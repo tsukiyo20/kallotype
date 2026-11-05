@@ -1,11 +1,12 @@
 //! `kalo-bench` — compare RGB → spectrum reconstructions on the same data.
 //!
 //! Deliberately dependency-free: this is a tool that has to run anywhere,
-//! including on a machine where nothing else has been installed. Two flags are
-//! enough that a hand-written parser beats pulling in a CLI framework.
+//! including on a machine where nothing else has been installed. A handful of
+//! flags does not justify pulling in a CLI framework.
 //!
 //! ```text
-//! kalo-bench [--data PATH] [--model all|polynomial|dictionary] [--verbose]
+//! kalo-bench [--data PATH] [--model all|polynomial|dictionary|sparse]
+//!            [--camera cie1931|generic] [--l1 VALUE] [--verbose]
 //! ```
 
 use std::path::PathBuf;
@@ -18,9 +19,44 @@ use kallotype_spectral::{
 
 const DEFAULT_DATA: &str = "data/colorchecker-2005/reflectance.csv";
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Model {
+    Polynomial,
+    Dictionary,
+    Sparse,
+}
+
+impl Model {
+    fn parse(value: &str) -> Result<Vec<Self>, String> {
+        Ok(match value {
+            "all" => vec![Self::Polynomial, Self::Dictionary],
+            "polynomial" => vec![Self::Polynomial],
+            "dictionary" => vec![Self::Dictionary],
+            "sparse" => vec![Self::Sparse],
+            other => return Err(format!("unknown model '{other}'")),
+        })
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Polynomial => "polynomial",
+            Self::Dictionary => "dictionary",
+            Self::Sparse => "sparse",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Camera {
+    Cie1931,
+    Generic,
+}
+
 struct Options {
     data: PathBuf,
-    models: Vec<&'static str>,
+    models: Vec<Model>,
+    camera: Camera,
+    l1: f64,
     verbose: bool,
 }
 
@@ -30,7 +66,9 @@ fn main() -> ExitCode {
         Err(message) => {
             eprintln!("error: {message}");
             eprintln!(
-                "usage: kalo-bench [--data PATH] [--model all|polynomial|dictionary] [--verbose]"
+                "usage: kalo-bench [--data PATH] \
+                 [--model all|polynomial|dictionary|sparse] \
+                 [--camera cie1931|generic] [--l1 VALUE] [--verbose]"
             );
             return ExitCode::FAILURE;
         }
@@ -47,27 +85,35 @@ fn main() -> ExitCode {
 
 fn parse_args() -> Result<Options, String> {
     let mut data = PathBuf::from(DEFAULT_DATA);
-    let mut models = vec!["polynomial", "dictionary"];
+    let mut models = vec![Model::Polynomial, Model::Dictionary];
+    let mut camera = Camera::Cie1931;
+    let mut l1 = 0.02_f64;
     let mut verbose = false;
 
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--data" => {
-                data = PathBuf::from(args.next().ok_or("--data needs a path")?);
-            }
-            "--model" => {
-                let value = args.next().ok_or("--model needs a value")?;
-                models = match value.as_str() {
-                    "all" => vec!["polynomial", "dictionary"],
-                    "polynomial" => vec!["polynomial"],
-                    "dictionary" => vec!["dictionary"],
-                    other => return Err(format!("unknown model '{other}'")),
+            "--data" => data = PathBuf::from(args.next().ok_or("--data needs a path")?),
+            "--model" => models = Model::parse(&args.next().ok_or("--model needs a value")?)?,
+            "--camera" => {
+                camera = match args.next().ok_or("--camera needs a value")?.as_str() {
+                    "cie1931" => Camera::Cie1931,
+                    "generic" => Camera::Generic,
+                    other => return Err(format!("unknown camera '{other}'")),
                 };
+            }
+            "--l1" => {
+                l1 = args
+                    .next()
+                    .ok_or("--l1 needs a value")?
+                    .parse()
+                    .map_err(|_| "--l1 must be a number".to_owned())?;
             }
             "--verbose" => verbose = true,
             "--help" | "-h" => {
-                println!("usage: kalo-bench [--data PATH] [--model NAME] [--verbose]");
+                println!(
+                    "usage: kalo-bench [--data PATH] [--model NAME] [--camera NAME] [--l1 VALUE] [--verbose]"
+                );
                 std::process::exit(0);
             }
             other => return Err(format!("unknown argument '{other}'")),
@@ -77,6 +123,8 @@ fn parse_args() -> Result<Options, String> {
     Ok(Options {
         data,
         models,
+        camera,
+        l1,
         verbose,
     })
 }
@@ -91,7 +139,10 @@ fn run(options: &Options) -> Result<(), String> {
     let set: ReflectanceSet =
         load_csv(&options.data).map_err(|error| format!("{}: {error}", options.data.display()))?;
 
-    let camera = Sensor::generic_camera(&set.grid);
+    let camera = match options.camera {
+        Camera::Cie1931 => Sensor::cie1931(&set.grid),
+        Camera::Generic => Sensor::generic_camera(&set.grid),
+    };
     let film = Sensor::film_layers(&set.grid);
 
     println!("kallotype bench");
@@ -103,8 +154,12 @@ fn run(options: &Options) -> Result<(), String> {
         set.grid.end_nm(),
         set.grid.step_nm()
     );
-    println!("  camera    {}  (synthetic test instrument)", camera.name());
-    println!("  film      {}  (synthetic test instrument)", film.name());
+    println!("  camera    {}  (test instrument)", camera.name());
+    println!("  film      {}  (test instrument)", film.name());
+    println!(
+        "  l1        {:.3}  (only used by the sparse model)",
+        options.l1
+    );
     println!();
 
     let mut results: Vec<(&str, Vec<Score>)> = Vec::new();
@@ -113,20 +168,24 @@ fn run(options: &Options) -> Result<(), String> {
         for sample in &set.samples {
             let response = camera.respond(&sample.reflectance);
             let estimate = match *model {
-                "polynomial" => PolynomialUpsampler
+                Model::Polynomial => PolynomialUpsampler
                     .reconstruct(&response, &camera, &set.grid)
                     .map_err(|error| error.to_string())?,
-                // Leave one out: reconstructing a sample from a dictionary
-                // that contains it would be measuring the dictionary, not the
-                // method.
-                _ => {
+                Model::Dictionary | Model::Sparse => {
+                    // Leave one out: reconstructing a sample from a dictionary
+                    // that contains it would measure the dictionary, not the
+                    // method.
                     let atoms = set
                         .samples
                         .iter()
                         .filter(|other| other.name != sample.name)
                         .map(|other| other.reflectance.clone())
                         .collect();
-                    DictionaryUpsampler::new(atoms)
+                    let mut dictionary = DictionaryUpsampler::new(atoms);
+                    if *model == Model::Sparse {
+                        dictionary = dictionary.with_l1(options.l1);
+                    }
+                    dictionary
                         .reconstruct(&response, &camera, &set.grid)
                         .map_err(|error| error.to_string())?
                 }
@@ -142,8 +201,8 @@ fn run(options: &Options) -> Result<(), String> {
 
             if options.verbose {
                 println!(
-                    "    {:<8} {:<10} rmse {:.4}  sam {:5.2}°  film ΔR {:>6.2}% {:>6.2}% {:>6.2}%",
-                    model,
+                    "    {:<11} {:<8} rmse {:.4}  sam {:5.2}°  film ΔR {:>7.2}% {:>7.2}% {:>7.2}%",
+                    model.name(),
                     sample.name,
                     score.rmse,
                     score.angle,
@@ -154,7 +213,7 @@ fn run(options: &Options) -> Result<(), String> {
             }
             scores.push(score);
         }
-        results.push((model, scores));
+        results.push((model.name(), scores));
     }
 
     if options.verbose {

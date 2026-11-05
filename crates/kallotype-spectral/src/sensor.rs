@@ -75,6 +75,36 @@ impl Sensor {
         )
     }
 
+    /// The CIE 1931 2 degree observer, from the analytic fit of
+    /// Wyman, Sloan and Shirley, *Simple Analytic Approximations to the CIE XYZ
+    /// Color Matching Functions* (JCGT 2013).
+    ///
+    /// Still a test instrument — an approximation of the standard observer, not
+    /// a measurement of any camera — but a far less arbitrary one than three
+    /// Gaussians, and it is what an "unknown camera" defaults to in practice.
+    /// Each channel is normalised to unit area, like [`Self::generic_camera`].
+    #[must_use]
+    pub fn cie1931(grid: &Spectrum) -> Self {
+        let channels: [Spectrum; 3] = [0, 1, 2].map(|axis| {
+            let mut channel = Spectrum::filled(grid.clone(), 0.0);
+            for (index, value) in channel.values_mut().iter_mut().enumerate() {
+                let wavelength = grid.start_nm() + grid.step_nm() * index as f64;
+                *value = cie1931_xyz(wavelength)[axis].max(0.0);
+            }
+            let area: f64 = channel.values().iter().sum::<f64>() * channel.step_nm();
+            if area > 0.0 {
+                for value in channel.values_mut() {
+                    *value /= area;
+                }
+            }
+            channel
+        });
+        Self {
+            name: "cie1931-approx".to_owned(),
+            channels,
+        }
+    }
+
     /// A stand-in for a film's three layer sensitivities.
     ///
     /// Sits where the benchmark wants it: shifted relative to the camera, which
@@ -113,6 +143,28 @@ impl Sensor {
     }
 }
 
+/// Piecewise Gaussian used by the Wyman fit: different width either side of the
+/// peak.
+fn lobe(wavelength: f64, peak: f64, left: f64, right: f64) -> f64 {
+    let width = if wavelength < peak { left } else { right };
+    let z = (wavelength - peak) / width;
+    (-0.5 * z * z).exp()
+}
+
+/// The Wyman, Sloan and Shirley (2013) approximation of the CIE 1931 2 degree
+/// colour matching functions, evaluated at one wavelength.
+#[must_use]
+pub fn cie1931_xyz(wavelength: f64) -> [f64; 3] {
+    let x = 1.056 * lobe(wavelength, 599.8, 37.9, 31.0)
+        + 0.362 * lobe(wavelength, 442.0, 16.0, 26.7)
+        - 0.065 * lobe(wavelength, 501.1, 20.4, 26.2);
+    let y =
+        0.821 * lobe(wavelength, 568.8, 46.9, 40.5) + 0.286 * lobe(wavelength, 530.9, 16.3, 31.1);
+    let z =
+        1.217 * lobe(wavelength, 437.0, 11.8, 36.0) + 0.681 * lobe(wavelength, 459.0, 26.0, 13.8);
+    [x, y, z]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,6 +177,16 @@ mod tests {
         for response in sensor.respond(&flat) {
             assert!((response - 1.0).abs() < 1e-9, "response {response}");
         }
+    }
+
+    #[test]
+    fn the_observer_peaks_where_it_should() {
+        // The luminance function peaks near 555 nm.
+        let peak = (380..=730)
+            .step_by(5)
+            .max_by(|a, b| cie1931_xyz(f64::from(*a))[1].total_cmp(&cie1931_xyz(f64::from(*b))[1]))
+            .unwrap();
+        assert!((545..=565).contains(&peak), "peak at {peak} nm");
     }
 
     #[test]

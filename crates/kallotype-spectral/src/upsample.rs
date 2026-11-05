@@ -108,6 +108,7 @@ impl Upsampler for PolynomialUpsampler {
 pub struct DictionaryUpsampler {
     atoms: Vec<Spectrum>,
     ridge: f64,
+    l1: f64,
     iterations: usize,
 }
 
@@ -118,6 +119,7 @@ impl DictionaryUpsampler {
         Self {
             atoms,
             ridge: 1e-4,
+            l1: 0.0,
             iterations: 1200,
         }
     }
@@ -126,6 +128,19 @@ impl DictionaryUpsampler {
     #[must_use]
     pub fn with_ridge(mut self, ridge: f64) -> Self {
         self.ridge = ridge.max(0.0);
+        self
+    }
+
+    /// Add an L1 penalty, which pushes the mixture towards few atoms.
+    ///
+    /// A dictionary with more atoms than sensor channels has enough freedom to
+    /// match the measurement with a combination that is spectrally wrong. The
+    /// L1 term is the cheapest way to take that freedom away: it makes the
+    /// solution sparse, and a sparse mixture cannot wander as far into the
+    /// null space.
+    #[must_use]
+    pub fn with_l1(mut self, l1: f64) -> Self {
+        self.l1 = l1.max(0.0);
         self
     }
 
@@ -166,7 +181,7 @@ impl Upsampler for DictionaryUpsampler {
             }
         }
 
-        let weights = nnls(&a, response, self.ridge, self.iterations);
+        let weights = nnls(&a, response, self.ridge, self.l1, self.iterations);
 
         for (weight, atom) in weights.iter().zip(&self.atoms) {
             if *weight == 0.0 {
@@ -217,7 +232,7 @@ fn solve3(mut matrix: [[f64; 3]; 3], mut rhs: [f64; 3]) -> Option<[f64; 3]> {
 }
 
 /// Projected-gradient non-negative least squares.
-fn nnls(a: &[[f64; 3]], b: &[f64; 3], ridge: f64, iterations: usize) -> Vec<f64> {
+fn nnls(a: &[[f64; 3]], b: &[f64; 3], ridge: f64, l1: f64, iterations: usize) -> Vec<f64> {
     let count = a.len();
     let mut weights = vec![0.0_f64; count];
 
@@ -240,13 +255,16 @@ fn nnls(a: &[[f64; 3]], b: &[f64; 3], ridge: f64, iterations: usize) -> Vec<f64>
                 residual[index] -= weight * value;
             }
         }
-        // Gradient descent on ||A w - b||^2 + λ||w||^2, projected onto w >= 0.
+        // Gradient descent on ||A w - b||^2 + λ2||w||^2, then the L1 proximal
+        // step, then the non-negativity projection.
         for (index, weight) in weights.iter_mut().enumerate() {
             let row = &a[index];
             let gradient: f64 = 2.0
                 * (row[0] * residual[0] + row[1] * residual[1] + row[2] * residual[2]
                     - ridge * *weight);
-            *weight = (*weight + step * gradient).max(0.0);
+            // Proximal step for the L1 term: soft-threshold at step * l1 before
+            // projecting onto the non-negative orthant.
+            *weight = (*weight + step * gradient - step * l1).max(0.0);
         }
     }
 
@@ -302,6 +320,35 @@ mod tests {
         // A convex mixture of two positive atoms cannot overshoot far.
         assert!(estimate.max() < 2.0);
         assert!(estimate.min() >= 0.0);
+    }
+
+    #[test]
+    fn the_l1_penalty_shrinks_the_mixture() {
+        let grid = grid();
+        let sensor = Sensor::generic_camera(&grid);
+        let atoms: Vec<Spectrum> = (0..6)
+            .map(|k| {
+                Spectrum::new(
+                    380.0,
+                    10.0,
+                    (0..36)
+                        .map(|i| 0.1 + 0.02 * f64::from(i) + 0.01 * f64::from(k))
+                        .collect(),
+                )
+                .unwrap()
+            })
+            .collect();
+        let response = sensor.respond(&atoms[2]);
+
+        let dense = DictionaryUpsampler::new(atoms.clone())
+            .reconstruct(&response, &sensor, &grid)
+            .unwrap();
+        let sparse = DictionaryUpsampler::new(atoms)
+            .with_l1(0.05)
+            .reconstruct(&response, &sensor, &grid)
+            .unwrap();
+
+        assert!(dense.max() >= sparse.max() - 1e-9);
     }
 
     #[test]
