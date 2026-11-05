@@ -1,0 +1,60 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: build
+        run: cargo build --release --locked --target ${{ matrix.target }} -p kallotype-cli
+
+      - name: package
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          name="kallotype-${GITHUB_REF_NAME}-${TARGET}"
+          bin="kalo"
+          if [ "${RUNNER_OS}" = "Windows" ]; then
+            bin="kalo.exe"
+          fi
+          mkdir -p "dist/${name}"
+          cp "target/${TARGET}/release/${bin}" "dist/${name}/"
+          cp README.md LICENSE NOTICE.md "dist/${name}/"
+          tar -czf "dist/${name}.tar.gz" -C dist "${name}"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.tar.gz
+          generate_release_notes: true

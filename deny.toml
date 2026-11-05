@@ -1,0 +1,50 @@
+# cargo-deny policy.
+#
+# The project ships binaries, so the licence policy is stricter than a library's:
+# no copyleft in the dependency graph, no unknown registries, no git sources.
+
+[graph]
+all-features = false
+no-default-features = false
+
+[advisories]
+version = 2
+yanked = "deny"
+ignore = []
+
+[licenses]
+# Permissive only. If a dependency needs an addition, add it here with a
+# comment explaining why, in the same commit that adds the dependency.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.9
+# Allowed-but-unused licences are fine: the list is a policy for future
+# dependencies, not an inventory of today's.
+unused-allowed-license = "allow"
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+deny = [
+    # Not used today. Listed so that a future dependency cannot quietly pull
+    # OpenSSL in next to the system TLS stack.
+    { name = "openssl" },
+    { name = "openssl-sys" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
