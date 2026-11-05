@@ -7,13 +7,25 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"
-repository = "https://github.com/kallotype/kallotype"
 authors = ["Kallotype contributors"]
+repository = "https://github.com/tsukiyo20/kallotype"
+homepage = "https://github.com/tsukiyo20/kallotype"
+readme = "README.md"
+keywords = ["photography", "film", "rendering", "colour", "simulation"]
+categories = ["graphics", "multimedia::images"]
+# Nothing is published until the model has real data behind it. Flip this
+# per crate when that changes, not before.
+publish = false
+
+[workspace.lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
-kallotype-core = { path = "crates/kallotype-core" }
-kallotype-io = { path = "crates/kallotype-io" }
-
 image = { version = "0.25", default-features = false, features = [
     "png",
     "tiff",
@@ -24,3 +36,4 @@ clap = { version = "4", features = ["derive"] }
 [profile.release]
 lto = "thin"
 codegen-units = 1
+strip = "symbols"

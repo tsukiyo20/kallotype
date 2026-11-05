@@ -1,0 +1,83 @@
+//! Failures a user can cause, with enough context to fix them.
+
+use std::path::PathBuf;
+
+use kallotype_io::IoError;
+
+/// Everything `kalo` can fail at.
+#[derive(Debug)]
+pub enum CliError {
+    /// The requested stock id is not compiled in.
+    UnknownStock {
+        /// `"film"` or `"paper"`.
+        kind: &'static str,
+        /// The id the user typed.
+        id: String,
+    },
+    /// A numeric flag received a value outside its domain.
+    InvalidNumber {
+        /// The flag, e.g. `"--dev"`.
+        flag: &'static str,
+        /// The value the user typed.
+        value: f64,
+        /// What was expected, e.g. `"a positive number of minutes"`.
+        expected: &'static str,
+    },
+    /// The output directory could not be created.
+    CreateDir {
+        /// The directory that failed.
+        path: PathBuf,
+        /// The underlying OS error.
+        source: std::io::Error,
+    },
+    /// The input could not be decoded.
+    Read {
+        /// The file that failed.
+        path: PathBuf,
+        /// The underlying decoder error.
+        source: IoError,
+    },
+    /// The output could not be encoded.
+    Write {
+        /// The file that failed.
+        path: PathBuf,
+        /// The underlying encoder error.
+        source: IoError,
+    },
+}
+
+impl std::fmt::Display for CliError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownStock { kind, id } => {
+                write!(f, "unknown {kind} stock '{id}' (try `kalo stocks`)")
+            }
+            Self::InvalidNumber {
+                flag,
+                value,
+                expected,
+            } => {
+                write!(f, "{flag} must be {expected}, got {value}")
+            }
+            Self::CreateDir { path, source } => {
+                write!(f, "could not create {}: {source}", path.display())
+            }
+            Self::Read { path, source } => {
+                write!(f, "could not read {}: {source}", path.display())
+            }
+            Self::Write { path, source } => {
+                write!(f, "could not write {}: {source}", path.display())
+            }
+        }
+    }
+}
+
+impl std::error::Error for CliError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::CreateDir { source, .. } => Some(source),
+            Self::Read { source, .. } | Self::Write { source, .. } => Some(source),
+            Self::UnknownStock { .. } | Self::InvalidNumber { .. } => None,
+        }
+    }
+}
