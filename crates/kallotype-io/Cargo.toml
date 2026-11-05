@@ -1,0 +1,16 @@
+[package]
+name = "kallotype-io"
+description = "Image loading and saving for Kallotype"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kallotype-core.workspace = true
+image.workspace = true
+
+[lints.rust]
+missing_docs = "warn"
