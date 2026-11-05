@@ -33,6 +33,10 @@ check: fmt-check lint test
 run *args:
     cargo run --release --bin kalo -- {{args}}
 
+# Compare RGB → spectrum reconstructions.
+bench *args:
+    cargo run --release -p kallotype-spectral --bin kalo-bench -- {{args}}
+
 # Rebuild the committed test chart.
 chart:
     python3 scripts/make_testchart.py
