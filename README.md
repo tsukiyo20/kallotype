@@ -57,6 +57,28 @@ kalo render photo.png -o photo_c41.png --film c41_standard --dev 9.0 --ev +0.3
 > linker refuses to run until the licence is accepted, and `git` fails the same
 > way.
 
+## Development
+
+```bash
+just check     # fmt + clippy + tests — the same three CI runs
+just run render assets/testchart.png -o out/a.png --dev 9
+just deny      # licences, advisories and sources
+```
+
+`just` is a convenience, not a requirement: every recipe is a plain `cargo`
+command, listed in [justfile](justfile) and explained in
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+Layout:
+
+```
+crates/kallotype-core/   the model — no dependencies, no I/O, no unsafe
+crates/kallotype-io/     decoding and encoding, the only file-format code
+crates/kallotype-cli/    the kalo binary, plus a library so commands are testable
+scripts/                 fixture generators
+docs/                    architecture notes (numbered, like ADRs)
+```
+
 ## The model
 
 ```
