@@ -1,0 +1,18 @@
+[package]
+name = "kallotype-cli"
+description = "The `kalo` command line interface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "kalo"
+path = "src/main.rs"
+
+[dependencies]
+kallotype-core.workspace = true
+kallotype-io.workspace = true
+clap.workspace = true
