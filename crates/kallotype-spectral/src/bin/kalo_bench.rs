@@ -5,16 +5,17 @@
 //! flags does not justify pulling in a CLI framework.
 //!
 //! ```text
-//! kalo-bench [--data PATH] [--model all|polynomial|dictionary|sparse]
-//!            [--camera cie1931|generic] [--l1 VALUE] [--verbose]
+//! kalo-bench [--data PATH] [--model all|polynomial|dictionary|sparse|hybrid]
+//!            [--camera cie1931|generic] [--dictionary PATH] [--dictionary-limit N]
+//!            [--l1 VALUE] [--hybrid-threshold VALUE] [--verbose]
 //! ```
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use kallotype_spectral::{
-    DictionaryUpsampler, PolynomialUpsampler, ReflectanceSet, Sensor, Upsampler, load_csv,
-    relative_response_error, rmse, spectral_angle_deg,
+    DictionaryUpsampler, PolynomialUpsampler, ReflectanceSet, Sensor, Spectrum, Upsampler,
+    load_csv, relative_response_error, rmse, spectral_angle_deg,
 };
 
 const DEFAULT_DATA: &str = "data/colorchecker-2005/reflectance.csv";
@@ -24,15 +25,17 @@ enum Model {
     Polynomial,
     Dictionary,
     Sparse,
+    Hybrid,
 }
 
 impl Model {
     fn parse(value: &str) -> Result<Vec<Self>, String> {
         Ok(match value {
-            "all" => vec![Self::Polynomial, Self::Dictionary],
+            "all" => vec![Self::Polynomial, Self::Dictionary, Self::Hybrid],
             "polynomial" => vec![Self::Polynomial],
             "dictionary" => vec![Self::Dictionary],
             "sparse" => vec![Self::Sparse],
+            "hybrid" => vec![Self::Hybrid],
             other => return Err(format!("unknown model '{other}'")),
         })
     }
@@ -42,6 +45,7 @@ impl Model {
             Self::Polynomial => "polynomial",
             Self::Dictionary => "dictionary",
             Self::Sparse => "sparse",
+            Self::Hybrid => "hybrid",
         }
     }
 }
@@ -57,6 +61,13 @@ struct Options {
     models: Vec<Model>,
     camera: Camera,
     l1: f64,
+    /// Reconstruct every sample from this dataset instead of leave-one-out.
+    dictionary: Option<PathBuf>,
+    /// Cap the dictionary size, so a 24-atom set can be compared with a
+    /// 169-atom one without size confounding the result.
+    dictionary_limit: Option<usize>,
+    /// Relative response residual above which the hybrid falls back.
+    hybrid_threshold: f64,
     verbose: bool,
 }
 
@@ -67,8 +78,9 @@ fn main() -> ExitCode {
             eprintln!("error: {message}");
             eprintln!(
                 "usage: kalo-bench [--data PATH] \
-                 [--model all|polynomial|dictionary|sparse] \
-                 [--camera cie1931|generic] [--l1 VALUE] [--verbose]"
+                 [--model all|polynomial|dictionary|sparse|hybrid] \
+                 [--camera cie1931|generic] [--dictionary PATH] [--dictionary-limit N]
+//!            [--l1 VALUE] [--hybrid-threshold VALUE] [--verbose]"
             );
             return ExitCode::FAILURE;
         }
@@ -85,9 +97,12 @@ fn main() -> ExitCode {
 
 fn parse_args() -> Result<Options, String> {
     let mut data = PathBuf::from(DEFAULT_DATA);
-    let mut models = vec![Model::Polynomial, Model::Dictionary];
+    let mut models = vec![Model::Polynomial, Model::Dictionary, Model::Hybrid];
     let mut camera = Camera::Cie1931;
     let mut l1 = 0.02_f64;
+    let mut dictionary = None;
+    let mut dictionary_limit = None;
+    let mut hybrid_threshold = 0.02_f64;
     let mut verbose = false;
 
     let mut args = std::env::args().skip(1);
@@ -109,6 +124,26 @@ fn parse_args() -> Result<Options, String> {
                     .parse()
                     .map_err(|_| "--l1 must be a number".to_owned())?;
             }
+            "--dictionary" => {
+                dictionary = Some(PathBuf::from(
+                    args.next().ok_or("--dictionary needs a path")?,
+                ));
+            }
+            "--dictionary-limit" => {
+                dictionary_limit = Some(
+                    args.next()
+                        .ok_or("--dictionary-limit needs a number")?
+                        .parse()
+                        .map_err(|_| "--dictionary-limit must be an integer".to_owned())?,
+                );
+            }
+            "--hybrid-threshold" => {
+                hybrid_threshold = args
+                    .next()
+                    .ok_or("--hybrid-threshold needs a value")?
+                    .parse()
+                    .map_err(|_| "--hybrid-threshold must be a number".to_owned())?;
+            }
             "--verbose" => verbose = true,
             "--help" | "-h" => {
                 println!(
@@ -125,6 +160,9 @@ fn parse_args() -> Result<Options, String> {
         models,
         camera,
         l1,
+        dictionary,
+        dictionary_limit,
+        hybrid_threshold,
         verbose,
     })
 }
@@ -138,6 +176,33 @@ struct Score {
 fn run(options: &Options) -> Result<(), String> {
     let set: ReflectanceSet =
         load_csv(&options.data).map_err(|error| format!("{}: {error}", options.data.display()))?;
+
+    // A dictionary from another dataset turns the benchmark into a
+    // cross-domain test: no atom comes from the material being reconstructed.
+    let cross_atoms: Option<Vec<Spectrum>> = match &options.dictionary {
+        Some(path) => {
+            let other: ReflectanceSet =
+                load_csv(path).map_err(|error| format!("{}: {error}", path.display()))?;
+            let mut atoms: Vec<Spectrum> = other
+                .samples
+                .iter()
+                .map(|sample| sample.reflectance.resampled(&set.grid))
+                .collect();
+            if let Some(limit) = options.dictionary_limit {
+                if limit > 0 && limit < atoms.len() {
+                    let stride = atoms.len().div_ceil(limit);
+                    atoms = atoms.into_iter().step_by(stride).take(limit).collect();
+                }
+            }
+            println!(
+                "  dictionary {}  ({} atoms, cross-domain)",
+                other.name,
+                atoms.len()
+            );
+            Some(atoms)
+        }
+        None => None,
+    };
 
     let camera = match options.camera {
         Camera::Cie1931 => Sensor::cie1931(&set.grid),
@@ -167,27 +232,57 @@ fn run(options: &Options) -> Result<(), String> {
         let mut scores = Vec::with_capacity(set.len());
         for sample in &set.samples {
             let response = camera.respond(&sample.reflectance);
+
+            let atoms = match &cross_atoms {
+                // Cross-domain: no atom comes from this material.
+                Some(atoms) => atoms.clone(),
+                // Leave one out: reconstructing a sample from a dictionary that
+                // contains it would measure the dictionary, not the method.
+                None => set
+                    .samples
+                    .iter()
+                    .filter(|other| other.name != sample.name)
+                    .map(|other| other.reflectance.clone())
+                    .collect(),
+            };
+
             let estimate = match *model {
                 Model::Polynomial => PolynomialUpsampler
                     .reconstruct(&response, &camera, &set.grid)
                     .map_err(|error| error.to_string())?,
-                Model::Dictionary | Model::Sparse => {
-                    // Leave one out: reconstructing a sample from a dictionary
-                    // that contains it would measure the dictionary, not the
-                    // method.
-                    let atoms = set
-                        .samples
-                        .iter()
-                        .filter(|other| other.name != sample.name)
-                        .map(|other| other.reflectance.clone())
-                        .collect();
+                Model::Dictionary | Model::Sparse | Model::Hybrid => {
                     let mut dictionary = DictionaryUpsampler::new(atoms);
                     if *model == Model::Sparse {
                         dictionary = dictionary.with_l1(options.l1);
                     }
-                    dictionary
+                    let from_dictionary = dictionary
                         .reconstruct(&response, &camera, &set.grid)
-                        .map_err(|error| error.to_string())?
+                        .map_err(|error| error.to_string())?;
+
+                    if *model == Model::Hybrid {
+                        // If the mixture cannot reproduce the measurement, the
+                        // dictionary does not cover this material; fall back to
+                        // the smooth prior rather than inventing a wrong answer.
+                        let measured = camera.respond(&from_dictionary);
+                        let residual: f64 = (0..3)
+                            .map(|index| (measured[index] - response[index]).powi(2))
+                            .sum::<f64>()
+                            .sqrt();
+                        let scale: f64 = (0..3)
+                            .map(|index| response[index].powi(2))
+                            .sum::<f64>()
+                            .sqrt()
+                            .max(1e-9);
+                        if residual / scale > options.hybrid_threshold {
+                            PolynomialUpsampler
+                                .reconstruct(&response, &camera, &set.grid)
+                                .map_err(|error| error.to_string())?
+                        } else {
+                            from_dictionary
+                        }
+                    } else {
+                        from_dictionary
+                    }
                 }
             };
 
