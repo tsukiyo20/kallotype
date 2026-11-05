@@ -1,0 +1,18 @@
+# Build output
+/target/
+
+# Rendered images — regenerate with `kalo render`
+/out/
+
+# A cargo home kept inside the tree, used only when the system one is
+# unavailable (sandboxes, CI images without a writable ~/.cargo).
+/.cargo-home/
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Rust backup files left by some editors
+*.rs.bk
