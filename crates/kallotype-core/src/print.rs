@@ -18,6 +18,8 @@
 
 use kallotype_spectral::Spectrum;
 
+use crate::scan::solve3;
+
 use crate::spectral::{GRID_LEN, GRID_START_NM, GRID_STEP_NM};
 
 /// One dye's absorption, or one paper layer's sensitivity, as a Gaussian band.
@@ -178,7 +180,27 @@ impl PrintContext {
         })
     }
 
-    fn response(&self, density_cmy: [f64; 3]) -> [f64; 3] {
+    /// Status density to analytical density.
+    ///
+    /// The characteristic curves are measured through status filters, so each
+    /// channel already contains all three dyes. The dye curves are per-dye
+    /// shapes. Feeding one into the other double-counts the overlap; the same
+    /// correction the scan needed applies here.
+    fn analytical(&self, status: [f64; 3]) -> [f64; 3] {
+        let probes = [650.0, 550.0, 450.0];
+        let mut matrix = [[0.0_f64; 3]; 3];
+        for (row, wavelength) in probes.iter().enumerate() {
+            for (column, dye) in self.dye.iter().enumerate() {
+                matrix[row][column] = dye.interpolate(*wavelength);
+            }
+        }
+        solve3(matrix, status)
+            .map(|values| values.map(|value| value.max(0.0)))
+            .unwrap_or(status)
+    }
+
+    fn response(&self, status_density: [f64; 3]) -> [f64; 3] {
+        let density_cmy = self.analytical(status_density);
         // Allocation-free on purpose: this runs once per pixel, and cloning a
         // spectrum here measured 20x slower than the rest of the render.
         let step = self.grid.step_nm();

@@ -172,7 +172,32 @@ impl ScanContext {
         &self.grid
     }
 
-    fn reflectance(&self, density_cmy: [f64; 3]) -> Spectrum {
+    /// Solve for the per-dye analytical densities behind a set of status densities.
+    ///
+    /// The characteristic curves report **status** densities: each channel is
+    /// measured through a filter and contains contributions from all three dyes.
+    /// The dye curves describe **analytical** absorption: one shape per dye,
+    /// peak-normalised. Feeding status densities straight into the dye shapes
+    /// double-counts the overlap, which is why a neutral print went black.
+    ///
+    /// The mixing matrix samples the dye curves at the status filter peaks
+    /// (650/550/450 nm). Real status filters are broad; sampling their peaks is
+    /// the documented approximation.
+    fn analytical(&self, status: [f64; 3]) -> [f64; 3] {
+        let probes = [650.0, 550.0, 450.0];
+        let mut matrix = [[0.0_f64; 3]; 3];
+        for (row, wavelength) in probes.iter().enumerate() {
+            for (column, dye) in self.dye.iter().enumerate() {
+                matrix[row][column] = dye.interpolate(*wavelength);
+            }
+        }
+        solve3(matrix, status)
+            .map(|values| values.map(|value| value.max(0.0)))
+            .unwrap_or(status)
+    }
+
+    fn reflectance(&self, status_density: [f64; 3]) -> Spectrum {
+        let density_cmy = self.analytical(status_density);
         let step = self.grid.step_nm();
         let mut reflectance = self.grid.clone();
         for (index, value) in reflectance.values_mut().iter_mut().enumerate() {
@@ -221,6 +246,37 @@ impl Default for ScanContext {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Gaussian elimination with partial pivoting for the 3x3 unmixing solve.
+pub(crate) fn solve3(mut matrix: [[f64; 3]; 3], mut rhs: [f64; 3]) -> Option<[f64; 3]> {
+    for column in 0..3 {
+        let pivot = (column..3)
+            .max_by(|&a, &b| matrix[a][column].abs().total_cmp(&matrix[b][column].abs()))?;
+        if matrix[pivot][column].abs() < 1e-9 {
+            return None;
+        }
+        matrix.swap(column, pivot);
+        rhs.swap(column, pivot);
+        let pivot_row = matrix[column];
+        let pivot_value = pivot_row[column];
+        for row in (column + 1)..3 {
+            let factor = matrix[row][column] / pivot_value;
+            for (cell, value) in pivot_row.iter().enumerate().skip(column) {
+                matrix[row][cell] -= factor * value;
+            }
+            rhs[row] -= factor * rhs[column];
+        }
+    }
+    let mut solution = [0.0; 3];
+    for row in (0..3).rev() {
+        let mut sum = rhs[row];
+        for (column, value) in solution.iter().enumerate().skip(row + 1) {
+            sum -= matrix[row][column] * value;
+        }
+        solution[row] = sum / matrix[row][row];
+    }
+    Some(solution)
 }
 
 fn gaussian(grid: &Spectrum, band: Band) -> Spectrum {
