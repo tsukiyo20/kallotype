@@ -11,8 +11,6 @@ authors = ["Kallotype contributors"]
 repository = "https://github.com/tsukiyo20/kallotype"
 homepage = "https://github.com/tsukiyo20/kallotype"
 readme = "README.md"
-keywords = ["photography", "film", "rendering", "colour", "simulation"]
-categories = ["graphics", "multimedia::images"]
 
 [workspace.lints.rust]
 missing_docs = "warn"

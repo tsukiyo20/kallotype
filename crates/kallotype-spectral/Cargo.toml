@@ -9,8 +9,8 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 readme.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["spectral", "color", "sensor", "upsampling", "rendering"]
+categories = ["science", "graphics"]
 
 [lib]
 name = "kallotype_spectral"

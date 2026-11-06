@@ -9,8 +9,8 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 readme.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["image", "png", "tiff", "jpeg", "encoding"]
+categories = ["multimedia::images", "multimedia::encoding"]
 
 [dependencies]
 kallotype-core = { path = "../kallotype-core", version = "0.1.0" }

@@ -9,8 +9,8 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 readme.workspace = true
-keywords.workspace = true
-categories.workspace = true
+keywords = ["cli", "film", "photography", "command-line", "render"]
+categories = ["command-line-interface", "multimedia::images"]
 
 [lib]
 name = "kallotype_cli"
