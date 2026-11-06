@@ -13,7 +13,7 @@ use crate::error::CliError;
 pub fn run(args: RenderArgs) -> Result<(), CliError> {
     let selection = resolve(&args.stock)?;
     let params = selection.render_params(args.ev);
-    let prepared = params.prepare();
+    let prepared = selection.prepare(args.ev)?;
 
     let mut image =
         load(&args.input, args.input_encoding.into()).map_err(|source| CliError::Read {

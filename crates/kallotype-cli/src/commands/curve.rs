@@ -8,7 +8,7 @@ use crate::error::CliError;
 pub fn run(args: CurveArgs) -> Result<(), CliError> {
     let selection = resolve(&args.stock)?;
     let params = selection.render_params(0.0);
-    let prepared = params.prepare();
+    let prepared = selection.prepare(0.0)?;
 
     print_report(&params, 0, 0);
 

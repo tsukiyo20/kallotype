@@ -37,6 +37,13 @@ pub enum CliError {
         /// The underlying decoder error.
         source: IoError,
     },
+    /// The dictionary could not be read.
+    Dictionary {
+        /// The file that failed.
+        path: PathBuf,
+        /// What the loader said.
+        message: String,
+    },
     /// The output could not be encoded.
     Write {
         /// The file that failed.
@@ -65,6 +72,9 @@ impl std::fmt::Display for CliError {
             Self::Read { path, source } => {
                 write!(f, "could not read {}: {source}", path.display())
             }
+            Self::Dictionary { path, message } => {
+                write!(f, "could not read dictionary {}: {message}", path.display())
+            }
             Self::Write { path, source } => {
                 write!(f, "could not write {}: {source}", path.display())
             }
@@ -77,7 +87,9 @@ impl std::error::Error for CliError {
         match self {
             Self::CreateDir { source, .. } => Some(source),
             Self::Read { source, .. } | Self::Write { source, .. } => Some(source),
-            Self::UnknownStock { .. } | Self::InvalidNumber { .. } => None,
+            Self::UnknownStock { .. } | Self::InvalidNumber { .. } | Self::Dictionary { .. } => {
+                None
+            }
         }
     }
 }

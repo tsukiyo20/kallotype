@@ -16,6 +16,10 @@ pub struct Selection {
     pub paper: &'static PaperStock,
     /// Whether to expose through the spectral path.
     pub spectral: bool,
+    /// Side of the baked exposure table, or 0 for no table.
+    pub lut_size: usize,
+    /// Reflectance CSV for the dictionary prior.
+    pub dictionary: Option<std::path::PathBuf>,
 }
 
 impl Selection {
@@ -28,7 +32,32 @@ impl Selection {
             development: self.development,
             exposure_ev,
             spectral: self.spectral,
+            lut_size: self.lut_size,
         }
+    }
+}
+
+impl Selection {
+    /// Load the dictionary, if one was requested, and prepare the render.
+    pub fn prepare(&self, exposure_ev: f64) -> Result<kallotype_core::PreparedRender, CliError> {
+        let params = self.render_params(exposure_ev);
+        let atoms = match &self.dictionary {
+            None => None,
+            Some(path) => {
+                let set =
+                    kallotype_spectral::load_csv(path).map_err(|error| CliError::Dictionary {
+                        path: path.clone(),
+                        message: error.to_string(),
+                    })?;
+                Some(
+                    set.samples
+                        .iter()
+                        .map(|sample| sample.reflectance.clone())
+                        .collect::<Vec<_>>(),
+                )
+            }
+        };
+        Ok(params.prepare_with(atoms.as_deref()))
     }
 }
 
@@ -69,6 +98,8 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         film,
         paper,
         spectral: stock.spectral,
+        lut_size: stock.lut_size,
+        dictionary: stock.dictionary.clone(),
     })
 }
 
@@ -82,8 +113,10 @@ pub fn print_report(params: &RenderParams, width: u32, height: u32) {
     println!("  paper     {}  ({})", params.paper.id, params.paper.label);
     println!(
         "  exposure  {}",
-        if params.spectral {
-            "spectral (placeholder camera and film layers)"
+        if params.spectral && params.lut_size >= 2 {
+            "spectral, baked table"
+        } else if params.spectral {
+            "spectral, live"
         } else {
             "scalar per channel"
         }

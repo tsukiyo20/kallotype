@@ -14,7 +14,7 @@
 //! prior measured in `docs/0002-rgb-to-spectrum.md` is the target, but it needs a
 //! baked lookup table to be usable per pixel, and that is a separate task.
 
-use kallotype_spectral::{PolynomialUpsampler, Sensor, Spectrum, Upsampler};
+use kallotype_spectral::{DictionaryUpsampler, PolynomialUpsampler, Sensor, Spectrum, Upsampler};
 
 /// First wavelength of the internal grid, in nanometres.
 pub const GRID_START_NM: f64 = 380.0;
@@ -30,6 +30,10 @@ pub struct SpectralContext {
     camera: Sensor,
     film: Sensor,
     upsampler: PolynomialUpsampler,
+    /// When present, the dictionary is tried first and the polynomial is the
+    /// fallback — the hybrid measured in `docs/0002-rgb-to-spectrum.md`.
+    dictionary: Option<DictionaryUpsampler>,
+    threshold: f64,
     /// Film response to a correctly exposed 18 % grey, per layer. Dividing by it
     /// keeps the spectral path anchored to the same grey as the scalar path, so
     /// that turning spectra on changes colour separation, not overall exposure.
@@ -61,18 +65,58 @@ impl SpectralContext {
         let film = Sensor::film_layers(&grid);
         let upsampler = PolynomialUpsampler;
 
-        let grey = upsampler
-            .reconstruct(&[0.18; 3], &camera, &grid)
-            .unwrap_or_else(|_| Spectrum::filled(grid.clone(), 0.0));
-        let reference = film.respond(&grey);
-
-        Self {
+        let mut context = Self {
             grid,
             camera,
             film,
             upsampler,
-            reference,
+            dictionary: None,
+            threshold: 0.02,
+            reference: [1.0; 3],
+        };
+        context.refresh_reference();
+        context
+    }
+
+    /// Recompute the grey anchor with whatever reconstruction is now active.
+    ///
+    /// This matters: the anchor must be measured through the same path that
+    /// renders, or enabling the dictionary would silently re-balance every print.
+    fn refresh_reference(&mut self) {
+        let grey = self
+            .reconstruct([0.18; 3])
+            .unwrap_or_else(|| Spectrum::filled(self.grid.clone(), 0.0));
+        self.reference = self.film.respond(&grey);
+    }
+
+    /// Use a dictionary prior, with the polynomial as the fallback.
+    ///
+    /// Atoms are resampled onto the internal grid, so callers can pass spectra
+    /// measured on any uniform grid.
+    #[must_use]
+    pub fn with_atoms(mut self, atoms: &[Spectrum]) -> Self {
+        let resampled: Vec<Spectrum> = atoms
+            .iter()
+            .map(|atom| atom.resampled(&self.grid))
+            .collect();
+        if !resampled.is_empty() {
+            self.dictionary = Some(DictionaryUpsampler::new(resampled));
+            self.refresh_reference();
         }
+        self
+    }
+
+    /// Relative camera-response residual above which the hybrid falls back.
+    #[must_use]
+    pub fn with_threshold(mut self, threshold: f64) -> Self {
+        self.threshold = threshold.max(0.0);
+        self
+    }
+
+    /// Whether a dictionary prior is active.
+    #[must_use]
+    pub fn has_dictionary(&self) -> bool {
+        self.dictionary.is_some()
     }
 
     /// The wavelength grid.
@@ -93,15 +137,40 @@ impl SpectralContext {
     /// grid mismatch that [`Self::new`] rules out.
     #[must_use]
     pub fn expose(&self, linear: [f64; 3]) -> Option<[f64; 3]> {
-        let spectrum = self
-            .upsampler
-            .reconstruct(&linear, &self.camera, &self.grid)
-            .ok()?;
+        let spectrum = self.reconstruct(linear)?;
         let response = self.film.respond(&spectrum);
         Some(std::array::from_fn(|channel| {
             let normalised = response[channel] * 0.18 / self.reference[channel].max(1e-12);
             normalised.max(1e-10).log10()
         }))
+    }
+}
+
+impl SpectralContext {
+    /// Pick a reconstruction: the dictionary if it can explain the measurement,
+    /// the polynomial otherwise.
+    fn reconstruct(&self, linear: [f64; 3]) -> Option<Spectrum> {
+        if let Some(dictionary) = &self.dictionary {
+            let candidate = dictionary
+                .reconstruct(&linear, &self.camera, &self.grid)
+                .ok()?;
+            let measured = self.camera.respond(&candidate);
+            let residual: f64 = (0..3)
+                .map(|index| (measured[index] - linear[index]).powi(2))
+                .sum::<f64>()
+                .sqrt();
+            let scale: f64 = (0..3)
+                .map(|index| linear[index].powi(2))
+                .sum::<f64>()
+                .sqrt()
+                .max(1e-9);
+            if residual / scale <= self.threshold {
+                return Some(candidate);
+            }
+        }
+        self.upsampler
+            .reconstruct(&linear, &self.camera, &self.grid)
+            .ok()
     }
 }
 
@@ -128,6 +197,25 @@ mod tests {
         // The magnitude is a property of the placeholder film sensor, so only
         // the direction and the presence of separation are asserted here.
         assert!((log_e[0] - log_e[2]) > 0.05, "no separation: {log_e:?}");
+    }
+
+    #[test]
+    fn a_dictionary_is_used_when_it_covers_the_colour() {
+        let context = SpectralContext::new();
+        let atoms: Vec<Spectrum> = [0.18_f64, 0.4, 0.05]
+            .iter()
+            .map(|level| {
+                context
+                    .upsampler
+                    .reconstruct(&[*level; 3], context.camera(), context.grid())
+                    .unwrap()
+            })
+            .collect();
+        let with_dictionary = context.with_atoms(&atoms);
+        assert!(with_dictionary.has_dictionary());
+
+        let neutral = with_dictionary.expose([0.18; 3]).unwrap();
+        assert!((neutral[0] - 0.18_f64.log10()).abs() < 1e-6);
     }
 
     #[test]

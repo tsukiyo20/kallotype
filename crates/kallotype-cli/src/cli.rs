@@ -56,6 +56,16 @@ pub struct StockArgs {
     /// Expose through the spectral path instead of the per-channel scalar one.
     #[arg(long)]
     pub spectral: bool,
+
+    /// Bake the spectral exposure into a table of this size per axis.
+    /// Requires --spectral. Zero disables the table.
+    #[arg(long, value_name = "N", default_value_t = 0)]
+    pub lut_size: usize,
+
+    /// Reflectance CSV to use as the spectral dictionary prior.
+    /// Requires --spectral. Without it the polynomial prior is used alone.
+    #[arg(long, value_name = "PATH")]
+    pub dictionary: Option<std::path::PathBuf>,
 }
 
 /// `kalo render`

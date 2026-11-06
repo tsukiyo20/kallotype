@@ -15,6 +15,7 @@
 use crate::curve::{CharacteristicCurve, sigmoid};
 use crate::development::DevelopmentParams;
 use crate::emulsion::{FilmStock, PaperStock};
+use crate::lut::ExposureLut;
 use crate::spectral::SpectralContext;
 
 /// log10 of the luminance a mid-grey card reflects. The anchor everything is
@@ -37,6 +38,8 @@ pub struct RenderParams {
     pub exposure_ev: f64,
     /// Expose through the spectral path instead of the per-channel scalar one.
     pub spectral: bool,
+    /// Bake the spectral exposure into a `size^3` table. Zero disables it.
+    pub lut_size: usize,
 }
 
 impl Default for RenderParams {
@@ -47,6 +50,7 @@ impl Default for RenderParams {
             development: DevelopmentParams::default(),
             exposure_ev: 0.0,
             spectral: false,
+            lut_size: 0,
         }
     }
 }
@@ -55,6 +59,15 @@ impl RenderParams {
     /// Freeze the development-dependent curves and solve the print balance.
     #[must_use]
     pub fn prepare(&self) -> PreparedRender {
+        self.prepare_with(None)
+    }
+
+    /// As [`Self::prepare`], with an optional dictionary for the spectral prior.
+    ///
+    /// The atoms are what the hybrid measured in `docs/0002-rgb-to-spectrum.md`
+    /// needs; without them the spectral path uses the polynomial prior alone.
+    #[must_use]
+    pub fn prepare_with(&self, atoms: Option<&[kallotype_spectral::Spectrum]>) -> PreparedRender {
         let channels: [CharacteristicCurve; 3] =
             std::array::from_fn(|i| self.development.apply_to(self.film.channels[i]));
 
@@ -80,7 +93,24 @@ impl RenderParams {
             print_slope,
             print_log_e0,
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
-            spectral: self.spectral.then(SpectralContext::new),
+            spectral: self
+                .spectral
+                .then(|| {
+                    let context = SpectralContext::new();
+                    match atoms {
+                        Some(atoms) => context.with_atoms(atoms),
+                        None => context,
+                    }
+                })
+                .filter(|_| self.lut_size < 2),
+            lut: (self.spectral && self.lut_size >= 2).then(|| {
+                let context = SpectralContext::new();
+                let context = match atoms {
+                    Some(atoms) => context.with_atoms(atoms),
+                    None => context,
+                };
+                ExposureLut::bake(self.lut_size, &context)
+            }),
         }
     }
 }
@@ -93,7 +123,10 @@ pub struct PreparedRender {
     print_slope: f64,
     print_log_e0: [f64; 3],
     exposure_shift: f64,
+    /// The live spectral model, when no table was baked.
     spectral: Option<SpectralContext>,
+    /// The baked table, when one was requested.
+    lut: Option<ExposureLut>,
 }
 
 impl PreparedRender {
@@ -103,10 +136,16 @@ impl PreparedRender {
         &self.channels
     }
 
-    /// Whether the spectral path is active.
+    /// Whether the spectral path is active, baked or live.
     #[must_use]
     pub fn is_spectral(&self) -> bool {
-        self.spectral.is_some()
+        self.spectral.is_some() || self.lut.is_some()
+    }
+
+    /// The baked table, if one was requested.
+    #[must_use]
+    pub fn lut(&self) -> Option<&ExposureLut> {
+        self.lut.as_ref()
     }
 
     /// Render one linear-light pixel.
@@ -117,9 +156,14 @@ impl PreparedRender {
         // keeps the function total; it cannot trigger with a context this module
         // built.
         let scalar = || std::array::from_fn(|channel| linear[channel].max(1e-10).log10());
-        let log_e = match &self.spectral {
-            Some(context) => context.expose(linear).unwrap_or_else(scalar),
-            None => scalar(),
+        let log_e = if let Some(lut) = &self.lut {
+            // Baked: three trilinear lookups.
+            lut.sample(linear)
+        } else if let Some(context) = &self.spectral {
+            // Live: reconstruct and integrate.
+            context.expose(linear).unwrap_or_else(scalar)
+        } else {
+            scalar()
         };
 
         let mut out = [0.0; 3];
@@ -211,6 +255,44 @@ mod tests {
                 "mid grey printed at {channel}"
             );
         }
+    }
+
+    #[test]
+    fn the_baked_table_matches_the_live_path() {
+        let live = RenderParams {
+            spectral: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        let baked = RenderParams {
+            spectral: true,
+            lut_size: 33,
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(baked.lut().is_some());
+        assert!(live.lut().is_none());
+
+        let mut worst = 0.0_f64;
+        for r in 0..6 {
+            for g in 0..6 {
+                for b in 0..6 {
+                    let rgb = [
+                        0.02 + 0.16 * f64::from(r),
+                        0.02 + 0.16 * f64::from(g),
+                        0.02 + 0.16 * f64::from(b),
+                    ];
+                    let a = live.render_pixel(rgb);
+                    let c = baked.render_pixel(rgb);
+                    for channel in 0..3 {
+                        worst = worst.max((a[channel] - c[channel]).abs());
+                    }
+                }
+            }
+        }
+        // 0.05 reflectance is about the corner error of a 33^3 table; the
+        // mean difference is two orders of magnitude smaller.
+        assert!(worst < 0.05, "baked path differs by {worst}");
     }
 
     #[test]

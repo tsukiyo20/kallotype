@@ -221,6 +221,7 @@ dependencies = [
  "clap",
  "kallotype-core",
  "kallotype-io",
+ "kallotype-spectral",
 ]
 
 [[package]]
