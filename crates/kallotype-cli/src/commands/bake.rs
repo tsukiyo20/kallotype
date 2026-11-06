@@ -18,7 +18,9 @@ pub fn run(args: BakeArgs) -> Result<(), CliError> {
         });
     }
 
-    let mut context = SpectralContext::new();
+    let mut context =
+        SpectralContext::new().with_camera(super::common::camera_profile(args.camera.as_deref())?);
+    println!("  camera {}", context.camera().name());
     if let Some(path) = &args.dictionary {
         let set = kallotype_spectral::load_csv(path).map_err(|error| CliError::Dictionary {
             path: path.clone(),

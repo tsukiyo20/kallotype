@@ -138,6 +138,11 @@ pub struct BakeArgs {
     /// Reflectance CSV to use as the spectral dictionary prior.
     #[arg(long, value_name = "PATH")]
     pub dictionary: Option<std::path::PathBuf>,
+
+    /// Which sensor the input is assumed to have come from. Must match the
+    /// `--camera` used to render, or the table will be refused.
+    #[arg(long, value_name = "NAME|PATH")]
+    pub camera: Option<String>,
 }
 
 /// `kalo curve`
