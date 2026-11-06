@@ -106,17 +106,7 @@ impl ScanContext {
             neutral_rgb: Vec::new(),
         };
 
-        context.white_xyz = context.xyz([0.0; 3]);
-        context.white_rgb = context.matrix([1.0; 3]);
-        context.neutral_rgb = (0..=NEUTRAL_STEPS)
-            .map(|index| {
-                let density = NEUTRAL_MAX_DENSITY * index as f64 / NEUTRAL_STEPS as f64;
-                let rgb = context.matrix(context.normalised_xyz([density; 3]));
-                // Same white-relative basis as `scan`, or the balance mixes two
-                // scales and white comes out at 0.84 instead of 1.0.
-                std::array::from_fn(|axis| rgb[axis] / context.white_rgb[axis].max(1e-12))
-            })
-            .collect();
+        context.recompute();
         context
     }
 
@@ -150,6 +140,30 @@ impl ScanContext {
         });
         let target = (neutral[0].max(1e-12) * neutral[1].max(1e-12) * neutral[2].max(1e-12)).cbrt();
         std::array::from_fn(|axis| rgb[axis] * target / neutral[axis].max(1e-12))
+    }
+
+    /// Replace the placeholder image dyes with measured spectra.
+    ///
+    /// White, the neutral-axis table and every derived quantity are recomputed,
+    /// because all three depend on the dyes.
+    #[must_use]
+    pub fn with_dyes(mut self, dye: [Spectrum; 3]) -> Self {
+        self.dye = dye.map(|spectrum| spectrum.resampled(&self.grid));
+        self.recompute();
+        self
+    }
+
+    /// Recompute everything that depends on the dye spectra.
+    fn recompute(&mut self) {
+        self.white_xyz = self.xyz([0.0; 3]);
+        self.white_rgb = self.matrix([1.0; 3]);
+        self.neutral_rgb = (0..=NEUTRAL_STEPS)
+            .map(|index| {
+                let density = NEUTRAL_MAX_DENSITY * index as f64 / NEUTRAL_STEPS as f64;
+                let rgb = self.matrix(self.normalised_xyz([density; 3]));
+                std::array::from_fn(|axis| rgb[axis] / self.white_rgb[axis].max(1e-12))
+            })
+            .collect();
     }
 
     /// The wavelength grid.
@@ -230,6 +244,27 @@ mod tests {
         for channel in rgb {
             assert!((channel - 1.0).abs() < 0.01, "white scans at {channel}");
         }
+    }
+
+    #[test]
+    fn measured_dyes_replace_the_placeholders() {
+        let baseline = ScanContext::new().scan([1.0, 0.6, 0.3]);
+        let grid = ScanContext::new().grid().clone();
+        let narrow: [Spectrum; 3] = [450.0, 550.0, 650.0].map(|peak| {
+            let mut spectrum = Spectrum::filled(grid.clone(), 0.0);
+            for (index, value) in spectrum.values_mut().iter_mut().enumerate() {
+                let wavelength = grid.start_nm() + grid.step_nm() * index as f64;
+                *value = (-0.5 * ((wavelength - peak) / 12.0).powi(2)).exp();
+            }
+            spectrum
+        });
+        let replaced = ScanContext::new().with_dyes(narrow).scan([1.0, 0.6, 0.3]);
+        let difference: f64 = baseline
+            .iter()
+            .zip(&replaced)
+            .map(|(a, b)| (a - b).abs())
+            .sum();
+        assert!(difference > 1e-3, "replacing the dyes changed nothing");
     }
 
     #[test]

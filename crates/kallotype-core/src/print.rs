@@ -67,6 +67,9 @@ pub struct PrintContext {
     dye: [Spectrum; 3],
     paper: [Spectrum; 3],
     reference: [f64; 3],
+    /// The density the print balance is anchored on, kept so that replacing the
+    /// spectra can recompute the anchor.
+    reference_density: [f64; 3],
 }
 
 impl PrintContext {
@@ -93,6 +96,7 @@ impl PrintContext {
             dye,
             paper,
             reference: [1.0; 3],
+            reference_density,
         };
         // Anchor on the *neutral* density at the reference level, so that grey
         // stays grey across the scale. The pipeline compensates for the small
@@ -101,6 +105,19 @@ impl PrintContext {
             (reference_density[0] + reference_density[1] + reference_density[2]) / 3.0;
         context.reference = context.balanced([neutral_level; 3]);
         context
+    }
+
+    /// Replace the placeholder bands with measured spectra.
+    ///
+    /// The spectra are resampled onto the internal grid, so anything digitised
+    /// on a uniform grid can be passed in. The reference response is recomputed,
+    /// because the anchor depends on the dyes.
+    #[must_use]
+    pub fn with_spectra(mut self, dye: [Spectrum; 3], paper: [Spectrum; 3]) -> Self {
+        self.dye = dye.map(|spectrum| spectrum.resampled(&self.grid));
+        self.paper = paper.map(|spectrum| spectrum.resampled(&self.grid));
+        self.reference = self.balanced(self.reference_density);
+        self
     }
 
     /// The wavelength grid.
@@ -222,6 +239,32 @@ mod tests {
         let base = context.expose(reference_density());
         let denser = context.expose([1.6, 1.1, 1.0]);
         assert!(denser[0] < base[0], "{denser:?}");
+    }
+
+    #[test]
+    fn measured_spectra_replace_the_placeholders() {
+        let context = PrintContext::new(reference_density());
+        let baseline = context.expose([1.0, 0.5, 0.2]);
+
+        // Narrow bands are a different physical world: less overlap, less
+        // crosstalk, so the numbers must move.
+        let grid = context.grid().clone();
+        let narrow: [Spectrum; 3] = [450.0, 550.0, 650.0].map(|peak| {
+            let mut spectrum = Spectrum::filled(grid.clone(), 0.0);
+            for (index, value) in spectrum.values_mut().iter_mut().enumerate() {
+                let wavelength = grid.start_nm() + grid.step_nm() * index as f64;
+                *value = (-0.5 * ((wavelength - peak) / 12.0).powi(2)).exp();
+            }
+            spectrum
+        });
+        let replaced = PrintContext::new(reference_density()).with_spectra(narrow.clone(), narrow);
+        let moved = replaced.expose([1.0, 0.5, 0.2]);
+        let difference: f64 = baseline
+            .iter()
+            .zip(&moved)
+            .map(|(a, b)| (a - b).abs())
+            .sum();
+        assert!(difference > 1e-3, "replacing the spectra changed nothing");
     }
 
     #[test]
