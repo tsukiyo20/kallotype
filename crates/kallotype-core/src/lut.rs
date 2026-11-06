@@ -18,7 +18,7 @@ use crate::spectral::SpectralContext;
 /// Magic bytes at the start of a baked table.
 const MAGIC: &[u8; 4] = b"KLUT";
 /// Format version. Bumped when the layout changes.
-const VERSION: u16 = 1;
+const VERSION: u16 = 2;
 /// Channels per sample: the model has always produced three.
 const CHANNELS: u16 = 3;
 /// Largest side accepted on read, to bound allocation from a hostile file.
@@ -44,6 +44,8 @@ pub enum LutError {
     Layout,
     /// The payload does not match its checksum.
     Checksum,
+    /// The table declares a provenance string longer than the header allows.
+    ProvenanceTooLong,
 }
 
 impl std::fmt::Display for LutError {
@@ -55,6 +57,7 @@ impl std::fmt::Display for LutError {
             Self::Size(size) => write!(f, "table side {size} is outside 2..={MAX_SIZE}"),
             Self::Layout => write!(f, "the table's declared layout does not match its size"),
             Self::Checksum => write!(f, "the table is corrupt (checksum mismatch)"),
+            Self::ProvenanceTooLong => write!(f, "the table's provenance string is too long"),
         }
     }
 }
@@ -91,6 +94,8 @@ pub struct ExposureLut {
     size: usize,
     /// `size^3` entries, index order `(r, g, b)`.
     data: Vec<[f32; 3]>,
+    /// Which model baked it: camera, film, grid. Descriptive and checkable.
+    identity: String,
 }
 
 impl ExposureLut {
@@ -122,7 +127,17 @@ impl ExposureLut {
                 }
             }
         }
-        Self { size, data }
+        Self {
+            size,
+            data,
+            identity: context.identity(),
+        }
+    }
+
+    /// The model identity recorded at bake time.
+    #[must_use]
+    pub fn identity(&self) -> &str {
+        &self.identity
     }
 
     /// Number of samples per axis.
@@ -147,11 +162,18 @@ impl ExposureLut {
     /// Returns [`LutError::Io`] if the file cannot be written.
     pub fn write(&self, path: impl AsRef<Path>) -> Result<(), LutError> {
         let path = path.as_ref();
-        let mut bytes = Vec::with_capacity(12 + self.data.len() * 12 + 4);
+        let identity = self.identity.as_bytes();
+        let Ok(identity_len) = u16::try_from(identity.len()) else {
+            return Err(LutError::ProvenanceTooLong);
+        };
+
+        let mut bytes = Vec::with_capacity(14 + identity.len() + self.data.len() * 12 + 4);
         bytes.extend_from_slice(MAGIC);
         bytes.extend_from_slice(&VERSION.to_le_bytes());
         bytes.extend_from_slice(&(self.size as u32).to_le_bytes());
         bytes.extend_from_slice(&CHANNELS.to_le_bytes());
+        bytes.extend_from_slice(&identity_len.to_le_bytes());
+        bytes.extend_from_slice(identity);
         for entry in &self.data {
             for value in entry {
                 bytes.extend_from_slice(&value.to_le_bytes());
@@ -179,7 +201,7 @@ impl ExposureLut {
             source,
         })?;
 
-        if bytes.len() < 16 || &bytes[0..4] != MAGIC {
+        if bytes.len() < 18 || &bytes[0..4] != MAGIC {
             return Err(LutError::Magic);
         }
         let version = u16::from_le_bytes([bytes[4], bytes[5]]);
@@ -195,7 +217,9 @@ impl ExposureLut {
             return Err(LutError::Layout);
         }
 
-        let expected = 12 + size * size * size * usize::from(CHANNELS) * 4;
+        let identity_len = u16::from_le_bytes([bytes[12], bytes[13]]) as usize;
+        let payload_start = 14 + identity_len;
+        let expected = payload_start + size * size * size * usize::from(CHANNELS) * 4;
         if bytes.len() != expected + 4 {
             return Err(LutError::Layout);
         }
@@ -209,8 +233,10 @@ impl ExposureLut {
             return Err(LutError::Checksum);
         }
 
+        let identity = String::from_utf8_lossy(&bytes[14..payload_start]).into_owned();
+
         let mut data = Vec::with_capacity(size * size * size);
-        for chunk in bytes[12..expected].chunks_exact(12) {
+        for chunk in bytes[payload_start..expected].chunks_exact(12) {
             let mut entry = [0.0_f32; 3];
             for (index, value) in entry.iter_mut().enumerate() {
                 let offset = index * 4;
@@ -224,7 +250,11 @@ impl ExposureLut {
             data.push(entry);
         }
 
-        Ok(Self { size, data })
+        Ok(Self {
+            size,
+            data,
+            identity,
+        })
     }
 
     /// Trilinear interpolation, clamped at the edges.
@@ -339,8 +369,18 @@ mod tests {
         let _ = std::fs::remove_file(&path);
 
         assert_eq!(loaded.size(), table.size());
+        assert_eq!(loaded.identity(), table.identity());
         let probe = [0.2, 0.35, 0.05];
         assert_eq!(loaded.sample(probe), table.sample(probe));
+    }
+
+    #[test]
+    fn the_identity_names_the_model() {
+        let context = SpectralContext::new();
+        let identity = context.identity();
+        assert!(identity.contains("camera="), "{identity}");
+        assert!(identity.contains("film="), "{identity}");
+        assert!(identity.contains("grid="), "{identity}");
     }
 
     #[test]

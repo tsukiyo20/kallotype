@@ -147,6 +147,15 @@ fn bake_writes_a_table_and_render_uses_it() {
         stdout(&rendered)
     );
 
+    // The table records which model baked it, and the render loaded it without
+    // a warning because the identities match.
+    let bytes = std::fs::read(&table).expect("table");
+    let text = String::from_utf8_lossy(&bytes[14..80]).to_string();
+    assert!(
+        text.contains("camera="),
+        "no provenance in the header: {text}"
+    );
+
     std::fs::remove_dir_all(&dir).expect("cleanup");
 }
 

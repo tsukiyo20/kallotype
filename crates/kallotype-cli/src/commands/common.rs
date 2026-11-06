@@ -22,6 +22,8 @@ pub struct Selection {
     pub dictionary: Option<std::path::PathBuf>,
     /// A table baked by `kalo bake`.
     pub lut: Option<std::path::PathBuf>,
+    /// Whether a model mismatch in the table is tolerated.
+    pub allow_model_mismatch: bool,
 }
 
 impl Selection {
@@ -49,6 +51,18 @@ impl Selection {
                 path: path.clone(),
                 message: error.to_string(),
             })?;
+
+            let expected = kallotype_core::SpectralContext::new().identity();
+            if let Err(message) = check_model(table.identity(), &expected) {
+                if !self.allow_model_mismatch {
+                    return Err(CliError::Lut {
+                        path: path.clone(),
+                        message,
+                    });
+                }
+                eprintln!("warning: {message}");
+            }
+
             return Ok(params.prepare_with_lut(table));
         }
 
@@ -69,6 +83,20 @@ impl Selection {
             }
         };
         Ok(params.prepare_with(atoms.as_deref()))
+    }
+}
+
+/// Decide whether a table's recorded model matches the one this build implements.
+///
+/// Split out from the loader so it can be tested without crafting a corrupt file.
+pub fn check_model(table: &str, build: &str) -> Result<(), String> {
+    if table == build {
+        Ok(())
+    } else {
+        Err(format!(
+            "baked for a different model: table says `{table}`, this build is `{build}`. \
+             Pass --allow-model-mismatch to use it anyway."
+        ))
     }
 }
 
@@ -112,6 +140,7 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         lut_size: stock.lut_size,
         dictionary: stock.dictionary.clone(),
         lut: stock.lut.clone(),
+        allow_model_mismatch: stock.allow_model_mismatch,
     })
 }
 
@@ -161,5 +190,23 @@ pub fn print_report(
 
     if width > 0 {
         println!("  image     {width}x{height}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::check_model;
+
+    #[test]
+    fn a_matching_identity_passes() {
+        assert!(check_model("camera=a;film=b", "camera=a;film=b").is_ok());
+    }
+
+    #[test]
+    fn a_foreign_identity_names_both_sides() {
+        let message = check_model("camera=old;film=b", "camera=new;film=b").unwrap_err();
+        assert!(message.contains("camera=old"), "{message}");
+        assert!(message.contains("camera=new"), "{message}");
+        assert!(message.contains("--allow-model-mismatch"), "{message}");
     }
 }

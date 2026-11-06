@@ -72,6 +72,10 @@ pub struct StockArgs {
     /// Use a table baked by `kalo bake` instead of computing the exposure.
     #[arg(long, value_name = "PATH")]
     pub lut: Option<std::path::PathBuf>,
+
+    /// Load a table even if it was baked for a different camera or film.
+    #[arg(long)]
+    pub allow_model_mismatch: bool,
 }
 
 /// `kalo render`

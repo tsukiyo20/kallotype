@@ -119,6 +119,22 @@ impl SpectralContext {
         self.dictionary.is_some()
     }
 
+    /// A stable description of the model this context implements.
+    ///
+    /// Recorded in baked tables so that loading a table baked for a different
+    /// camera or film fails loudly instead of silently producing wrong colour.
+    #[must_use]
+    pub fn identity(&self) -> String {
+        format!(
+            "camera={};film={};grid={}:{}:{}",
+            self.camera.name(),
+            self.film.name(),
+            self.grid.start_nm(),
+            self.grid.step_nm(),
+            self.grid.len()
+        )
+    }
+
     /// The wavelength grid.
     #[must_use]
     pub fn grid(&self) -> &Spectrum {
