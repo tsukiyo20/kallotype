@@ -57,6 +57,16 @@ kalo render photo.png -o photo_c41.png --film c41_standard --dev 9.0 --ev +0.3
 > linker refuses to run until the licence is accepted, and `git` fails the same
 > way.
 
+## Research
+
+The work is recorded as it happened, not rewritten afterwards:
+
+- **[Research log](docs/RESEARCH-LOG.md)** — each step's question, method, result
+  and what changed because of it.
+- **[Data catalogue](docs/DATA-CATALOG.md)** — every dataset, what consumes it,
+  and which components are still placeholders.
+- **[ADRs](docs/)** — the decisions themselves, with their evidence.
+
 ## Development
 
 ```bash
