@@ -30,6 +30,7 @@ pub mod curve;
 pub mod development;
 pub mod emulsion;
 pub mod grain;
+pub mod halation;
 pub mod lut;
 pub mod pipeline;
 pub mod print;
@@ -41,8 +42,12 @@ pub use curve::CharacteristicCurve;
 pub use development::DevelopmentParams;
 pub use emulsion::{FILM_STOCKS, FilmStock, PAPER_STOCKS, PaperStock, film_stock, paper_stock};
 pub use grain::GrainField;
+pub use halation::{Halation, Halo};
 pub use lut::ExposureLut;
-pub use pipeline::{PreparedRender, RenderParams, render_pixels, render_pixels_with_grain};
+pub use pipeline::{
+    Finishing, PreparedRender, RenderParams, render_pixels, render_pixels_finished,
+    render_pixels_with_grain,
+};
 pub use print::PrintContext;
 pub use scan::ScanContext;
 pub use spectral::{CameraProfile, SpectralContext};

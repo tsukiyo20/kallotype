@@ -16,9 +16,10 @@ developed* as a first-class parameter, not as a separate preset.
 
 Phases 0–3 are in place: the characteristic curve and its dependence on
 development time and temperature, the spectral exposure path, the spectral print
-and the spectral scan. Phase 5 has started with **grain** (`--grain`), modelled
-as a particle process on the film's own scale — see below. Halation and couplers
-are not modelled yet.
+and the spectral scan. Phase 5 is in: **grain** (`--grain`), modelled as a
+particle process on the film's own scale, and **halation** (`--halation`), the
+light that scatters in the emulsion and reflects off the base. Couplers are not
+modelled yet.
 
 The spectral path is reached with `--spectral` (and `--spectral-print`,
 `--spectral-scan`); without those flags the renderer uses the per-channel scalar
@@ -128,7 +129,12 @@ Three things are worth calling out:
    reflectance. This is what an operator does with a test strip.
 3. **Everything is f64 and in physical units**, so a GPU implementation can be
    checked against this one rather than trusted.
-4. **Grain is a count, not noise.** A pixel is an aperture over a random
+4. **Halation is light, so it is added to the exposure.** Two unit-sum Gaussian
+   kernels — a short near-neutral scatter and a long red reflection, both in
+   micrometres of film rather than pixels — move the exposure around, and a
+   documented fraction returns. It runs before grain, because it is light
+   exposing the emulsion and grain is what that light develops.
+5. **Grain is a count, not noise.** A pixel is an aperture over a random
    arrangement of developed grains, so its exposure has counting statistics:
    `σ_logE = 1/(ln 10 · √N)` where `N` is how many grains the pixel holds. That
    one expression gives Selwyn granularity (`σ ∝ 1/√area`, so grain survives a

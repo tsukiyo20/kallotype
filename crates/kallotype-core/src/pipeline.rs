@@ -261,6 +261,24 @@ impl PreparedRender {
         }
     }
 
+    /// Curve, print and scan for one pixel, with optional grain on the exposure.
+    fn finish(
+        &self,
+        log_e: [f64; 3],
+        x: usize,
+        y: usize,
+        grain: Option<&crate::grain::GrainField>,
+    ) -> [f64; 3] {
+        let density = self.negative_density(log_e);
+        let jittered: [f64; 3] = match grain {
+            Some(grain) => std::array::from_fn(|channel| {
+                log_e[channel] + grain.jitter(x, y, density[channel], channel)
+            }),
+            None => log_e,
+        };
+        self.positive(self.negative_density(jittered))
+    }
+
     /// Render one linear-light pixel.
     #[must_use]
     pub fn render_pixel(&self, linear: [f64; 3]) -> [f64; 3] {
@@ -268,7 +286,51 @@ impl PreparedRender {
     }
 }
 
-/// Render a whole image in place. Pixels are linear light on both sides.
+/// What happens between the exposure and the development.
+///
+/// Both are optional and independent; the model without them is the model.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Finishing<'a> {
+    /// Light that scatters in the emulsion and reflects off the base.
+    pub halation: Option<&'a crate::halation::Halation>,
+    /// The emulsion's grain.
+    pub grain: Option<&'a crate::grain::GrainField>,
+}
+
+/// Render a whole image with the finishing effects.
+///
+/// Halation runs first and needs the whole frame, because it moves light
+/// between pixels; grain runs second and is per pixel. Both are applied to the
+/// exposure — one to where the light went, one to how many grains it developed —
+/// which is why they sit before the curve rather than after the print.
+pub fn render_pixels_finished(
+    pixels: &mut [[f64; 3]],
+    prepared: &PreparedRender,
+    width: usize,
+    height: usize,
+    finishing: &Finishing,
+) {
+    let width = width.max(1);
+    if let Some(halation) = finishing.halation {
+        let mut log_e: Vec<[f64; 3]> = pixels
+            .iter()
+            .map(|pixel| prepared.log_exposure(*pixel))
+            .collect();
+        halation.apply(&mut log_e, width, height);
+        for (index, pixel) in pixels.iter_mut().enumerate() {
+            let (x, y) = (index % width, index / width);
+            *pixel = prepared.finish(log_e[index], x, y, finishing.grain);
+        }
+        return;
+    }
+    for (index, pixel) in pixels.iter_mut().enumerate() {
+        let (x, y) = (index % width, index / width);
+        let log_e = prepared.log_exposure(*pixel);
+        *pixel = prepared.finish(log_e, x, y, finishing.grain);
+    }
+}
+
+/// Render a whole image in place.
 pub fn render_pixels(pixels: &mut [[f64; 3]], prepared: &PreparedRender) {
     for pixel in pixels.iter_mut() {
         *pixel = prepared.render_pixel(*pixel);
@@ -285,15 +347,16 @@ pub fn render_pixels_with_grain(
     prepared: &PreparedRender,
     grain: &crate::grain::GrainField,
 ) {
-    let width = grain.width.max(1);
-    for (index, pixel) in pixels.iter_mut().enumerate() {
-        let log_e = prepared.log_exposure(*pixel);
-        let density = prepared.negative_density(log_e);
-        let jittered: [f64; 3] = std::array::from_fn(|channel| {
-            log_e[channel] + grain.jitter(index % width, index / width, density[channel], channel)
-        });
-        *pixel = prepared.positive(prepared.negative_density(jittered));
-    }
+    render_pixels_finished(
+        pixels,
+        prepared,
+        grain.width,
+        grain.height,
+        &Finishing {
+            halation: None,
+            grain: Some(grain),
+        },
+    );
 }
 
 #[cfg(test)]

@@ -204,6 +204,7 @@ pub fn print_report(
     width: u32,
     height: u32,
     grain: Option<&kallotype_core::GrainField>,
+    halation: Option<&kallotype_core::Halation>,
 ) {
     let development = params.development;
 
@@ -238,6 +239,19 @@ pub fn print_report(
     );
     if prepared.is_spectral() || prepared.lut().is_some() {
         println!("  camera    {}", params.camera.name());
+    }
+    if let Some(halation) = halation {
+        println!(
+            "  halation  scatter σ {:.0} µm {:.1}/{:.1}/{:.1} %  reflection σ {:.0} µm {:.1}/{:.1}/{:.1} %  (placeholder)",
+            halation.scatter.sigma_um,
+            100.0 * halation.scatter.strength[0],
+            100.0 * halation.scatter.strength[1],
+            100.0 * halation.scatter.strength[2],
+            halation.reflection.sigma_um,
+            100.0 * halation.reflection.strength[0],
+            100.0 * halation.reflection.strength[1],
+            100.0 * halation.reflection.strength[2],
+        );
     }
     if let Some(grain) = grain {
         println!(

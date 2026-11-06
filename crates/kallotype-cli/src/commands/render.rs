@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use kallotype_core::{GrainField, render_pixels, render_pixels_with_grain};
+use kallotype_core::{Finishing, GrainField, Halation, render_pixels_finished};
 use kallotype_io::{load, save};
 
 use crate::cli::RenderArgs;
@@ -22,6 +22,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         })?;
     let (width, height) = (image.width, image.height);
 
+    let pixel_um = args.frame_mm * 1000.0 / width.max(1) as f64;
     let grain = args.grain.then(|| {
         GrainField::new(
             width as usize,
@@ -30,10 +31,18 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             args.grain_seed,
         )
     });
-    match &grain {
-        Some(field) => render_pixels_with_grain(&mut image.pixels, &prepared, field),
-        None => render_pixels(&mut image.pixels, &prepared),
-    }
+    let halation = args.halation.then(|| Halation::typical(pixel_um));
+    let finishing = Finishing {
+        halation: halation.as_ref(),
+        grain: grain.as_ref(),
+    };
+    render_pixels_finished(
+        &mut image.pixels,
+        &prepared,
+        width as usize,
+        height as usize,
+        &finishing,
+    );
 
     ensure_parent(&args.output)?;
 
@@ -42,7 +51,14 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         source,
     })?;
 
-    print_report(&params, &prepared, width, height, grain.as_ref());
+    print_report(
+        &params,
+        &prepared,
+        width,
+        height,
+        grain.as_ref(),
+        halation.as_ref(),
+    );
     println!();
     println!(
         "  wrote     {} ({}x{})",
