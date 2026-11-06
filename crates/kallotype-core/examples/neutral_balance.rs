@@ -36,6 +36,31 @@ fn main() {
         );
     }
 
+    let full = PrintContext::new([1.2, 1.1, 1.0]).with_spectra(
+        [
+            read("vision3_500t_cyan"),
+            read("vision3_500t_magenta"),
+            read("vision3_500t_yellow"),
+        ],
+        [
+            read("paper_endura_metallic_sensitivity_cyan"),
+            read("paper_endura_metallic_sensitivity_magenta"),
+            read("paper_endura_metallic_sensitivity_yellow"),
+        ],
+    );
+    println!();
+    println!("measured film dyes + measured paper layers:");
+    for step in 1..=10 {
+        let density = 0.2 * f64::from(step);
+        let g = full.balance_gain(density);
+        let spread = g.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            - g.iter().copied().fold(f64::INFINITY, f64::min);
+        println!(
+            "  {density:>4.1}: gains [{:>5.3} {:>5.3} {:>5.3}] spread {spread:.3}",
+            g[0], g[1], g[2]
+        );
+    }
+
     println!();
     println!("paper dyes in the scan, neutral densities (should be neutral):");
     let scan = ScanContext::new().with_dyes([
