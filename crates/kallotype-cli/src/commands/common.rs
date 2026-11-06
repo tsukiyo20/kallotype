@@ -24,6 +24,8 @@ pub struct Selection {
     pub lut: Option<std::path::PathBuf>,
     /// Whether a model mismatch in the table is tolerated.
     pub allow_model_mismatch: bool,
+    /// Whether to print through the spectral model.
+    pub spectral_print: bool,
 }
 
 impl Selection {
@@ -37,6 +39,7 @@ impl Selection {
             exposure_ev,
             spectral: self.spectral || self.lut.is_some(),
             lut_size: self.lut_size,
+            spectral_print: self.spectral_print,
         }
     }
 }
@@ -141,6 +144,7 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         dictionary: stock.dictionary.clone(),
         lut: stock.lut.clone(),
         allow_model_mismatch: stock.allow_model_mismatch,
+        spectral_print: stock.spectral_print,
     })
 }
 
@@ -156,6 +160,14 @@ pub fn print_report(
     println!("kallotype {}", env!("CARGO_PKG_VERSION"));
     println!("  film      {}  ({})", params.film.id, params.film.label);
     println!("  paper     {}  ({})", params.paper.id, params.paper.label);
+    println!(
+        "  print     {}",
+        if prepared.is_spectral_print() {
+            "spectral (dye absorption × paper layers)"
+        } else {
+            "scalar per channel"
+        }
+    );
     println!(
         "  exposure  {}",
         if prepared.lut().is_some() {

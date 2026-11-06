@@ -16,6 +16,7 @@ use crate::curve::{CharacteristicCurve, sigmoid};
 use crate::development::DevelopmentParams;
 use crate::emulsion::{FilmStock, PaperStock};
 use crate::lut::ExposureLut;
+use crate::print::PrintContext;
 use crate::spectral::SpectralContext;
 
 /// log10 of the luminance a mid-grey card reflects. The anchor everything is
@@ -40,6 +41,8 @@ pub struct RenderParams {
     pub spectral: bool,
     /// Bake the spectral exposure into a `size^3` table. Zero disables it.
     pub lut_size: usize,
+    /// Print through spectral dye absorption and paper layer sensitivities.
+    pub spectral_print: bool,
 }
 
 impl Default for RenderParams {
@@ -51,6 +54,7 @@ impl Default for RenderParams {
             exposure_ev: 0.0,
             spectral: false,
             lut_size: 0,
+            spectral_print: false,
         }
     }
 }
@@ -99,16 +103,28 @@ impl RenderParams {
         let z_target = (t_target / (1.0 - t_target)).ln();
 
         let mid = mid_grey_log_e();
-        let print_log_e0: [f64; 3] = std::array::from_fn(|i| {
-            let density_mid = channels[i].density(mid);
-            -density_mid - z_target / print_slope
-        });
+        let density_mid: [f64; 3] = std::array::from_fn(|i| channels[i].density(mid));
+
+        // Two ways to describe what reaches the paper. The scalar one treats each
+        // density as that channel's light loss; the spectral one integrates the
+        // dyes' absorption bands against the paper's layer sensitivities.
+        let print = self.spectral_print.then(|| PrintContext::new(density_mid));
+        let print_log_e0: [f64; 3] = match &print {
+            // The spectral model is anchored on neutral grey, so the actual
+            // mid-grey exposure is subtracted here rather than assumed to be 0.
+            Some(context) => {
+                let mid_exposure = context.expose(density_mid);
+                std::array::from_fn(|i| mid_exposure[i] - z_target / print_slope)
+            }
+            None => std::array::from_fn(|i| -density_mid[i] - z_target / print_slope),
+        };
 
         PreparedRender {
             channels,
             paper,
             print_slope,
             print_log_e0,
+            print,
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
             spectral: self
                 .spectral
@@ -144,6 +160,8 @@ pub struct PreparedRender {
     spectral: Option<SpectralContext>,
     /// The baked table, when one was requested.
     lut: Option<ExposureLut>,
+    /// The spectral print model, when requested.
+    print: Option<PrintContext>,
 }
 
 impl PreparedRender {
@@ -157,6 +175,12 @@ impl PreparedRender {
     #[must_use]
     pub fn is_spectral(&self) -> bool {
         self.spectral.is_some() || self.lut.is_some()
+    }
+
+    /// Whether the print is going through the spectral model.
+    #[must_use]
+    pub fn is_spectral_print(&self) -> bool {
+        self.print.is_some()
     }
 
     /// The baked table, if one was requested.
@@ -183,12 +207,28 @@ impl PreparedRender {
             scalar()
         };
 
+        let mut density_cmy = [0.0; 3];
+        for channel in 0..3 {
+            density_cmy[channel] =
+                self.channels[channel].density(log_e[channel] + self.exposure_shift);
+        }
+
+        // The spectral print does one integration for all three layers; calling
+        // it inside the channel loop made it six times more expensive per pixel.
+        let print_exposure = self
+            .print
+            .as_ref()
+            .map(|context| context.expose(density_cmy));
+
         let mut out = [0.0; 3];
         for channel in 0..3 {
-            let log_e = log_e[channel] + self.exposure_shift;
-            let density_negative = self.channels[channel].density(log_e);
-            // The enlarger sees the light the negative transmitted.
-            let log_transmittance = -density_negative;
+            let density_negative = density_cmy[channel];
+            // The enlarger sees the light the negative transmitted: per channel
+            // in the scalar model, through the dye spectra in the spectral one.
+            let log_transmittance = match &print_exposure {
+                Some(values) => values[channel],
+                None => -density_negative,
+            };
             let z = self.print_slope * (log_transmittance - self.print_log_e0[channel]);
             let density_print = self.paper.d_min + self.paper.span() * sigmoid(z);
             out[channel] = 10.0_f64.powf(-density_print).clamp(0.0, 1.0);
@@ -271,6 +311,58 @@ mod tests {
                 (channel - 0.18).abs() < 0.01,
                 "mid grey printed at {channel}"
             );
+        }
+    }
+
+    #[test]
+    fn spectral_print_keeps_mid_grey_on_target() {
+        let prepared = RenderParams {
+            spectral_print: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(prepared.is_spectral_print());
+        let out = prepared.render_pixel([0.18, 0.18, 0.18]);
+        for channel in out {
+            assert!(
+                (channel - 0.18).abs() < 0.01,
+                "mid grey printed at {channel}"
+            );
+        }
+    }
+
+    #[test]
+    fn spectral_print_couples_the_layers() {
+        let scalar = RenderParams::default().prepare();
+        let spectral = RenderParams {
+            spectral_print: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+
+        // A cyan-dominant patch: its density sits mostly in one channel, but the
+        // dyes overlap, so the paper's other layers must move too.
+        let sample = [0.08, 0.42, 0.45];
+        let a = scalar.render_pixel(sample);
+        let b = spectral.render_pixel(sample);
+        let difference: f64 = a.iter().zip(&b).map(|(x, y)| (x - y).abs()).sum();
+        assert!(difference > 1e-4, "no coupling visible: {difference}");
+    }
+
+    #[test]
+    fn spectral_print_is_monotonic_and_bounded() {
+        let prepared = RenderParams {
+            spectral_print: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        let mut previous = -1.0;
+        for i in -80..80 {
+            let x = 2.0_f64.powf(f64::from(i) / 10.0) * 0.18;
+            let y = prepared.render_pixel([x; 3])[1];
+            assert!((0.0..=1.0).contains(&y));
+            assert!(y >= previous - 1e-9, "non-monotonic at {x}");
+            previous = y;
         }
     }
 

@@ -76,6 +76,10 @@ pub struct StockArgs {
     /// Load a table even if it was baked for a different camera or film.
     #[arg(long)]
     pub allow_model_mismatch: bool,
+
+    /// Print through spectral dye absorption and paper layer sensitivities.
+    #[arg(long)]
+    pub spectral_print: bool,
 }
 
 /// `kalo render`
