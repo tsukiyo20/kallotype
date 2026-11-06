@@ -8,6 +8,10 @@
 # unavailable (sandboxes, CI images without a writable ~/.cargo).
 /.cargo-home/
 
+# Compiled Python from the scripts in scripts/
+__pycache__/
+*.pyc
+
 # Editor and OS noise
 .DS_Store
 .idea/
