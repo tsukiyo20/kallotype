@@ -68,6 +68,8 @@ struct Options {
     dictionary_limit: Option<usize>,
     /// Relative response residual above which the hybrid falls back.
     hybrid_threshold: f64,
+    /// Shift applied to the synthetic camera's peaks, in nanometres.
+    camera_shift: f64,
     verbose: bool,
 }
 
@@ -103,6 +105,7 @@ fn parse_args() -> Result<Options, String> {
     let mut dictionary = None;
     let mut dictionary_limit = None;
     let mut hybrid_threshold = 0.02_f64;
+    let mut camera_shift = 0.0_f64;
     let mut verbose = false;
 
     let mut args = std::env::args().skip(1);
@@ -144,6 +147,15 @@ fn parse_args() -> Result<Options, String> {
                     .parse()
                     .map_err(|_| "--hybrid-threshold must be a number".to_owned())?;
             }
+            "--camera-shift" => {
+                camera_shift = args
+                    .next()
+                    .ok_or("--camera-shift needs a value")?
+                    .parse()
+                    .map_err(|_| "--camera-shift must be a number".to_string())?;
+                // The shift is only meaningful for the parameterised camera.
+                camera = Camera::Generic;
+            }
             "--verbose" => verbose = true,
             "--help" | "-h" => {
                 println!(
@@ -163,6 +175,7 @@ fn parse_args() -> Result<Options, String> {
         dictionary,
         dictionary_limit,
         hybrid_threshold,
+        camera_shift,
         verbose,
     })
 }
@@ -207,7 +220,7 @@ fn run(options: &Options) -> Result<(), String> {
 
     let camera = match options.camera {
         Camera::Cie1931 => Sensor::cie1931(&set.grid),
-        Camera::Generic => Sensor::generic_camera(&set.grid),
+        Camera::Generic => Sensor::generic_camera_shifted(&set.grid, options.camera_shift),
     };
     let film = Sensor::film_layers(&set.grid);
 

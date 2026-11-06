@@ -105,6 +105,24 @@ impl Sensor {
         }
     }
 
+    /// The synthetic camera with all three peaks shifted by `shift_nm`.
+    ///
+    /// Not a model of any real device: a device for asking how much the answer
+    /// depends on where the camera's channels sit. Real cameras differ from one
+    /// another by more than this in peak position and much more in shape.
+    #[must_use]
+    pub fn generic_camera_shifted(grid: &Spectrum, shift_nm: f64) -> Self {
+        Self::from_gaussians(
+            grid,
+            "generic-camera-shifted",
+            [
+                (450.0 + shift_nm, 38.0),
+                (545.0 + shift_nm, 42.0),
+                (620.0 + shift_nm, 48.0),
+            ],
+        )
+    }
+
     /// A stand-in for a film's three layer sensitivities.
     ///
     /// Sits where the benchmark wants it: shifted relative to the camera, which
