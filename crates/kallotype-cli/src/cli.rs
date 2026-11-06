@@ -52,6 +52,10 @@ pub struct StockArgs {
     /// Developer temperature in degrees Celsius.
     #[arg(long, value_name = "C", default_value_t = 20.0)]
     pub temp: f64,
+
+    /// Expose through the spectral path instead of the per-channel scalar one.
+    #[arg(long)]
+    pub spectral: bool,
 }
 
 /// `kalo render`

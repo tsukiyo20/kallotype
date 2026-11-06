@@ -14,6 +14,8 @@ pub struct Selection {
     pub film: &'static FilmStock,
     /// The paper.
     pub paper: &'static PaperStock,
+    /// Whether to expose through the spectral path.
+    pub spectral: bool,
 }
 
 impl Selection {
@@ -25,6 +27,7 @@ impl Selection {
             paper: self.paper,
             development: self.development,
             exposure_ev,
+            spectral: self.spectral,
         }
     }
 }
@@ -65,6 +68,7 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         development,
         film,
         paper,
+        spectral: stock.spectral,
     })
 }
 
@@ -76,6 +80,14 @@ pub fn print_report(params: &RenderParams, width: u32, height: u32) {
     println!("kallotype {}", env!("CARGO_PKG_VERSION"));
     println!("  film      {}  ({})", params.film.id, params.film.label);
     println!("  paper     {}  ({})", params.paper.id, params.paper.label);
+    println!(
+        "  exposure  {}",
+        if params.spectral {
+            "spectral (placeholder camera and film layers)"
+        } else {
+            "scalar per channel"
+        }
+    );
     println!(
         "  develop   {:.2} min @ {:.1} °C  →  {:.2} effective min",
         development.time_min,

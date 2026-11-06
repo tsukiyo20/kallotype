@@ -15,6 +15,7 @@
 use crate::curve::{CharacteristicCurve, sigmoid};
 use crate::development::DevelopmentParams;
 use crate::emulsion::{FilmStock, PaperStock};
+use crate::spectral::SpectralContext;
 
 /// log10 of the luminance a mid-grey card reflects. The anchor everything is
 /// balanced against; 0.18 is the conventional value.
@@ -34,6 +35,8 @@ pub struct RenderParams {
     pub development: DevelopmentParams,
     /// Exposure offset in stops, applied before the negative is exposed.
     pub exposure_ev: f64,
+    /// Expose through the spectral path instead of the per-channel scalar one.
+    pub spectral: bool,
 }
 
 impl Default for RenderParams {
@@ -43,6 +46,7 @@ impl Default for RenderParams {
             paper: crate::emulsion::paper_stock("c41_paper").expect("built-in stock"),
             development: DevelopmentParams::default(),
             exposure_ev: 0.0,
+            spectral: false,
         }
     }
 }
@@ -76,18 +80,20 @@ impl RenderParams {
             print_slope,
             print_log_e0,
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
+            spectral: self.spectral.then(SpectralContext::new),
         }
     }
 }
 
 /// A [`RenderParams`] with the curves already developed and the print balanced.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PreparedRender {
     channels: [CharacteristicCurve; 3],
     paper: CharacteristicCurve,
     print_slope: f64,
     print_log_e0: [f64; 3],
     exposure_shift: f64,
+    spectral: Option<SpectralContext>,
 }
 
 impl PreparedRender {
@@ -97,12 +103,28 @@ impl PreparedRender {
         &self.channels
     }
 
+    /// Whether the spectral path is active.
+    #[must_use]
+    pub fn is_spectral(&self) -> bool {
+        self.spectral.is_some()
+    }
+
     /// Render one linear-light pixel.
     #[must_use]
     pub fn render_pixel(&self, linear: [f64; 3]) -> [f64; 3] {
+        // Scalar path: the channel's own log exposure. Spectral path: the film's
+        // three layers, each integrating a reconstructed spectrum. The fallback
+        // keeps the function total; it cannot trigger with a context this module
+        // built.
+        let scalar = || std::array::from_fn(|channel| linear[channel].max(1e-10).log10());
+        let log_e = match &self.spectral {
+            Some(context) => context.expose(linear).unwrap_or_else(scalar),
+            None => scalar(),
+        };
+
         let mut out = [0.0; 3];
         for channel in 0..3 {
-            let log_e = linear[channel].max(1e-10).log10() + self.exposure_shift;
+            let log_e = log_e[channel] + self.exposure_shift;
             let density_negative = self.channels[channel].density(log_e);
             // The enlarger sees the light the negative transmitted.
             let log_transmittance = -density_negative;
@@ -172,6 +194,59 @@ mod tests {
             ..DevelopmentParams::default()
         }));
         assert!(pulled < normal, "normal {normal}, pulled {pulled}");
+    }
+
+    #[test]
+    fn spectral_path_keeps_mid_grey_on_target() {
+        let prepared = RenderParams {
+            spectral: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(prepared.is_spectral());
+        let out = prepared.render_pixel([0.18, 0.18, 0.18]);
+        for channel in out {
+            assert!(
+                (channel - 0.18).abs() < 0.01,
+                "mid grey printed at {channel}"
+            );
+        }
+    }
+
+    #[test]
+    fn spectral_path_changes_colour_separation() {
+        let scalar = RenderParams::default().prepare();
+        let spectral = RenderParams {
+            spectral: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+
+        let sample = [0.75, 0.12, 0.08];
+        let a = scalar.render_pixel(sample);
+        let b = spectral.render_pixel(sample);
+        let difference: f64 = a.iter().zip(&b).map(|(x, y)| (x - y).abs()).sum();
+        assert!(
+            difference > 1e-4,
+            "spectral path changed nothing: {difference}"
+        );
+    }
+
+    #[test]
+    fn spectral_output_is_monotonic_and_bounded() {
+        let prepared = RenderParams {
+            spectral: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        let mut previous = -1.0;
+        for i in -80..80 {
+            let x = 2.0_f64.powf(f64::from(i) / 10.0) * 0.18;
+            let y = prepared.render_pixel([x; 3])[1];
+            assert!((0.0..=1.0).contains(&y));
+            assert!(y >= previous - 1e-9, "non-monotonic at {x}");
+            previous = y;
+        }
     }
 
     #[test]

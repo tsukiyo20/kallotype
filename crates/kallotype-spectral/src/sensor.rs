@@ -116,9 +116,9 @@ impl Sensor {
             grid,
             "generic-camera-shifted",
             [
-                (450.0 + shift_nm, 38.0),
-                (545.0 + shift_nm, 42.0),
                 (620.0 + shift_nm, 48.0),
+                (545.0 + shift_nm, 42.0),
+                (450.0 + shift_nm, 38.0),
             ],
         )
     }
