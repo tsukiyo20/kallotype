@@ -5,6 +5,7 @@
 //! indistinguishable to the camera, and any reconstruction has to pick one of
 //! them. Which one it picks is the model.
 
+use crate::layers;
 use crate::spectrum::{SpectralError, Spectrum};
 
 /// Three spectral response curves sampled on a common grid.
@@ -61,17 +62,26 @@ impl Sensor {
             .map(|channel| channel.dot(spectrum).unwrap_or(0.0))
     }
 
-    /// A generic camera: three broad overlapping curves.
+    /// A generic camera: three broad overlapping curves, in R, G, B order.
     ///
     /// This is a **test instrument**, not a measurement. It exists so the
     /// benchmark can run before any real spectral sensitivities have been
     /// collected.
+    ///
+    /// The order is part of the contract, not a detail. Channels are indexed
+    /// the same way everywhere in this crate and in `kallotype-core`, so
+    /// channel 0 has to be the one that sees red. This constructor used to list
+    /// its peaks blue-first while [`Self::generic_camera_shifted`] listed them
+    /// red-first; with a film whose layers were also blue-first, red in still
+    /// came out red, so nothing noticed until the film's layers were replaced
+    /// with measured ones. Two orderings that agree with each other and with
+    /// nothing else are still two orderings.
     #[must_use]
     pub fn generic_camera(grid: &Spectrum) -> Self {
         Self::from_gaussians(
             grid,
             "generic-camera",
-            [(450.0, 38.0), (545.0, 42.0), (620.0, 48.0)],
+            [(620.0, 48.0), (545.0, 42.0), (450.0, 38.0)],
         )
     }
 
@@ -123,7 +133,7 @@ impl Sensor {
         )
     }
 
-    /// A stand-in for a film's three layer sensitivities.
+    /// A stand-in for a film's three layer sensitivities, in R, G, B order.
     ///
     /// Sits where the benchmark wants it: shifted relative to the camera, which
     /// is exactly why a metameric error in the reconstruction shows up as an
@@ -133,7 +143,7 @@ impl Sensor {
         Self::from_gaussians(
             grid,
             "film-layers",
-            [(445.0, 30.0), (550.0, 35.0), (650.0, 50.0)],
+            [(650.0, 50.0), (550.0, 35.0), (445.0, 30.0)],
         )
     }
 
@@ -205,6 +215,44 @@ mod tests {
             .max_by(|a, b| cie1931_xyz(f64::from(*a))[1].total_cmp(&cie1931_xyz(f64::from(*b))[1]))
             .unwrap();
         assert!((545..=565).contains(&peak), "peak at {peak} nm");
+    }
+
+    /// Channel 0 sees red, channel 2 sees blue — in every constructor. The two
+    /// generic cameras disagreed about this for as long as both the camera and
+    /// the film layers were listed blue-first, because red in still came out red.
+    #[test]
+    fn every_constructor_indexes_its_channels_red_to_blue() {
+        let grid = Spectrum::uniform(380.0, 5.0, 71).unwrap();
+        let band = |centre: f64| {
+            let mut spectrum = Spectrum::filled(grid.clone(), 0.0);
+            for (index, value) in spectrum.values_mut().iter_mut().enumerate() {
+                let wavelength = grid.start_nm() + grid.step_nm() * index as f64;
+                *value = (-0.5 * ((wavelength - centre) / 12.0).powi(2)).exp();
+            }
+            spectrum
+        };
+        let (red, blue) = (band(650.0), band(450.0));
+        for sensor in [
+            Sensor::generic_camera(&grid),
+            Sensor::generic_camera_shifted(&grid, 0.0),
+        ] {
+            let at_red = sensor.respond(&red);
+            let at_blue = sensor.respond(&blue);
+            assert!(
+                at_red[0] > 5.0 * at_blue[0],
+                "{}: red channel reads {:.4} from red and {:.4} from blue",
+                sensor.name(),
+                at_red[0],
+                at_blue[0]
+            );
+            assert!(
+                at_blue[2] > 5.0 * at_red[2],
+                "{}: blue channel reads {:.4} from blue and {:.4} from red",
+                sensor.name(),
+                at_blue[2],
+                at_red[2]
+            );
+        }
     }
 
     #[test]
