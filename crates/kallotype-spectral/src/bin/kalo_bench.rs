@@ -50,10 +50,12 @@ impl Model {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum Camera {
     Cie1931,
     Generic,
+    /// A measured sensitivity, as written by `scripts/import_camspec.py`.
+    Measured(PathBuf),
 }
 
 struct Options {
@@ -81,7 +83,7 @@ fn main() -> ExitCode {
             eprintln!(
                 "usage: kalo-bench [--data PATH] \
                  [--model all|polynomial|dictionary|sparse|hybrid] \
-                 [--camera cie1931|generic] [--dictionary PATH] [--dictionary-limit N]
+                 [--camera cie1931|generic|PATH] [--dictionary PATH] [--dictionary-limit N]
 //!            [--l1 VALUE] [--hybrid-threshold VALUE] [--verbose]"
             );
             return ExitCode::FAILURE;
@@ -114,10 +116,11 @@ fn parse_args() -> Result<Options, String> {
             "--data" => data = PathBuf::from(args.next().ok_or("--data needs a path")?),
             "--model" => models = Model::parse(&args.next().ok_or("--model needs a value")?)?,
             "--camera" => {
-                camera = match args.next().ok_or("--camera needs a value")?.as_str() {
+                let value = args.next().ok_or("--camera needs a value")?;
+                camera = match value.as_str() {
                     "cie1931" => Camera::Cie1931,
                     "generic" => Camera::Generic,
-                    other => return Err(format!("unknown camera '{other}'")),
+                    path => Camera::Measured(PathBuf::from(path)),
                 };
             }
             "--l1" => {
@@ -218,9 +221,27 @@ fn run(options: &Options) -> Result<(), String> {
         None => None,
     };
 
-    let camera = match options.camera {
+    let camera = match &options.camera {
         Camera::Cie1931 => Sensor::cie1931(&set.grid),
         Camera::Generic => Sensor::generic_camera_shifted(&set.grid, options.camera_shift),
+        Camera::Measured(path) => {
+            let curves = load_csv(path).map_err(|error| format!("{}: {error}", path.display()))?;
+            let channel = |name: &str| {
+                curves
+                    .sample(name)
+                    .map(|sample| sample.reflectance.resampled(&set.grid))
+                    .ok_or_else(|| format!("{}: no column named {name:?}", path.display()))
+            };
+            let sensor = Sensor::new(
+                path.file_stem()
+                    .map(|stem| stem.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "measured".to_owned()),
+                [channel("red")?, channel("green")?, channel("blue")?],
+            )
+            .map_err(|error| error.to_string())?;
+            // White-balanced input, not raw: see `data/cameras/README.md`.
+            sensor.area_normalized()
+        }
     };
     let film = Sensor::film_layers(&set.grid);
 

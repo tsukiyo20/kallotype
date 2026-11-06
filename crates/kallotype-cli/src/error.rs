@@ -44,6 +44,13 @@ pub enum CliError {
         /// What the loader said.
         message: String,
     },
+    /// A camera sensitivity file could not be read.
+    Camera {
+        /// The file that failed.
+        path: PathBuf,
+        /// What went wrong.
+        message: String,
+    },
     /// A baked table could not be read or written.
     Lut {
         /// The file that failed.
@@ -82,6 +89,9 @@ impl std::fmt::Display for CliError {
             Self::Dictionary { path, message } => {
                 write!(f, "could not read dictionary {}: {message}", path.display())
             }
+            Self::Camera { path, message } => {
+                write!(f, "camera sensitivity {}: {message}", path.display())
+            }
             Self::Lut { path, message } => {
                 write!(f, "lookup table {}: {message}", path.display())
             }
@@ -100,6 +110,7 @@ impl std::error::Error for CliError {
             Self::UnknownStock { .. }
             | Self::InvalidNumber { .. }
             | Self::Dictionary { .. }
+            | Self::Camera { .. }
             | Self::Lut { .. } => None,
         }
     }

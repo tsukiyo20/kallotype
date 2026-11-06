@@ -23,6 +23,47 @@ pub const GRID_STEP_NM: f64 = 5.0;
 /// Number of samples on the internal grid.
 pub const GRID_LEN: usize = 71;
 
+/// Which sensor the RGB triple is assumed to have come from.
+///
+/// This is the assumption the whole spectral path is conditional on, so it is a
+/// named, recorded choice rather than a constant buried in a constructor. The
+/// name reaches `SpectralContext::identity`, which reaches every baked table, so
+/// a table cannot be loaded against a different camera by accident.
+#[derive(Debug, Clone, Default)]
+pub enum CameraProfile {
+    /// Three broad Gaussians: the stand-in from before any measured camera
+    /// existed. Kept because it is the assumption the early benchmarks used.
+    #[default]
+    Generic,
+    /// The CIE 1931 2 degree observer, for input that is already XYZ.
+    Observer,
+    /// A measured spectral sensitivity, for example an import of the camSPEC
+    /// database (`scripts/import_camspec.py`).
+    Measured(Sensor),
+}
+
+impl CameraProfile {
+    /// The sensor's name, for the render report and for baked-table identity.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Generic => "generic-camera",
+            Self::Observer => "cie1931-approx",
+            Self::Measured(sensor) => sensor.name(),
+        }
+    }
+
+    /// Build the sensor on `grid`.
+    #[must_use]
+    pub fn sensor(&self, grid: &kallotype_spectral::Spectrum) -> Sensor {
+        match self {
+            Self::Generic => Sensor::generic_camera(grid),
+            Self::Observer => Sensor::cie1931(grid),
+            Self::Measured(sensor) => sensor.resampled(grid),
+        }
+    }
+}
+
 /// Everything the spectral exposure needs, built once per render.
 #[derive(Debug, Clone)]
 pub struct SpectralContext {
@@ -47,12 +88,12 @@ impl Default for SpectralContext {
 }
 
 impl SpectralContext {
-    /// Build the context on the internal grid.
+    /// Build the context on the internal grid, with the default camera profile.
     ///
-    /// Both sensors are **test instruments** from `kallotype-spectral`: three
-    /// broad Gaussian channels as the camera and three Gaussian layers as the
-    /// film, both ordered R, G, B. They are placeholders with recorded
-    /// provenance — see `docs/0003-camera-assumption.md` for what that costs.
+    /// The film's layers are measured (`data/sensitivities/`); the camera is
+    /// [`CameraProfile::default`], which is still a stand-in. Both are ordered
+    /// R, G, B — see `docs/0003-camera-assumption.md` for what the camera costs
+    /// and `data/cameras/README.md` for how to replace it.
     ///
     /// # Panics
     ///
@@ -61,7 +102,7 @@ impl SpectralContext {
     pub fn new() -> Self {
         let grid = Spectrum::uniform(GRID_START_NM, GRID_STEP_NM, GRID_LEN)
             .expect("the internal grid is a valid constant");
-        let camera = Sensor::generic_camera(&grid);
+        let camera = CameraProfile::default().sensor(&grid);
         let film = Sensor::film_layers(&grid);
         let upsampler = PolynomialUpsampler;
 
@@ -103,6 +144,18 @@ impl SpectralContext {
             self.dictionary = Some(DictionaryUpsampler::new(resampled));
             self.refresh_reference();
         }
+        self
+    }
+
+    /// Replace the camera assumption.
+    ///
+    /// The grey anchor is recomputed, because it is the film's response to the
+    /// spectrum this camera reconstructs for mid grey. Changing the camera
+    /// without that would silently re-balance every print.
+    #[must_use]
+    pub fn with_camera(mut self, camera: CameraProfile) -> Self {
+        self.camera = camera.sensor(&self.grid);
+        self.refresh_reference();
         self
     }
 

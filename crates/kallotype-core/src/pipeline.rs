@@ -18,7 +18,7 @@ use crate::emulsion::{FilmStock, PaperStock};
 use crate::lut::ExposureLut;
 use crate::print::PrintContext;
 use crate::scan::ScanContext;
-use crate::spectral::SpectralContext;
+use crate::spectral::{CameraProfile, SpectralContext};
 
 /// log10 of the luminance a mid-grey card reflects. The anchor everything is
 /// balanced against; 0.18 is the conventional value.
@@ -28,7 +28,7 @@ pub fn mid_grey_log_e() -> f64 {
 }
 
 /// Everything needed to render: which film, which paper, and how it was developed.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct RenderParams {
     /// The negative.
     pub film: &'static FilmStock,
@@ -40,6 +40,9 @@ pub struct RenderParams {
     pub exposure_ev: f64,
     /// Expose through the spectral path instead of the per-channel scalar one.
     pub spectral: bool,
+    /// Which sensor the input RGB is assumed to have come from. Ignored by the
+    /// scalar path.
+    pub camera: CameraProfile,
     /// Bake the spectral exposure into a `size^3` table. Zero disables it.
     pub lut_size: usize,
     /// Print through spectral dye absorption and paper layer sensitivities.
@@ -56,6 +59,7 @@ impl Default for RenderParams {
             development: DevelopmentParams::default(),
             exposure_ev: 0.0,
             spectral: false,
+            camera: CameraProfile::default(),
             lut_size: 0,
             spectral_print: false,
             spectral_scan: false,
@@ -80,7 +84,7 @@ impl RenderParams {
         let mut prepared = Self {
             spectral: false,
             lut_size: 0,
-            ..*self
+            ..self.clone()
         }
         .prepare_with(None);
         prepared.lut = Some(lut);
@@ -134,7 +138,7 @@ impl RenderParams {
             spectral: self
                 .spectral
                 .then(|| {
-                    let context = SpectralContext::new();
+                    let context = SpectralContext::new().with_camera(self.camera.clone());
                     match atoms {
                         Some(atoms) => context.with_atoms(atoms),
                         None => context,
@@ -142,7 +146,7 @@ impl RenderParams {
                 })
                 .filter(|_| self.lut_size < 2),
             lut: (self.spectral && self.lut_size >= 2).then(|| {
-                let context = SpectralContext::new();
+                let context = SpectralContext::new().with_camera(self.camera.clone());
                 let context = match atoms {
                     Some(atoms) => context.with_atoms(atoms),
                     None => context,

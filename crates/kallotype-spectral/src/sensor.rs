@@ -49,6 +49,47 @@ impl Sensor {
         &self.channels
     }
 
+    /// Each channel divided by its own integral.
+    ///
+    /// This is a statement about the *input encoding*, not about the sensor: it
+    /// makes a flat spectrum respond equally in all three channels, which is
+    /// what a white-balanced triple means. A raw camera response does not, and
+    /// the database's own channel levels are consequently not used when a
+    /// measured sensitivity is loaded for white-balanced input.
+    #[must_use]
+    pub fn area_normalized(&self) -> Self {
+        let channels: [Spectrum; 3] = self.channels.each_ref().map(|channel| {
+            let area: f64 = channel.values().iter().sum::<f64>() * channel.step_nm();
+            if area.abs() > 1e-12 {
+                channel.scaled(1.0 / area)
+            } else {
+                channel.clone()
+            }
+        });
+        Self {
+            name: self.name.clone(),
+            channels,
+        }
+    }
+
+    /// The same response curves sampled on another grid.
+    ///
+    /// Channels keep their shape and their relative scale; values outside the
+    /// original span are clamped, which is what [`Spectrum::resampled`] does.
+    #[must_use]
+    pub fn resampled(&self, grid: &Spectrum) -> Self {
+        if self.channels[0].shares_grid(grid) {
+            return self.clone();
+        }
+        Self {
+            name: self.name.clone(),
+            channels: self
+                .channels
+                .each_ref()
+                .map(|channel| channel.resampled(grid)),
+        }
+    }
+
     /// Measure a spectrum.
     ///
     /// # Panics

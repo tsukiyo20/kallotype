@@ -1,7 +1,8 @@
 //! Argument resolution and the report every command shares.
 
-use kallotype_core::{DevelopmentParams, FilmStock, PaperStock, RenderParams};
+use kallotype_core::{CameraProfile, DevelopmentParams, FilmStock, PaperStock, RenderParams};
 use kallotype_core::{film_stock, paper_stock};
+use kallotype_spectral::Sensor;
 
 use crate::cli::StockArgs;
 use crate::error::CliError;
@@ -16,6 +17,8 @@ pub struct Selection {
     pub paper: &'static PaperStock,
     /// Whether to expose through the spectral path.
     pub spectral: bool,
+    /// Which sensor the input is assumed to have come from.
+    pub camera: CameraProfile,
     /// Side of the baked exposure table, or 0 for no table.
     pub lut_size: usize,
     /// Reflectance CSV for the dictionary prior.
@@ -40,6 +43,7 @@ impl Selection {
             development: self.development,
             exposure_ev,
             spectral: self.spectral || self.lut.is_some(),
+            camera: self.camera.clone(),
             lut_size: self.lut_size,
             spectral_print: self.spectral_print,
             spectral_scan: self.spectral_scan,
@@ -143,6 +147,7 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         film,
         paper,
         spectral: stock.spectral,
+        camera: camera_profile(stock.camera.as_deref())?,
         lut_size: stock.lut_size,
         dictionary: stock.dictionary.clone(),
         lut: stock.lut.clone(),
@@ -150,6 +155,48 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         spectral_print: stock.spectral_print,
         spectral_scan: stock.spectral_scan,
     })
+}
+
+/// Resolve `--camera` into a profile.
+///
+/// Two names are built in; anything else is a path to a CSV imported by
+/// `scripts/import_camspec.py`, with one column per channel named red, green and
+/// blue.
+fn camera_profile(value: Option<&str>) -> Result<CameraProfile, CliError> {
+    let Some(value) = value else {
+        return Ok(CameraProfile::default());
+    };
+    match value {
+        "generic" => Ok(CameraProfile::Generic),
+        "observer" => Ok(CameraProfile::Observer),
+        path => {
+            let set = kallotype_spectral::load_csv(path).map_err(|error| CliError::Camera {
+                path: path.into(),
+                message: error.to_string(),
+            })?;
+            let channel = |name: &str| {
+                set.sample(name)
+                    .map(|sample| sample.reflectance.clone())
+                    .ok_or_else(|| CliError::Camera {
+                        path: path.into(),
+                        message: format!("no column named {name:?}"),
+                    })
+            };
+            let channels = [channel("red")?, channel("green")?, channel("blue")?];
+            // The dataset name is the directory's; the camera's is the file's.
+            let name = std::path::Path::new(path)
+                .file_stem()
+                .map(|stem| stem.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.to_owned());
+            let sensor = Sensor::new(name, channels)
+                .map_err(|error| CliError::Camera {
+                    path: path.into(),
+                    message: error.to_string(),
+                })?
+                .area_normalized();
+            Ok(CameraProfile::Measured(sensor))
+        }
+    }
 }
 
 /// Print what the development did, before any pixels are touched.
@@ -190,6 +237,9 @@ pub fn print_report(
             "scalar per channel"
         }
     );
+    if prepared.is_spectral() || prepared.lut().is_some() {
+        println!("  camera    {}", params.camera.name());
+    }
     println!(
         "  develop   {:.2} min @ {:.1} °C  →  {:.2} effective min",
         development.time_min,
@@ -219,7 +269,33 @@ pub fn print_report(
 
 #[cfg(test)]
 mod tests {
-    use super::check_model;
+    use super::{camera_profile, check_model};
+    use kallotype_core::CameraProfile;
+
+    #[test]
+    fn the_built_in_camera_names_resolve() {
+        assert!(matches!(
+            camera_profile(None).unwrap(),
+            CameraProfile::Generic
+        ));
+        assert!(matches!(
+            camera_profile(Some("generic")).unwrap(),
+            CameraProfile::Generic
+        ));
+        assert!(matches!(
+            camera_profile(Some("observer")).unwrap(),
+            CameraProfile::Observer
+        ));
+    }
+
+    #[test]
+    fn a_missing_camera_file_names_the_path() {
+        let message = camera_profile(Some("/nonexistent/camera.csv")).unwrap_err();
+        assert!(
+            message.to_string().contains("/nonexistent/camera.csv"),
+            "{message}"
+        );
+    }
 
     #[test]
     fn a_matching_identity_passes() {

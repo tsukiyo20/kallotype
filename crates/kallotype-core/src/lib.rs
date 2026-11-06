@@ -43,4 +43,4 @@ pub use lut::ExposureLut;
 pub use pipeline::{PreparedRender, RenderParams, render_pixels};
 pub use print::PrintContext;
 pub use scan::ScanContext;
-pub use spectral::SpectralContext;
+pub use spectral::{CameraProfile, SpectralContext};

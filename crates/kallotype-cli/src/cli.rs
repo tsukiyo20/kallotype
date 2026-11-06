@@ -77,6 +77,14 @@ pub struct StockArgs {
     #[arg(long)]
     pub allow_model_mismatch: bool,
 
+    /// Which sensor the input is assumed to have come from.
+    ///
+    /// `generic` (three broad Gaussians) or `observer` (CIE 1931, for input that
+    /// is already XYZ), or a path to a CSV imported by
+    /// `scripts/import_camspec.py`. Requires --spectral.
+    #[arg(long, value_name = "NAME|PATH")]
+    pub camera: Option<String>,
+
     /// Print through spectral dye absorption and paper layer sensitivities.
     #[arg(long)]
     pub spectral_print: bool,

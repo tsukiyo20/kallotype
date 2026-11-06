@@ -8,6 +8,10 @@
 # unavailable (sandboxes, CI images without a writable ~/.cargo).
 /.cargo-home/
 
+# Camera sensitivities are imported locally: the source database is
+# CC BY-NC-SA, so it is not vendored. See data/cameras/README.md.
+/data/cameras/*.csv
+
 # Compiled Python from the scripts in scripts/
 __pycache__/
 *.pyc
