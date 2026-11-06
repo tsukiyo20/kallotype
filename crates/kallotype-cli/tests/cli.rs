@@ -89,6 +89,33 @@ fn temperature_trades_against_time() {
     assert!(delta < 1e-3, "expected parity, got delta {delta}");
 }
 
+/// The grain is a fixture, not a different image every render: same seed, same
+/// bytes. A different seed has to be a different image, or the seed is ignored.
+#[test]
+fn grain_is_deterministic_in_its_seed() {
+    let dir = scratch("grain");
+    let render = |name: &str, seed: &str| {
+        let out = dir.join(name);
+        let output = kalo()
+            .arg("render")
+            .arg(chart())
+            .arg("-o")
+            .arg(&out)
+            .args(["--dev", "9", "--grain", "--frame-mm", "3.6"])
+            .args(["--grain-seed", seed])
+            .output()
+            .expect("kalo should start");
+        assert!(output.status.success(), "stderr: {}", stderr(&output));
+        std::fs::read(&out).expect("the output file was written")
+    };
+
+    let first = render("a.png", "0");
+    let again = render("b.png", "0");
+    let other = render("c.png", "1");
+    assert_eq!(first, again, "the same seed must reproduce the same image");
+    assert_ne!(first, other, "a different seed must change the grain");
+}
+
 #[test]
 fn render_writes_an_image_and_creates_directories() {
     let dir = scratch("render");

@@ -206,30 +206,34 @@ impl PreparedRender {
         self.lut.as_ref()
     }
 
-    /// Render one linear-light pixel.
+    /// The three log exposures: scalar per channel, or the film's layers
+    /// integrating a reconstructed spectrum.
     #[must_use]
-    pub fn render_pixel(&self, linear: [f64; 3]) -> [f64; 3] {
-        // Scalar path: the channel's own log exposure. Spectral path: the film's
-        // three layers, each integrating a reconstructed spectrum. The fallback
-        // keeps the function total; it cannot trigger with a context this module
-        // built.
+    pub fn log_exposure(&self, linear: [f64; 3]) -> [f64; 3] {
         let scalar = || std::array::from_fn(|channel| linear[channel].max(1e-10).log10());
-        let log_e = if let Some(lut) = &self.lut {
+        if let Some(lut) = &self.lut {
             // Baked: three trilinear lookups.
             lut.sample(linear)
         } else if let Some(context) = &self.spectral {
-            // Live: reconstruct and integrate.
+            // Live: reconstruct and integrate. The fallback keeps the function
+            // total; it cannot trigger with a context this module built.
             context.expose(linear).unwrap_or_else(scalar)
         } else {
             scalar()
-        };
-
-        let mut density_cmy = [0.0; 3];
-        for channel in 0..3 {
-            density_cmy[channel] =
-                self.channels[channel].density(log_e[channel] + self.exposure_shift);
         }
+    }
 
+    /// The negative's density, from log exposure.
+    #[must_use]
+    pub fn negative_density(&self, log_e: [f64; 3]) -> [f64; 3] {
+        std::array::from_fn(|channel| {
+            self.channels[channel].density(log_e[channel] + self.exposure_shift)
+        })
+    }
+
+    /// The print and the scan, from the negative's density.
+    #[must_use]
+    pub fn positive(&self, density_cmy: [f64; 3]) -> [f64; 3] {
         // The spectral print does one integration for all three layers; calling
         // it inside the channel loop made it six times more expensive per pixel.
         let print_exposure = self
@@ -239,12 +243,11 @@ impl PreparedRender {
 
         let mut density_print = [0.0; 3];
         for channel in 0..3 {
-            let density_negative = density_cmy[channel];
             // The enlarger sees the light the negative transmitted: per channel
             // in the scalar model, through the dye spectra in the spectral one.
             let log_transmittance = match &print_exposure {
                 Some(values) => values[channel],
-                None => -density_negative,
+                None => -density_cmy[channel],
             };
             let z = self.print_slope * (log_transmittance - self.print_log_e0[channel]);
             density_print[channel] = self.paper.d_min + self.paper.span() * sigmoid(z);
@@ -257,12 +260,39 @@ impl PreparedRender {
             None => density_print.map(|density| 10.0_f64.powf(-density).clamp(0.0, 1.0)),
         }
     }
+
+    /// Render one linear-light pixel.
+    #[must_use]
+    pub fn render_pixel(&self, linear: [f64; 3]) -> [f64; 3] {
+        self.positive(self.negative_density(self.log_exposure(linear)))
+    }
 }
 
 /// Render a whole image in place. Pixels are linear light on both sides.
 pub fn render_pixels(pixels: &mut [[f64; 3]], prepared: &PreparedRender) {
     for pixel in pixels.iter_mut() {
         *pixel = prepared.render_pixel(*pixel);
+    }
+}
+
+/// Render a whole image with grain.
+///
+/// The grain is an exposure fluctuation, so it is applied to the log exposure
+/// and then pushed through the same curve — which is what keeps it out of a
+/// blank frame and out of the shoulder without either case being special-cased.
+pub fn render_pixels_with_grain(
+    pixels: &mut [[f64; 3]],
+    prepared: &PreparedRender,
+    grain: &crate::grain::GrainField,
+) {
+    let width = grain.width.max(1);
+    for (index, pixel) in pixels.iter_mut().enumerate() {
+        let log_e = prepared.log_exposure(*pixel);
+        let density = prepared.negative_density(log_e);
+        let jittered: [f64; 3] = std::array::from_fn(|channel| {
+            log_e[channel] + grain.jitter(index % width, index / width, density[channel], channel)
+        });
+        *pixel = prepared.positive(prepared.negative_density(jittered));
     }
 }
 
@@ -508,5 +538,39 @@ mod tests {
             assert!(y >= previous - 1e-9, "non-monotonic at {x}");
             previous = y;
         }
+    }
+
+    /// Grain has to be visible where the eye expects it: not in a flat black, not
+    /// in a flat white, and unmistakably in between. Both ends are flat for a
+    /// reason that is not written down anywhere — one characteristic curve is in
+    /// its toe, the other in its shoulder.
+    #[test]
+    fn grain_peaks_in_the_midtones() {
+        const SIDE: usize = 64;
+        let mut grain = crate::grain::GrainField::new(SIDE, SIDE, 36.0, 11);
+        // A 6 µm pixel: a 6000-pixel scan of a 35 mm frame, where grain is real.
+        grain.pixel_area_um2 = 36.0;
+
+        let spread = |ev: f64| {
+            let prepared = RenderParams {
+                exposure_ev: ev,
+                ..RenderParams::default()
+            }
+            .prepare();
+            let mut pixels = vec![[0.18; 3]; SIDE * SIDE];
+            render_pixels_with_grain(&mut pixels, &prepared, &grain);
+            let mean = pixels.iter().map(|p| p[0]).sum::<f64>() / pixels.len() as f64;
+            (pixels.iter().map(|p| (p[0] - mean).powi(2)).sum::<f64>() / pixels.len() as f64).sqrt()
+        };
+
+        // Measured on this model: 0.00003 at −8 EV, a broad peak of 0.021 around
+        // 0 to +2 EV, 0.0018 at +6 EV.
+        let dark = spread(-8.0);
+        let mid = spread(0.0);
+        let bright = spread(6.0);
+        assert!(
+            mid > 5.0 * dark && mid > 5.0 * bright,
+            "mid {mid}  dark {dark}  bright {bright}"
+        );
     }
 }

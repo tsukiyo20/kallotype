@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use kallotype_core::render_pixels;
+use kallotype_core::{GrainField, render_pixels, render_pixels_with_grain};
 use kallotype_io::{load, save};
 
 use crate::cli::RenderArgs;
@@ -22,7 +22,18 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         })?;
     let (width, height) = (image.width, image.height);
 
-    render_pixels(&mut image.pixels, &prepared);
+    let grain = args.grain.then(|| {
+        GrainField::new(
+            width as usize,
+            height as usize,
+            args.frame_mm,
+            args.grain_seed,
+        )
+    });
+    match &grain {
+        Some(field) => render_pixels_with_grain(&mut image.pixels, &prepared, field),
+        None => render_pixels(&mut image.pixels, &prepared),
+    }
 
     ensure_parent(&args.output)?;
 
@@ -31,7 +42,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         source,
     })?;
 
-    print_report(&params, &prepared, width, height);
+    print_report(&params, &prepared, width, height, grain.as_ref());
     println!();
     println!(
         "  wrote     {} ({}x{})",

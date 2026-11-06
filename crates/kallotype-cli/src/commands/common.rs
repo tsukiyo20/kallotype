@@ -203,6 +203,7 @@ pub fn print_report(
     prepared: &kallotype_core::PreparedRender,
     width: u32,
     height: u32,
+    grain: Option<&kallotype_core::GrainField>,
 ) {
     let development = params.development;
 
@@ -237,6 +238,14 @@ pub fn print_report(
     );
     if prepared.is_spectral() || prepared.lut().is_some() {
         println!("  camera    {}", params.camera.name());
+    }
+    if let Some(grain) = grain {
+        println!(
+            "  grain     {:.1}/µm²  ({:.2} µm pixel, seed {}, placeholder density)",
+            grain.grains_per_um2[0],
+            grain.pixel_area_um2.sqrt(),
+            grain.seed
+        );
     }
     println!(
         "  develop   {:.2} min @ {:.1} °C  →  {:.2} effective min",

@@ -122,6 +122,24 @@ pub struct RenderArgs {
     /// How to interpret the values stored in the input file.
     #[arg(long, value_enum, default_value_t = EncodingArg::Srgb)]
     pub input_encoding: EncodingArg,
+
+    /// Add grain to the negative, as a particle process on the film's scale.
+    ///
+    /// The graininess depends on how much film area a pixel covers, so it needs
+    /// --frame-mm to know how big the frame is.
+    #[arg(long)]
+    pub grain: bool,
+
+    /// Width of the film frame the image represents, in millimetres.
+    ///
+    /// 36 is a 35 mm still frame; use 24 for half-frame, and the short side if
+    /// the image is portrait.
+    #[arg(long, value_name = "MM", default_value_t = 36.0)]
+    pub frame_mm: f64,
+
+    /// Grain seed. The same seed and the same image give the same grain.
+    #[arg(long, value_name = "N", default_value_t = 0)]
+    pub grain_seed: u64,
 }
 
 /// `kalo bake`
