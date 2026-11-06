@@ -3,7 +3,6 @@
 use std::path::Path;
 
 use kallotype_core::{ExposureLut, SpectralContext};
-use kallotype_spectral::Spectrum;
 
 use crate::cli::BakeArgs;
 use crate::error::CliError;
@@ -21,18 +20,17 @@ pub fn run(args: BakeArgs) -> Result<(), CliError> {
     let mut context =
         SpectralContext::new().with_camera(super::common::camera_profile(args.camera.as_deref())?);
     println!("  camera {}", context.camera().name());
-    if let Some(path) = &args.dictionary {
+    let mut atoms = Vec::new();
+    for path in &args.dictionary {
         let set = kallotype_spectral::load_csv(path).map_err(|error| CliError::Dictionary {
             path: path.clone(),
             message: error.to_string(),
         })?;
-        let atoms: Vec<Spectrum> = set
-            .samples
-            .iter()
-            .map(|sample| sample.reflectance.clone())
-            .collect();
+        atoms.extend(set.samples.iter().map(|sample| sample.reflectance.clone()));
+    }
+    if !atoms.is_empty() {
         context = context.with_atoms(&atoms);
-        println!("  dictionary {} ({} atoms)", set.name, atoms.len());
+        println!("  dictionary {} atoms", atoms.len());
     }
 
     let table = ExposureLut::bake(args.size, &context);

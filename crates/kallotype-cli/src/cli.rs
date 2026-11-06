@@ -64,10 +64,11 @@ pub struct StockArgs {
     #[arg(long, value_name = "N", default_value_t = 0)]
     pub lut_size: usize,
 
-    /// Reflectance CSV to use as the spectral dictionary prior.
-    /// Requires --spectral. Without it the polynomial prior is used alone.
+    /// Reflectance CSV to use as the spectral dictionary prior. Repeat it to
+    /// mix material families into one dictionary. Requires --spectral. Without
+    /// it the polynomial prior is used alone.
     #[arg(long, value_name = "PATH")]
-    pub dictionary: Option<std::path::PathBuf>,
+    pub dictionary: Vec<std::path::PathBuf>,
 
     /// Use a table baked by `kalo bake` instead of computing the exposure.
     #[arg(long, value_name = "PATH")]
@@ -135,9 +136,10 @@ pub struct BakeArgs {
     #[arg(long, value_name = "N", default_value_t = 33)]
     pub size: usize,
 
-    /// Reflectance CSV to use as the spectral dictionary prior.
+    /// Reflectance CSV to use as the spectral dictionary prior. Repeat it to
+    /// mix material families.
     #[arg(long, value_name = "PATH")]
-    pub dictionary: Option<std::path::PathBuf>,
+    pub dictionary: Vec<std::path::PathBuf>,
 
     /// Which sensor the input is assumed to have come from. Must match the
     /// `--camera` used to render, or the table will be refused.

@@ -63,8 +63,11 @@ struct Options {
     models: Vec<Model>,
     camera: Camera,
     l1: f64,
-    /// Reconstruct every sample from this dataset instead of leave-one-out.
-    dictionary: Option<PathBuf>,
+    /// Reconstruct every sample from the union of these datasets instead of
+    /// leave-one-out. Any atom whose name matches the target sample's name is
+    /// held out, so a dictionary that contains the target family is still a
+    /// fair test.
+    dictionaries: Vec<PathBuf>,
     /// Cap the dictionary size, so a 24-atom set can be compared with a
     /// 169-atom one without size confounding the result.
     dictionary_limit: Option<usize>,
@@ -83,7 +86,7 @@ fn main() -> ExitCode {
             eprintln!(
                 "usage: kalo-bench [--data PATH] \
                  [--model all|polynomial|dictionary|sparse|hybrid] \
-                 [--camera cie1931|generic|PATH] [--dictionary PATH] [--dictionary-limit N]
+                 [--camera cie1931|generic|PATH] [--dictionary PATH ...] [--dictionary-limit N]
 //!            [--l1 VALUE] [--hybrid-threshold VALUE] [--verbose]"
             );
             return ExitCode::FAILURE;
@@ -104,7 +107,7 @@ fn parse_args() -> Result<Options, String> {
     let mut models = vec![Model::Polynomial, Model::Dictionary, Model::Hybrid];
     let mut camera = Camera::Cie1931;
     let mut l1 = 0.02_f64;
-    let mut dictionary = None;
+    let mut dictionaries: Vec<PathBuf> = Vec::new();
     let mut dictionary_limit = None;
     let mut hybrid_threshold = 0.02_f64;
     let mut camera_shift = 0.0_f64;
@@ -131,7 +134,7 @@ fn parse_args() -> Result<Options, String> {
                     .map_err(|_| "--l1 must be a number".to_owned())?;
             }
             "--dictionary" => {
-                dictionary = Some(PathBuf::from(
+                dictionaries.push(PathBuf::from(
                     args.next().ok_or("--dictionary needs a path")?,
                 ));
             }
@@ -175,7 +178,7 @@ fn parse_args() -> Result<Options, String> {
         models,
         camera,
         l1,
-        dictionary,
+        dictionaries,
         dictionary_limit,
         hybrid_threshold,
         camera_shift,
@@ -194,32 +197,51 @@ fn run(options: &Options) -> Result<(), String> {
     let set: ReflectanceSet =
         load_csv(&options.data).map_err(|error| format!("{}: {error}", options.data.display()))?;
 
-    // A dictionary from another dataset turns the benchmark into a
-    // cross-domain test: no atom comes from the material being reconstructed.
-    let cross_atoms: Option<Vec<Spectrum>> = match &options.dictionary {
-        Some(path) => {
+    // The atom pool is the union of the `--dictionary` files, or the target set
+    // itself. Names travel with the atoms so the target sample can be held out
+    // by name: a dictionary that contains the target's own material is still a
+    // fair test, and a cross-domain dictionary is the case where no name ever
+    // matches.
+    let mut pool: Vec<(String, Spectrum)> = if options.dictionaries.is_empty() {
+        set.samples
+            .iter()
+            .map(|sample| (sample.name.clone(), sample.reflectance.clone()))
+            .collect()
+    } else {
+        let mut pool = Vec::new();
+        for path in &options.dictionaries {
             let other: ReflectanceSet =
                 load_csv(path).map_err(|error| format!("{}: {error}", path.display()))?;
-            let mut atoms: Vec<Spectrum> = other
-                .samples
-                .iter()
-                .map(|sample| sample.reflectance.resampled(&set.grid))
-                .collect();
-            if let Some(limit) = options.dictionary_limit {
-                if limit > 0 && limit < atoms.len() {
-                    let stride = atoms.len().div_ceil(limit);
-                    atoms = atoms.into_iter().step_by(stride).take(limit).collect();
-                }
-            }
-            println!(
-                "  dictionary {}  ({} atoms, cross-domain)",
-                other.name,
-                atoms.len()
+            pool.extend(
+                other
+                    .samples
+                    .iter()
+                    .map(|sample| (sample.name.clone(), sample.reflectance.resampled(&set.grid))),
             );
-            Some(atoms)
         }
-        None => None,
+        pool
     };
+    if let Some(limit) = options.dictionary_limit {
+        if limit > 0 && limit < pool.len() {
+            let stride = pool.len().div_ceil(limit);
+            pool = pool.into_iter().step_by(stride).take(limit).collect();
+        }
+    }
+    let origin = if options.dictionaries.is_empty() {
+        format!("{} (leave one out)", set.name)
+    } else {
+        options
+            .dictionaries
+            .iter()
+            .map(|path| {
+                path.file_stem()
+                    .map(|stem| stem.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "?".to_owned())
+            })
+            .collect::<Vec<_>>()
+            .join("+")
+    };
+    println!("  dictionary {origin}  ({} atoms)", pool.len());
 
     let camera = match &options.camera {
         Camera::Cie1931 => Sensor::cie1931(&set.grid),
@@ -268,18 +290,13 @@ fn run(options: &Options) -> Result<(), String> {
         for sample in &set.samples {
             let response = camera.respond(&sample.reflectance);
 
-            let atoms = match &cross_atoms {
-                // Cross-domain: no atom comes from this material.
-                Some(atoms) => atoms.clone(),
-                // Leave one out: reconstructing a sample from a dictionary that
-                // contains it would measure the dictionary, not the method.
-                None => set
-                    .samples
-                    .iter()
-                    .filter(|other| other.name != sample.name)
-                    .map(|other| other.reflectance.clone())
-                    .collect(),
-            };
+            // Reconstructing a sample from an atom that *is* that sample would
+            // measure the dictionary, not the method.
+            let atoms: Vec<Spectrum> = pool
+                .iter()
+                .filter(|(name, _)| *name != sample.name)
+                .map(|(_, spectrum)| spectrum.clone())
+                .collect();
 
             let (estimate, fell_back) = match *model {
                 Model::Polynomial => (

@@ -21,8 +21,8 @@ pub struct Selection {
     pub camera: CameraProfile,
     /// Side of the baked exposure table, or 0 for no table.
     pub lut_size: usize,
-    /// Reflectance CSV for the dictionary prior.
-    pub dictionary: Option<std::path::PathBuf>,
+    /// Reflectance CSVs for the dictionary prior.
+    pub dictionary: Vec<std::path::PathBuf>,
     /// A table baked by `kalo bake`.
     pub lut: Option<std::path::PathBuf>,
     /// Whether a model mismatch in the table is tolerated.
@@ -76,21 +76,19 @@ impl Selection {
             return Ok(params.prepare_with_lut(table));
         }
 
-        let atoms = match &self.dictionary {
-            None => None,
-            Some(path) => {
+        let atoms = if self.dictionary.is_empty() {
+            None
+        } else {
+            let mut atoms = Vec::new();
+            for path in &self.dictionary {
                 let set =
                     kallotype_spectral::load_csv(path).map_err(|error| CliError::Dictionary {
                         path: path.clone(),
                         message: error.to_string(),
                     })?;
-                Some(
-                    set.samples
-                        .iter()
-                        .map(|sample| sample.reflectance.clone())
-                        .collect::<Vec<_>>(),
-                )
+                atoms.extend(set.samples.iter().map(|sample| sample.reflectance.clone()));
             }
+            Some(atoms)
         };
         Ok(params.prepare_with(atoms.as_deref()))
     }
