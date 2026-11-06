@@ -48,6 +48,20 @@ const NEUTRAL_MAX_DENSITY: f64 = 3.0;
 /// Entries in the grey-balance table.
 const NEUTRAL_STEPS: usize = 32;
 
+/// CIE standard illuminant D50 on the internal grid, 5 nm steps.
+///
+/// ISO 3664 specifies D50 for judging reflection prints, which is what this
+/// model scans. Values are the CIE SPD, normalised only by the white-point
+/// division in `scan`.
+const D50_SPD: [f64; 71] = [
+    24.49, 27.18, 29.87, 39.59, 49.31, 52.91, 56.51, 58.27, 60.03, 58.93, 57.82, 66.32, 74.83,
+    81.04, 87.25, 88.93, 90.61, 90.99, 91.37, 93.24, 95.11, 93.54, 91.96, 93.84, 95.72, 96.17,
+    96.61, 96.87, 97.13, 99.61, 102.10, 101.43, 100.75, 101.54, 102.32, 101.16, 100.00, 98.87,
+    97.73, 98.33, 98.92, 96.21, 93.50, 95.59, 97.69, 98.48, 99.27, 99.16, 99.04, 97.38, 95.72,
+    97.29, 98.86, 97.26, 95.67, 96.93, 98.19, 100.60, 103.00, 101.07, 99.13, 93.26, 87.38, 89.49,
+    91.60, 92.25, 92.89, 84.87, 76.85, 81.68, 86.51,
+];
+
 /// XYZ (D65) to linear sRGB, the standard matrix.
 const XYZ_TO_SRGB: [[f64; 3]; 3] = [
     [3.240_454_2, -1.537_138_5, -0.498_531_4],
@@ -83,9 +97,13 @@ impl ScanContext {
             .expect("the internal grid is a valid constant");
 
         let dye: [Spectrum; 3] = PAPER_DYES.map(|band| gaussian(&grid, band));
-        // Equal-energy illuminant: a placeholder, and the reason the output's
-        // white point is not a real viewing condition yet.
-        let illuminant = Spectrum::filled(grid.clone(), 1.0);
+        // D50: the viewing condition ISO 3664 specifies for reflection prints.
+        let illuminant = Spectrum::new(
+            crate::spectral::GRID_START_NM,
+            crate::spectral::GRID_STEP_NM,
+            D50_SPD.to_vec(),
+        )
+        .expect("the D50 table matches the internal grid");
 
         let cmf: [Spectrum; 3] = std::array::from_fn(|axis| {
             let mut spectrum = Spectrum::filled(grid.clone(), 0.0);
