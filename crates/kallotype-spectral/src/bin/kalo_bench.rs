@@ -171,6 +171,7 @@ struct Score {
     rmse: f64,
     angle: f64,
     film: [f64; 3],
+    fallback: bool,
 }
 
 fn run(options: &Options) -> Result<(), String> {
@@ -246,10 +247,13 @@ fn run(options: &Options) -> Result<(), String> {
                     .collect(),
             };
 
-            let estimate = match *model {
-                Model::Polynomial => PolynomialUpsampler
-                    .reconstruct(&response, &camera, &set.grid)
-                    .map_err(|error| error.to_string())?,
+            let (estimate, fell_back) = match *model {
+                Model::Polynomial => (
+                    PolynomialUpsampler
+                        .reconstruct(&response, &camera, &set.grid)
+                        .map_err(|error| error.to_string())?,
+                    false,
+                ),
                 Model::Dictionary | Model::Sparse | Model::Hybrid => {
                     let mut dictionary = DictionaryUpsampler::new(atoms);
                     if *model == Model::Sparse {
@@ -274,14 +278,17 @@ fn run(options: &Options) -> Result<(), String> {
                             .sqrt()
                             .max(1e-9);
                         if residual / scale > options.hybrid_threshold {
-                            PolynomialUpsampler
-                                .reconstruct(&response, &camera, &set.grid)
-                                .map_err(|error| error.to_string())?
+                            (
+                                PolynomialUpsampler
+                                    .reconstruct(&response, &camera, &set.grid)
+                                    .map_err(|error| error.to_string())?,
+                                true,
+                            )
                         } else {
-                            from_dictionary
+                            (from_dictionary, false)
                         }
                     } else {
-                        from_dictionary
+                        (from_dictionary, false)
                     }
                 }
             };
@@ -292,6 +299,7 @@ fn run(options: &Options) -> Result<(), String> {
                 angle: spectral_angle_deg(&sample.reflectance, &estimate)
                     .map_err(|error| error.to_string())?,
                 film: film_error,
+                fallback: fell_back,
             };
 
             if options.verbose {
@@ -316,8 +324,8 @@ fn run(options: &Options) -> Result<(), String> {
     }
 
     println!(
-        "  {:<12} {:>10} {:>10} {:>14} {:>14}",
-        "model", "mean RMSE", "mean SAM", "film |ΔR| avg", "film |ΔR| max"
+        "  {:<12} {:>10} {:>10} {:>14} {:>14} {:>10}",
+        "model", "mean RMSE", "mean SAM", "film |ΔR| avg", "film |ΔR| max", "fallback"
     );
     for (model, scores) in &results {
         let count = scores.len() as f64;
@@ -333,8 +341,10 @@ fn run(options: &Options) -> Result<(), String> {
             .flat_map(|score| score.film.iter().map(|value| value.abs()))
             .fold(0.0_f64, f64::max);
 
+        let fallbacks = scores.iter().filter(|score| score.fallback).count();
+        let fallback_rate = 100.0 * fallbacks as f64 / count;
         println!(
-            "  {model:<12} {mean_rmse:>10.4} {mean_angle:>9.2}° {mean_film:>13.2}% {max_film:>13.2}%"
+            "  {model:<12} {mean_rmse:>10.4} {mean_angle:>9.2}° {mean_film:>13.2}% {max_film:>13.2}% {fallback_rate:>9.1}%"
         );
     }
 
