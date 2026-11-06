@@ -32,6 +32,7 @@ pub mod emulsion;
 pub mod lut;
 pub mod pipeline;
 pub mod print;
+pub mod scan;
 pub mod spectral;
 
 pub use color::{linear_to_srgb, srgb_to_linear};
@@ -41,4 +42,5 @@ pub use emulsion::{FILM_STOCKS, FilmStock, PAPER_STOCKS, PaperStock, film_stock,
 pub use lut::ExposureLut;
 pub use pipeline::{PreparedRender, RenderParams, render_pixels};
 pub use print::PrintContext;
+pub use scan::ScanContext;
 pub use spectral::SpectralContext;

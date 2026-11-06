@@ -80,6 +80,10 @@ pub struct StockArgs {
     /// Print through spectral dye absorption and paper layer sensitivities.
     #[arg(long)]
     pub spectral_print: bool,
+
+    /// Scan through spectral reflectance, illuminant and observer.
+    #[arg(long)]
+    pub spectral_scan: bool,
 }
 
 /// `kalo render`

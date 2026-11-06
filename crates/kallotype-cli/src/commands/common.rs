@@ -26,6 +26,8 @@ pub struct Selection {
     pub allow_model_mismatch: bool,
     /// Whether to print through the spectral model.
     pub spectral_print: bool,
+    /// Whether to scan through the spectral model.
+    pub spectral_scan: bool,
 }
 
 impl Selection {
@@ -40,6 +42,7 @@ impl Selection {
             spectral: self.spectral || self.lut.is_some(),
             lut_size: self.lut_size,
             spectral_print: self.spectral_print,
+            spectral_scan: self.spectral_scan,
         }
     }
 }
@@ -145,6 +148,7 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         lut: stock.lut.clone(),
         allow_model_mismatch: stock.allow_model_mismatch,
         spectral_print: stock.spectral_print,
+        spectral_scan: stock.spectral_scan,
     })
 }
 
@@ -164,6 +168,14 @@ pub fn print_report(
         "  print     {}",
         if prepared.is_spectral_print() {
             "spectral (dye absorption × paper layers)"
+        } else {
+            "scalar per channel"
+        }
+    );
+    println!(
+        "  scan      {}",
+        if prepared.is_spectral_scan() {
+            "spectral (reflectance × illuminant × CIE 1931)"
         } else {
             "scalar per channel"
         }

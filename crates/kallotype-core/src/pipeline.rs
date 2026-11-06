@@ -17,6 +17,7 @@ use crate::development::DevelopmentParams;
 use crate::emulsion::{FilmStock, PaperStock};
 use crate::lut::ExposureLut;
 use crate::print::PrintContext;
+use crate::scan::ScanContext;
 use crate::spectral::SpectralContext;
 
 /// log10 of the luminance a mid-grey card reflects. The anchor everything is
@@ -43,6 +44,8 @@ pub struct RenderParams {
     pub lut_size: usize,
     /// Print through spectral dye absorption and paper layer sensitivities.
     pub spectral_print: bool,
+    /// Scan through spectral reflectance, illuminant and observer.
+    pub spectral_scan: bool,
 }
 
 impl Default for RenderParams {
@@ -55,6 +58,7 @@ impl Default for RenderParams {
             spectral: false,
             lut_size: 0,
             spectral_print: false,
+            spectral_scan: false,
         }
     }
 }
@@ -125,6 +129,7 @@ impl RenderParams {
             print_slope,
             print_log_e0,
             print,
+            scan: self.spectral_scan.then(ScanContext::new),
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
             spectral: self
                 .spectral
@@ -162,6 +167,8 @@ pub struct PreparedRender {
     lut: Option<ExposureLut>,
     /// The spectral print model, when requested.
     print: Option<PrintContext>,
+    /// The spectral scan model, when requested.
+    scan: Option<ScanContext>,
 }
 
 impl PreparedRender {
@@ -181,6 +188,12 @@ impl PreparedRender {
     #[must_use]
     pub fn is_spectral_print(&self) -> bool {
         self.print.is_some()
+    }
+
+    /// Whether the scan is going through the spectral model.
+    #[must_use]
+    pub fn is_spectral_scan(&self) -> bool {
+        self.scan.is_some()
     }
 
     /// The baked table, if one was requested.
@@ -220,7 +233,7 @@ impl PreparedRender {
             .as_ref()
             .map(|context| context.expose(density_cmy));
 
-        let mut out = [0.0; 3];
+        let mut density_print = [0.0; 3];
         for channel in 0..3 {
             let density_negative = density_cmy[channel];
             // The enlarger sees the light the negative transmitted: per channel
@@ -230,10 +243,15 @@ impl PreparedRender {
                 None => -density_negative,
             };
             let z = self.print_slope * (log_transmittance - self.print_log_e0[channel]);
-            let density_print = self.paper.d_min + self.paper.span() * sigmoid(z);
-            out[channel] = 10.0_f64.powf(-density_print).clamp(0.0, 1.0);
+            density_print[channel] = self.paper.d_min + self.paper.span() * sigmoid(z);
         }
-        out
+
+        match &self.scan {
+            // Spectral scan: reflectance through the illuminant and the observer.
+            Some(context) => context.scan(density_print),
+            // Scalar scan: each density is that channel's light loss.
+            None => density_print.map(|density| 10.0_f64.powf(-density).clamp(0.0, 1.0)),
+        }
     }
 }
 
@@ -311,6 +329,41 @@ mod tests {
                 (channel - 0.18).abs() < 0.01,
                 "mid grey printed at {channel}"
             );
+        }
+    }
+
+    #[test]
+    fn spectral_scan_produces_neutral_grey() {
+        let prepared = RenderParams {
+            spectral_print: true,
+            spectral_scan: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(prepared.is_spectral_scan());
+
+        let out = prepared.render_pixel([0.18, 0.18, 0.18]);
+        let spread = out.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            - out.iter().copied().fold(f64::INFINITY, f64::min);
+        assert!(spread < 0.02, "grey drifts by {spread}: {out:?}");
+        assert!(out[1] > 0.02 && out[1] < 0.6, "mid grey at {}", out[1]);
+    }
+
+    #[test]
+    fn spectral_scan_is_monotonic_and_bounded() {
+        let prepared = RenderParams {
+            spectral_print: true,
+            spectral_scan: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        let mut previous = -1.0;
+        for i in -80..80 {
+            let x = 2.0_f64.powf(f64::from(i) / 10.0) * 0.18;
+            let y = prepared.render_pixel([x; 3])[1];
+            assert!((0.0..=1.0).contains(&y));
+            assert!(y >= previous - 1e-9, "non-monotonic at {x}");
+            previous = y;
         }
     }
 
