@@ -46,14 +46,18 @@ cargo run --release --bin kalo -- render crates/kallotype-cli/assets/testchart.p
 cargo run --release --bin kalo -- render crates/kallotype-cli/assets/testchart.png -o out/dev_12.png --dev 12.0
 ```
 
-Or install the binary:
+Or install the binary from crates.io:
 
 ```bash
-cargo install --path crates/kallotype-cli
+cargo install kallotype-cli
 kalo stocks
 kalo curve --dev 9.0 --temp 22 --sweep
 kalo render photo.png -o photo_c41.png --film c41_standard --dev 9.0 --ev +0.3
 ```
+
+The library is on crates.io too — [`kallotype-core`](https://crates.io/crates/kallotype-core),
+[`kallotype-spectral`](https://crates.io/crates/kallotype-spectral),
+[`kallotype-io`](https://crates.io/crates/kallotype-io).
 
 > **macOS:** if `cargo build` fails with *"You have not agreed to the Xcode
 > license agreements"*, run `sudo xcodebuild -license accept` once. The system
