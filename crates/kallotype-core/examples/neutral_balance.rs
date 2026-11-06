@@ -1,0 +1,53 @@
+//! Does the numerical grey balance still earn its keep with real dye spectra?
+//!
+//! Run with the digitised Vision3 500T curves:
+//!
+//! ```console
+//! cargo run -p kallotype-core --example neutral_balance
+//! ```
+
+use kallotype_core::PrintContext;
+use kallotype_spectral::{Spectrum, load_csv};
+
+fn read(name: &str) -> Spectrum {
+    let set = load_csv(format!("data/dyes/vision3_500t_{name}.csv")).expect("dye csv");
+    set.samples[0].reflectance.clone()
+}
+
+fn main() {
+    let placeholder = PrintContext::new([1.2, 1.1, 1.0]);
+    let real = PrintContext::new([1.2, 1.1, 1.0]).with_dyes([
+        read("cyan"),
+        read("magenta"),
+        read("yellow"),
+    ]);
+
+    println!(
+        "{:<10} {:>22} {:>22}",
+        "density", "placeholder gains", "measured gains"
+    );
+    for step in 1..=10 {
+        let density = 0.2 * f64::from(step);
+        let a = placeholder.balance_gain(density);
+        let b = real.balance_gain(density);
+        println!(
+            "{density:<10.1} [{:>6.3} {:>6.3} {:>6.3}] [{:>6.3} {:>6.3} {:>6.3}]",
+            a[0], a[1], a[2], b[0], b[1], b[2]
+        );
+    }
+
+    println!();
+    println!("spread of the gains (1.0 = the balance does nothing):");
+    for step in 1..=10 {
+        let density = 0.2 * f64::from(step);
+        let spread = |g: [f64; 3]| {
+            g.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+                - g.iter().copied().fold(f64::INFINITY, f64::min)
+        };
+        println!(
+            "  {density:>4.1}: placeholder {:.3}   measured {:.3}",
+            spread(placeholder.balance_gain(density)),
+            spread(real.balance_gain(density))
+        );
+    }
+}

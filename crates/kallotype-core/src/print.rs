@@ -107,6 +107,25 @@ impl PrintContext {
         context
     }
 
+    /// Replace only the dye spectra, keeping the paper layers.
+    #[must_use]
+    pub fn with_dyes(mut self, dye: [Spectrum; 3]) -> Self {
+        self.dye = dye.map(|spectrum| spectrum.resampled(&self.grid));
+        self.reference = self.balanced(self.reference_density);
+        self
+    }
+
+    /// The gain the grey balance applies at a neutral density, per layer.
+    ///
+    /// A diagnostic: if real dyes are neutral by design, these gains should be
+    /// close to 1 and the numerical balance is doing nothing.
+    #[must_use]
+    pub fn balance_gain(&self, neutral_density: f64) -> [f64; 3] {
+        let response = self.response([neutral_density; 3]);
+        let target = (response[0] * response[1] * response[2]).cbrt();
+        std::array::from_fn(|layer| target / response[layer].max(1e-12))
+    }
+
     /// Replace the placeholder bands with measured spectra.
     ///
     /// The spectra are resampled onto the internal grid, so anything digitised
