@@ -21,7 +21,7 @@
 //! - Colour management: the phase-0 model carries no primaries.
 //! - Couplers, grain, halation.
 //!
-//! Those land in later phases; see `docs/0001-architecture.md` and `ROADMAP.md`.
+//! Those land in later phases.
 
 #![forbid(unsafe_code)]
 

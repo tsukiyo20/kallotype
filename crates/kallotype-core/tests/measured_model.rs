@@ -3,6 +3,11 @@
 //! Every other test in this crate runs on placeholders. These read the digitised
 //! datasets, so they are where a physical regression would show up first.
 //!
+//! The datasets are **not in this repository**: they are the products of a
+//! separate digitisation effort and are kept locally. Every test here is
+//! `#[ignore]`d for that reason. On a machine that has `data/` beside the crate,
+//! run them with `cargo test -- --ignored`.
+//!
 //! The grey balance is the thing to watch. It was written to compensate for
 //! missing data; with the mask measured and the filter pack solved it should be
 //! the identity. If it stops being the identity, something physical changed.
@@ -47,6 +52,7 @@ fn spread(values: [f64; 3]) -> f64 {
         - values.iter().copied().fold(f64::INFINITY, f64::min)
 }
 
+#[ignore = "reads the digitised datasets, which are not in this repository"]
 #[test]
 fn the_solved_filter_pack_makes_the_balance_an_identity() {
     let context = measured_print();
@@ -70,6 +76,7 @@ fn the_solved_filter_pack_makes_the_balance_an_identity() {
     }
 }
 
+#[ignore = "reads the digitised datasets, which are not in this repository"]
 #[test]
 fn without_the_filter_pack_the_balance_has_real_work_to_do() {
     // The sentinel only means something if the uncorrected model fails it.
@@ -80,6 +87,7 @@ fn without_the_filter_pack_the_balance_has_real_work_to_do() {
     );
 }
 
+#[ignore = "reads the digitised datasets, which are not in this repository"]
 #[test]
 fn the_measured_scan_prints_neutral_grey() {
     let scan = ScanContext::new().with_dyes([

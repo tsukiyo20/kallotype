@@ -2,9 +2,8 @@
 //!
 //! Until this module existed the layers were three Gaussians: a guess about
 //! where a film responds, not a statement about any film. These are the curves
-//! from the technical data sheet for KODAK VISION3 500T 5219/7219, digitised
-//! into `data/sensitivities/` — see the README there for the extraction, the
-//! calibration and the checks it passed.
+//! from the technical data sheet for KODAK VISION3 500T 5219/7219 (publication
+//! H-1-5219, page 4), digitised from the chart and resampled to 5 nm.
 //!
 //! The chart plots *log* sensitivity: the reciprocal exposure, in erg/cm²,
 //! needed to reach a fixed density under monochromatic light. Up to a constant

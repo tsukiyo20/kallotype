@@ -82,8 +82,7 @@ pub struct StockArgs {
     ///
     /// `srgb` (the input's own definition, the default), `observer` (CIE 1931,
     /// for input that is already XYZ), `generic` (three broad Gaussians), or a
-    /// path to a CSV imported by `scripts/import_camspec.py`. Requires
-    /// --spectral.
+    /// path to a measured sensitivity CSV. Requires --spectral.
     #[arg(long, value_name = "NAME|PATH")]
     pub camera: Option<String>,
 

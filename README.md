@@ -14,10 +14,13 @@ developed* as a first-class parameter, not as a separate preset.
 
 ## Status
 
-Phase 0. The repository currently implements the characteristic curve and its
-dependence on development time and temperature. It does **not** yet model
-spectra, couplers, grain or halation. The built-in stocks are placeholders with
-realistic numbers, not measurements — see [ROADMAP.md](ROADMAP.md).
+Phases 0–3 are in place: the characteristic curve and its dependence on
+development time and temperature, the spectral exposure path, the spectral print
+and the spectral scan. Grain, halation and couplers are not modelled yet.
+
+The spectral path is reached with `--spectral` (and `--spectral-print`,
+`--spectral-scan`); without those flags the renderer uses the per-channel scalar
+model, which is exact for neutrals and cheap everywhere.
 
 What works today:
 
@@ -57,15 +60,16 @@ kalo render photo.png -o photo_c41.png --film c41_standard --dev 9.0 --ev +0.3
 > linker refuses to run until the licence is accepted, and `git` fails the same
 > way.
 
-## Research
+## What is published, and what is not
 
-The work is recorded as it happened, not rewritten afterwards:
+This repository is the **code**. The datasets it was developed against and the
+research notes that record the reasoning are kept locally and are not published
+here: they are the product of a separate digitisation effort, and some of the
+sources they describe are not redistributable in any case.
 
-- **[Research log](docs/RESEARCH-LOG.md)** — each step's question, method, result
-  and what changed because of it.
-- **[Data catalogue](docs/DATA-CATALOG.md)** — every dataset, what consumes it,
-  and which components are still placeholders.
-- **[ADRs](docs/)** — the decisions themselves, with their evidence.
+The consequence is deliberate: the model is self-contained — every measured
+constant it needs is compiled in — but the tests that re-read the raw datasets
+are `#[ignore]`d, and the benchmark needs a reflectance CSV passed to `--data`.
 
 ## Development
 
@@ -73,14 +77,13 @@ The work is recorded as it happened, not rewritten afterwards:
 just check     # fmt + clippy + tests — the same three CI runs
 just run render assets/testchart.png -o out/a.png --dev 9
 just bench     # compare RGB → spectrum reconstructions
-kalo bake -o out/model.klut --size 33 --dictionary data/vegetation-hawaii/reflectance.csv
+kalo bake -o out/model.klut --size 33 --dictionary spectra.csv
 kalo render photo.png -o out/photo.png --dev 9 --lut out/model.klut
 just deny      # licences, advisories and sources
 ```
 
 `just` is a convenience, not a requirement: every recipe is a plain `cargo`
-command, listed in [justfile](justfile) and explained in
-[CONTRIBUTING.md](CONTRIBUTING.md).
+command, listed in [justfile](justfile).
 
 Layout:
 
@@ -89,9 +92,7 @@ crates/kallotype-core/   the model — no dependencies, no I/O, no unsafe
 crates/kallotype-io/     decoding and encoding, the only file-format code
 crates/kallotype-cli/    the kalo binary, plus a library so commands are testable
 crates/kallotype-spectral/ spectra, sensors and the RGB → spectrum benchmark
-data/                    measured datasets, each with its provenance
-scripts/                 fixture generators
-docs/                    architecture notes (numbered, like ADRs)
+assets/                  the generated test chart
 ```
 
 ## The model
@@ -119,10 +120,8 @@ Three things are worth calling out:
 - Not a LUT pack, and not a "film look" filter that happens to be called a
   simulation.
 - Not a reimplementation of anything. The physics is public; every line here is
-  written against published literature and, from phase 1 on, against data
-  sheets that are digitised in this repository.
-- Not a product yet. There is no GUI, no colour management, and no spectral
-  dimension.
+  written against published literature and against manufacturer data sheets.
+- Not a product yet. There is no GUI and no colour management.
 
 ## Crates
 
@@ -135,15 +134,13 @@ Three things are worth calling out:
 `kallotype-gpu` (wgpu) arrives in phase 4 and must match `kallotype-core`
 within a stated tolerance.
 
-## Data and licensing
+## Licence
 
 Code is **Apache-2.0**. See [LICENSE](LICENSE).
 
-Data is treated separately and tracked in [NOTICE.md](NOTICE.md): every
-spectral curve, density curve and target value must record where it came from.
-Nothing copied from another project's data files is accepted. Manufacturer data
-sheets describe physical facts and are the intended source; the digitisation
-work is ours.
+The measured curves that ship compiled into the crate are our own digitisation
+of published manufacturer data sheets; the data sheets themselves are not
+redistributed. Nothing copied from another project's data files is accepted.
 
 ## Contributing
 

@@ -1,6 +1,7 @@
 //! Does the numerical grey balance still earn its keep with real dye spectra?
 //!
-//! Run with the digitised Vision3 500T curves:
+//! The digitised Vision3 500T curves are **not in this repository**, so this
+//! example only runs where `data/dyes/` exists beside the crate:
 //!
 //! ```console
 //! cargo run -p kallotype-core --example neutral_balance

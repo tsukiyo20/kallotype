@@ -93,8 +93,8 @@ impl RenderParams {
 
     /// As [`Self::prepare`], with an optional dictionary for the spectral prior.
     ///
-    /// The atoms are what the hybrid measured in `docs/0002-rgb-to-spectrum.md`
-    /// needs; without them the spectral path uses the polynomial prior alone.
+    /// The atoms are what the hybrid needs; without them the spectral path uses
+    /// the polynomial prior alone.
     #[must_use]
     pub fn prepare_with(&self, atoms: Option<&[kallotype_spectral::Spectrum]>) -> PreparedRender {
         let channels: [CharacteristicCurve; 3] =

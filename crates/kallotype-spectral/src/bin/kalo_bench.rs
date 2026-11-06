@@ -5,7 +5,7 @@
 //! flags does not justify pulling in a CLI framework.
 //!
 //! ```text
-//! kalo-bench [--data PATH] [--model all|polynomial|dictionary|sparse|hybrid]
+//! kalo-bench --data PATH [--model all|polynomial|dictionary|sparse|hybrid]
 //!            [--camera cie1931|generic] [--dictionary PATH] [--dictionary-limit N]
 //!            [--l1 VALUE] [--hybrid-threshold VALUE] [--verbose]
 //! ```
@@ -17,8 +17,6 @@ use kallotype_spectral::{
     DictionaryUpsampler, PolynomialUpsampler, ReflectanceSet, Sensor, Spectrum, Upsampler,
     load_csv, relative_response_error, rmse, spectral_angle_deg,
 };
-
-const DEFAULT_DATA: &str = "data/colorchecker-2005/reflectance.csv";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Model {
@@ -54,7 +52,7 @@ impl Model {
 enum Camera {
     Cie1931,
     Generic,
-    /// A measured sensitivity, as written by `scripts/import_camspec.py`.
+    /// A measured sensitivity: a CSV with `wavelength,red,green,blue` columns.
     Measured(PathBuf),
 }
 
@@ -103,7 +101,7 @@ fn main() -> ExitCode {
 }
 
 fn parse_args() -> Result<Options, String> {
-    let mut data = PathBuf::from(DEFAULT_DATA);
+    let mut data: Option<PathBuf> = None;
     let mut models = vec![Model::Polynomial, Model::Dictionary, Model::Hybrid];
     let mut camera = Camera::Cie1931;
     let mut l1 = 0.02_f64;
@@ -116,7 +114,7 @@ fn parse_args() -> Result<Options, String> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--data" => data = PathBuf::from(args.next().ok_or("--data needs a path")?),
+            "--data" => data = Some(PathBuf::from(args.next().ok_or("--data needs a path")?)),
             "--model" => models = Model::parse(&args.next().ok_or("--model needs a value")?)?,
             "--camera" => {
                 let value = args.next().ok_or("--camera needs a value")?;
@@ -173,6 +171,10 @@ fn parse_args() -> Result<Options, String> {
         }
     }
 
+    let data = data.ok_or(
+        "--data is required: a reflectance CSV, first column the wavelength and one \
+         column per sample",
+    )?;
     Ok(Options {
         data,
         models,
@@ -261,7 +263,8 @@ fn run(options: &Options) -> Result<(), String> {
                 [channel("red")?, channel("green")?, channel("blue")?],
             )
             .map_err(|error| error.to_string())?;
-            // White-balanced input, not raw: see `data/cameras/README.md`.
+            // White-balanced input, not raw: each channel is divided by its
+            // own area so a neutral triple reconstructs to a neutral spectrum.
             sensor.area_normalized()
         }
     };

@@ -51,7 +51,7 @@ jobs:
           fi
           mkdir -p "dist/${name}"
           cp "target/${TARGET}/release/${bin}" "dist/${name}/"
-          cp README.md LICENSE NOTICE.md "dist/${name}/"
+          cp README.md LICENSE "dist/${name}/"
           tar -czf "dist/${name}.tar.gz" -C dist "${name}"
 
       - uses: softprops/action-gh-release@v2

@@ -158,8 +158,7 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
 /// Resolve `--camera` into a profile.
 ///
 /// Two names are built in; anything else is a path to a CSV imported by
-/// `scripts/import_camspec.py`, with one column per channel named red, green and
-/// blue.
+/// a measured sensitivity, with one column per channel named red, green and blue.
 pub(crate) fn camera_profile(value: Option<&str>) -> Result<CameraProfile, CliError> {
     let Some(value) = value else {
         return Ok(CameraProfile::default());

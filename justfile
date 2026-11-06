@@ -37,10 +37,6 @@ run *args:
 bench *args:
     cargo run --release -p kallotype-spectral --bin kalo-bench -- {{args}}
 
-# Rebuild the committed test chart.
-chart:
-    python3 scripts/make_testchart.py
-
 # Audit licences, advisories and sources.
 deny:
     cargo deny check

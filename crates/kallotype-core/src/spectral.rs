@@ -11,8 +11,8 @@
 //!
 //! The reconstruction used here is the **fast** member of the family: the
 //! polynomial prior, which is a closed-form 3×3 solve per pixel. The dictionary
-//! prior measured in `docs/0002-rgb-to-spectrum.md` is the target, but it needs a
-//! baked lookup table to be usable per pixel, and that is a separate task.
+//! prior is the target, but it needs a baked lookup table to be usable per
+//! pixel, and that is a separate task.
 
 use kallotype_spectral::{DictionaryUpsampler, PolynomialUpsampler, Sensor, Spectrum, Upsampler};
 
@@ -42,7 +42,7 @@ pub enum CameraProfile {
     /// The CIE 1931 2 degree observer, for input that is already XYZ.
     Observer,
     /// A measured spectral sensitivity, for example an import of the camSPEC
-    /// database (`scripts/import_camspec.py`).
+    /// database.
     Measured(Sensor),
 }
 
@@ -78,7 +78,7 @@ pub struct SpectralContext {
     film: Sensor,
     upsampler: PolynomialUpsampler,
     /// When present, the dictionary is tried first and the polynomial is the
-    /// fallback — the hybrid measured in `docs/0002-rgb-to-spectrum.md`.
+    /// fallback.
     dictionary: Option<DictionaryUpsampler>,
     threshold: f64,
     /// Film response to a correctly exposed 18 % grey, per layer. Dividing by it
@@ -96,10 +96,10 @@ impl Default for SpectralContext {
 impl SpectralContext {
     /// Build the context on the internal grid, with the default camera profile.
     ///
-    /// The film's layers are measured (`data/sensitivities/`); the camera is
-    /// [`CameraProfile::default`], which is still a stand-in. Both are ordered
-    /// R, G, B — see `docs/0003-camera-assumption.md` for what the camera costs
-    /// and `data/cameras/README.md` for how to replace it.
+    /// The film's layers are measured from the manufacturer's data sheet; the
+    /// camera is [`CameraProfile::default`], the input's own definition. Both
+    /// are ordered R, G, B, and getting that order wrong is invisible until a
+    /// red patch comes out blue.
     ///
     /// # Panics
     ///
