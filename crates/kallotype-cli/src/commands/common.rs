@@ -167,6 +167,7 @@ fn camera_profile(value: Option<&str>) -> Result<CameraProfile, CliError> {
         return Ok(CameraProfile::default());
     };
     match value {
+        "srgb" => Ok(CameraProfile::Srgb),
         "generic" => Ok(CameraProfile::Generic),
         "observer" => Ok(CameraProfile::Observer),
         path => {
@@ -274,9 +275,12 @@ mod tests {
 
     #[test]
     fn the_built_in_camera_names_resolve() {
+        // The default is the sRGB primaries: the input is an sRGB image, and
+        // that basis is the one that means what the file says.
+        assert!(matches!(camera_profile(None).unwrap(), CameraProfile::Srgb));
         assert!(matches!(
-            camera_profile(None).unwrap(),
-            CameraProfile::Generic
+            camera_profile(Some("srgb")).unwrap(),
+            CameraProfile::Srgb
         ));
         assert!(matches!(
             camera_profile(Some("generic")).unwrap(),

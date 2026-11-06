@@ -31,9 +31,13 @@ pub const GRID_LEN: usize = 71;
 /// a table cannot be loaded against a different camera by accident.
 #[derive(Debug, Clone, Default)]
 pub enum CameraProfile {
+    /// The linear sRGB primaries: the triple is an sRGB colour, which is what
+    /// the program is actually handed. The default, because it is the only
+    /// option that is exactly right for the input.
+    #[default]
+    Srgb,
     /// Three broad Gaussians: the stand-in from before any measured camera
     /// existed. Kept because it is the assumption the early benchmarks used.
-    #[default]
     Generic,
     /// The CIE 1931 2 degree observer, for input that is already XYZ.
     Observer,
@@ -47,6 +51,7 @@ impl CameraProfile {
     #[must_use]
     pub fn name(&self) -> &str {
         match self {
+            Self::Srgb => "srgb-primaries",
             Self::Generic => "generic-camera",
             Self::Observer => "cie1931-approx",
             Self::Measured(sensor) => sensor.name(),
@@ -57,6 +62,7 @@ impl CameraProfile {
     #[must_use]
     pub fn sensor(&self, grid: &kallotype_spectral::Spectrum) -> Sensor {
         match self {
+            Self::Srgb => Sensor::srgb(grid),
             Self::Generic => Sensor::generic_camera(grid),
             Self::Observer => Sensor::cie1931(grid),
             Self::Measured(sensor) => sensor.resampled(grid),
@@ -255,6 +261,45 @@ mod tests {
         for channel in log_e {
             assert!((channel - expected).abs() < 1e-6, "{channel} vs {expected}");
         }
+    }
+
+    /// The default camera is the input's own definition, so the reconstruction
+    /// has to give the colour back exactly — as long as the prior can hold it.
+    #[test]
+    fn the_default_camera_gives_back_the_colour_it_was_handed() {
+        let context = SpectralContext::new();
+        for linear in [
+            [0.18, 0.18, 0.18],
+            [0.9, 0.1, 0.1],
+            [0.1, 0.1, 0.9],
+            [0.4, 0.3, 0.2],
+        ] {
+            let spectrum = context.reconstruct(linear).expect("polynomial solves");
+            let back = context.camera().respond(&spectrum);
+            for channel in 0..3 {
+                assert!(
+                    (back[channel] - linear[channel]).abs() < 1e-6,
+                    "{linear:?} came back as {back:?}"
+                );
+            }
+        }
+    }
+
+    /// Where the smooth prior cannot hold the colour, the clamp is what gives it
+    /// away: the quadratic goes negative and the reflectance floor lifts the
+    /// response. This is the polynomial's floor, not the camera's — the solve
+    /// before the clamp is exact — and it is why the dictionary exists.
+    #[test]
+    fn a_saturated_green_exceeds_what_the_smooth_prior_can_hold() {
+        let context = SpectralContext::new();
+        let linear = [0.1, 0.9, 0.1];
+        let spectrum = context.reconstruct(linear).expect("polynomial solves");
+        let back = context.camera().respond(&spectrum);
+        assert!(spectrum.min() >= 0.0, "reflectance went negative");
+        assert!(
+            back[0] > 0.2,
+            "expected the clamp to lift red above 0.2, got {back:?}"
+        );
     }
 
     #[test]

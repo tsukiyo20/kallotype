@@ -174,6 +174,45 @@ impl Sensor {
         )
     }
 
+    /// The sRGB primaries, as three spectral weighting functions.
+    ///
+    /// An sRGB triple is defined by the inverse of the standard matrix, applied
+    /// to CIE XYZ. Writing that out gives `R = ∫ S(λ) · r(λ) dλ` with
+    ///
+    /// ```text
+    /// r =  3.2406 x̄ - 1.5372 ȳ - 0.4986 z̄
+    /// g = -0.9689 x̄ + 1.8758 ȳ + 0.0415 z̄
+    /// b =  0.0557 x̄ - 0.2040 ȳ + 1.0570 z̄
+    /// ```
+    ///
+    /// This is the only basis that is *exactly* right for an sRGB input, and it
+    /// is not a camera: the curves have negative lobes, which no sensor has, and
+    /// they carry no noise, no IR-cut filter and no lens.
+    ///
+    /// Unlike the other constructors, the scale is not normalised. The matrix is
+    /// the definition, and dividing the channels would silently redefine it.
+    #[must_use]
+    pub fn srgb(grid: &Spectrum) -> Self {
+        const INVERSE: [[f64; 3]; 3] = [
+            [3.2406, -1.5372, -0.4986],
+            [-0.9689, 1.8758, 0.0415],
+            [0.0557, -0.2040, 1.0570],
+        ];
+        let channels: [Spectrum; 3] = INVERSE.map(|row| {
+            let mut channel = Spectrum::filled(grid.clone(), 0.0);
+            for (index, value) in channel.values_mut().iter_mut().enumerate() {
+                let wavelength = grid.start_nm() + grid.step_nm() * index as f64;
+                let observer = cie1931_xyz(wavelength);
+                *value = row[0] * observer[0] + row[1] * observer[1] + row[2] * observer[2];
+            }
+            channel
+        });
+        Self {
+            name: "srgb-primaries".to_owned(),
+            channels,
+        }
+    }
+
     /// The three layer sensitivities of KODAK VISION3 500T 5219/7219.
     ///
     /// Measured, not modelled: the curves come from the film's technical data
@@ -310,6 +349,19 @@ mod tests {
                 at_red[2]
             );
         }
+    }
+
+    /// The sRGB basis is exact and is not a sensor: it has to keep the negative
+    /// lobes that the inverse matrix produces, or it is no longer sRGB.
+    #[test]
+    fn the_srgb_basis_has_negative_lobes() {
+        let grid = Spectrum::uniform(380.0, 5.0, 71).unwrap();
+        let sensor = Sensor::srgb(&grid);
+        let red = sensor.channels()[0].min();
+        let blue = sensor.channels()[2].min();
+        assert!(red < -0.1, "red basis minimum {red}");
+        assert!(blue < -0.1, "blue basis minimum {blue}");
+        assert_eq!(sensor.name(), "srgb-primaries");
     }
 
     #[test]
