@@ -26,6 +26,7 @@
 #![forbid(unsafe_code)]
 
 pub mod data;
+pub mod layers;
 pub mod metrics;
 pub mod sensor;
 pub mod spectrum;

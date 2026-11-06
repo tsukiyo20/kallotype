@@ -133,18 +133,34 @@ impl Sensor {
         )
     }
 
-    /// A stand-in for a film's three layer sensitivities, in R, G, B order.
+    /// The three layer sensitivities of KODAK VISION3 500T 5219/7219.
     ///
-    /// Sits where the benchmark wants it: shifted relative to the camera, which
-    /// is exactly why a metameric error in the reconstruction shows up as an
-    /// error in dye density.
+    /// Measured, not modelled: the curves come from the film's technical data
+    /// sheet and live in [`crate::layers`]. They sit where the benchmark wants
+    /// them — shifted relative to the camera — which is exactly why a metameric
+    /// error in the reconstruction shows up as an error in dye density.
+    ///
+    /// The tables are sampled at 380–730 nm every 5 nm and resampled onto
+    /// `grid`, so the caller's grid does not have to match.
     #[must_use]
     pub fn film_layers(grid: &Spectrum) -> Self {
-        Self::from_gaussians(
-            grid,
-            "film-layers",
-            [(650.0, 50.0), (550.0, 35.0), (445.0, 30.0)],
-        )
+        let native = Spectrum::uniform(layers::START_NM, layers::STEP_NM, layers::LEN)
+            .expect("the layer table's grid is a valid constant");
+        let peak = layers::CHANNELS
+            .iter()
+            .flat_map(|table| table.iter())
+            .fold(0.0_f64, |a, &b| a.max(b));
+        let channels: [Spectrum; 3] = layers::CHANNELS.map(|table| {
+            let mut channel = Spectrum::filled(native.clone(), 0.0);
+            for (value, sample) in channel.values_mut().iter_mut().zip(table.iter()) {
+                *value = sample / peak;
+            }
+            channel.resampled(grid)
+        });
+        Self {
+            name: "vision3-500t".to_owned(),
+            channels,
+        }
     }
 
     fn from_gaussians(grid: &Spectrum, name: &str, peaks: [(f64, f64); 3]) -> Self {
