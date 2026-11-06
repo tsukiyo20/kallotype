@@ -22,9 +22,9 @@ fn stderr(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
 }
 
-/// The committed test chart, addressed from the crate directory.
+/// The committed test chart, inside the crate so the published package has it.
 fn chart() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/testchart.png")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/testchart.png")
 }
 
 /// A private directory per test, so the suite can run in parallel.

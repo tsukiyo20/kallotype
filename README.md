@@ -42,8 +42,8 @@ $ kalo curve --dev 12.0
 
 ```bash
 cargo build --release
-cargo run --release --bin kalo -- render assets/testchart.png -o out/dev_065.png
-cargo run --release --bin kalo -- render assets/testchart.png -o out/dev_12.png --dev 12.0
+cargo run --release --bin kalo -- render crates/kallotype-cli/assets/testchart.png -o out/dev_065.png
+cargo run --release --bin kalo -- render crates/kallotype-cli/assets/testchart.png -o out/dev_12.png --dev 12.0
 ```
 
 Or install the binary:
@@ -75,7 +75,7 @@ are `#[ignore]`d, and the benchmark needs a reflectance CSV passed to `--data`.
 
 ```bash
 just check     # fmt + clippy + tests — the same three CI runs
-just run render assets/testchart.png -o out/a.png --dev 9
+just run render crates/kallotype-cli/assets/testchart.png -o out/a.png --dev 9
 just bench     # compare RGB → spectrum reconstructions
 kalo bake -o out/model.klut --size 33 --dictionary spectra.csv
 kalo render photo.png -o out/photo.png --dev 9 --lut out/model.klut
@@ -85,6 +85,15 @@ just deny      # licences, advisories and sources
 `just` is a convenience, not a requirement: every recipe is a plain `cargo`
 command, listed in [justfile](justfile).
 
+### Publishing
+
+Four crates, and they go up in dependency order: `kallotype-spectral`, then
+`kallotype-core`, then `kallotype-io` and `kallotype-cli`. Only the first can be
+packaged before the rest exist on crates.io — a path dependency carries a
+version, and packaging resolves that version against the registry, so
+`kallotype-core` cannot be built for upload until `kallotype-spectral` is
+already there.
+
 Layout:
 
 ```
@@ -92,7 +101,6 @@ crates/kallotype-core/   the model — no dependencies, no I/O, no unsafe
 crates/kallotype-io/     decoding and encoding, the only file-format code
 crates/kallotype-cli/    the kalo binary, plus a library so commands are testable
 crates/kallotype-spectral/ spectra, sensors and the RGB → spectrum benchmark
-assets/                  the generated test chart
 ```
 
 ## The model

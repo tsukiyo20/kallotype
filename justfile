@@ -29,7 +29,7 @@ doc:
 # Everything CI checks.
 check: fmt-check lint test
 
-# Render an image. Example: just run render assets/testchart.png -o out/a.png --dev 9
+# Render an image. Example: just run render crates/kallotype-cli/assets/testchart.png -o out/a.png --dev 9
 run *args:
     cargo run --release --bin kalo -- {{args}}
 

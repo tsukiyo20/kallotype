@@ -13,10 +13,6 @@ homepage = "https://github.com/tsukiyo20/kallotype"
 readme = "README.md"
 keywords = ["photography", "film", "rendering", "colour", "simulation"]
 categories = ["graphics", "multimedia::images"]
-# Nothing is published until the model has real data behind it. Flip this
-# per crate when that changes, not before.
-publish = false
-
 [workspace.lints.rust]
 missing_docs = "warn"
 unsafe_code = "forbid"
