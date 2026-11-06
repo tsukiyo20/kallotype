@@ -32,5 +32,6 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
             commands::stocks::run();
             Ok(())
         }
+        Command::Bake(args) => commands::bake::run(args),
     }
 }

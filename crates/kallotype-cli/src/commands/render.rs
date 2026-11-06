@@ -31,7 +31,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         source,
     })?;
 
-    print_report(&params, width, height);
+    print_report(&params, &prepared, width, height);
     println!();
     println!(
         "  wrote     {} ({}x{})",

@@ -63,6 +63,8 @@ kalo render photo.png -o photo_c41.png --film c41_standard --dev 9.0 --ev +0.3
 just check     # fmt + clippy + tests — the same three CI runs
 just run render assets/testchart.png -o out/a.png --dev 9
 just bench     # compare RGB → spectrum reconstructions
+kalo bake -o out/model.klut --size 33 --dictionary data/vegetation-hawaii/reflectance.csv
+kalo render photo.png -o out/photo.png --dev 9 --lut out/model.klut
 just deny      # licences, advisories and sources
 ```
 

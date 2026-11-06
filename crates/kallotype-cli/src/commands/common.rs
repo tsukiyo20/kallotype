@@ -20,6 +20,8 @@ pub struct Selection {
     pub lut_size: usize,
     /// Reflectance CSV for the dictionary prior.
     pub dictionary: Option<std::path::PathBuf>,
+    /// A table baked by `kalo bake`.
+    pub lut: Option<std::path::PathBuf>,
 }
 
 impl Selection {
@@ -31,16 +33,25 @@ impl Selection {
             paper: self.paper,
             development: self.development,
             exposure_ev,
-            spectral: self.spectral,
+            spectral: self.spectral || self.lut.is_some(),
             lut_size: self.lut_size,
         }
     }
 }
 
 impl Selection {
-    /// Load the dictionary, if one was requested, and prepare the render.
+    /// Load the table or dictionary, if requested, and prepare the render.
     pub fn prepare(&self, exposure_ev: f64) -> Result<kallotype_core::PreparedRender, CliError> {
         let params = self.render_params(exposure_ev);
+
+        if let Some(path) = &self.lut {
+            let table = kallotype_core::ExposureLut::read(path).map_err(|error| CliError::Lut {
+                path: path.clone(),
+                message: error.to_string(),
+            })?;
+            return Ok(params.prepare_with_lut(table));
+        }
+
         let atoms = match &self.dictionary {
             None => None,
             Some(path) => {
@@ -100,22 +111,27 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         spectral: stock.spectral,
         lut_size: stock.lut_size,
         dictionary: stock.dictionary.clone(),
+        lut: stock.lut.clone(),
     })
 }
 
 /// Print what the development did, before any pixels are touched.
-pub fn print_report(params: &RenderParams, width: u32, height: u32) {
+pub fn print_report(
+    params: &RenderParams,
+    prepared: &kallotype_core::PreparedRender,
+    width: u32,
+    height: u32,
+) {
     let development = params.development;
-    let prepared = params.prepare();
 
     println!("kallotype {}", env!("CARGO_PKG_VERSION"));
     println!("  film      {}  ({})", params.film.id, params.film.label);
     println!("  paper     {}  ({})", params.paper.id, params.paper.label);
     println!(
         "  exposure  {}",
-        if params.spectral && params.lut_size >= 2 {
+        if prepared.lut().is_some() {
             "spectral, baked table"
-        } else if params.spectral {
+        } else if prepared.is_spectral() {
             "spectral, live"
         } else {
             "scalar per channel"

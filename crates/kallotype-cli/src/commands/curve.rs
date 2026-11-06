@@ -10,7 +10,7 @@ pub fn run(args: CurveArgs) -> Result<(), CliError> {
     let params = selection.render_params(0.0);
     let prepared = selection.prepare(0.0)?;
 
-    print_report(&params, 0, 0);
+    print_report(&params, &prepared, 0, 0);
 
     if args.sweep {
         println!();

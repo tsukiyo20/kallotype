@@ -44,6 +44,13 @@ pub enum CliError {
         /// What the loader said.
         message: String,
     },
+    /// A baked table could not be read or written.
+    Lut {
+        /// The file that failed.
+        path: PathBuf,
+        /// What the table layer said.
+        message: String,
+    },
     /// The output could not be encoded.
     Write {
         /// The file that failed.
@@ -75,6 +82,9 @@ impl std::fmt::Display for CliError {
             Self::Dictionary { path, message } => {
                 write!(f, "could not read dictionary {}: {message}", path.display())
             }
+            Self::Lut { path, message } => {
+                write!(f, "lookup table {}: {message}", path.display())
+            }
             Self::Write { path, source } => {
                 write!(f, "could not write {}: {source}", path.display())
             }
@@ -87,9 +97,10 @@ impl std::error::Error for CliError {
         match self {
             Self::CreateDir { source, .. } => Some(source),
             Self::Read { source, .. } | Self::Write { source, .. } => Some(source),
-            Self::UnknownStock { .. } | Self::InvalidNumber { .. } | Self::Dictionary { .. } => {
-                None
-            }
+            Self::UnknownStock { .. }
+            | Self::InvalidNumber { .. }
+            | Self::Dictionary { .. }
+            | Self::Lut { .. } => None,
         }
     }
 }

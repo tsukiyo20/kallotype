@@ -32,6 +32,8 @@ pub enum Command {
     Stocks,
     /// Show what a development does to the curves.
     Curve(CurveArgs),
+    /// Bake the spectral exposure into a reusable table.
+    Bake(BakeArgs),
 }
 
 /// Options shared by every command that touches a film and a paper.
@@ -66,6 +68,10 @@ pub struct StockArgs {
     /// Requires --spectral. Without it the polynomial prior is used alone.
     #[arg(long, value_name = "PATH")]
     pub dictionary: Option<std::path::PathBuf>,
+
+    /// Use a table baked by `kalo bake` instead of computing the exposure.
+    #[arg(long, value_name = "PATH")]
+    pub lut: Option<std::path::PathBuf>,
 }
 
 /// `kalo render`
@@ -95,6 +101,22 @@ pub struct RenderArgs {
     /// How to interpret the values stored in the input file.
     #[arg(long, value_enum, default_value_t = EncodingArg::Srgb)]
     pub input_encoding: EncodingArg,
+}
+
+/// `kalo bake`
+#[derive(Debug, Args)]
+pub struct BakeArgs {
+    /// Output table path, conventionally `.klut`.
+    #[arg(short, long)]
+    pub output: std::path::PathBuf,
+
+    /// Samples per axis.
+    #[arg(long, value_name = "N", default_value_t = 33)]
+    pub size: usize,
+
+    /// Reflectance CSV to use as the spectral dictionary prior.
+    #[arg(long, value_name = "PATH")]
+    pub dictionary: Option<std::path::PathBuf>,
 }
 
 /// `kalo curve`

@@ -115,6 +115,68 @@ fn render_writes_an_image_and_creates_directories() {
 }
 
 #[test]
+fn bake_writes_a_table_and_render_uses_it() {
+    let dir = scratch("bake");
+    let table = dir.join("model.klut");
+
+    let baked = kalo()
+        .arg("bake")
+        .arg("-o")
+        .arg(&table)
+        .args(["--size", "5"])
+        .output()
+        .expect("kalo should start");
+    assert!(baked.status.success(), "stderr: {}", stderr(&baked));
+    assert!(table.exists(), "the table was not written");
+
+    let out = dir.join("out.png");
+    let rendered = kalo()
+        .arg("render")
+        .arg(chart())
+        .arg("-o")
+        .arg(&out)
+        .arg("--lut")
+        .arg(&table)
+        .output()
+        .expect("kalo should start");
+    assert!(rendered.status.success(), "stderr: {}", stderr(&rendered));
+    assert!(out.exists());
+    assert!(
+        stdout(&rendered).contains("spectral, baked table"),
+        "{}",
+        stdout(&rendered)
+    );
+
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}
+
+#[test]
+fn a_truncated_table_is_rejected() {
+    let dir = scratch("badlut");
+    let table = dir.join("broken.klut");
+    std::fs::write(&table, b"KLUT").expect("write");
+
+    let output = kalo()
+        .arg("render")
+        .arg(chart())
+        .arg("-o")
+        .arg(dir.join("out.png"))
+        .arg("--lut")
+        .arg(&table)
+        .output()
+        .expect("kalo should start");
+
+    assert!(!output.status.success());
+    assert!(
+        stderr(&output).contains("lookup table"),
+        "{}",
+        stderr(&output)
+    );
+
+    std::fs::remove_dir_all(&dir).expect("cleanup");
+}
+
+#[test]
 fn unknown_film_is_reported_by_name() {
     let output = run(&["curve", "--film", "portra400"]);
     assert!(!output.status.success(), "an unknown stock must fail");

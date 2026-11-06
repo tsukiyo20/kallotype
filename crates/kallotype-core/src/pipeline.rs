@@ -62,6 +62,23 @@ impl RenderParams {
         self.prepare_with(None)
     }
 
+    /// Prepare with a table loaded from disk instead of baking one.
+    ///
+    /// The table was baked from some camera, film and dictionary; the caller is
+    /// responsible for it matching this render's film. The format carries no
+    /// model identity yet, which is a known gap.
+    #[must_use]
+    pub fn prepare_with_lut(&self, lut: ExposureLut) -> PreparedRender {
+        let mut prepared = Self {
+            spectral: false,
+            lut_size: 0,
+            ..*self
+        }
+        .prepare_with(None);
+        prepared.lut = Some(lut);
+        prepared
+    }
+
     /// As [`Self::prepare`], with an optional dictionary for the spectral prior.
     ///
     /// The atoms are what the hybrid measured in `docs/0002-rgb-to-spectrum.md`

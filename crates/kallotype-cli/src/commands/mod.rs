@@ -1,5 +1,6 @@
 //! One module per subcommand.
 
+pub mod bake;
 pub mod common;
 pub mod curve;
 pub mod render;
