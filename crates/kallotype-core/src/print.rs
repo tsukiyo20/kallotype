@@ -72,6 +72,9 @@ pub struct PrintContext {
     /// The density the print balance is anchored on, kept so that replacing the
     /// spectra can recompute the anchor.
     reference_density: [f64; 3],
+    /// Density of the unexposed, processed film: base, fog and the colour mask.
+    /// Added to the dye densities before the transmittance is computed.
+    base_density: Option<Spectrum>,
 }
 
 impl PrintContext {
@@ -99,6 +102,7 @@ impl PrintContext {
             paper,
             reference: [1.0; 3],
             reference_density,
+            base_density: None,
         };
         // Anchor on the *neutral* density at the reference level, so that grey
         // stays grey across the scale. The pipeline compensates for the small
@@ -126,6 +130,20 @@ impl PrintContext {
         let response = self.response([neutral_density; 3]);
         let target = (response[0] * response[1] * response[2]).cbrt();
         std::array::from_fn(|layer| target / response[layer].max(1e-12))
+    }
+
+    /// Add the film's minimum density: base, fog and the orange mask.
+    ///
+    /// The published dye curves have D-min subtracted, so the mask is not in
+    /// them. Without it a neutral negative does not print neutral, and the grey
+    /// balance is left compensating for a physical layer that was removed from
+    /// the data.
+    #[must_use]
+    pub fn with_base_density(mut self, base: Spectrum) -> Self {
+        let base = base.resampled(&self.grid);
+        self.base_density = Some(base);
+        self.reference = self.balanced(self.reference_density);
+        self
     }
 
     /// Replace the placeholder bands with measured spectra.
@@ -206,11 +224,15 @@ impl PrintContext {
         let step = self.grid.step_nm();
         let mut response = [0.0_f64; 3];
         for wavelength_index in 0..self.grid.len() {
-            let density: f64 = density_cmy
+            let mut density: f64 = self
+                .base_density
+                .as_ref()
+                .map_or(0.0, |base| base.values()[wavelength_index]);
+            density += density_cmy
                 .iter()
                 .zip(&self.dye)
                 .map(|(value, dye)| value * dye.values()[wavelength_index])
-                .sum();
+                .sum::<f64>();
             // exp2 is markedly cheaper than powf and this runs per wavelength
             // per pixel: 10^-d = 2^(-d * log2 10).
             let transmitted = (-density * std::f64::consts::LOG2_10).exp2();

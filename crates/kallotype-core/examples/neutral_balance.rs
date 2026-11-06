@@ -48,6 +48,34 @@ fn main() {
             read("paper_endura_metallic_sensitivity_yellow"),
         ],
     );
+    let masked = PrintContext::new([1.2, 1.1, 1.0])
+        .with_spectra(
+            [
+                read("vision3_500t_cyan"),
+                read("vision3_500t_magenta"),
+                read("vision3_500t_yellow"),
+            ],
+            [
+                read("paper_endura_metallic_sensitivity_cyan"),
+                read("paper_endura_metallic_sensitivity_magenta"),
+                read("paper_endura_metallic_sensitivity_yellow"),
+            ],
+        )
+        .with_base_density(read("vision3_500t_minimum_density"));
+
+    println!();
+    println!("measured film dyes + papers + minimum density (the mask):");
+    for step in 1..=10 {
+        let density = 0.2 * f64::from(step);
+        let g = masked.balance_gain(density);
+        let spread = g.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            - g.iter().copied().fold(f64::INFINITY, f64::min);
+        println!(
+            "  {density:>4.1}: gains [{:>5.3} {:>5.3} {:>5.3}] spread {spread:.3}",
+            g[0], g[1], g[2]
+        );
+    }
+
     println!();
     println!("measured film dyes + measured paper layers:");
     for step in 1..=10 {
