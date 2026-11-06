@@ -64,6 +64,24 @@ fn main() {
         .with_base_density(read("vision3_500t_minimum_density"));
 
     println!();
+    println!("solving the enlarger filter pack on the measured model:");
+    let solved = masked.solve_filters(1.0);
+    println!(
+        "  solved    {:.0}Y {:.0}M {:.0}C  (Kodak CC units)",
+        solved[0], solved[1], solved[2]
+    );
+    let filtered = masked.clone().with_filters(solved);
+    for density in [0.5, 1.0, 1.5, 2.0] {
+        let g = filtered.balance_gain(density);
+        let spread = g.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            - g.iter().copied().fold(f64::INFINITY, f64::min);
+        println!(
+            "  D={density:>3.1}: gains [{:>5.3} {:>5.3} {:>5.3}] spread {spread:.3}",
+            g[0], g[1], g[2]
+        );
+    }
+
+    println!();
     println!("measured film dyes + papers + minimum density (the mask):");
     for step in 1..=10 {
         let density = 0.2 * f64::from(step);

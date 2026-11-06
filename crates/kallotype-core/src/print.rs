@@ -46,6 +46,23 @@ const DYE_BANDS: [Band; 3] = [
     },
 ];
 
+/// Filter pack bands: yellow removes blue, magenta removes green, cyan removes
+/// red. Wider than a real dichroic filter, and a placeholder.
+const FILTER_BANDS: [Band; 3] = [
+    Band {
+        peak_nm: 450.0,
+        width_nm: 55.0,
+    },
+    Band {
+        peak_nm: 550.0,
+        width_nm: 50.0,
+    },
+    Band {
+        peak_nm: 650.0,
+        width_nm: 55.0,
+    },
+];
+
 /// The paper's three layers sit under the same three bands, for the same reason.
 const PAPER_BANDS: [Band; 3] = [
     Band {
@@ -72,6 +89,14 @@ pub struct PrintContext {
     /// The density the print balance is anchored on, kept so that replacing the
     /// spectra can recompute the anchor.
     reference_density: [f64; 3],
+    /// Enlarger filter pack, in Kodak colour-correction units for yellow, magenta
+    /// and cyan. Cyan is almost always zero in a colour head.
+    filters: [f64; 3],
+    /// The three filter absorption bands: yellow removes blue, magenta removes
+    /// green, cyan removes red. Placeholders, like the dyes.
+    filter_bands: [Spectrum; 3],
+    /// The enlarger's light source. Equal-energy until a real one is measured.
+    illuminant: Spectrum,
     /// Density of the unexposed, processed film: base, fog and the colour mask.
     /// Added to the dye densities before the transmittance is computed.
     base_density: Option<Spectrum>,
@@ -95,6 +120,9 @@ impl PrintContext {
         let dye: [Spectrum; 3] = DYE_BANDS.map(|band| gaussian(&grid, band));
         // Unit area, so the response to white light is 1.0 per layer.
         let paper: [Spectrum; 3] = PAPER_BANDS.map(|band| normalised(gaussian(&grid, band)));
+        // Built before the struct literal, because `grid` is moved into it.
+        let filter_bands: [Spectrum; 3] = FILTER_BANDS.map(|band| gaussian(&grid, band));
+        let illuminant = Spectrum::filled(grid.clone(), 1.0);
 
         let mut context = Self {
             grid,
@@ -102,6 +130,9 @@ impl PrintContext {
             paper,
             reference: [1.0; 3],
             reference_density,
+            filters: [0.0; 3],
+            filter_bands,
+            illuminant,
             base_density: None,
         };
         // Anchor on the *neutral* density at the reference level, so that grey
@@ -130,6 +161,54 @@ impl PrintContext {
         let response = self.response([neutral_density; 3]);
         let target = (response[0] * response[1] * response[2]).cbrt();
         std::array::from_fn(|layer| target / response[layer].max(1e-12))
+    }
+
+    /// Set the enlarger filter pack, in Kodak colour-correction units.
+    #[must_use]
+    pub fn with_filters(mut self, filters: [f64; 3]) -> Self {
+        self.filters = filters;
+        self.reference = self.balanced(self.reference_density);
+        self
+    }
+
+    /// Solve for the filter pack that makes a neutral negative print neutral.
+    ///
+    /// The filters change the ratio of the three layer responses, which is exactly
+    /// what a printer adjusts with test strips. Two unknowns, two ratios, so a
+    /// coarse grid followed by a refinement is enough and is easier to trust than
+    /// a gradient step on a function with clamps in it.
+    #[must_use]
+    pub fn solve_filters(&self, density: f64) -> [f64; 3] {
+        let spread = |candidate: Self| {
+            let response = candidate.response([density; 3]);
+            let target = (response[0] * response[1] * response[2]).cbrt();
+            let gains: [f64; 3] = std::array::from_fn(|i| target / response[i].max(1e-12));
+            gains.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+                - gains.iter().copied().fold(f64::INFINITY, f64::min)
+        };
+
+        let mut best = (f64::INFINITY, [0.0; 3]);
+        let mut step = 10.0_f64;
+        let mut centre = [0.0_f64; 3];
+        for _ in 0..4 {
+            for yellow in 0..=20 {
+                for magenta in 0..=20 {
+                    let candidate = [
+                        centre[0] + (f64::from(yellow) - 10.0) * step,
+                        centre[1] + (f64::from(magenta) - 10.0) * step,
+                        0.0,
+                    ]
+                    .map(|value| value.max(0.0));
+                    let value = spread(self.clone().with_filters(candidate));
+                    if value < best.0 {
+                        best = (value, candidate);
+                    }
+                }
+            }
+            centre = best.1;
+            step /= 5.0;
+        }
+        best.1
     }
 
     /// Add the film's minimum density: base, fog and the orange mask.
@@ -235,7 +314,12 @@ impl PrintContext {
                 .sum::<f64>();
             // exp2 is markedly cheaper than powf and this runs per wavelength
             // per pixel: 10^-d = 2^(-d * log2 10).
-            let transmitted = (-density * std::f64::consts::LOG2_10).exp2();
+            let mut filter = 0.0;
+            for (cc, band) in self.filters.iter().zip(&self.filter_bands) {
+                filter += cc * band.values()[wavelength_index] / 100.0;
+            }
+            let light = self.illuminant.values()[wavelength_index];
+            let transmitted = (-(density + filter) * std::f64::consts::LOG2_10).exp2() * light;
             for (value, paper) in response.iter_mut().zip(&self.paper) {
                 *value += paper.values()[wavelength_index] * transmitted;
             }
