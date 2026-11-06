@@ -6,20 +6,20 @@
 //! cargo run -p kallotype-core --example neutral_balance
 //! ```
 
-use kallotype_core::PrintContext;
+use kallotype_core::{PrintContext, ScanContext};
 use kallotype_spectral::{Spectrum, load_csv};
 
-fn read(name: &str) -> Spectrum {
-    let set = load_csv(format!("data/dyes/vision3_500t_{name}.csv")).expect("dye csv");
+fn read(stem: &str) -> Spectrum {
+    let set = load_csv(format!("data/dyes/{stem}.csv")).expect("dye csv");
     set.samples[0].reflectance.clone()
 }
 
 fn main() {
     let placeholder = PrintContext::new([1.2, 1.1, 1.0]);
     let real = PrintContext::new([1.2, 1.1, 1.0]).with_dyes([
-        read("cyan"),
-        read("magenta"),
-        read("yellow"),
+        read("vision3_500t_cyan"),
+        read("vision3_500t_magenta"),
+        read("vision3_500t_yellow"),
     ]);
 
     println!(
@@ -33,6 +33,24 @@ fn main() {
         println!(
             "{density:<10.1} [{:>6.3} {:>6.3} {:>6.3}] [{:>6.3} {:>6.3} {:>6.3}]",
             a[0], a[1], a[2], b[0], b[1], b[2]
+        );
+    }
+
+    println!();
+    println!("paper dyes in the scan, neutral densities (should be neutral):");
+    let scan = ScanContext::new().with_dyes([
+        read("paper_endura_metallic_cyan"),
+        read("paper_endura_metallic_magenta"),
+        read("paper_endura_metallic_yellow"),
+    ]);
+    for step in 1..=6 {
+        let density = 0.3 * f64::from(step);
+        let rgb = scan.scan([density; 3]);
+        let spread = rgb.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+            - rgb.iter().copied().fold(f64::INFINITY, f64::min);
+        println!(
+            "  {density:>4.1}: rgb [{:>5.3} {:>5.3} {:>5.3}] spread {spread:.3}",
+            rgb[0], rgb[1], rgb[2]
         );
     }
 
