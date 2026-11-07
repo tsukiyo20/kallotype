@@ -1,0 +1,21 @@
+[package]
+name = "kallotype-gpu"
+description = "wgpu backend for Kallotype, held to the CPU model's tolerance"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords = ["gpu", "wgpu", "film", "simulation", "rendering"]
+categories = ["graphics", "simulation"]
+
+[dependencies]
+kallotype-core = { path = "../kallotype-core", version = "0.1.0" }
+wgpu = "26"
+pollster = "0.4"
+
+[lints]
+workspace = true

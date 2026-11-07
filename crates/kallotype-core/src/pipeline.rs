@@ -159,6 +159,29 @@ impl RenderParams {
     }
 }
 
+/// The scalar model, flattened into the numbers another backend needs.
+///
+/// A GPU cannot call into this crate, and re-deriving the model from its
+/// parameters on the other side would be a second implementation that could
+/// drift. So the prepared render hands over the numbers it solved, in the shape
+/// a shader wants: per layer, a base density, a span, a slope and an inflection
+/// point; then the paper's two numbers and the enlarger's four.
+///
+/// Only the pure scalar path has one. The spectral exposure, the spectral print
+/// and the spectral scan integrate over wavelength, and a backend that wants
+/// them has to port the integration rather than the numbers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ScalarModel {
+    /// Per layer: `d_min`, `span`, `slope_factor`, `log_e0`.
+    pub curve: [[f64; 4]; 3],
+    /// The paper's `d_min` and `span`.
+    pub paper: [f64; 2],
+    /// The enlarger's slope, then the per-layer anchor log exposure.
+    pub print: [f64; 4],
+    /// Exposure offset applied before the curve, in decades.
+    pub exposure_shift: f64,
+}
+
 /// A [`RenderParams`] with the curves already developed and the print balanced.
 #[derive(Debug, Clone)]
 pub struct PreparedRender {
@@ -178,6 +201,38 @@ pub struct PreparedRender {
 }
 
 impl PreparedRender {
+    /// The scalar model as plain numbers, when the render uses only the scalar
+    /// path. `None` the moment any spectral stage is active.
+    #[must_use]
+    pub fn scalar_model(&self) -> Option<ScalarModel> {
+        if self.spectral.is_some()
+            || self.lut.is_some()
+            || self.print.is_some()
+            || self.scan.is_some()
+        {
+            return None;
+        }
+        Some(ScalarModel {
+            curve: std::array::from_fn(|layer| {
+                let curve = &self.channels[layer];
+                [
+                    curve.d_min,
+                    curve.span(),
+                    curve.slope_factor(),
+                    curve.log_e0,
+                ]
+            }),
+            paper: [self.paper.d_min, self.paper.span()],
+            print: [
+                self.print_slope,
+                self.print_log_e0[0],
+                self.print_log_e0[1],
+                self.print_log_e0[2],
+            ],
+            exposure_shift: self.exposure_shift,
+        })
+    }
+
     /// The three negative curves after development.
     #[must_use]
     pub fn channels(&self) -> &[CharacteristicCurve; 3] {

@@ -10,7 +10,15 @@ no-default-features = false
 [advisories]
 version = 2
 yanked = "deny"
-ignore = []
+ignore = [
+    # `paste` is reached only through wgpu's type machinery, and it is a
+    # proc-macro that expands at compile time: there is no runtime code to be
+    # vulnerable, and no maintained alternative that wgpu 26 accepts. It is
+    # unmaintained, not broken. Dropping it means raising the workspace MSRV to
+    # 1.87 for wgpu 30, which is a decision with its own cost and is not worth
+    # taking for a macro.
+    { id = "RUSTSEC-2024-0436", reason = "compile-time proc-macro in wgpu 26; no runtime code" },
+]
 
 [licenses]
 # Permissive only. If a dependency needs an addition, add it here with a

@@ -173,8 +173,22 @@ Three things are worth calling out:
 | `kallotype-io` | Decoding and encoding images. The only place that touches a file format. |
 | `kallotype-cli` | The `kalo` binary. |
 
-`kallotype-gpu` (wgpu) arrives in phase 4 and must match `kallotype-core`
-within a stated tolerance.
+### `kallotype-gpu`
+
+A wgpu backend that must agree with `kallotype-core`. It is a transcription of
+the scalar model into WGSL and nothing else: the prepared render hands over the
+numbers it solved, the shader applies the same arithmetic in f32, and a test
+compares the two on the same pixels. Across a 2 048-pixel grid that spans the toe
+and the shoulder, the worst per-channel difference is **2.2 × 10⁻⁷** in linear
+light, against a stated tolerance of 1 × 10⁻⁴.
+
+The tolerance is the contract. A GPU port that "looks right" is how a film
+simulation acquires two different films.
+
+The crate covers the **scalar path only**: the spectral stages integrate over
+wavelength, so a backend that wants them has to port the integration rather than
+a handful of solved constants, and asking for one returns an error rather than
+silently rendering something else.
 
 ## Licence
 
