@@ -267,7 +267,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         layers: &crate::measured::KODAK_PORTRA400_LAYERS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
-        sigma_um: Some([4.0100, 3.0000, 2.7600]),
+        sigma_um: Some([4.4500, 3.4100, 3.0800]),
     },
     FilmStock {
         id: "kodak_ektar_100",
@@ -284,7 +284,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         layers: &crate::measured::KODAK_EKTAR100_LAYERS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
-        sigma_um: Some([4.4500, 3.3900, 3.1800]),
+        sigma_um: Some([4.8700, 3.6700, 3.4900]),
     },
     FilmStock {
         id: "kodak_gold200",
@@ -302,6 +302,23 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+    },
+    FilmStock {
+        id: "kodak_portra_160",
+        process: FilmProcess::Negative,
+        label: "KODAK PROFESSIONAL PORTRA 160",
+        note: "Generated from kodak_portra_160.toml; borrowed: spectra.dyes.",
+        channels: [
+            curve(0.0, 1.5459, 0.5658, -0.7281),
+            curve(0.0, 1.6641, 0.6012, -0.7461),
+            curve(0.0, 1.9107, 0.6834, -0.7601),
+        ],
+        base_density: [0.1995, 0.6101, 0.8417],
+        grains_per_um2: [0.62, 0.51, 0.07],
+        layers: &crate::measured::KODAK_PORTRA160_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: Some([4.8400, 3.0700, 3.4400]),
     },
 ];
 

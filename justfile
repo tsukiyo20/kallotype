@@ -25,7 +25,8 @@ lint:
 stocks:
     PYTHONPATH=private/.pylib313 /opt/homebrew/bin/python3.13 \
         private/scripts/compile_stocks.py --check private/stocks/kodak_portra_400.toml \
-        private/stocks/kodak_ektar_100.toml private/stocks/kodak_gold200.toml
+        private/stocks/kodak_portra_160.toml private/stocks/kodak_ektar_100.toml \
+        private/stocks/kodak_gold200.toml
 
 # Run the whole test suite.
 test:

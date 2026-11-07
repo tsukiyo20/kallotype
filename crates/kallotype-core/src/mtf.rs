@@ -10,28 +10,34 @@
 //! The VISION3 500T data sheet (H-1-5219, page 3) draws the film's
 //! modulation-transfer curve for the three layers, on logarithmic axes, from
 //! 2.5 to about 90 cycles/mm. It is digitised in
-//! `scripts/extract_mtf.py`, and a Gaussian fitted to it per layer gives
+//! `scripts/extract_mtf.py`, and `scripts/fit_mtf_blur.py` fits one Gaussian per
+//! layer over 5-60 cycles/mm and 20-100 % response:
 //!
 //! | layer | sigma | response at 50 c/mm, fitted / measured |
 //! |---|---|---|
-//! | red | 3.12 µm | 0.61 / 0.58 |
-//! | green | 3.57 µm | 0.52 / 0.50 |
-//! | blue | 5.11 µm | 0.27 / 0.32 |
+//! | red | 3.43 µm | 0.60 / 0.59 |
+//! | green | 3.67 µm | 0.53 / 0.53 |
+//! | blue | 4.64 µm | 0.32 / 0.33 |
 //!
-//! with an rms of 0.04 over the whole curve. Blue is the softest, which is what
+//! with an rms of 2.5 to 5.2 % of response. Blue is the softest, which is what
 //! a shorter wavelength scattering in the emulsion should do.
 //!
 //! ## What the number is, and is not
 //!
 //! A **single Gaussian is an approximation**: the sheet's curve is flatter than
-//! a Gaussian in the middle and heavier in the tail, and two Gaussians fit it
-//! about a third better (0.03 against 0.04). One is used because the model has
-//! one blur per channel, and 0.04 of MTF is below what a 4K scan of a film
-//! resolves anyway.
+//! a Gaussian in the middle and heavier in the tail, so the residual is largest
+//! where the curve is lowest. One is used because the model has one blur per
+//! channel, and 5 % of response at 50 cycles/mm is below what a 4K scan of a
+//! film resolves anyway.
+//!
+//! The window is a decision, and it is the same decision for every stock: across
+//! the twelve layers now in the tree, 5-60 cycles/mm fits with a median rms of
+//! 2.8 % against 4.5 % for 5-80. A wider window is not more honest, it is a
+//! worse model of the same data.
 //!
 //! The sheet does not state the measuring aperture, so this sigma includes
 //! whatever lens made the measurement. At f/5.6 that is a 0.9 µm Gaussian in
-//! quadrature, which would take the red layer's 3.12 to 2.99 — a 4 % correction
+//! quadrature, which would take the red layer's 3.43 to 3.31 — a 3 % correction
 //! that cannot be made without knowing the aperture, and is recorded here rather
 //! than guessed at.
 //!
@@ -56,7 +62,7 @@ impl EmulsionBlur {
     #[must_use]
     pub fn measured(pixel_um: f64) -> Self {
         Self {
-            sigma_um: [3.12, 3.57, 5.11],
+            sigma_um: [3.43, 3.67, 4.64],
             pixel_um,
         }
     }
@@ -66,7 +72,7 @@ impl EmulsionBlur {
     #[must_use]
     pub fn for_stock(film: &crate::emulsion::FilmStock, pixel_um: f64) -> Self {
         Self {
-            sigma_um: film.sigma_um.unwrap_or([3.12, 3.57, 5.11]),
+            sigma_um: film.sigma_um.unwrap_or([3.43, 3.67, 4.64]),
             pixel_um,
         }
     }
