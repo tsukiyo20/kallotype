@@ -10,7 +10,8 @@
 ///
 /// The kernel sums to one, so the pass moves a quantity rather than creating it;
 /// clamping at the edges keeps that true in the border pixels too.
-pub(crate) fn gaussian_blur(plane: &[f64], width: usize, height: usize, sigma_px: f64) -> Vec<f64> {
+#[must_use]
+pub fn gaussian_blur(plane: &[f64], width: usize, height: usize, sigma_px: f64) -> Vec<f64> {
     if sigma_px <= 0.0 || width == 0 || height == 0 || plane.len() < width * height {
         return vec![0.0; plane.len()];
     }
@@ -50,7 +51,12 @@ pub(crate) fn gaussian_blur(plane: &[f64], width: usize, height: usize, sigma_px
 }
 
 /// A normalised Gaussian, three standard deviations out.
-pub(crate) fn gaussian_kernel(sigma_px: f64) -> Vec<f64> {
+///
+/// Public because a backend that convolves has to convolve with the *same*
+/// numbers. Rebuilding the kernel on the other side would be a second definition
+/// of the blur, and the two would agree until someone changed a radius.
+#[must_use]
+pub fn gaussian_kernel(sigma_px: f64) -> Vec<f64> {
     let radius = (3.0 * sigma_px).ceil().max(1.0) as usize;
     let mut kernel: Vec<f64> = (0..=2 * radius)
         .map(|index| {

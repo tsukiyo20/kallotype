@@ -143,10 +143,10 @@ pub struct RenderArgs {
 
     /// Render on the GPU instead of the CPU.
     ///
-    /// Both the scalar path and the closed-form spectral one are implemented,
-    /// with grain. What is not: a baked table, a dictionary prior, halation and
-    /// DIR couplers. Any of those falls back to the CPU and says which. Needs a
-    /// build with the `gpu` feature;
+    /// Everything the model does — both paths, grain, halation, the DIR
+    /// couplers — except a baked table and a dictionary prior, which are
+    /// solvers rather than models. A render that needs one falls back to the
+    /// CPU and says so. Needs a build with the `gpu` feature;
     /// `cargo install kallotype-cli --features gpu`.
     #[arg(long)]
     pub gpu: bool,

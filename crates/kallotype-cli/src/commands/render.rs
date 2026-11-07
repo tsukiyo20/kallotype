@@ -55,14 +55,14 @@ fn render_pixels(
         }
     };
 
-    match gpu.render_finished(pixels, prepared, finishing) {
+    match gpu.render_finished(pixels, prepared, width, height, finishing) {
         Ok(rendered) => {
             pixels.copy_from_slice(&rendered);
             Ok(Backend::Gpu(gpu.describe()))
         }
-        // The backend names what it cannot do, and asking it is what decides:
-        // the CLI does not keep a second list of supported stages to drift out
-        // of step with the crate's.
+        // The backend names what it cannot do — a table, a dictionary — and
+        // asking it is what decides: the CLI keeps no second list of supported
+        // stages to drift out of step with the crate's.
         Err(kallotype_gpu::GpuError::Unsupported(stage)) => {
             eprintln!("warning: --gpu does not implement {stage} yet; rendering on the cpu");
             Ok(render_on_cpu(pixels, prepared, width, height, finishing))

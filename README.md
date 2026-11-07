@@ -190,24 +190,34 @@ per-channel difference in linear light is:
 | spectral exposure | 3.6 × 10⁻⁷ |
 | spectral print | 8.2 × 10⁻⁷ |
 | all three stages | 1.0 × 10⁻⁶ |
-| all three stages, with grain | 1.0 × 10⁻⁶ |
+| halation | 3.1 × 10⁻⁷ |
+| DIR couplers | 2.9 × 10⁻⁷ |
+| everything the model has | 7.0 × 10⁻⁷ |
 
 against a stated tolerance of 1 × 10⁻⁴.
 
 The tolerance is the contract. A GPU port that "looks right" is how a film
 simulation acquires two different films.
 
-**Grain** is implemented too, and it is the sharpest constraint on the
-transcription. Its draw is SplitMix64 — 64-bit arithmetic, which WGSL has no
+**Grain**, **halation** and the **DIR couplers** are all implemented, which makes
+the backend the whole model rather than the front of it.
+
+Grain is the sharpest constraint on the transcription. Its draw is SplitMix64 — 64-bit arithmetic, which WGSL has no
 integers for — so `grain.wgsl` runs the same generator on pairs of `u32`, and
 `grain.rs` keeps twenty-three bits of state rather than fifty-three so that the
 draw is exact in an `f32`. For a random number "close enough" is false: the two
 backends either draw the same number or they have made two films.
 
+Halation and the couplers move light between pixels, so they need the frame in a
+buffer: the backend runs one dispatch when there is nothing spatial and a chain of
+up to seven when there is, skipping the passes that are off. A test renders the
+same frame both ways and asserts the two are **bit-identical**, because two ways
+to run a model is two ways to disagree.
+
 What is refused — with an error naming it, not a shrug — is a **baked exposure
-table**, a **dictionary prior**, **halation** and **DIR couplers**: a sampled
-cube, a per-pixel non-negative least squares, and two convolutions over the whole
-frame that need a chain of passes rather than one.
+table** and a **dictionary prior**: a sampled cube and a per-pixel non-negative
+least squares are their own models, and neither is expressible as a constant
+matrix.
 
 It is wired into the CLI behind a feature flag, because wgpu is about two hundred
 crates and a command line tool does not need a GPU to be useful:
@@ -224,9 +234,8 @@ The report always says which backend ran and which device it was:
 ```
 
 `--gpu` falls back to the CPU with a warning — never silently, never with an
-error — when there is no adapter, when the render needs a table or a dictionary,
-or when halation or couplers are on. The message names the stage, because the
-backend is asked rather than assumed. At eight bits per channel the two
+error — when there is no adapter or when the render needs a table or a dictionary.
+The message names the stage, because the backend is asked rather than assumed. At eight bits per channel the two
 backends agree to within one level; under a megapixel the files are usually
 byte-identical, but that is a coincidence of where samples land on rounding
 boundaries rather than a promise.
@@ -236,14 +245,16 @@ readback:
 
 | render | cpu | gpu | ratio |
 |---|---|---|---|
-| scalar | 92.6 ms | 24.5 ms | 3.8 × |
-| all three spectral stages | 3 093 ms | 41 ms | 76 × |
+| scalar | 106 ms | 23 ms | 4.5 × |
+| all three spectral stages | 3 062 ms | 36 ms | 84 × |
+| the same, with grain | 3 174 ms | 33 ms | 97 × |
+| the same, with halation and couplers | 3 356 ms | 45 ms | 74 × |
 
 The spectral path is where the device earns its place: seventy-one wavelength
-samples per pixel across four integrations is exactly the work a GPU is for.
-Below about a megapixel of scalar work the fixed cost of a device and a readback
-is the larger term, and the CPU wins — which is worth knowing before passing
-`--gpu` to make a small image.
+samples per pixel across four integrations is exactly the work a GPU is for. Below
+about a megapixel of scalar work the fixed cost of a device and a readback is the
+larger term, and the CPU wins — which is worth knowing before passing `--gpu` to
+make a small image.
 
 ## Licence
 

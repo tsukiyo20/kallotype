@@ -1,106 +1,14 @@
-// The spectral model, one invocation per pixel.
+// The spectral model: camera triple → spectrum → film layers → log exposure,
+// then density → dye absorption → paper → reflectance → observer.
 //
-// This is a transcription of `kallotype_core`'s exposure, print and scan into
-// WGSL: the same seventy-one-point integration, the same tables, the same
-// clamps. Everything it needs arrives as constants — the basis, the dye and
-// layer spectra, the illuminants, the observer, the three inverted systems and
-// the grey-balance tables — because the one thing this must not do is solve
-// anything the CPU solved differently.
+// This is a transcription of `kallotype_core`'s spectral path. Everything it
+// needs arrives as constants — the basis, the dye and layer spectra, the
+// illuminants, the observer, the three inverted systems and the grey-balance
+// tables — because the one thing it must not do is solve anything the CPU solved
+// differently.
 //
-// The three stages are independent. A render can integrate the exposure and
-// then print per channel, or the reverse; the flags in `params.flags` choose,
-// and every combination has a branch that reproduces the CPU's own.
-//
-// ## Layout
-//
-// `Params` is deliberately written as plain `vec4`s and `Tables` as plain
-// `array<f32, N>`s, so that neither side has to reason about padding: a `vec4`
-// is sixteen bytes everywhere, and an `f32` array has stride four. The Rust
-// struct is built by appending in exactly the order declared below.
-
-const L: u32 = 71u;
-const LOG2_10: f32 = 3.321928094887363;
-
-struct Params {
-    // Per layer: (d_min, span, slope_factor, log_e0).
-    curve: array<vec4<f32>, 3>,
-    // (paper d_min, paper span, enlarger slope, exposure shift).
-    image: vec4<f32>,
-    // The per-layer anchor log exposure.
-    anchor: vec4<f32>,
-    // (wavelength samples, wavelength step, unused, unused).
-    grid: vec4<f32>,
-    // The film's response to a reconstructed 18 % grey, per layer.
-    exposure_reference: vec4<f32>,
-    // The print's grey balance, per layer.
-    print_reference: vec4<f32>,
-    // (masking strength per layer, density at which it is fully destroyed).
-    masking: vec4<f32>,
-    // (filter pack in colour-correction units, unused).
-    filters: vec4<f32>,
-    // XYZ of paper white.
-    white_xyz: vec4<f32>,
-    // RGB of paper white.
-    white_rgb: vec4<f32>,
-    // (neutral-axis density span, neutral-axis steps, paper base density,
-    // unused).
-    neutral: vec4<f32>,
-    // (exposure is spectral, print is spectral, scan is spectral, the print
-    // unmixing solved).
-    flags: vec4<f32>,
-    // (the scan unmixing solved, unused, unused, unused).
-    flags2: vec4<f32>,
-    // (seed low, seed high, image width, image height) — all exact integers.
-    grain: vec4<u32>,
-    // (pixel area in µm², developed grains per µm² per layer).
-    grain_density: vec4<f32>,
-    // What the finishing stage was asked to do: (grain, halation, couplers, _).
-    effects: vec4<u32>,
-};
-
-struct Tables {
-    reconstruct: array<f32, 9>,
-    basis: array<f32, 3u * L>,
-    film: array<f32, 3u * L>,
-    print_analytical: array<f32, 9>,
-    print_dye: array<f32, 3u * L>,
-    print_paper: array<f32, 3u * L>,
-    print_illuminant: array<f32, L>,
-    print_mask: array<f32, L>,
-    print_filter_bands: array<f32, 3u * L>,
-    scan_analytical: array<f32, 9>,
-    scan_dye: array<f32, 3u * L>,
-    scan_cmf: array<f32, 3u * L>,
-    scan_illuminant: array<f32, L>,
-    scan_matrix: array<f32, 9>,
-    scan_neutral: array<f32, 3u * 33u>,
-};
-
-@group(0) @binding(0) var<uniform> params: Params;
-@group(0) @binding(1) var<storage, read> input: array<vec4<f32>>;
-@group(0) @binding(2) var<storage, read_write> output: array<vec4<f32>>;
-@group(0) @binding(3) var<storage, read> tables: Tables;
-
-// The same branch the CPU takes: `1/(1+e^-z)` overflows for large negative z,
-// and half a picture at the shoulder is large negative z.
-fn sigmoid(z: f32) -> f32 {
-    if (z >= 0.0) {
-        return 1.0 / (1.0 + exp(-z));
-    }
-    let e = exp(z);
-    return e / (1.0 + e);
-}
-
-// WGSL has no base-ten logarithm; the CPU calls `f64::log10`.
-fn log10_cpu(x: f32) -> f32 {
-    return log(x) / log(10.0);
-}
-
-// `pow` wants a non-negative base and the products fed to it are integrals of
-// non-negative tables, so the clamp is belt and braces rather than maths.
-fn cbrt_(x: f32) -> f32 {
-    return pow(max(x, 0.0), 1.0 / 3.0);
-}
+// The exposure, the print and the scan are independent, and each has a branch for
+// its flag; every combination reproduces the CPU's own.
 
 // ---------------------------------------------------------------------------
 // Exposure: camera triple → spectrum → film layers → log exposure.
@@ -149,8 +57,8 @@ fn spectral_log_exposure(rgb: vec3<f32>) -> vec3<f32> {
 
 // Status densities in, analytical densities out. The characteristic curves are
 // measured through status filters and already contain all three dyes; the dye
-// curves are per-dye shapes. Feeding one to the other double-counts the
-// overlap, which is what the inverted system undoes.
+// curves are per-dye shapes. Feeding one to the other double-counts the overlap,
+// which is what the inverted system undoes.
 fn print_analytical(status: vec3<f32>) -> vec3<f32> {
     let unmixed = vec3<f32>(
         tables.print_analytical[0u] * status.x + tables.print_analytical[1u] * status.y + tables.print_analytical[2u] * status.z,
@@ -185,9 +93,8 @@ fn print_response(status: vec3<f32>) -> vec3<f32> {
 
     var response = vec3<f32>(0.0);
     for (var i = 0u; i < L; i = i + 1u) {
-        var density = tables.print_mask[i] * surviving;
-        density = density
-            + density_cmy.x * tables.print_dye[i]
+        var d = tables.print_mask[i] * surviving;
+        d = d + density_cmy.x * tables.print_dye[i]
             + density_cmy.y * tables.print_dye[L + i]
             + density_cmy.z * tables.print_dye[2u * L + i];
 
@@ -197,7 +104,7 @@ fn print_response(status: vec3<f32>) -> vec3<f32> {
             + params.filters.y * tables.print_filter_bands[L + i] / 100.0
             + params.filters.z * tables.print_filter_bands[2u * L + i] / 100.0;
 
-        let transmitted = exp2(-(density + filtration) * LOG2_10) * tables.print_illuminant[i];
+        let transmitted = exp2(-(d + filtration) * LOG2_10) * tables.print_illuminant[i];
         response.x = response.x + tables.print_paper[i] * transmitted;
         response.y = response.y + tables.print_paper[L + i] * transmitted;
         response.z = response.z + tables.print_paper[2u * L + i] * transmitted;
@@ -253,13 +160,13 @@ fn scan_colour(printed: vec3<f32>) -> vec3<f32> {
 
     var xyz = vec3<f32>(0.0);
     for (var i = 0u; i < L; i = i + 1u) {
-        var density = params.neutral.z
+        var d = params.neutral.z
             + density_cmy.x * tables.scan_dye[i]
             + density_cmy.y * tables.scan_dye[L + i]
             + density_cmy.z * tables.scan_dye[2u * L + i];
         // The paper cannot reflect more than it receives; the dyes only take
         // light away, so no clamp is needed here.
-        let light = exp2(-density * LOG2_10) * tables.scan_illuminant[i];
+        let light = exp2(-d * LOG2_10) * tables.scan_illuminant[i];
         xyz.x = xyz.x + light * tables.scan_cmf[i];
         xyz.y = xyz.y + light * tables.scan_cmf[L + i];
         xyz.z = xyz.z + light * tables.scan_cmf[2u * L + i];
@@ -305,9 +212,7 @@ fn scan_colour(printed: vec3<f32>) -> vec3<f32> {
         ),
         fraction,
     );
-    let balance = cbrt_(
-        max(neutral.x, 1e-12) * max(neutral.y, 1e-12) * max(neutral.z, 1e-12),
-    );
+    let balance = cbrt_(max(neutral.x, 1e-12) * max(neutral.y, 1e-12) * max(neutral.z, 1e-12));
     return vec3<f32>(
         white_relative.x * balance / max(neutral.x, 1e-12),
         white_relative.y * balance / max(neutral.y, 1e-12),
@@ -315,46 +220,28 @@ fn scan_colour(printed: vec3<f32>) -> vec3<f32> {
     );
 }
 
-@compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    let index = id.x;
-    if (index >= arrayLength(&input)) {
-        return;
-    }
+// ---------------------------------------------------------------------------
+// The interface every pass calls.
+// ---------------------------------------------------------------------------
 
-    let linear = input[index].rgb;
-
-    var log_e: vec3<f32>;
+fn model_exposure(linear: vec3<f32>) -> vec3<f32> {
     if (params.flags.x > 0.5) {
-        log_e = spectral_log_exposure(linear);
-    } else {
-        // Scalar exposure: the channel is its own layer's log exposure.
-        log_e = vec3<f32>(
-            log10_cpu(max(linear.x, 1e-10)),
-            log10_cpu(max(linear.y, 1e-10)),
-            log10_cpu(max(linear.z, 1e-10)),
-        );
+        return spectral_log_exposure(linear);
     }
+    // Scalar exposure: the channel is its own layer's log exposure.
+    return vec3<f32>(
+        log10_cpu(max(linear.x, 1e-10)),
+        log10_cpu(max(linear.y, 1e-10)),
+        log10_cpu(max(linear.z, 1e-10)),
+    );
+}
 
-    let shift = params.image.w;
-    var density = vec3<f32>(0.0);
-    for (var layer = 0u; layer < 3u; layer = layer + 1u) {
-        let curve = params.curve[layer];
-        let mean = curve.x + curve.y * sigmoid(curve.z * (log_e[layer] + shift - curve.w));
-        if (params.effects.x == 0u) {
-            density[layer] = mean;
-        } else {
-            let jittered = log_e[layer] + grain_jitter(index, layer, mean);
-            density[layer] =
-                curve.x + curve.y * sigmoid(curve.z * (jittered + shift - curve.w));
-        }
-    }
-
+fn model_positive(status: vec3<f32>) -> vec3<f32> {
     // What the enlarger sees: the channel's own light loss, or the light the
     // negative's dyes transmit.
-    var log_transmittance = -density;
+    var log_transmittance = -status;
     if (params.flags.y > 0.5) {
-        log_transmittance = print_expose(density);
+        log_transmittance = print_expose(status);
     }
 
     var printed = vec3<f32>(0.0);
@@ -363,12 +250,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         printed[layer] = params.image.x + params.image.y * sigmoid(z);
     }
 
-    var result: vec3<f32>;
     if (params.flags.z > 0.5) {
-        result = clamp(scan_colour(printed), vec3<f32>(0.0), vec3<f32>(1.0));
-    } else {
-        result = clamp(exp2(-printed * LOG2_10), vec3<f32>(0.0), vec3<f32>(1.0));
+        return clamp(scan_colour(printed), vec3<f32>(0.0), vec3<f32>(1.0));
     }
-
-    output[index] = vec4<f32>(result, 1.0);
+    return clamp(exp2(-printed * LOG2_10), vec3<f32>(0.0), vec3<f32>(1.0));
 }
