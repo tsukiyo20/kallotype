@@ -425,6 +425,8 @@ impl PreparedRender {
 /// Both are optional and independent; the model without them is the model.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Finishing<'a> {
+    /// The film's own blur: how soft the emulsion makes everything.
+    pub emulsion: Option<&'a crate::mtf::EmulsionBlur>,
     /// Light that scatters in the emulsion and reflects off the base.
     pub halation: Option<&'a crate::halation::Halation>,
     /// The emulsion's grain.
@@ -449,7 +451,8 @@ pub fn render_pixels_finished(
     let width = width.max(1);
 
     // Without a spatial effect there is nothing to keep a frame for.
-    if finishing.halation.is_none() && finishing.couplers.is_none() {
+    if finishing.emulsion.is_none() && finishing.halation.is_none() && finishing.couplers.is_none()
+    {
         for (index, pixel) in pixels.iter_mut().enumerate() {
             let (x, y) = (index % width, index / width);
             let log_e = prepared.log_exposure(*pixel);
@@ -464,6 +467,12 @@ pub fn render_pixels_finished(
         .iter()
         .map(|pixel| prepared.log_exposure(*pixel))
         .collect();
+    // The emulsion's own blur comes first: it is the lens's image being
+    // softened by the film, and the halo is light that entered the film and
+    // came back, so it is distributed by the same blur afterwards.
+    if let Some(emulsion) = finishing.emulsion {
+        emulsion.apply(&mut log_e, width, height);
+    }
     if let Some(halation) = finishing.halation {
         halation.apply(&mut log_e, width, height);
     }
@@ -517,6 +526,7 @@ pub fn render_pixels_with_grain(
         grain.width,
         grain.height,
         &Finishing {
+            emulsion: None,
             halation: None,
             grain: Some(grain),
             couplers: None,

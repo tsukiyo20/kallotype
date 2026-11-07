@@ -381,6 +381,15 @@ impl Gpu {
             }
         };
 
+        // The emulsion's blur is one more per-channel convolution than the
+        // chain has passes for, and the GPU would rather say so than run a
+        // render that is sharper than the CPU's and quietly disagree.
+        if finishing.emulsion.is_some_and(|blur| !blur.is_noop()) {
+            return Err(GpuError::Unsupported(
+                "the emulsion blur, which the chain does not convolve",
+            ));
+        }
+
         // An effect that is all zeros is a no-op, and running the chain for it
         // would cost five dispatches to change nothing.
         let halation = finishing
@@ -1162,6 +1171,7 @@ mod tests {
     fn grain_matches_the_cpu_on_the_scalar_path() {
         let grain = GrainField::new(WIDTH, HEIGHT, 36.0, 7);
         let finishing = Finishing {
+            emulsion: None,
             grain: Some(&grain),
             ..Finishing::default()
         };
@@ -1179,6 +1189,7 @@ mod tests {
     fn grain_matches_the_cpu_through_the_spectral_chain() {
         let grain = GrainField::new(WIDTH, HEIGHT, 36.0, 0xDEAD_BEEF);
         let finishing = Finishing {
+            emulsion: None,
             grain: Some(&grain),
             ..Finishing::default()
         };
@@ -1229,6 +1240,7 @@ mod tests {
         // enough to reach across the edge and small enough to stay in frame.
         let halation = Halation::typical(6.0);
         let finishing = Finishing {
+            emulsion: None,
             halation: Some(&halation),
             ..Finishing::default()
         };
@@ -1267,6 +1279,7 @@ mod tests {
         let halation = Halation::typical(6.0);
         let couplers = Couplers::typical(6.0);
         let finishing = Finishing {
+            emulsion: None,
             halation: Some(&halation),
             grain: Some(&grain),
             couplers: Some(&couplers),
@@ -1426,6 +1439,7 @@ mod tests {
             (
                 Some(&model),
                 Finishing {
+                    emulsion: None,
                     halation: Some(&halation),
                     grain: Some(&grain),
                     couplers: Some(&couplers),
@@ -1498,6 +1512,7 @@ mod tests {
         // CPU does not: a 64-bit generator on 32-bit halves.
         let grain = GrainField::new(WIDTH, HEIGHT, 36.0, 99);
         let finishing = Finishing {
+            emulsion: None,
             grain: Some(&grain),
             ..Finishing::default()
         };
@@ -1591,6 +1606,7 @@ mod timing {
                     ..RenderParams::default()
                 },
                 Finishing {
+                    emulsion: None,
                     halation: Some(&halation),
                     grain: Some(&grain),
                     couplers: Some(&couplers),

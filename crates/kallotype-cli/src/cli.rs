@@ -162,6 +162,14 @@ pub struct RenderArgs {
     #[arg(long)]
     pub couplers: bool,
 
+    /// Add the film's own blur, from the measured modulation-transfer curve.
+    ///
+    /// This is what makes a rendered frame as soft as a negative rather than as
+    /// sharp as the arithmetic. It needs --frame-mm for the same reason the
+    /// others do: the blur is in micrometres of film.
+    #[arg(long)]
+    pub emulsion: bool,
+
     /// Add halation: light scattered in the emulsion and reflected off the base.
     ///
     /// Needs --frame-mm for the same reason grain does — the kernels are

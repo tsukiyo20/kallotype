@@ -2,7 +2,9 @@
 
 use std::path::Path;
 
-use kallotype_core::{Couplers, Finishing, GrainField, Halation, render_pixels_finished};
+use kallotype_core::{
+    Couplers, EmulsionBlur, Finishing, GrainField, Halation, render_pixels_finished,
+};
 use kallotype_io::{load, save};
 
 use crate::cli::RenderArgs;
@@ -131,9 +133,11 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             selection.film,
         )
     });
+    let emulsion = args.emulsion.then(|| EmulsionBlur::measured(pixel_um));
     let halation = args.halation.then(|| Halation::typical(pixel_um));
     let couplers = args.couplers.then(|| Couplers::typical(pixel_um));
     let finishing = Finishing {
+        emulsion: emulsion.as_ref(),
         halation: halation.as_ref(),
         grain: grain.as_ref(),
         couplers: couplers.as_ref(),
@@ -161,6 +165,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         height,
         &Rendering {
             grain: grain.as_ref(),
+            emulsion: emulsion.as_ref(),
             halation: halation.as_ref(),
             couplers: couplers.as_ref(),
             backend: backend.to_string(),

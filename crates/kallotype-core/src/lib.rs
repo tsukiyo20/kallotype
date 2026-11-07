@@ -35,6 +35,7 @@ pub mod halation;
 pub mod lut;
 mod measured;
 pub mod model;
+pub mod mtf;
 pub mod pipeline;
 pub mod print;
 pub mod psf;
@@ -50,6 +51,7 @@ pub use grain::GrainField;
 pub use halation::{Halation, Halo};
 pub use lut::ExposureLut;
 pub use model::{ExposureModel, PrintModel, ScanModel, SpectralModel};
+pub use mtf::EmulsionBlur;
 pub use pipeline::{
     Finishing, PreparedRender, RenderParams, ScalarModel, render_pixels, render_pixels_finished,
     render_pixels_with_grain,

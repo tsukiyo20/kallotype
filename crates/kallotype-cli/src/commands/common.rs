@@ -204,6 +204,8 @@ pub(crate) fn camera_profile(value: Option<&str>) -> Result<CameraProfile, CliEr
 pub struct Rendering<'a> {
     /// Grain, if it was on.
     pub grain: Option<&'a kallotype_core::GrainField>,
+    /// The emulsion's blur, if it was on.
+    pub emulsion: Option<&'a kallotype_core::EmulsionBlur>,
     /// Halation, if it was on.
     pub halation: Option<&'a kallotype_core::Halation>,
     /// DIR couplers, if they were on.
@@ -216,6 +218,7 @@ impl Default for Rendering<'_> {
     fn default() -> Self {
         Self {
             grain: None,
+            emulsion: None,
             halation: None,
             couplers: None,
             backend: "cpu".to_owned(),
@@ -274,6 +277,12 @@ pub fn print_report(
             [row1[0], row1[1], row1[2]],
             [row2[0], row2[1], row2[2]],
             couplers.sigma_um
+        );
+    }
+    if let Some(emulsion) = rendering.emulsion {
+        println!(
+            "  blur      σ {:.2}/{:.2}/{:.2} µm  (measured MTF, H-1-5219 p.3)",
+            emulsion.sigma_um[0], emulsion.sigma_um[1], emulsion.sigma_um[2]
         );
     }
     if let Some(halation) = rendering.halation {
