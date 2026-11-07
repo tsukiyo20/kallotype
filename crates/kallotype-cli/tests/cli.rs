@@ -233,3 +233,50 @@ fn non_positive_development_time_is_rejected() {
         stderr(&output)
     );
 }
+
+/// Without the feature the flag still exists, so the answer is a sentence
+/// instead of clap's "unexpected argument".
+#[cfg(not(feature = "gpu"))]
+#[test]
+fn gpu_asks_for_a_build_that_has_one() {
+    let dir = scratch("gpu-off");
+    let output = kalo()
+        .arg("render")
+        .arg(chart())
+        .arg("-o")
+        .arg(dir.join("out.png"))
+        .arg("--gpu")
+        .output()
+        .expect("kalo should start");
+    assert!(!output.status.success(), "the render should be refused");
+    let message = stderr(&output);
+    assert!(message.contains("--features gpu"), "{message}");
+}
+
+/// With the feature the render has to succeed whether or not there is an
+/// adapter: a missing GPU is a warning and a CPU render, not a failure.
+#[cfg(feature = "gpu")]
+#[test]
+fn gpu_renders_or_falls_back_and_says_which() {
+    let dir = scratch("gpu-on");
+    let out = dir.join("out.png");
+    let output = kalo()
+        .arg("render")
+        .arg(chart())
+        .arg("-o")
+        .arg(&out)
+        .args(["--dev", "9", "--gpu"])
+        .output()
+        .expect("kalo should start");
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    assert!(out.exists(), "no image was written");
+    let report = stdout(&output);
+    let line = report
+        .lines()
+        .find(|line| line.trim_start().starts_with("backend"))
+        .expect("the report must name the backend");
+    assert!(
+        line.contains("gpu") || line.contains("cpu"),
+        "unexpected backend line: {line}"
+    );
+}

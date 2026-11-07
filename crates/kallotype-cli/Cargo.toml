@@ -20,8 +20,14 @@ path = "src/lib.rs"
 name = "kalo"
 path = "src/main.rs"
 
+[features]
+# Opt-in: enabling it drags wgpu and about two hundred crates into the build of
+# a command line tool that does not need a GPU to be useful.
+gpu = ["dep:kallotype-gpu"]
+
 [dependencies]
 kallotype-core = { path = "../kallotype-core", version = "0.1.0" }
+kallotype-gpu = { path = "../kallotype-gpu", version = "0.1.0", optional = true }
 kallotype-io = { path = "../kallotype-io", version = "0.1.0" }
 kallotype-spectral = { path = "../kallotype-spectral", version = "0.1.0" }
 clap.workspace = true

@@ -73,6 +73,7 @@ pub struct Gpu {
     queue: wgpu::Queue,
     pipeline: wgpu::ComputePipeline,
     binder: wgpu::BindGroupLayout,
+    adapter: wgpu::AdapterInfo,
 }
 
 impl std::fmt::Debug for Gpu {
@@ -82,6 +83,15 @@ impl std::fmt::Debug for Gpu {
 }
 
 impl Gpu {
+    /// Which device is doing the work, for the render report.
+    ///
+    /// A user who is told "GPU" and sees no speedup deserves to know that it was
+    /// a software rasteriser or a twelve-year-old integrated chip.
+    #[must_use]
+    pub fn describe(&self) -> String {
+        format!("{} ({:?})", self.adapter.name, self.adapter.backend)
+    }
+
     /// Open the default adapter and build the pipeline.
     ///
     /// # Errors
@@ -171,6 +181,7 @@ impl Gpu {
             queue,
             pipeline,
             binder,
+            adapter: adapter.get_info(),
         })
     }
 

@@ -190,6 +190,28 @@ wavelength, so a backend that wants them has to port the integration rather than
 a handful of solved constants, and asking for one returns an error rather than
 silently rendering something else.
 
+It is wired into the CLI behind a feature flag, because wgpu is about two hundred
+crates and a command line tool does not need a GPU to be useful:
+
+```bash
+cargo install kallotype-cli --features gpu
+kalo render photo.png -o out/photo.png --gpu
+```
+
+The report always says which backend ran and which device it was:
+
+```text
+  backend   gpu — Apple M4 (Metal)
+```
+
+`--gpu` falls back to the CPU with a warning — never silently, never with an
+error — when there is no adapter, when the render uses a spectral stage, or when
+grain, halation or couplers are on. At eight bits per channel the two backends
+produce byte-identical files, which is the practical form of the tolerance.
+
+Measured on 2 073 600 pixels of the scalar model: **92.4 ms** on the CPU against
+**22.8 ms** on the GPU including upload, dispatch and readback, a ratio of 4.06.
+
 ## Licence
 
 Code is **Apache-2.0**. See [LICENSE](LICENSE).

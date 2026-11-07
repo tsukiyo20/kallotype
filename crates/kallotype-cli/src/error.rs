@@ -44,6 +44,11 @@ pub enum CliError {
         /// What the loader said.
         message: String,
     },
+    /// The build has no GPU backend, or the one it has cannot run this render.
+    Gpu {
+        /// What to tell the user.
+        message: String,
+    },
     /// A camera sensitivity file could not be read.
     Camera {
         /// The file that failed.
@@ -89,6 +94,7 @@ impl std::fmt::Display for CliError {
             Self::Dictionary { path, message } => {
                 write!(f, "could not read dictionary {}: {message}", path.display())
             }
+            Self::Gpu { message } => write!(f, "{message}"),
             Self::Camera { path, message } => {
                 write!(f, "camera sensitivity {}: {message}", path.display())
             }
@@ -111,6 +117,7 @@ impl std::error::Error for CliError {
             | Self::InvalidNumber { .. }
             | Self::Dictionary { .. }
             | Self::Camera { .. }
+            | Self::Gpu { .. }
             | Self::Lut { .. } => None,
         }
     }

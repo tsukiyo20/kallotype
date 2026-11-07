@@ -558,6 +558,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "kallotype-core",
+ "kallotype-gpu",
  "kallotype-io",
  "kallotype-spectral",
 ]

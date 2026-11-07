@@ -141,6 +141,14 @@ pub struct RenderArgs {
     #[arg(long, value_name = "N", default_value_t = 0)]
     pub grain_seed: u64,
 
+    /// Render on the GPU instead of the CPU.
+    ///
+    /// Only the scalar path is implemented on the GPU: with any spectral stage
+    /// on, the render falls back to the CPU and says so. Needs a build with the
+    /// `gpu` feature; `cargo install kallotype-cli --features gpu`.
+    #[arg(long)]
+    pub gpu: bool,
+
     /// Add DIR couplers: development inhibition between layers, with diffusion.
     ///
     /// This is what produces interimage colour correction and the Mackie line

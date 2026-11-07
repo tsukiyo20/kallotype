@@ -6,8 +6,110 @@ use kallotype_core::{Couplers, Finishing, GrainField, Halation, render_pixels_fi
 use kallotype_io::{load, save};
 
 use crate::cli::RenderArgs;
-use crate::commands::common::{print_report, resolve};
+use crate::commands::common::{Rendering, print_report, resolve};
 use crate::error::CliError;
+
+/// Who did the work.
+pub enum Backend {
+    /// The `kallotype-core` model, in f64.
+    Cpu,
+    /// The device, as wgpu describes it. Only constructed in a build with the
+    /// `gpu` feature, which is why it is allowed to be dead code without it.
+    #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
+    Gpu(String),
+}
+
+impl std::fmt::Display for Backend {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Cpu => write!(formatter, "cpu"),
+            Self::Gpu(name) => write!(formatter, "gpu — {name}"),
+        }
+    }
+}
+
+/// Render the pixels, on the GPU if asked and possible, on the CPU otherwise.
+///
+/// The fallback is deliberate and loud. A user who passes `--gpu` on a machine
+/// with no adapter, or with a spectral render the backend does not implement,
+/// gets a warning and a correct image, not an error and not a silently different
+/// one.
+#[cfg(feature = "gpu")]
+fn render_pixels(
+    pixels: &mut [[f64; 3]],
+    prepared: &kallotype_core::PreparedRender,
+    width: usize,
+    height: usize,
+    finishing: &Finishing,
+    on_gpu: bool,
+) -> Result<Backend, CliError> {
+    if on_gpu {
+        let effects = finishing.halation.is_some()
+            || finishing.grain.is_some()
+            || finishing.couplers.is_some();
+        match kallotype_gpu::Gpu::new() {
+            Ok(gpu) if !effects && prepared.scalar_model().is_some() => {
+                let rendered = gpu
+                    .render(pixels, prepared)
+                    .map_err(|error| CliError::Gpu {
+                        message: error.to_string(),
+                    })?;
+                pixels.copy_from_slice(&rendered);
+                return Ok(Backend::Gpu(gpu.describe()));
+            }
+            Ok(_) if effects => {
+                eprintln!(
+                    "warning: --gpu does not implement grain, halation or couplers yet; \
+                     rendering on the cpu"
+                );
+                return Ok(render_on_cpu(pixels, prepared, width, height, finishing));
+            }
+            Ok(_) => {
+                eprintln!(
+                    "warning: --gpu implements the scalar path only; this render is spectral, \
+                     so it is running on the cpu"
+                );
+                return Ok(render_on_cpu(pixels, prepared, width, height, finishing));
+            }
+            Err(error) => {
+                eprintln!("warning: {error}; rendering on the cpu");
+            }
+        }
+    }
+    Ok(render_on_cpu(pixels, prepared, width, height, finishing))
+}
+
+/// Without the feature the flag still exists, so the answer is a sentence rather
+/// than clap's "unexpected argument".
+#[cfg(not(feature = "gpu"))]
+fn render_pixels(
+    pixels: &mut [[f64; 3]],
+    prepared: &kallotype_core::PreparedRender,
+    width: usize,
+    height: usize,
+    finishing: &Finishing,
+    on_gpu: bool,
+) -> Result<Backend, CliError> {
+    if on_gpu {
+        return Err(CliError::Gpu {
+            message: "this build has no GPU backend: \
+                      `cargo install kallotype-cli --features gpu`"
+                .to_owned(),
+        });
+    }
+    Ok(render_on_cpu(pixels, prepared, width, height, finishing))
+}
+
+fn render_on_cpu(
+    pixels: &mut [[f64; 3]],
+    prepared: &kallotype_core::PreparedRender,
+    width: usize,
+    height: usize,
+    finishing: &Finishing,
+) -> Backend {
+    render_pixels_finished(pixels, prepared, width, height, finishing);
+    Backend::Cpu
+}
 
 /// Run the subcommand.
 pub fn run(args: RenderArgs) -> Result<(), CliError> {
@@ -38,13 +140,14 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         grain: grain.as_ref(),
         couplers: couplers.as_ref(),
     };
-    render_pixels_finished(
+    let backend = render_pixels(
         &mut image.pixels,
         &prepared,
         width as usize,
         height as usize,
         &finishing,
-    );
+        args.gpu,
+    )?;
 
     ensure_parent(&args.output)?;
 
@@ -58,9 +161,12 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         &prepared,
         width,
         height,
-        grain.as_ref(),
-        halation.as_ref(),
-        couplers.as_ref(),
+        &Rendering {
+            grain: grain.as_ref(),
+            halation: halation.as_ref(),
+            couplers: couplers.as_ref(),
+            backend: backend.to_string(),
+        },
     );
     println!();
     println!(

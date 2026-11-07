@@ -198,18 +198,43 @@ pub(crate) fn camera_profile(value: Option<&str>) -> Result<CameraProfile, CliEr
 }
 
 /// Print what the development did, before any pixels are touched.
+/// What the render did beyond the model: the effects that were on, and who ran
+/// them. Grouped because a report function with eight arguments is a report
+/// function that grows one every phase.
+pub struct Rendering<'a> {
+    /// Grain, if it was on.
+    pub grain: Option<&'a kallotype_core::GrainField>,
+    /// Halation, if it was on.
+    pub halation: Option<&'a kallotype_core::Halation>,
+    /// DIR couplers, if they were on.
+    pub couplers: Option<&'a kallotype_core::Couplers>,
+    /// Which backend did the work, already formatted.
+    pub backend: String,
+}
+
+impl Default for Rendering<'_> {
+    fn default() -> Self {
+        Self {
+            grain: None,
+            halation: None,
+            couplers: None,
+            backend: "cpu".to_owned(),
+        }
+    }
+}
+
+/// Print what the render did, before the pixels are written.
 pub fn print_report(
     params: &RenderParams,
     prepared: &kallotype_core::PreparedRender,
     width: u32,
     height: u32,
-    grain: Option<&kallotype_core::GrainField>,
-    halation: Option<&kallotype_core::Halation>,
-    couplers: Option<&kallotype_core::Couplers>,
+    rendering: &Rendering<'_>,
 ) {
     let development = params.development;
 
     println!("kallotype {}", env!("CARGO_PKG_VERSION"));
+    println!("  backend   {}", rendering.backend);
     println!("  film      {}  ({})", params.film.id, params.film.label);
     println!("  paper     {}  ({})", params.paper.id, params.paper.label);
     println!(
@@ -241,7 +266,7 @@ pub fn print_report(
     if prepared.is_spectral() || prepared.lut().is_some() {
         println!("  camera    {}", params.camera.name());
     }
-    if let Some(couplers) = couplers {
+    if let Some(couplers) = rendering.couplers {
         let [row0, row1, row2] = couplers.inhibition;
         println!(
             "  couplers  inhibition R←{:?} G←{:?} B←{:?}  σ {:.0} µm  (placeholder)",
@@ -251,7 +276,7 @@ pub fn print_report(
             couplers.sigma_um
         );
     }
-    if let Some(halation) = halation {
+    if let Some(halation) = rendering.halation {
         println!(
             "  halation  scatter σ {:.0} µm {:.1}/{:.1}/{:.1} %  reflection σ {:.0} µm {:.1}/{:.1}/{:.1} %  (placeholder)",
             halation.scatter.sigma_um,
@@ -264,7 +289,7 @@ pub fn print_report(
             100.0 * halation.reflection.strength[2],
         );
     }
-    if let Some(grain) = grain {
+    if let Some(grain) = rendering.grain {
         println!(
             "  grain     {:.1}/µm²  ({:.2} µm pixel, seed {}, placeholder density)",
             grain.grains_per_um2[0],
