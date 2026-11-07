@@ -61,6 +61,16 @@ impl EmulsionBlur {
         }
     }
 
+    /// The stock's own blur when its sheet published an MTF, and the compiled
+    /// VISION3 fit when it did not — a borrow the stock's note declares.
+    #[must_use]
+    pub fn for_stock(film: &crate::emulsion::FilmStock, pixel_um: f64) -> Self {
+        Self {
+            sigma_um: film.sigma_um.unwrap_or([3.12, 3.57, 5.11]),
+            pixel_um,
+        }
+    }
+
     /// Whether the blur would change anything **at this pixel size**.
     ///
     /// A film's blur is a few micrometres. A 35 mm frame rendered at 1200 pixels

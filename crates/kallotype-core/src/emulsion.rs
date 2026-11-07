@@ -81,6 +81,12 @@ pub struct FilmStock {
     pub dyes: &'static [[f64; GRID_LEN]; 3],
     /// Spectral density of base, fog and the orange mask, 380–730 nm at 5 nm.
     pub mask: &'static [f64; GRID_LEN],
+    /// The emulsion's blur, measured from the stock's own MTF, per layer.
+    ///
+    /// `None` means the sheet did not publish a modulation-transfer curve and
+    /// the render falls back to the compiled VISION3 fit — a borrow, and the
+    /// stock's `note` says so.
+    pub sigma_um: Option<[f64; 3]>,
 }
 
 /// A paper stock: one curve, because paper only has to record what is on the
@@ -140,6 +146,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         // minimum-density spectrum from the same page.
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
     },
     FilmStock {
         id: "c41_standard",
@@ -159,6 +166,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         layers: &kallotype_spectral::layers::CHANNELS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
     },
     FilmStock {
         id: "c41_contrast",
@@ -174,6 +182,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         layers: &kallotype_spectral::layers::CHANNELS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
     },
     FilmStock {
         id: "bw_classic",
@@ -191,6 +200,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         layers: &kallotype_spectral::layers::CHANNELS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
     },
     FilmStock {
         id: "fuji_nph400",
@@ -217,6 +227,62 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         layers: &crate::measured::FUJI_NPH400_LAYERS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
+    },
+    FilmStock {
+        id: "kodak_portra_400",
+        label: "KODAK PROFESSIONAL PORTRA 400, C-41",
+        note: "Measured curves and base (E-4050 p4, vector paths) and a measured \
+               MTF (sigma 4.01/3.00/2.76 um) and layer sensitivities in the stock \
+               file. The dye shapes are borrowed, because E-4050 prints a neutral \
+               subject and D-min rather than three dye curves. Grain is the \
+               VISION3 placeholder.",
+        channels: [
+            curve(0.0, 1.6578, 0.6299, -0.6947),
+            curve(0.0, 1.7095, 0.6276, -0.7407),
+            curve(0.0, 2.0460, 0.7204, -0.7987),
+        ],
+        base_density: [0.2156, 0.6302, 0.8476],
+        grains_per_um2: [0.62, 0.51, 0.07],
+        layers: &crate::measured::KODAK_PORTRA400_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: Some([4.01, 3.00, 2.76]),
+    },
+    FilmStock {
+        id: "kodak_ektar_100",
+        label: "KODAK PROFESSIONAL EKTAR 100, C-41",
+        note: "Measured curves and base (E-4046 p4), layer sensitivities (p4) and \
+               MTF (sigma 4.45/3.39/3.18 um). Dye shapes are borrowed, as for \
+               PORTRA 400, and grain is the VISION3 placeholder.",
+        channels: [
+            curve(0.0, 1.6713, 0.6038, -0.7120),
+            curve(0.0, 1.6693, 0.5911, -0.7400),
+            curve(0.0, 2.0919, 0.7193, -0.7820),
+        ],
+        base_density: [0.2184, 0.6436, 0.8535],
+        grains_per_um2: [0.62, 0.51, 0.07],
+        layers: &crate::measured::KODAK_EKTAR100_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: Some([4.45, 3.39, 3.18]),
+    },
+    FilmStock {
+        id: "kodak_gold200",
+        label: "KODAK GOLD 200, C-41",
+        note: "Measured curves and base (E-7022 p4); its untitled curve panel sits \
+               above the sensitivity plot. Spectra, blur and grain are borrowed.",
+        channels: [
+            curve(0.0, 1.5411, 0.5473, -0.7300),
+            curve(0.0, 1.6367, 0.5659, -0.7680),
+            curve(0.0, 1.7876, 0.6321, -0.7360),
+        ],
+        base_density: [0.2611, 0.6662, 0.9944],
+        grains_per_um2: [0.62, 0.51, 0.07],
+        layers: &kallotype_spectral::layers::CHANNELS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
     },
 ];
 

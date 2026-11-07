@@ -143,8 +143,10 @@ impl StockFile {
     pub fn check(&self) -> Vec<Finding> {
         let mut findings = Vec::new();
         findings.push(self.check_provenance());
+        findings.push(self.check_borrowed());
         findings.extend(self.check_curves());
         findings.push(self.check_base());
+        findings.push(self.check_emulsion());
         findings.extend(self.check_spectra());
         findings
     }
@@ -351,6 +353,51 @@ impl StockFile {
                 ),
                 Err(_) => Finding::fail("base", "a paper needs `base.target_mid_reflectance`"),
             }
+        }
+    }
+
+    /// Which quantities the stock takes from another one, if any.
+    ///
+    /// A manufacturer sheet does not always publish every quantity the model
+    /// wants: Kodak's still films print a neutral subject and D-min rather than
+    /// three dyes. Borrowing is legitimate; borrowing silently is not. A stock
+    /// that declares a borrow can still claim to be measured, and the check
+    /// says what was taken.
+    fn check_borrowed(&self) -> Finding {
+        match self.strings("stock.borrowed") {
+            Ok(names) if names.is_empty() => {
+                Finding::note("borrowed", "nothing; every quantity is this sheet's")
+            }
+            Ok(names) => Finding::ok("borrowed", format!("{:?} from the compiled stock", names)),
+            Err(_) => Finding::note("borrowed", "nothing declared"),
+        }
+    }
+
+    /// The emulsion's blur, if the sheet publishes an MTF.
+    ///
+    /// Optional: a stock without a measured modulation-transfer curve is a
+    /// stock that borrows the blur, and saying so is better than inventing a
+    /// sigma. When present, three positive finite values in micrometres.
+    fn check_emulsion(&self) -> Finding {
+        if !self.is_film() {
+            return Finding::note("emulsion", "not a film");
+        }
+        let Ok(sigma) = self.floats("emulsion.sigma_um") else {
+            return Finding::note(
+                "emulsion",
+                "no `emulsion.sigma_um`; the stock falls back to the compiled blur",
+            );
+        };
+        if sigma.len() == 3 && sigma.iter().all(|s| s.is_finite() && *s > 0.0) {
+            Finding::ok(
+                "emulsion",
+                format!("sigma {:?} µm, measured from the sheet's MTF", sigma),
+            )
+        } else {
+            Finding::fail(
+                "emulsion",
+                "`emulsion.sigma_um` must be three positive finite numbers",
+            )
         }
     }
 

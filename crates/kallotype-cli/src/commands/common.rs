@@ -291,7 +291,7 @@ pub fn print_report(
     }
     if let Some(emulsion) = rendering.emulsion {
         println!(
-            "  blur      σ {:.2}/{:.2}/{:.2} µm, {}  (measured MTF, H-1-5219 p.3)",
+            "  blur      σ {:.2}/{:.2}/{:.2} µm, {}  ({})",
             emulsion.sigma_um[0],
             emulsion.sigma_um[1],
             emulsion.sigma_um[2],
@@ -299,6 +299,11 @@ pub fn print_report(
                 "below the pixel"
             } else {
                 "applied"
+            },
+            if params.film.sigma_um.is_some() {
+                "the stock's own MTF"
+            } else {
+                "borrowed: VISION3 H-1-5219 p.3"
             }
         );
     }
