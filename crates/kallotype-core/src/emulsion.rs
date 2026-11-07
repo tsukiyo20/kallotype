@@ -320,6 +320,23 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.8400, 3.0700, 3.4400]),
     },
+    FilmStock {
+        id: "kodak_portra_800",
+        process: FilmProcess::Negative,
+        label: "KODAK PROFESSIONAL PORTRA 800",
+        note: "Generated from kodak_portra_800.toml; borrowed: spectra.dyes.",
+        channels: [
+            curve(0.0, 1.5435, 0.5855, -0.7187),
+            curve(0.0, 1.6521, 0.5926, -0.7947),
+            curve(0.0, 1.8100, 0.6856, -0.7207),
+        ],
+        base_density: [0.3232, 0.7114, 1.0423],
+        grains_per_um2: [0.62, 0.51, 0.07],
+        layers: &crate::measured::KODAK_PORTRA800_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: Some([4.7500, 3.7000, 3.0000]),
+    },
 ];
 
 /// Every paper stock compiled into the binary.
