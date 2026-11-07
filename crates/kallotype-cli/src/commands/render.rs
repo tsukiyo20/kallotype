@@ -47,16 +47,6 @@ fn render_pixels(
         return Ok(render_on_cpu(pixels, prepared, width, height, finishing));
     }
 
-    // Spatial effects move light between pixels, which neither shader does. Say
-    // so before opening a device rather than rendering half of the request.
-    if finishing.halation.is_some() || finishing.grain.is_some() || finishing.couplers.is_some() {
-        eprintln!(
-            "warning: --gpu does not implement grain, halation or couplers yet; \
-             rendering on the cpu"
-        );
-        return Ok(render_on_cpu(pixels, prepared, width, height, finishing));
-    }
-
     let gpu = match kallotype_gpu::Gpu::new() {
         Ok(gpu) => gpu,
         Err(error) => {
@@ -65,19 +55,16 @@ fn render_pixels(
         }
     };
 
-    match gpu.render(pixels, prepared) {
+    match gpu.render_finished(pixels, prepared, finishing) {
         Ok(rendered) => {
             pixels.copy_from_slice(&rendered);
             Ok(Backend::Gpu(gpu.describe()))
         }
-        // The backend declines the renders it cannot replay; asking it is what
-        // decides, so the CLI does not have to keep a second list of what is
-        // supported in step with the crate's.
-        Err(kallotype_gpu::GpuError::Unsupported) => {
-            eprintln!(
-                "warning: --gpu cannot replay a baked table or a dictionary prior; \
-                 rendering on the cpu"
-            );
+        // The backend names what it cannot do, and asking it is what decides:
+        // the CLI does not keep a second list of supported stages to drift out
+        // of step with the crate's.
+        Err(kallotype_gpu::GpuError::Unsupported(stage)) => {
+            eprintln!("warning: --gpu does not implement {stage} yet; rendering on the cpu");
             Ok(render_on_cpu(pixels, prepared, width, height, finishing))
         }
         Err(error) => Err(CliError::Gpu {

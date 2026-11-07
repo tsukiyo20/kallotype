@@ -24,9 +24,14 @@
 //! — and [`Gpu::render`] returns [`GpuError::Unsupported`] rather than
 //! rendering something adjacent.
 //!
-//! Grain, halation and DIR couplers are spatial and live outside both shaders;
-//! the caller decides what to do about that rather than being told the render
-//! succeeded.
+//! **Grain** is implemented. It is a fluctuation of the exposure at a single
+//! pixel, so both shaders apply it where the CPU does — and because the draw is
+//! SplitMix64 and WGSL has no 64-bit integers, `grain.wgsl` runs the same
+//! generator on pairs of `u32`. For a random draw "close enough" would be false:
+//! the two backends either draw the same number or they are two films.
+//!
+//! **Halation and DIR couplers** convolve the whole frame, which is a chain of
+//! passes rather than one, and they are refused by name.
 //!
 //! ## Where the tolerance comes from
 //!
@@ -47,6 +52,12 @@
 //! exposure, `8.2e-7` with the spectral print and `1.0e-6` with all three
 //! stages, which is why one [`TOLERANCE`] covers both shaders.
 //!
+//! Grain adds a fifth amplifier and it is the sharpest one: a draw that differs
+//! at all differs by a whole standard deviation, about `5e-3` in log exposure,
+//! fifty times [`TOLERANCE`]. Measured on a 512-pixel frame it adds `1e-10` to
+//! the scalar path and `-6e-8` to the spectral one — that is, nothing — because
+//! the shader draws the same number rather than a nearby one.
+//!
 //! ## No adapter, no test
 //!
 //! CI runners have no GPU and some have no software rasteriser either. The tests
@@ -58,15 +69,20 @@ mod replay;
 
 use kallotype_core::model::NEUTRAL_ENTRIES;
 use kallotype_core::spectral::GRID_LEN;
-use kallotype_core::{PreparedRender, ScalarModel, SpectralModel};
+use kallotype_core::{Finishing, GrainField, PreparedRender, ScalarModel, SpectralModel};
+
+/// The shader sources, as files. `GRAIN` is concatenated ahead of the other two.
+const GRAIN: &str = include_str!("../shaders/grain.wgsl");
+const SCALAR: &str = include_str!("../shaders/scalar.wgsl");
+const SPECTRAL: &str = include_str!("../shaders/spectral.wgsl");
 
 /// The largest per-channel difference the two backends are allowed, in linear
 /// light.
 ///
-/// Measured on this model the worst difference is `2.2e-7` on the scalar path
-/// and `1.0e-6` on the full spectral one; the bound is set two orders of
-/// magnitude above them so it catches a wrong implementation rather than a
-/// rounding mode.
+/// Measured on this model the worst difference is `3.0e-7` on the scalar path
+/// and `1.0e-6` on the full spectral one, with or without grain; the bound is set
+/// two orders of magnitude above them so it catches a wrong implementation
+/// rather than a rounding mode.
 pub const TOLERANCE: f64 = 1.0e-4;
 
 /// Why the GPU backend could not render.
@@ -74,8 +90,8 @@ pub const TOLERANCE: f64 = 1.0e-4;
 pub enum GpuError {
     /// No adapter, or the device could not be created.
     NoAdapter(String),
-    /// The render uses a stage this backend does not implement.
-    Unsupported,
+    /// The render uses a stage this backend does not implement, named.
+    Unsupported(&'static str),
     /// The pixel count does not match the buffer size used.
     Empty,
 }
@@ -84,11 +100,9 @@ impl std::fmt::Display for GpuError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NoAdapter(message) => write!(formatter, "no GPU adapter: {message}"),
-            Self::Unsupported => write!(
-                formatter,
-                "the gpu backend replays closed-form models only; this render uses a baked \
-                 exposure table or a dictionary prior, both of which are solvers"
-            ),
+            Self::Unsupported(stage) => {
+                write!(formatter, "the gpu backend does not implement {stage}")
+            }
             Self::Empty => write!(formatter, "no pixels to render"),
         }
     }
@@ -155,18 +169,11 @@ impl Gpu {
         }))
         .map_err(|error| GpuError::NoAdapter(error.to_string()))?;
 
-        let scalar = Stage::build(
-            &device,
-            "scalar",
-            include_str!("../shaders/scalar.wgsl"),
-            false,
-        );
-        let spectral = Stage::build(
-            &device,
-            "spectral",
-            include_str!("../shaders/spectral.wgsl"),
-            true,
-        );
+        // Grain is one file prepended to both shaders: it is the same draw in
+        // both, and two copies of a 64-bit generator written twice in u32 halves
+        // is two chances to get a carry wrong.
+        let scalar = Stage::build(&device, "scalar", &format!("{GRAIN}\n{SCALAR}"), false);
+        let spectral = Stage::build(&device, "spectral", &format!("{GRAIN}\n{SPECTRAL}"), true);
 
         Ok(Self {
             device,
@@ -188,15 +195,58 @@ impl Gpu {
         pixels: &[[f64; 3]],
         prepared: &PreparedRender,
     ) -> Result<Vec<[f64; 3]>, GpuError> {
+        self.render_finished(pixels, prepared, &Finishing::default())
+    }
+
+    /// The same, with the finishing effects the CPU model has.
+    ///
+    /// Grain goes through: it is a fluctuation of the exposure at one pixel, so
+    /// both shaders apply it where the CPU does, and they draw the same number —
+    /// see `grain.wgsl`. Halation and the DIR couplers convolve the whole frame,
+    /// which is a chain of passes rather than one, and they are refused rather
+    /// than dropped.
+    ///
+    /// # Errors
+    ///
+    /// [`GpuError::Unsupported`] when the render needs a stage or an effect this
+    /// backend does not implement, and [`GpuError::Empty`] for an empty image.
+    pub fn render_finished(
+        &self,
+        pixels: &[[f64; 3]],
+        prepared: &PreparedRender,
+        finishing: &Finishing,
+    ) -> Result<Vec<[f64; 3]>, GpuError> {
+        if finishing.halation.is_some() {
+            return Err(GpuError::Unsupported("halation"));
+        }
+        if finishing.couplers.is_some() {
+            return Err(GpuError::Unsupported("DIR couplers"));
+        }
+        let grain = finishing.grain;
+
         // Exactly one of these describes a given render; the scalar case comes
         // first only because it is the one with fewer numbers in it.
         if let Some(model) = prepared.scalar_model() {
-            return self.render_model(pixels, &model);
+            return self.execute(
+                &self.scalar,
+                "scalar",
+                pixels,
+                &scalar_uniform(&model, grain),
+                None,
+            );
         }
         if let Some(model) = prepared.spectral_model() {
-            return self.render_spectral(pixels, &model);
+            return self.execute(
+                &self.spectral,
+                "spectral",
+                pixels,
+                &spectral_uniform(&model, grain),
+                Some(&spectral_tables(&model)),
+            );
         }
-        Err(GpuError::Unsupported)
+        Err(GpuError::Unsupported(
+            "a baked exposure table or a dictionary prior",
+        ))
     }
 
     /// Render pixels through the scalar model.
@@ -209,7 +259,13 @@ impl Gpu {
         pixels: &[[f64; 3]],
         model: &ScalarModel,
     ) -> Result<Vec<[f64; 3]>, GpuError> {
-        self.execute(&self.scalar, "scalar", pixels, &scalar_uniform(model), None)
+        self.execute(
+            &self.scalar,
+            "scalar",
+            pixels,
+            &scalar_uniform(model, None),
+            None,
+        )
     }
 
     /// Render pixels through the spectral model.
@@ -226,7 +282,7 @@ impl Gpu {
             &self.spectral,
             "spectral",
             pixels,
-            &spectral_uniform(model),
+            &spectral_uniform(model, None),
             Some(&spectral_tables(model)),
         )
     }
@@ -373,12 +429,7 @@ impl Gpu {
 }
 
 impl Stage {
-    fn build(
-        device: &wgpu::Device,
-        label: &'static str,
-        source: &'static str,
-        tables: bool,
-    ) -> Self {
+    fn build(device: &wgpu::Device, label: &'static str, source: &str, tables: bool) -> Self {
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(label),
             source: wgpu::ShaderSource::Wgsl(source.into()),
@@ -432,29 +483,80 @@ impl Stage {
 // The uniform and the tables, in the layout the shaders declare.
 // ---------------------------------------------------------------------------
 
+/// Append values as little-endian f32.
+fn push_f32(out: &mut Vec<u8>, values: &[f32]) {
+    out.extend(values.iter().flat_map(|value| value.to_le_bytes()));
+}
+
+/// Append values as little-endian u32.
+fn push_u32(out: &mut Vec<u8>, values: &[u32]) {
+    out.extend(values.iter().flat_map(|value| value.to_le_bytes()));
+}
+
+/// The three lanes both shaders end with: the grain field and what was asked for.
+///
+/// A render without grain still occupies them, with the flag at zero, because a
+/// buffer that changed length would move every field after it.
+fn push_grain(out: &mut Vec<u8>, grain: Option<&GrainField>) {
+    let seed = grain.map_or(0, |grain| grain.seed);
+    push_u32(
+        out,
+        &[
+            seed as u32,
+            (seed >> 32) as u32,
+            grain.map_or(0, |grain| grain.width as u32),
+            grain.map_or(0, |grain| grain.height as u32),
+        ],
+    );
+    push_f32(
+        out,
+        &match grain {
+            Some(grain) => [
+                grain.pixel_area_um2 as f32,
+                grain.grains_per_um2[0] as f32,
+                grain.grains_per_um2[1] as f32,
+                grain.grains_per_um2[2] as f32,
+            ],
+            None => [0.0; 4],
+        },
+    );
+    push_u32(out, &[u32::from(grain.is_some()), 0, 0, 0]);
+}
+
 /// The uniform buffer for a scalar model, in the layout `scalar.wgsl` expects.
-fn scalar_uniform(model: &ScalarModel) -> Vec<u8> {
-    let mut floats: Vec<f32> = Vec::with_capacity(20);
+fn scalar_uniform(model: &ScalarModel, grain: Option<&GrainField>) -> Vec<u8> {
+    let mut out = Vec::with_capacity(128);
     for curve in &model.curve {
-        floats.extend(curve.iter().map(|&value| value as f32));
+        push_f32(&mut out, &curve.map(|value| value as f32));
     }
     // (paper d_min, paper span, enlarger slope, exposure shift)
-    floats.push(model.paper[0] as f32);
-    floats.push(model.paper[1] as f32);
-    floats.push(model.print[0] as f32);
-    floats.push(model.exposure_shift as f32);
+    push_f32(
+        &mut out,
+        &[
+            model.paper[0] as f32,
+            model.paper[1] as f32,
+            model.print[0] as f32,
+            model.exposure_shift as f32,
+        ],
+    );
     // The three anchors, padded to a vec4.
-    floats.extend(model.print[1..4].iter().map(|&value| value as f32));
-    floats.push(0.0);
-    floats
-        .iter()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
+    push_f32(
+        &mut out,
+        &[
+            model.print[1] as f32,
+            model.print[2] as f32,
+            model.print[3] as f32,
+            0.0,
+        ],
+    );
+    push_grain(&mut out, grain);
+    out
 }
 
 /// The uniform buffer for a spectral model, in the layout `spectral.wgsl`
-/// expects: fifteen `vec4` lanes, in the order the struct declares them.
-fn spectral_uniform(model: &SpectralModel) -> Vec<u8> {
+/// expects: fifteen `vec4` lanes, in the order the struct declares them, then
+/// the three the grain block appends.
+fn spectral_uniform(model: &SpectralModel, grain: Option<&GrainField>) -> Vec<u8> {
     let scalar = &model.scalar;
     let exposure = model.exposure.as_ref();
     let enlarger = model.enlarger.as_ref();
@@ -512,11 +614,12 @@ fn spectral_uniform(model: &SpectralModel) -> Vec<u8> {
     ]);
     lanes.push([flag(scan.is_some_and(|model| model.clamped)), 0.0, 0.0, 0.0]);
 
-    lanes
-        .iter()
-        .flatten()
-        .flat_map(|value| value.to_le_bytes())
-        .collect()
+    let mut out = Vec::with_capacity(288);
+    for lane in &lanes {
+        push_f32(&mut out, lane);
+    }
+    push_grain(&mut out, grain);
+    out
 }
 
 /// Append `values` as f32, which is the only conversion the tables need.
@@ -621,7 +724,12 @@ fn spectral_tables(model: &SpectralModel) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kallotype_core::{RenderParams, render_pixels};
+    use kallotype_core::{Halation, RenderParams, render_pixels, render_pixels_finished};
+
+    /// A grain field on a small frame, for the tests that need one.
+    fn sample_grain() -> GrainField {
+        GrainField::new(32, 16, 36.0, 12345)
+    }
 
     /// A spread of linear-light colours, dense enough that some of them land on
     /// the steep parts of both curves. A grid of mid-greys would pass whatever
@@ -649,8 +757,34 @@ mod tests {
         out
     }
 
+    /// A frame shaped like a grain field, so that the two agree about which
+    /// pixel is the one at `(x, y)` — a flat list of the right length is not
+    /// enough, because grain is indexed by position.
+    fn frame() -> (usize, usize, Vec<[f64; 3]>) {
+        const WIDTH: usize = 32;
+        const HEIGHT: usize = 16;
+        let mut out = Vec::with_capacity(WIDTH * HEIGHT);
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                let a = (x as f64 + 0.5) / WIDTH as f64;
+                let b = (y as f64 + 0.5) / HEIGHT as f64;
+                out.push([a * a, b * 0.4, (a * b).sqrt()]);
+            }
+        }
+        (WIDTH, HEIGHT, out)
+    }
+
     /// The difference between the two backends, worst channel first.
     fn compare(prepared: &kallotype_core::PreparedRender) -> f64 {
+        compare_finished(prepared, &pixels(), &Finishing::default())
+    }
+
+    /// The same, for a render with finishing effects and its own frame shape.
+    fn compare_finished(
+        prepared: &kallotype_core::PreparedRender,
+        input: &[[f64; 3]],
+        finishing: &Finishing,
+    ) -> f64 {
         let gpu = match Gpu::new() {
             Ok(gpu) => gpu,
             Err(error) => {
@@ -658,10 +792,14 @@ mod tests {
                 return 0.0;
             }
         };
-        let input = pixels();
+        let input = input.to_vec();
+        let width = finishing.grain.map_or(input.len(), |grain| grain.width);
+        let height = finishing.grain.map_or(1, |grain| grain.height);
         let mut cpu = input.clone();
-        render_pixels(&mut cpu, prepared);
-        let gpu_out = gpu.render(&input, prepared).expect("the model renders");
+        render_pixels_finished(&mut cpu, prepared, width, height, finishing);
+        let gpu_out = gpu
+            .render_finished(&input, prepared, finishing)
+            .expect("the model renders");
 
         assert_eq!(cpu.len(), gpu_out.len());
         let mut worst = 0.0_f64;
@@ -719,7 +857,41 @@ mod tests {
             let prepared = params.prepare();
             let mut cpu = input.clone();
             render_pixels(&mut cpu, &prepared);
-            let replayed = replay::render(&input, &prepared);
+            let replayed = replay::render(&input, &prepared, None);
+
+            let mut worst = 0.0_f64;
+            for (expected, actual) in cpu.iter().zip(&replayed) {
+                for channel in 0..3 {
+                    worst = worst.max((expected[channel] - actual[channel]).abs());
+                }
+            }
+            assert!(worst < 1e-9, "{name}: the replay differs by {worst:.2e}");
+        }
+
+        // And with grain, which is the one place the shader runs arithmetic the
+        // CPU does not: a 64-bit generator on 32-bit halves.
+        let (width, height, input) = frame();
+        let grain = GrainField::new(width, height, 36.0, 99);
+        let finishing = Finishing {
+            grain: Some(&grain),
+            ..Finishing::default()
+        };
+        for (name, params) in [
+            ("scalar+grain", RenderParams::default()),
+            (
+                "chain+grain",
+                RenderParams {
+                    spectral: true,
+                    spectral_print: true,
+                    spectral_scan: true,
+                    ..RenderParams::default()
+                },
+            ),
+        ] {
+            let prepared = params.prepare();
+            let mut cpu = input.clone();
+            render_pixels_finished(&mut cpu, &prepared, width, height, &finishing);
+            let replayed = replay::render(&input, &prepared, Some(&grain));
 
             let mut worst = 0.0_f64;
             for (expected, actual) in cpu.iter().zip(&replayed) {
@@ -778,6 +950,76 @@ mod tests {
         );
     }
 
+    /// Grain is a per-pixel fluctuation of the exposure, so it goes through the
+    /// same shader — and, because the draw is ported rather than reused, it has
+    /// to draw the same number. This is the test that says the port is exact.
+    #[test]
+    fn grain_matches_the_cpu_on_the_scalar_path() {
+        let (_, _, input) = frame();
+        let grain = GrainField::new(32, 16, 36.0, 7);
+        let finishing = Finishing {
+            grain: Some(&grain),
+            ..Finishing::default()
+        };
+        compare_finished(&RenderParams::default().prepare(), &input, &finishing);
+    }
+
+    /// The same draw, through the longest shader in the crate.
+    #[test]
+    fn grain_matches_the_cpu_through_the_spectral_chain() {
+        let (_, _, input) = frame();
+        let grain = GrainField::new(32, 16, 36.0, 0xDEAD_BEEF);
+        let finishing = Finishing {
+            grain: Some(&grain),
+            ..Finishing::default()
+        };
+        compare_finished(
+            &RenderParams {
+                spectral: true,
+                spectral_print: true,
+                spectral_scan: true,
+                ..RenderParams::default()
+            }
+            .prepare(),
+            &input,
+            &finishing,
+        );
+    }
+
+    /// The two spatial effects convolve the frame, which needs a chain of passes
+    /// rather than one. They are refused by name, not dropped on the floor.
+    #[test]
+    fn the_spatial_effects_are_refused_by_name() {
+        let gpu = match Gpu::new() {
+            Ok(gpu) => gpu,
+            Err(_) => return,
+        };
+        let prepared = RenderParams::default().prepare();
+        let halation = Halation::typical(6.0);
+        let couplers = kallotype_core::Couplers::typical(6.0);
+        for (finishing, name) in [
+            (
+                Finishing {
+                    halation: Some(&halation),
+                    ..Finishing::default()
+                },
+                "halation",
+            ),
+            (
+                Finishing {
+                    couplers: Some(&couplers),
+                    ..Finishing::default()
+                },
+                "DIR couplers",
+            ),
+        ] {
+            match gpu.render_finished(&[[0.18; 3]], &prepared, &finishing) {
+                Err(GpuError::Unsupported(reason)) => assert_eq!(reason, name),
+                other => panic!("expected a refusal of {name}, got {other:?}"),
+            }
+        }
+    }
+
     /// A baked table is a sampled cube, not an integration, and a dictionary is
     /// a per-pixel solve. Both must be refused rather than approximated.
     #[test]
@@ -795,7 +1037,7 @@ mod tests {
         .prepare();
         assert!(matches!(
             gpu.render(&[[0.18; 3]], &baked),
-            Err(GpuError::Unsupported)
+            Err(GpuError::Unsupported(_))
         ));
     }
 
@@ -813,8 +1055,21 @@ mod tests {
         let model = prepared.spectral_model().expect("all three stages");
         assert_eq!(spectral_tables(&model).len(), TABLE_FLOATS * 4);
 
-        let uniform = spectral_uniform(&model);
-        assert_eq!(uniform.len(), 15 * 16, "fifteen vec4 lanes");
+        // Fifteen lanes of model, then three for the grain block, which a render
+        // without grain still occupies so that nothing after it moves.
+        assert_eq!(spectral_uniform(&model, None).len(), 18 * 16);
+        assert_eq!(
+            spectral_uniform(&model, Some(&sample_grain())).len(),
+            18 * 16
+        );
+        assert_eq!(
+            scalar_uniform(
+                &RenderParams::default().prepare().scalar_model().unwrap(),
+                None
+            )
+            .len(),
+            8 * 16
+        );
     }
 }
 

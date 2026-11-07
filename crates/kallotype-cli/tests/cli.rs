@@ -281,22 +281,31 @@ fn gpu_renders_or_falls_back_and_says_which() {
     );
 }
 
-/// The spectral path is no longer CPU-only, and the agreement that matters is
-/// the one a user can see: the two backends have to give the same eight-bit
-/// file. If the adapter is missing the render still has to succeed, and to say
-/// which machine did it.
+/// The spectral path and grain are no longer CPU-only, and the agreement that
+/// matters is the one a user can see: the two backends have to give the same
+/// eight-bit file. If the adapter is missing the render still has to succeed, and
+/// to say which machine did it.
 ///
 /// The frame is drawn here rather than taken from the asset, because a slow
 /// spectral render in a debug build costs a minute per image and a test nobody
 /// wants to run protects nothing. What the path does does not depend on the
-/// picture; what it does depend on is the three stages, and those are all on.
+/// picture; what it does depend on is the stages and the effects, and those are
+/// all on.
+///
+/// Grain is the interesting one: it is a random draw, so "close enough" would be
+/// false — the two backends either draw the same number or they are two films.
 #[cfg(feature = "gpu")]
 #[test]
-fn gpu_renders_the_spectral_path_to_the_same_pixels() {
+fn gpu_renders_the_effects_to_the_same_pixels() {
     let dir = scratch("gpu-spectral");
     let on_cpu = dir.join("cpu.png");
     let on_gpu = dir.join("gpu.png");
-    let stages = ["--spectral", "--spectral-print", "--spectral-scan"];
+    let stages = [
+        "--spectral",
+        "--spectral-print",
+        "--spectral-scan",
+        "--grain",
+    ];
 
     let input = dir.join("input.png");
     const WIDTH: u32 = 48;
@@ -382,6 +391,32 @@ fn gpu_renders_the_spectral_path_to_the_same_pixels() {
             "a fallback has to say so: {backend}"
         );
     }
+}
+
+/// The two effects that convolve the frame are outside both shaders. A render
+/// that asks for one has to be told so and given the correct CPU image.
+#[cfg(feature = "gpu")]
+#[test]
+fn a_spatial_effect_falls_back_and_says_which() {
+    let dir = scratch("gpu-halation");
+    let out = dir.join("out.png");
+    let output = kalo()
+        .arg("render")
+        .arg(chart())
+        .arg("-o")
+        .arg(&out)
+        .args(["--halation", "--gpu"])
+        .output()
+        .expect("kalo should start");
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    assert!(out.exists(), "the fallback still has to write an image");
+    let message = stderr(&output);
+    assert!(message.contains("does not implement halation"), "{message}");
+    let report = stdout(&output);
+    assert!(
+        report.contains("backend   cpu"),
+        "the report must admit it: {report}"
+    );
 }
 
 /// Without an adapter — or without the feature — a spectral render must not be

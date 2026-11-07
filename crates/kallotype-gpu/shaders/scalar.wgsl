@@ -18,6 +18,12 @@ struct Params {
     // The per-layer anchor log exposure.
     anchor: vec3<f32>,
     _pad: f32,
+    // (seed low, seed high, image width, image height) — all exact integers.
+    grain: vec4<u32>,
+    // (pixel area in µm², developed grains per µm² per layer).
+    grain_density: vec4<f32>,
+    // What the finishing stage was asked to do: (grain, halation, couplers, _).
+    effects: vec4<u32>,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -43,18 +49,31 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
     let linear = input[index].rgb;
     let shift = params.paper.w;
+    var log_e: vec3<f32>;
     var density: vec3<f32>;
-    var result: vec3<f32>;
 
     for (var layer = 0u; layer < 3u; layer += 1u) {
         // The CPU clamps the linear value before the logarithm; so does this.
-        let log_e = log(max(linear[layer], 1e-10)) / log(10.0) + shift;
+        log_e[layer] = log(max(linear[layer], 1e-10)) / log(10.0);
 
         let curve = params.curve[layer];
-        let negative = curve.x + curve.y * sigmoid(curve.z * (log_e - curve.w));
+        let mean = curve.x + curve.y * sigmoid(curve.z * (log_e[layer] + shift - curve.w));
+        if (params.effects.x == 0u) {
+            density[layer] = mean;
+        } else {
+            // Grain is an exposure fluctuation: it goes through the same curve
+            // again, which is what keeps it out of a blank frame and out of the
+            // shoulder without either case being special-cased.
+            let jittered = log_e[layer] + grain_jitter(index, layer, mean);
+            density[layer] =
+                curve.x + curve.y * sigmoid(curve.z * (jittered + shift - curve.w));
+        }
+    }
 
+    var result: vec3<f32>;
+    for (var layer = 0u; layer < 3u; layer += 1u) {
         // Scalar print: the paper sees the negative's transmission, per channel.
-        let z = params.paper.z * (-negative - params.anchor[layer]);
+        let z = params.paper.z * (-density[layer] - params.anchor[layer]);
         let printed = params.paper.x + params.paper.y * sigmoid(z);
 
         // Scalar scan: the density is the channel's light loss.

@@ -50,6 +50,12 @@ struct Params {
     flags: vec4<f32>,
     // (the scan unmixing solved, unused, unused, unused).
     flags2: vec4<f32>,
+    // (seed low, seed high, image width, image height) — all exact integers.
+    grain: vec4<u32>,
+    // (pixel area in µm², developed grains per µm² per layer).
+    grain_density: vec4<f32>,
+    // What the finishing stage was asked to do: (grain, halation, couplers, _).
+    effects: vec4<u32>,
 };
 
 struct Tables {
@@ -334,7 +340,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     var density = vec3<f32>(0.0);
     for (var layer = 0u; layer < 3u; layer = layer + 1u) {
         let curve = params.curve[layer];
-        density[layer] = curve.x + curve.y * sigmoid(curve.z * (log_e[layer] + shift - curve.w));
+        let mean = curve.x + curve.y * sigmoid(curve.z * (log_e[layer] + shift - curve.w));
+        if (params.effects.x == 0u) {
+            density[layer] = mean;
+        } else {
+            let jittered = log_e[layer] + grain_jitter(index, layer, mean);
+            density[layer] =
+                curve.x + curve.y * sigmoid(curve.z * (jittered + shift - curve.w));
+        }
     }
 
     // What the enlarger sees: the channel's own light loss, or the light the

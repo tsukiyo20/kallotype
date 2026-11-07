@@ -112,6 +112,20 @@ impl GrainField {
         (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
     }
 
+    /// Bits of the state a draw keeps.
+    ///
+    /// Twenty-three, not the fifty-three a f64 draw would use: a shader has no
+    /// f64, so a value built from more bits than an f32 can hold is a different
+    /// number there, and the two backends would produce two different films.
+    /// Twenty-three bits are exact in both — `(bits + 0.5) * 2^-23` is
+    /// representable to the last bit either way — so both draw the same one.
+    ///
+    /// The cost is a coarser draw: `u1` no longer reaches below `2^-24`, so the
+    /// normal caps at about five sigma. Grain is not a tail measurement, and the
+    /// distribution of the visible fluctuation is set by the counting statistics,
+    /// not by the resolution of the generator.
+    const UNIFORM_BITS: u64 = 23;
+
     /// A uniform in `(0, 1)`: the Box–Muller transform cannot take zero.
     fn uniform(&self, x: usize, y: usize, channel: usize, lane: u64) -> f64 {
         let mut state = self.seed.wrapping_mul(0xD6E8_FEB8_6659_FD93)
@@ -119,8 +133,8 @@ impl GrainField {
             ^ (y as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
             ^ (channel as u64).wrapping_mul(0x1656_67B1_9E37_79F9)
             ^ lane.wrapping_mul(0x2545_F491_4F6C_DD1D);
-        let bits = splitmix64(&mut state) >> 11;
-        (bits as f64 + 0.5) * (1.0 / (1u64 << 53) as f64)
+        let bits = splitmix64(&mut state) >> (64 - Self::UNIFORM_BITS);
+        (bits as f64 + 0.5) * (1.0 / (1u64 << Self::UNIFORM_BITS) as f64)
     }
 }
 
@@ -129,6 +143,11 @@ impl GrainField {
 /// The generator is re-seeded from the coordinates for every sample rather than
 /// advanced along the image, so the grain does not depend on how the image was
 /// split into rows or tiles.
+///
+/// It is 64-bit arithmetic, and WGSL has no 64-bit integers, so the shader that
+/// reproduces this runs it on pairs of `u32`. That is a transcription of the
+/// same algorithm rather than a different one — the alternative, a second
+/// generator chosen for being portable, would produce a second film's grain.
 fn splitmix64(state: &mut u64) -> u64 {
     *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
     let mut z = *state;

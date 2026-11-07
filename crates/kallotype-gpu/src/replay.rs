@@ -16,22 +16,55 @@
 //! construction, and if the two ever disagree the extraction is wrong, not the
 //! model. The two shaders are checked against it the same way.
 
-use kallotype_core::{PreparedRender, ScalarModel, SpectralModel};
+use kallotype_core::{GrainField, PreparedRender, ScalarModel, SpectralModel};
 
 const LOG2_10: f64 = std::f64::consts::LOG2_10;
 
 /// Replay a whole image, choosing the shader the render would choose.
-pub(crate) fn render(pixels: &[[f64; 3]], prepared: &PreparedRender) -> Vec<[f64; 3]> {
+pub(crate) fn render(
+    pixels: &[[f64; 3]],
+    prepared: &PreparedRender,
+    grain: Option<&GrainField>,
+) -> Vec<[f64; 3]> {
     if let Some(model) = prepared.scalar_model() {
-        return pixels.iter().map(|pixel| scalar(&model, *pixel)).collect();
+        return pixels
+            .iter()
+            .enumerate()
+            .map(|(index, pixel)| scalar(&model, *pixel, grain, index))
+            .collect();
     }
     if let Some(model) = prepared.spectral_model() {
         return pixels
             .iter()
-            .map(|pixel| spectral(&model, *pixel))
+            .enumerate()
+            .map(|(index, pixel)| spectral(&model, *pixel, grain, index))
             .collect();
     }
     panic!("the render is neither scalar nor closed-form spectral");
+}
+
+/// The mean density a layer develops to, then the grain's version of it.
+///
+/// The fluctuation is sized by the *mean* density and applied to the exposure,
+/// so the curve runs twice — which is what keeps grain out of a blank frame and
+/// out of the shoulder without either case being special-cased.
+fn developed(
+    curve: &[f64; 4],
+    log_e: f64,
+    shift: f64,
+    grain: Option<&GrainField>,
+    index: usize,
+    layer: usize,
+) -> f64 {
+    let mean = curve[0] + curve[1] * sigmoid(curve[2] * (log_e + shift - curve[3]));
+    match grain {
+        None => mean,
+        Some(grain) => {
+            let (x, y) = (index % grain.width.max(1), index / grain.width.max(1));
+            let jitter = grain_jitter(grain, x, y, layer, mean);
+            curve[0] + curve[1] * sigmoid(curve[2] * (log_e + jitter + shift - curve[3]))
+        }
+    }
 }
 
 fn sigmoid(z: f64) -> f64 {
@@ -44,11 +77,22 @@ fn sigmoid(z: f64) -> f64 {
 }
 
 /// `scalar.wgsl`, stage for stage.
-fn scalar(model: &ScalarModel, linear: [f64; 3]) -> [f64; 3] {
+fn scalar(
+    model: &ScalarModel,
+    linear: [f64; 3],
+    grain: Option<&GrainField>,
+    index: usize,
+) -> [f64; 3] {
     std::array::from_fn(|layer| {
-        let log_e = linear[layer].max(1e-10).log10() + model.exposure_shift;
-        let curve = model.curve[layer];
-        let negative = curve[0] + curve[1] * sigmoid(curve[2] * (log_e - curve[3]));
+        let log_e = linear[layer].max(1e-10).log10();
+        let negative = developed(
+            &model.curve[layer],
+            log_e,
+            model.exposure_shift,
+            grain,
+            index,
+            layer,
+        );
         let z = model.print[0] * (-negative - model.print[layer + 1]);
         let printed = model.paper[0] + model.paper[1] * sigmoid(z);
         (-printed * LOG2_10).exp2().clamp(0.0, 1.0)
@@ -56,16 +100,26 @@ fn scalar(model: &ScalarModel, linear: [f64; 3]) -> [f64; 3] {
 }
 
 /// `spectral.wgsl`, stage for stage.
-fn spectral(model: &SpectralModel, linear: [f64; 3]) -> [f64; 3] {
+fn spectral(
+    model: &SpectralModel,
+    linear: [f64; 3],
+    grain: Option<&GrainField>,
+    index: usize,
+) -> [f64; 3] {
     let log_e = match &model.exposure {
         Some(exposure) => spectral_log_exposure(exposure, model.step_nm, linear),
         None => std::array::from_fn(|layer| linear[layer].max(1e-10).log10()),
     };
 
     let density: [f64; 3] = std::array::from_fn(|layer| {
-        let curve = model.scalar.curve[layer];
-        let log_e = log_e[layer] + model.scalar.exposure_shift;
-        curve[0] + curve[1] * sigmoid(curve[2] * (log_e - curve[3]))
+        developed(
+            &model.scalar.curve[layer],
+            log_e[layer],
+            model.scalar.exposure_shift,
+            grain,
+            index,
+            layer,
+        )
     });
 
     let log_transmittance = match &model.enlarger {
@@ -213,4 +267,181 @@ fn scan_colour(scan: &kallotype_core::ScanModel, step_nm: f64, printed: [f64; 3]
     let balance = (neutral[0].max(1e-12) * neutral[1].max(1e-12) * neutral[2].max(1e-12)).cbrt();
 
     std::array::from_fn(|axis| white_relative[axis] * balance / neutral[axis].max(1e-12))
+}
+
+// ---------------------------------------------------------------------------
+// The grain draw, in the shader's own arithmetic.
+//
+// Written out on 32-bit halves rather than with Rust's `u64` because that is
+// what `grain.wgsl` has to do: a test that used the original would prove that
+// `u64` works, not that the transcription does.
+// ---------------------------------------------------------------------------
+
+/// A 64-bit value as the two halves WGSL has.
+#[derive(Clone, Copy)]
+struct Wide {
+    hi: u32,
+    lo: u32,
+}
+
+fn wide_xor(left: Wide, right: Wide) -> Wide {
+    Wide {
+        hi: left.hi ^ right.hi,
+        lo: left.lo ^ right.lo,
+    }
+}
+
+fn wide_add(left: Wide, right: Wide) -> Wide {
+    let lo = left.lo.wrapping_add(right.lo);
+    let carry = u32::from(lo < left.lo);
+    Wide {
+        hi: left.hi.wrapping_add(right.hi).wrapping_add(carry),
+        lo,
+    }
+}
+
+fn wide_shr(value: Wide, count: u32) -> Wide {
+    if count >= 32 {
+        return Wide {
+            hi: 0,
+            lo: value.hi >> (count - 32),
+        };
+    }
+    Wide {
+        hi: value.hi >> count,
+        lo: (value.lo >> count) | (value.hi << (32 - count)),
+    }
+}
+
+fn mul_hi(left: u32, right: u32) -> u32 {
+    let a0 = left & 0xFFFF;
+    let a1 = left >> 16;
+    let b0 = right & 0xFFFF;
+    let b1 = right >> 16;
+
+    let mut t = a0.wrapping_mul(b0);
+    let carry0 = t >> 16;
+    t = a1.wrapping_mul(b0).wrapping_add(carry0);
+    let middle = t & 0xFFFF;
+    let carry1 = t >> 16;
+    t = a0.wrapping_mul(b1).wrapping_add(middle);
+    a1.wrapping_mul(b1)
+        .wrapping_add(carry1)
+        .wrapping_add(t >> 16)
+}
+
+fn wide_mul(left: Wide, right: Wide) -> Wide {
+    let cross = left
+        .lo
+        .wrapping_mul(right.hi)
+        .wrapping_add(left.hi.wrapping_mul(right.lo));
+    Wide {
+        hi: mul_hi(left.lo, right.lo).wrapping_add(cross),
+        lo: left.lo.wrapping_mul(right.lo),
+    }
+}
+
+fn splitmix64(state: Wide) -> Wide {
+    let mut value = wide_add(
+        state,
+        Wide {
+            hi: 0x9E37_79B9,
+            lo: 0x7F4A_7C15,
+        },
+    );
+    value = wide_mul(
+        wide_xor(value, wide_shr(value, 30)),
+        Wide {
+            hi: 0xBF58_476D,
+            lo: 0x1CE4_E5B9,
+        },
+    );
+    value = wide_mul(
+        wide_xor(value, wide_shr(value, 27)),
+        Wide {
+            hi: 0x94D0_49BB,
+            lo: 0x1331_11EB,
+        },
+    );
+    wide_xor(value, wide_shr(value, 31))
+}
+
+fn grain_seed(seed: u64) -> Wide {
+    Wide {
+        hi: (seed >> 32) as u32,
+        lo: seed as u32,
+    }
+}
+
+fn grain_uniform(seed: Wide, x: u32, y: u32, layer: u32, lane: u32) -> f64 {
+    let multiply =
+        |value: u32, hi: u32, lo: u32| wide_mul(Wide { hi: 0, lo: value }, Wide { hi, lo });
+
+    let mut state = wide_mul(
+        seed,
+        Wide {
+            hi: 0xD6E8_FEB8,
+            lo: 0x6659_FD93,
+        },
+    );
+    state = wide_xor(state, multiply(x, 0x9E37_79B9, 0x7F4A_7C15));
+    state = wide_xor(state, multiply(y, 0xC2B2_AE3D, 0x27D4_EB4F));
+    state = wide_xor(state, multiply(layer, 0x1656_67B1, 0x9E37_79F9));
+    state = wide_xor(state, multiply(lane, 0x2545_F491, 0x4F6C_DD1D));
+
+    let bits = wide_shr(splitmix64(state), 41).lo;
+    (f64::from(bits) + 0.5) * (1.0 / 8_388_608.0)
+}
+
+fn grain_normal(seed: Wide, x: u32, y: u32, layer: u32) -> f64 {
+    let u1 = grain_uniform(seed, x, y, layer, 0);
+    let u2 = grain_uniform(seed, x, y, layer, 1);
+    (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
+}
+
+fn grain_sigma(grain: &GrainField, density: f64, layer: usize) -> f64 {
+    let covered = 1.0 - (-density.max(0.0) * LOG2_10).exp2();
+    let grains = grain.grains_per_um2[layer].max(0.0) * grain.pixel_area_um2 * covered;
+    1.0 / (std::f64::consts::LN_10 * (grains + 1.0).sqrt())
+}
+
+fn grain_jitter(grain: &GrainField, x: usize, y: usize, layer: usize, density: f64) -> f64 {
+    grain_sigma(grain, density, layer)
+        * grain_normal(grain_seed(grain.seed), x as u32, y as u32, layer as u32)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The point of the whole file: the u32 transcription is the same generator
+    /// as the CPU's `u64` one, draw for draw.
+    #[test]
+    fn the_ported_generator_draws_what_the_cpu_draws() {
+        let grain = GrainField::new(37, 23, 36.0, 0xC0FF_EE12_3456_789A);
+        let mut worst = 0.0_f64;
+        for index in 0..(37 * 23) {
+            let (x, y) = (index % 37, index / 37);
+            for layer in 0..3 {
+                for density in [0.1, 0.6, 1.5, 2.8] {
+                    let expected = grain.jitter(x, y, density, layer);
+                    let replayed = grain_jitter(&grain, x, y, layer, density);
+                    worst = worst.max((expected - replayed).abs());
+                }
+            }
+        }
+        assert!(worst < 1e-12, "the draw differs by {worst:.3e}");
+    }
+
+    /// A single bit wrong in the wide multiply would show up as a different
+    /// number rather than as a small error, so the check above is sharp; this
+    /// one says the halves are actually load-bearing.
+    #[test]
+    fn a_wrong_high_half_changes_the_draw() {
+        let grain = GrainField::new(4, 4, 36.0, 1);
+        let right = grain_jitter(&grain, 1, 2, 0, 1.0);
+        let mut wrong = grain;
+        wrong.seed = 2;
+        assert_ne!(right, grain_jitter(&wrong, 1, 2, 0, 1.0));
+    }
 }

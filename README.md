@@ -186,20 +186,28 @@ per-channel difference in linear light is:
 
 | render | worst difference |
 |---|---|
-| scalar | 2.2 × 10⁻⁷ |
+| scalar | 3.0 × 10⁻⁷ |
 | spectral exposure | 3.6 × 10⁻⁷ |
 | spectral print | 8.2 × 10⁻⁷ |
 | all three stages | 1.0 × 10⁻⁶ |
+| all three stages, with grain | 1.0 × 10⁻⁶ |
 
 against a stated tolerance of 1 × 10⁻⁴.
 
 The tolerance is the contract. A GPU port that "looks right" is how a film
 simulation acquires two different films.
 
-What is refused — with an error, not a shrug — is a **baked exposure table** and
-a **dictionary prior**: a sampled cube and a per-pixel non-negative least
-squares are their own models, and neither is expressible as a constant matrix.
-Grain, halation and couplers are spatial and live outside both shaders.
+**Grain** is implemented too, and it is the sharpest constraint on the
+transcription. Its draw is SplitMix64 — 64-bit arithmetic, which WGSL has no
+integers for — so `grain.wgsl` runs the same generator on pairs of `u32`, and
+`grain.rs` keeps twenty-three bits of state rather than fifty-three so that the
+draw is exact in an `f32`. For a random number "close enough" is false: the two
+backends either draw the same number or they have made two films.
+
+What is refused — with an error naming it, not a shrug — is a **baked exposure
+table**, a **dictionary prior**, **halation** and **DIR couplers**: a sampled
+cube, a per-pixel non-negative least squares, and two convolutions over the whole
+frame that need a chain of passes rather than one.
 
 It is wired into the CLI behind a feature flag, because wgpu is about two hundred
 crates and a command line tool does not need a GPU to be useful:
@@ -217,7 +225,8 @@ The report always says which backend ran and which device it was:
 
 `--gpu` falls back to the CPU with a warning — never silently, never with an
 error — when there is no adapter, when the render needs a table or a dictionary,
-or when grain, halation or couplers are on. At eight bits per channel the two
+or when halation or couplers are on. The message names the stage, because the
+backend is asked rather than assumed. At eight bits per channel the two
 backends agree to within one level; under a megapixel the files are usually
 byte-identical, but that is a coincidence of where samples land on rounding
 boundaries rather than a promise.
