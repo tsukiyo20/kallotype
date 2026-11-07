@@ -73,8 +73,21 @@ impl From<image::ImageError> for IoError {
 }
 
 /// Read an image from disk and return linear-light pixels.
+///
+/// The decoder's default limits are a decompression-bomb guard tuned for
+/// thumbnails: a 33 MP 16-bit frame — one full-frame camera, unscaled — trips
+/// them and is refused as "memory limit exceeded". A renderer whose job is to
+/// eat camera files raises them to something a camera can actually produce and
+/// leaves the guard in place rather than removing it.
 pub fn load(path: impl AsRef<Path>, encoding: InputEncoding) -> Result<Image, IoError> {
-    let dynamic = image::open(path)?;
+    let reader = image::ImageReader::open(path).map_err(image::ImageError::IoError)?;
+    let mut reader = reader.with_guessed_format().map_err(image::ImageError::IoError)?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(65_535);
+    limits.max_image_height = Some(65_535);
+    limits.max_alloc = Some(8 * 1024 * 1024 * 1024);
+    reader.limits(limits);
+    let dynamic = reader.decode()?;
     let rgb = dynamic.to_rgb32f();
     let (width, height) = rgb.dimensions();
 
