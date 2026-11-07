@@ -46,6 +46,13 @@ pub struct FilmStock {
     /// Used by the non-spectral print, which has no spectrum to put there. The
     /// spectral print uses the measured mask instead, and the two agree.
     pub base_density: [f64; 3],
+    /// Effective developed grains per square micrometre, per layer.
+    ///
+    /// "Effective" is doing work in that sentence: a developed image's noise is
+    /// dominated by clumping, so the number is far below a count of silver
+    /// halide grains. It is whatever reproduces the manufacturer's granularity
+    /// curve, and [`crate::GrainField::for_stock`] is where it goes.
+    pub grains_per_um2: [f64; 3],
 }
 
 /// A paper stock: one curve, because paper only has to record what is on the
@@ -86,6 +93,11 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         // The plateaus of the same curves at −8 stops, which is the film's
         // minimum density in status terms.
         base_density: [0.1867, 0.5782, 0.8319],
+        // Derived from the rms granularity chart on the same page: the inverse
+        // of what it takes to reproduce sigma D = 0.0060 / 0.0077 / 0.0197 at a
+        // density of 1 through a 48 µm aperture. Blue is the front layer and the
+        // grainiest by a factor of nine.
+        grains_per_um2: [0.62, 0.51, 0.07],
     },
     FilmStock {
         id: "c41_standard",
@@ -97,6 +109,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
             curve(0.0, 2.14, 0.66, -0.76),
         ],
         base_density: [0.22, 0.22, 0.22],
+        grains_per_um2: [3.6, 3.6, 3.6],
     },
     FilmStock {
         id: "c41_contrast",
@@ -108,6 +121,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
             curve(0.0, 2.31, 0.76, -0.74),
         ],
         base_density: [0.20, 0.20, 0.20],
+        grains_per_um2: [3.6, 3.6, 3.6],
     },
     FilmStock {
         id: "bw_classic",
@@ -119,6 +133,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
             curve(0.0, 2.50, 0.58, -0.80),
         ],
         base_density: [0.10, 0.10, 0.10],
+        grains_per_um2: [3.6, 3.6, 3.6],
     },
 ];
 
@@ -155,6 +170,7 @@ pub fn paper_stock(id: &str) -> Option<&'static PaperStock> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::grain::GrainField;
 
     /// The measured stock's status base and the mask the spectral print adds are
     /// one measurement written two ways. If they ever drift apart, one of the two
@@ -169,6 +185,25 @@ mod tests {
                 (stock.base_density[channel] - at).abs() < 0.06,
                 "layer {channel}: base {:.4} against mask {at:.4}",
                 stock.base_density[channel]
+            );
+        }
+    }
+
+    /// The granularity chart gives a *density* fluctuation; the model works in
+    /// log exposure, and the curve's slope connects them. This is the round trip
+    /// through the whole derivation: at a density of 1 through a 48 µm aperture,
+    /// rms granularity has to land where the data sheet put it.
+    #[test]
+    fn the_measured_grain_reproduces_the_granularity_chart() {
+        let stock = film_stock("vision3_500t").expect("the measured stock");
+        let mut field = GrainField::for_stock(1, 1, 36.0, 0, stock);
+        field.pixel_area_um2 = 48.0 * 48.0;
+        // The chart's values at D = 1, in layer order R, G, B.
+        for (layer, published) in [0.0060, 0.0077, 0.0197].into_iter().enumerate() {
+            let sigma_d = stock.channels[layer].gamma * field.sigma(1.0, layer);
+            assert!(
+                (sigma_d - published).abs() < 0.2 * published,
+                "layer {layer}: {sigma_d:.4} against the chart's {published:.4}"
             );
         }
     }

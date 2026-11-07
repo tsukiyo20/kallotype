@@ -30,18 +30,33 @@
 //! - **Density dependence.** Grain is invisible in a blank frame and peaks where
 //!   the curve is steepest, without either being written down as a rule.
 //!
-//! ## What is not modelled
+//! ## Where `n` comes from
 //!
-//! The grain density `n` is a placeholder, not a measurement: it is chosen so the
-//! model reproduces an RMS granularity of about 0.005 at `D = 1` across a 48 µm
-//! aperture, the order of magnitude the manufacturers publish for ISO 400–800
-//! colour negative films. Pinning it against the film's own data sheet at two
-//! apertures is the exit criterion for this phase.
+//! `n` is not a free parameter. The manufacturer publishes rms granularity
+//! against density, measured through a 48 µm aperture; that is `sigma_D`, and
+//! with the curve's local slope `gamma`,
+//!
+//! ```text
+//! sigma_D = gamma · sigma_logE
+//! ```
+//!
+//! so the chart pins `n` for every layer of the stock it belongs to. For
+//! `vision3_500t` the three layers come out at 0.62, 0.51 and 0.07 grains per
+//! µm² — the blue record needs nine times fewer than the red to be nine times
+//! grainier, which is what being the front layer of a fast film means.
+//!
+//! "Grains" is a deliberate simplification of "effective scattering centres". A
+//! developed image's noise is dominated by clumping, so `n` is far below a count
+//! of silver halide crystals — a few tenths per µm² rather than a few per µm².
+//! It is whatever reproduces the published curve, and `emulsion` holds it per
+//! stock.
 //!
 //! Development is not linked in yet. Grain clumping does grow with development —
 //! the literature is clear about the direction and says little about the law —
 //! but a made-up exponent is worse than an honest gap, so the relation waits for
 //! a measurement.
+
+use crate::emulsion::FilmStock;
 
 /// The grain field of one image.
 ///
@@ -63,13 +78,18 @@ pub struct GrainField {
 }
 
 impl GrainField {
-    /// The default grain density per layer, in grains per µm².
+    /// Grain density for a stock that has not been measured, in grains per µm².
     ///
-    /// A placeholder: see the module documentation for what it reproduces and
-    /// what would replace it.
+    /// A placeholder, at the order of magnitude a physical grain count would
+    /// give. The measured stocks carry their own, derived from the published
+    /// granularity curve, and it is nine times smaller for the blue layer.
     pub const DEFAULT_GRAINS_PER_UM2: f64 = 3.6;
 
-    /// A field for an image `width × height` pixels covering `frame_mm` across.
+    /// A field for an image `width × height` pixels covering `frame_mm` across,
+    /// with the fallback grain density.
+    ///
+    /// Use [`Self::for_stock`] when the film is known: the measured stocks carry
+    /// their own, and they differ by a factor of nine between layers.
     ///
     /// `frame_mm` is the width of the film frame the image represents — 36 for
     /// a 35 mm frame — so pixel size is `frame_mm / width` in millimetres.
@@ -84,6 +104,21 @@ impl GrainField {
             pixel_area_um2: pixel_um * pixel_um,
             grains_per_um2: [Self::DEFAULT_GRAINS_PER_UM2; 3],
             seed,
+        }
+    }
+
+    /// A field whose grain density is the stock's own.
+    #[must_use]
+    pub fn for_stock(
+        width: usize,
+        height: usize,
+        frame_mm: f64,
+        seed: u64,
+        stock: &FilmStock,
+    ) -> Self {
+        Self {
+            grains_per_um2: stock.grains_per_um2,
+            ..Self::new(width, height, frame_mm, seed)
         }
     }
 
@@ -191,14 +226,15 @@ mod tests {
         assert!(field.sigma(1.0, 0) > field.sigma(3.0, 0));
     }
 
-    /// The number that matters: at a 48 µm aperture and D = 1 this should land
-    /// near the published 0.005, or the placeholder density is wrong.
+    /// The placeholder is the fallback, so it should sit where a physical grain
+    /// count would: a few thousand grains under a 48 µm aperture, and a
+    /// log-exposure fluctuation of a few thousandths.
     #[test]
-    fn the_placeholder_density_reproduces_a_published_granularity() {
+    fn the_fallback_density_is_the_order_of_a_real_grain_count() {
         let field = field(2300.0);
         let sigma = field.sigma(1.0, 0);
         assert!(
-            (0.004..0.007).contains(&sigma),
+            (0.002..0.008).contains(&sigma),
             "sigma {sigma} at a 48 µm aperture"
         );
     }

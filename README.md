@@ -191,6 +191,13 @@ wrong in the way that matters for a negative (`d_min` 0.635 against a measured
 0.84). A sensitometric curve has a toe, a straight line and a shoulder, and a
 model that cannot express a straight line cannot express a negative.
 
+Grain comes from the same place. The manufacturer publishes rms granularity
+against density; the model's grain is counting statistics, `sigma_logE =
+1/(ln 10 · √N)`, and inverting the published curve gives `n` per layer: 0.62,
+0.51 and 0.07 grains per µm² for the red, green and blue records of the one
+measured stock. Blue needs nine times fewer grains than red to be nine times
+grainier, which is what being the fast front layer of a 500 T film means.
+
 A colour negative's minimum density is not part of its curve. It is base, fog and
 the orange mask — spectrally structured, so the model carries it as a spectrum
 and the curve describes only the dye, which is zero where nothing was exposed.

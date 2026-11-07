@@ -119,12 +119,16 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
     let (width, height) = (image.width, image.height);
 
     let pixel_um = args.frame_mm * 1000.0 / width.max(1) as f64;
+    // The field takes its grain density from the stock: the measured one differs
+    // by a factor of nine between its layers, and a stock without a measurement
+    // falls back to the placeholder.
     let grain = args.grain.then(|| {
-        GrainField::new(
+        GrainField::for_stock(
             width as usize,
             height as usize,
             args.frame_mm,
             args.grain_seed,
+            selection.film,
         )
     });
     let halation = args.halation.then(|| Halation::typical(pixel_um));
