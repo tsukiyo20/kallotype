@@ -149,6 +149,7 @@ impl RenderParams {
                 .spectral_scan
                 .then(|| ScanContext::measured_with(self.paper.dyes)),
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
+            reversal: self.film.process == crate::emulsion::FilmProcess::Reversal,
             spectral: self
                 .spectral
                 .then(|| {
@@ -206,6 +207,8 @@ pub struct ScalarModel {
 /// A [`RenderParams`] with the curves already developed and the print balanced.
 #[derive(Debug, Clone)]
 pub struct PreparedRender {
+    /// Whether the film is viewed directly rather than printed.
+    pub reversal: bool,
     channels: [CharacteristicCurve; 3],
     base_density: [f64; 3],
     paper: CharacteristicCurve,
@@ -371,6 +374,17 @@ impl PreparedRender {
     /// The print and the scan, from the negative's density.
     #[must_use]
     pub fn positive(&self, density_cmy: [f64; 3]) -> [f64; 3] {
+        // A reversal film is its own picture: there is no print, no paper and no
+        // enlarger between the development and the eye. What leaves is what the
+        // film transmits, and the density *is* the image.
+        if self.reversal {
+            return std::array::from_fn(|channel| {
+                10.0_f64
+                    .powf(-(density_cmy[channel] + self.base_density[channel]))
+                    .clamp(0.0, 1.0)
+            });
+        }
+
         // The spectral print does one integration for all three layers; calling
         // it inside the channel loop made it six times more expensive per pixel.
         let print_exposure = self
@@ -583,6 +597,23 @@ mod tests {
                 (channel - 0.18).abs() < 0.005,
                 "mid grey printed at {channel}"
             );
+        }
+    }
+
+    #[test]
+    fn a_reversal_film_is_not_printed() {
+        // The only stage that separates a reversal from a negative is the print:
+        // the film's own density is the picture, so what leaves is its
+        // transmittance and not a paper's response to it.
+        let mut prepared = RenderParams::default().prepare();
+        let density = [0.2, 0.4, 0.6];
+        let printed = prepared.positive(density);
+        prepared.reversal = true;
+        let direct = prepared.positive(density);
+        for channel in 0..3 {
+            let expected = 10.0_f64.powf(-(density[channel] + prepared.base_density[channel]));
+            assert!((direct[channel] - expected).abs() < 1e-12, "{channel}");
+            assert_ne!(printed[channel], direct[channel], "{channel}");
         }
     }
 
