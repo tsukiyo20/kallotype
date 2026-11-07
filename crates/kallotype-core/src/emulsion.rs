@@ -192,6 +192,32 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
     },
+    FilmStock {
+        id: "fuji_nph400",
+        label: "FUJICOLOR NPH 400 PROFESSIONAL, CN-16",
+        note: "Measured, except for the dyes and the mask. Curves from data sheet \
+               AF3-865E page 6, digitised 2026-11-07; layer sensitivities from figure \
+               19 on the same page. Figure 21 publishes the density of a mid-scale \
+               neutral subject rather than the three dyes separately, so the dye \
+               shapes are borrowed from the VISION3 digitisation and the mask with \
+               them — which is why this stock is not yet as measured as it looks.",
+        // Red, green and blue. `d_max` is the span above the base; transition 3 is
+        // what the three curves of this stock prefer when fitted together.
+        channels: [
+            curve(0.0, 2.8856, 0.7520, -0.6371).with_transition(3.0),
+            curve(0.0, 2.6366, 0.8859, -1.1100).with_transition(3.0),
+            curve(0.0, 3.4299, 0.8066, -0.4871).with_transition(3.0),
+        ],
+        // The toe plateaus of the same curves: cyan, magenta, yellow.
+        base_density: [0.2053, 0.3996, 0.7863],
+        // One published figure — diffuse rms granularity 4 through a 48 µm
+        // aperture — inverted through the model's grain statistics. One number,
+        // so all three layers carry it; the real cyan record is finer.
+        grains_per_um2: [5.42, 5.42, 5.42],
+        layers: &crate::measured::FUJI_NPH400_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+    },
 ];
 
 /// Every paper stock compiled into the binary.
@@ -283,6 +309,27 @@ pub fn paper_stock(id: &str) -> Option<&'static PaperStock> {
 mod tests {
     use super::*;
     use crate::grain::GrainField;
+
+    /// The second film is not the first one with another curve.
+    ///
+    /// Its layer sensitivities were digitised from its own data sheet, and its
+    /// curves turn their corners at 3 rather than 4. A stock that borrowed the
+    /// first film's tables would render the same colour with a different
+    /// contrast, which is the thing this field exists to prevent.
+    #[test]
+    fn the_second_film_has_its_own_layers() {
+        let fuji = film_stock("fuji_nph400").expect("built-in stock");
+        let kodak = film_stock("vision3_500t").expect("built-in stock");
+        assert_eq!(fuji.channels[0].transition, 3.0);
+        assert_eq!(kodak.channels[0].transition, crate::curve::TRANSITION);
+        let peak = |table: &[f64; GRID_LEN]| table.iter().copied().fold(0.0_f64, f64::max);
+        let ratios: [f64; 3] =
+            std::array::from_fn(|layer| peak(&fuji.layers[layer]) / peak(&kodak.layers[layer]));
+        assert!(
+            ratios.iter().any(|ratio| (ratio - 1.0).abs() > 0.05),
+            "the two films share their layer tables: {ratios:?}"
+        );
+    }
 
     /// Every film carries three dyes, three layer sensitivities and a mask, on
     /// the grid the model integrates over, and none of them is negative.

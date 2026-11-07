@@ -19,6 +19,7 @@ development time and temperature, the spectral exposure path, the spectral print
 and the spectral scan. The curve is the **measured** one, digitised from the
 VISION3 500T data sheet, and so is everything the spectral path integrates — so
 `--film vision3_500t`, the default, is a film rather than an impression of one.
+A second measured film, FUJICOLOR NPH 400, sits beside it.
 The paper's curve is measured too, and the default paper is a measured one: the
 **PORTRA ENDURA** curves from E-4021, a print whose white is 0.096 status
 density. It turns out to be a different *shape* from a negative's — no straight
@@ -32,7 +33,14 @@ the print sees the negative through, and the orange mask between them. `--film`
 therefore changes the colour and not only the contrast — for a stock that has
 its own. The placeholders borrow the measured VISION3 spectra and say so in
 their notes, because an invented curve on somebody else's colour is half a
-stock. Phase 5 is in: **grain** (`--grain`), modelled as a
+stock.
+
+Two films have their own now: **VISION3 500T** and **FUJICOLOR NPH 400**, the
+latter digitised from AF3-865E. NPH 400 is honest about one gap in its note —
+its sheet publishes the density of a mid-scale neutral subject rather than the
+three dyes, so the dye shapes and the mask are still VISION3's. Its curves, its
+base, its grain and its layer sensitivities are its own, and `--film fuji_nph400`
+renders a visibly warmer print than the stock the project started with. Phase 5 is in: **grain** (`--grain`), modelled as a
 particle process on the film's own scale, and **halation** (`--halation`), the
 light that scatters in the emulsion and reflects off the base. Phase 6 has
 started with **DIR couplers** (`--couplers`): development inhibition between
