@@ -162,6 +162,17 @@ impl ScanContext {
 
     /// Replace the placeholder image dyes with measured spectra.
     ///
+    /// Build the context the renderer uses: the paper's dyes are measured.
+    ///
+    /// # Panics
+    ///
+    /// Cannot panic: the tables are compile-time constants on the internal grid.
+    #[must_use]
+    pub fn measured() -> Self {
+        Self::new()
+            .with_dyes(crate::measured::PAPER_DYES.map(|table| crate::measured::spectrum(&table)))
+    }
+
     /// White, the neutral-axis table and every derived quantity are recomputed,
     /// because all three depend on the dyes.
     #[must_use]

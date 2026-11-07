@@ -25,7 +25,9 @@ the cyan dye forms, so the mask and the dye's unwanted absorption cancel.
 
 The spectral path is reached with `--spectral` (and `--spectral-print`,
 `--spectral-scan`); without those flags the renderer uses the per-channel scalar
-model, which is exact for neutrals and cheap everywhere.
+model, which is exact for neutrals and cheap everywhere. The spectral path runs
+on the film's and the paper's **measured** dye curves, compiled in — including
+the orange mask, which is coupled rather than constant.
 
 What works today:
 

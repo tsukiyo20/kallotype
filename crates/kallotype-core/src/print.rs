@@ -267,6 +267,27 @@ impl PrintContext {
         best.1
     }
 
+    /// Build the context the renderer uses: every spectrum measured.
+    ///
+    /// The dyes, the paper's layers and the mask are the digitised curves from
+    /// `crate::measured`; the mask is coupled, so it is consumed where the cyan
+    /// dye forms. This is the model, and [`Self::new`] is what it is compared
+    /// against.
+    ///
+    /// # Panics
+    ///
+    /// Cannot panic: the tables are compile-time constants on the internal grid.
+    #[must_use]
+    pub fn measured(reference_density: [f64; 3]) -> Self {
+        Self::new(reference_density)
+            .with_spectra(
+                crate::measured::FILM_DYES.map(|table| crate::measured::spectrum(&table)),
+                crate::measured::PAPER_LAYERS.map(|table| crate::measured::spectrum(&table)),
+            )
+            .with_base_density(crate::measured::spectrum(&crate::measured::FILM_MASK))
+            .with_masking(Masking::default())
+    }
+
     /// Add the film's minimum density: base, fog and the orange mask.
     ///
     /// The published dye curves have D-min subtracted, so the mask is not in

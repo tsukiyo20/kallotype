@@ -116,7 +116,9 @@ impl RenderParams {
         // Two ways to describe what reaches the paper. The scalar one treats each
         // density as that channel's light loss; the spectral one integrates the
         // dyes' absorption bands against the paper's layer sensitivities.
-        let print = self.spectral_print.then(|| PrintContext::new(density_mid));
+        let print = self
+            .spectral_print
+            .then(|| PrintContext::measured(density_mid));
         let print_log_e0: [f64; 3] = match &print {
             // The spectral model is anchored on neutral grey, so the actual
             // mid-grey exposure is subtracted here rather than assumed to be 0.
@@ -133,7 +135,7 @@ impl RenderParams {
             print_slope,
             print_log_e0,
             print,
-            scan: self.spectral_scan.then(ScanContext::new),
+            scan: self.spectral_scan.then(ScanContext::measured),
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
             spectral: self
                 .spectral

@@ -33,6 +33,7 @@ pub mod emulsion;
 pub mod grain;
 pub mod halation;
 pub mod lut;
+mod measured;
 pub mod pipeline;
 pub mod print;
 pub mod psf;
