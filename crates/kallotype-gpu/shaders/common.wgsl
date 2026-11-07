@@ -20,21 +20,27 @@ fn softplus(u: f32) -> f32 {
     return max(u, 0.0) + log(1.0 + exp(-abs(u)));
 }
 
-// The characteristic curve, from its four numbers.
+// The characteristic curve, from its numbers and its transition.
 //
 // The slope is `gamma` times the difference of two logistic steps, which is a
 // plateau between the corners and zero outside: toe, straight line, shoulder.
 // A single logistic would have a point of maximum contrast and no straight line,
-// which is not what a measured curve looks like.
-fn curve_density(c: vec4<f32>, x: f32) -> f32 {
+// which is not what a measured negative looks like.
+//
+// `transition` is how fast the corners are turned, and it comes from the
+// material: 4 for a negative, 10 for a paper, whose curve has no straight line
+// for the corners to bound and is expressed by letting them overlap. See
+// `kallotype_core::curve`.
+fn curve_density(c: vec4<f32>, transition: f32, x: f32) -> f32 {
     let span = max(c.y - c.x, 1e-9);
     let gamma = max(c.z, 1e-9);
     let half = 0.5 * span / gamma;
     let toe = c.w - half;
     let shoulder = c.w + half;
+    let slope = max(transition, 1e-3);
     return c.x
-        + (gamma / TRANSITION)
-            * (softplus(TRANSITION * (x - toe)) - softplus(TRANSITION * (x - shoulder)));
+        + (gamma / slope)
+            * (softplus(slope * (x - toe)) - softplus(slope * (x - shoulder)));
 }
 
 // WGSL has no base-ten logarithm; the CPU calls `f64::log10`.
@@ -57,12 +63,12 @@ fn develop(index: u32, log_e: vec3<f32>) -> vec3<f32> {
     let shift = params.image.w;
     var density = vec3<f32>(0.0);
     for (var layer = 0u; layer < 3u; layer = layer + 1u) {
-        let mean = curve_density(params.curve[layer], log_e[layer] + shift);
+        let mean = curve_density(params.curve[layer], params.transition[layer], log_e[layer] + shift);
         if (params.effects.x == 0u) {
             density[layer] = mean;
         } else {
             let jittered = log_e[layer] + grain_jitter(index, layer, mean);
-            density[layer] = curve_density(params.curve[layer], jittered + shift);
+            density[layer] = curve_density(params.curve[layer], params.transition[layer], jittered + shift);
         }
     }
     return density;

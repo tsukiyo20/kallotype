@@ -1,9 +1,10 @@
 //! Built-in film and paper stocks.
 //!
-//! One of them — [`FILM_STOCKS`]'s `vision3_500t` — is measured: its curves are
-//! digitised from the manufacturer's data sheet and its spectra are the ones
-//! compiled into `crate::measured`. Everything else is a stand-in with realistic
-//! numbers, and the notes on each say which it is.
+//! Two of them are measured — the film `vision3_500t` and the paper
+//! `endura_premier_metallic`. Their curves are digitised from the manufacturer's
+//! data sheets, and the film's spectra are the ones compiled into
+//! `crate::measured`. Everything else is a stand-in with realistic numbers, and
+//! the notes on each say which it is.
 //!
 //! The ids of the stand-ins deliberately name no real product. A stock called
 //! `portra400` that is not Portra 400 would be a lie, and the whole point of this
@@ -27,7 +28,7 @@
 //! Paper is the exception and keeps its `d_min`: unexposed paper has a density
 //! of its own, it has no mask, and there is no second place to put it.
 
-use crate::curve::CharacteristicCurve;
+use crate::curve::{CharacteristicCurve, PAPER_TRANSITION};
 
 /// A film stock: one characteristic curve per colour layer.
 #[derive(Debug, Clone, Copy)]
@@ -140,6 +141,22 @@ pub static FILM_STOCKS: &[FilmStock] = &[
 /// Every paper stock compiled into the binary.
 pub static PAPER_STOCKS: &[PaperStock] = &[
     PaperStock {
+        id: "endura_premier_metallic",
+        label: "KODAK PROFESSIONAL ENDURA Premier Metallic, RA-4",
+        note: "Measured. Curve digitised from data sheet E-4071 page 4; its three \
+               dye spectra come from page 5 of the same sheet. The white is the \
+               metallic base's, 0.21 status density, not a normal paper's 0.07.",
+        // The mean of the three measured layers, fitted at the paper's
+        // transition of 10. Per layer they are red (0.2078, 2.7739, 5.24,
+        // −1.175), green (0.2043, 2.5258, 5.40, −1.205) and blue (0.1707,
+        // 2.4699, 6.66, −1.193), each reproduced to an rms of 0.013, 0.010 and
+        // 0.007. One curve serves the print, so this one is their average and
+        // the layer spread at the shoulder — 0.30 of density — is what that
+        // single curve cannot say.
+        channel: curve(0.1943, 2.5899, 5.7667, -1.1908).with_transition(PAPER_TRANSITION),
+        target_mid_reflectance: 0.18,
+    },
+    PaperStock {
         id: "c41_paper",
         label: "Colour paper, RA-4",
         note: "Placeholder RA-4 paper: low d_min, short contrasty curve.",
@@ -220,6 +237,42 @@ mod tests {
                     "{} layer {layer}: d_min {}",
                     stock.id,
                     channel.d_min
+                );
+            }
+        }
+    }
+
+    /// Paper keeps its `d_min`, unlike film: unexposed paper has a density of
+    /// its own and no mask to carry it. The measured one's is the toe the data
+    /// sheet draws, and it is the paper's white — a print on it cannot reflect
+    /// more than a tenth of what 0.21 of density allows.
+    #[test]
+    fn the_measured_paper_carries_its_white_as_the_toe() {
+        let paper = paper_stock("endura_premier_metallic").expect("the measured paper");
+        assert!(
+            (paper.channel.d_min - 0.1943).abs() < 1e-9,
+            "d_min {} is not the measured toe",
+            paper.channel.d_min
+        );
+        assert!(
+            (paper.channel.transition - PAPER_TRANSITION).abs() < 1e-9,
+            "a paper at a negative's transition cannot turn fast enough"
+        );
+        // The white is the base's reflectance, and the placeholder paper's is
+        // what a normal RA-4 sheet gives. This one is metallic and grey.
+        let white = 10.0_f64.powf(-paper.channel.d_min);
+        assert!(
+            white < 0.7,
+            "a metallic paper's white came out at {white}, too bright for its measured toe"
+        );
+        // And every other paper keeps the negative's transition away from it.
+        for stock in PAPER_STOCKS {
+            if stock.id != paper.id {
+                assert!(
+                    (stock.channel.transition - PAPER_TRANSITION).abs() > 1e-9
+                        || stock.channel.d_min > 0.15,
+                    "{} claims the paper transition without a measured curve",
+                    stock.id
                 );
             }
         }

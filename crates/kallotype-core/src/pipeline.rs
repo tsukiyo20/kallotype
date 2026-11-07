@@ -181,6 +181,11 @@ pub struct ScalarModel {
     pub curve: [[f64; 4]; 3],
     /// The paper's `d_min`, `d_max`, `gamma` and `log_e0`.
     pub paper: [f64; 4],
+    /// How sharply each curve turns: the three layers, then the paper.
+    ///
+    /// It rides on the curve rather than on the model because it is a property
+    /// of the material — see `crate::curve`.
+    pub transition: [f64; 4],
     /// The film's minimum density in status terms: base, fog and mask.
     pub base_density: [f64; 3],
     /// The enlarger's exposure shift per layer, in decades.
@@ -224,6 +229,12 @@ impl PreparedRender {
                 self.paper.d_max,
                 self.paper.gamma,
                 self.paper.log_e0,
+            ],
+            transition: [
+                self.channels[0].transition,
+                self.channels[1].transition,
+                self.channels[2].transition,
+                self.paper.transition,
             ],
             base_density: self.base_density,
             print_shift: self.print_shift,

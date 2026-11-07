@@ -19,7 +19,11 @@ development time and temperature, the spectral exposure path, the spectral print
 and the spectral scan. The curve is the **measured** one, digitised from the
 VISION3 500T data sheet, and so is everything the spectral path integrates — so
 `--film vision3_500t`, the default, is a film rather than an impression of one.
-The other stocks are placeholders, and their notes say so. Phase 5 is in: **grain** (`--grain`), modelled as a
+The paper's curve is measured too — the ENDURA Premier Metallic sheet's
+characteristic curves, and it turns out to be a different *shape* from a
+negative's: no straight line anywhere, so the model carries how sharply a curve
+turns as a property of the material. The remaining stocks are placeholders, and
+their notes say so. Phase 5 is in: **grain** (`--grain`), modelled as a
 particle process on the film's own scale, and **halation** (`--halation`), the
 light that scatters in the emulsion and reflects off the base. Phase 6 has
 started with **DIR couplers** (`--couplers`): development inhibition between

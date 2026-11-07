@@ -22,6 +22,14 @@ lint:
 test:
     cargo test --workspace --all-features
 
+# Run the tests that read the digitised datasets in the private folder.
+#
+# These are `#[ignore]`d because the data is not in the repository, so nothing in
+# CI runs them and nothing notices when they stop working. Run them whenever the
+# model or the datasets move.
+data:
+    cargo test --workspace --all-features -- --ignored
+
 # Build the API documentation, warnings are errors.
 doc:
     cargo doc --workspace --no-deps

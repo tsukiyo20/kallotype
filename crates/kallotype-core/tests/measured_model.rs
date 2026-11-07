@@ -4,9 +4,14 @@
 //! datasets, so they are where a physical regression would show up first.
 //!
 //! The datasets are **not in this repository**: they are the products of a
-//! separate digitisation effort and are kept locally. Every test here is
-//! `#[ignore]`d for that reason. On a machine that has `data/` beside the crate,
-//! run them with `cargo test -- --ignored`.
+//! separate digitisation effort and are kept in the git-ignored `private/`
+//! folder. Every test here is `#[ignore]`d for that reason. On a machine that has
+//! that folder, run them with `cargo test -- --ignored`.
+//!
+//! Ignored tests rot, and these did: the dataset path was not updated when the
+//! files moved into `private/`, and the four tests below were failing to find
+//! their data for a commit before anyone ran them. They are worth running
+//! whenever the model changes — `just data` does it.
 //!
 //! The grey balance is the thing to watch. It was written to compensate for
 //! missing data; with the mask measured and the filter pack solved it should be
@@ -14,12 +19,12 @@
 
 use std::path::Path;
 
-use kallotype_core::{PrintContext, ScanContext};
+use kallotype_core::{PrintContext, ScanContext, paper_stock};
 use kallotype_spectral::{Spectrum, load_csv};
 
 fn read(stem: &str) -> Spectrum {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../data/dyes")
+        .join("../../private/data/dyes")
         .join(format!("{stem}.csv"));
     let set = load_csv(&path).expect("dataset must load");
     set.samples[0].reflectance.clone()
@@ -125,5 +130,67 @@ fn the_orange_mask_is_consumed_by_cyan_development() {
         clear_gain > plain_gain + 0.02,
         "the mask gave back {:.3} decades of blue, not enough to be a coupler: {clear_gain} vs {plain_gain}",
         clear_gain - plain_gain
+    );
+}
+
+/// Two columns of numbers, headed: log exposure and density.
+fn curve_csv(stem: &str) -> Vec<(f64, f64)> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../private/data/sensitometry")
+        .join(format!("{stem}.csv"));
+    let text = std::fs::read_to_string(&path).expect("dataset must load");
+    text.lines()
+        .skip(1)
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| {
+            let mut fields = line.split(',');
+            let x = fields
+                .next()
+                .expect("a log exposure")
+                .parse()
+                .expect("a number");
+            let y = fields.next().expect("a density").parse().expect("a number");
+            (x, y)
+        })
+        .collect()
+}
+
+/// The compiled paper curve is a compromise between three measured layers, and
+/// a compromise has a testable definition: it must lie inside the envelope the
+/// three data-sheet curves draw, everywhere. A regression that moved any of the
+/// four parameters through the side of the envelope would fail here.
+#[ignore = "reads the digitised datasets, which are not in this repository"]
+#[test]
+fn the_measured_paper_curve_lies_inside_its_three_layers() {
+    let paper = paper_stock("endura_premier_metallic").expect("the measured paper");
+    let layers = ["red", "green", "blue"]
+        .map(|name| curve_csv(&format!("paper_endura_premier_metallic_{name}")));
+    for layer in &layers {
+        assert!(layer.len() > 200, "only {} points", layer.len());
+    }
+
+    let mut worst_inside: f64 = f64::NEG_INFINITY;
+    for (index, (log_e, _)) in layers[0].iter().enumerate() {
+        let low = layers
+            .iter()
+            .map(|layer| layer[index].1)
+            .fold(f64::INFINITY, f64::min);
+        let high = layers
+            .iter()
+            .map(|layer| layer[index].1)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let value = paper.channel.density(*log_e);
+        // How far the curve is from leaving the envelope, negative when inside.
+        worst_inside = worst_inside.max(low - value).max(value - high);
+    }
+    assert!(
+        worst_inside < 0.0,
+        "the stock's curve leaves the measured envelope by {}",
+        worst_inside
+    );
+    assert!(
+        worst_inside > -0.05,
+        "the stock's curve is {} inside the envelope — too far to be the mean",
+        -worst_inside
     );
 }

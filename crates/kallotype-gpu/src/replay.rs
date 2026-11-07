@@ -50,19 +50,20 @@ pub(crate) fn render(
 /// out of the shoulder without either case being special-cased.
 fn developed(
     curve: &[f64; 4],
+    transition: f64,
     log_e: f64,
     shift: f64,
     grain: Option<&GrainField>,
     index: usize,
     layer: usize,
 ) -> f64 {
-    let mean = curve_density(*curve, log_e + shift);
+    let mean = curve_density(*curve, transition, log_e + shift);
     match grain {
         None => mean,
         Some(grain) => {
             let (x, y) = (index % grain.width.max(1), index / grain.width.max(1));
             let jitter = grain_jitter(grain, x, y, layer, mean);
-            curve_density(*curve, log_e + jitter + shift)
+            curve_density(*curve, transition, log_e + jitter + shift)
         }
     }
 }
@@ -71,16 +72,16 @@ fn softplus(u: f64) -> f64 {
     u.max(0.0) + (-u.abs()).exp().ln_1p()
 }
 
-/// The characteristic curve, from its four numbers. Mirrors `common.wgsl`.
-fn curve_density(c: [f64; 4], x: f64) -> f64 {
+/// The characteristic curve, from its numbers and its transition. Mirrors
+/// `common.wgsl`.
+fn curve_density(c: [f64; 4], transition: f64, x: f64) -> f64 {
     let span = (c[1] - c[0]).max(1e-9);
     let gamma = c[2].max(1e-9);
     let half = 0.5 * span / gamma;
     let toe = c[3] - half;
     let shoulder = c[3] + half;
-    let transition = 4.0;
-    c[0] + (gamma / transition)
-        * (softplus(transition * (x - toe)) - softplus(transition * (x - shoulder)))
+    let slope = transition.max(1e-3);
+    c[0] + (gamma / slope) * (softplus(slope * (x - toe)) - softplus(slope * (x - shoulder)))
 }
 
 /// `scalar.wgsl`, stage for stage.
@@ -94,6 +95,7 @@ fn scalar(
         let log_e = linear[layer].max(1e-10).log10();
         let negative = developed(
             &model.curve[layer],
+            model.transition[layer],
             log_e,
             model.exposure_shift,
             grain,
@@ -102,6 +104,7 @@ fn scalar(
         );
         let printed = curve_density(
             model.paper,
+            model.transition[3],
             -(negative + model.base_density[layer]) + model.print_shift[layer],
         );
         (-printed * LOG2_10).exp2().clamp(0.0, 1.0)
@@ -123,6 +126,7 @@ fn spectral(
     let density: [f64; 3] = std::array::from_fn(|layer| {
         developed(
             &model.scalar.curve[layer],
+            model.scalar.transition[layer],
             log_e[layer],
             model.scalar.exposure_shift,
             grain,
@@ -139,6 +143,7 @@ fn spectral(
     let printed: [f64; 3] = std::array::from_fn(|layer| {
         curve_density(
             model.scalar.paper,
+            model.scalar.transition[3],
             log_transmittance[layer] + model.scalar.print_shift[layer],
         )
     });

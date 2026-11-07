@@ -730,10 +730,12 @@ fn uniform(
     let enlarger = spectral.and_then(|model| model.enlarger.as_ref());
     let scan = spectral.and_then(|model| model.scan.as_ref());
 
-    let mut out = Vec::with_capacity(25 * 16);
+    let mut out = Vec::with_capacity(26 * 16);
     for curve in &scalar.curve {
         push_f32(&mut out, &curve.map(|value| value as f32));
     }
+    // How sharply each curve turns: the three layers, then the paper.
+    push_f32(&mut out, &scalar.transition.map(|value| value as f32));
     // (paper d_min, paper d_max, paper gamma, exposure shift)
     push_f32(
         &mut out,
@@ -1195,6 +1197,29 @@ mod tests {
         );
     }
 
+    /// The transition rides on the curve, so a paper and a negative carry
+    /// different ones through the same four numbers. That makes the packing a
+    /// place a mistake would hide: swap the lanes and every default render still
+    /// matches, because both are 4. This one is a paper at 10.
+    #[test]
+    fn a_paper_at_its_own_transition_matches_the_cpu() {
+        let params = RenderParams {
+            paper: kallotype_core::paper_stock("endura_premier_metallic")
+                .expect("the measured paper"),
+            ..RenderParams::default()
+        };
+        // The two transitions must actually differ, or the test proves nothing.
+        let prepared = params.prepare();
+        let model = prepared.scalar_model().expect("a scalar render");
+        assert!(
+            (model.transition[3] - model.transition[0]).abs() > 5.0,
+            "paper {} against film {} — the lanes are not distinguishable",
+            model.transition[3],
+            model.transition[0]
+        );
+        compare_finished(&prepared, &frame(), WIDTH, HEIGHT, &Finishing::default());
+    }
+
     /// Halation spreads light across pixels, which is the whole reason the chain
     /// exists: the halo has to land in the same place, and to fall off the same
     /// way, or the two backends disagree in a band around every highlight.
@@ -1417,7 +1442,7 @@ mod tests {
                 finishing.couplers.copied(),
                 &kernels,
             );
-            assert_eq!(bytes.len(), 25 * 16, "twenty-five lanes");
+            assert_eq!(bytes.len(), 26 * 16, "twenty-six lanes");
         }
     }
 

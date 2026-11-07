@@ -13,13 +13,15 @@
 const L: u32 = 71u;
 const LOG2_10: f32 = 3.321928094887363;
 const LN_10: f32 = 2.302585092994046;
-// How sharply a curve's straight line turns into its toe and shoulder; see
+// How sharply a curve's straight line turns into its toe and shoulder is a
+// property of the material, so it rides with the curve; see
 // `kallotype_core::curve`.
-const TRANSITION: f32 = 4.0;
 
 struct Params {
     // Per layer: (d_min, d_max, gamma, log_e0).
     curve: array<vec4<f32>, 3>,
+    // How sharply each curve turns: the three layers, then the paper.
+    transition: vec4<f32>,
     // (paper d_min, paper d_max, paper gamma, exposure shift).
     image: vec4<f32>,
     // The enlarger's exposure shift per layer, then the paper's log_e0.

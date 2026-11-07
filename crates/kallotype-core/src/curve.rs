@@ -41,19 +41,45 @@
 //! length is not a fifth parameter — a curve that saturates over `span` at slope
 //! `gamma` has exactly that much straight line and no more.
 //!
-//! `a` is the one number the shape needs and the four parameters do not carry:
-//! how abruptly the straight line turns into the toe. Fitted per layer it lands
-//! at 1.09, 1.17 and 1.33 per stop; it is a single constant here because a value
-//! that moves by 0.2 between three layers of one film is not resolved by a chart
-//! digitised to a few thousandths of a density.
+//! `a` is the one number the four parameters do not carry: how abruptly the
+//! straight line turns into the toe. Fitted per layer of the negative it lands
+//! at 1.09, 1.17 and 1.33 per stop, so one value serves that film: a number that
+//! moves by 0.2 between three layers is not resolved by a chart digitised to a
+//! few thousandths of a density.
+//!
+//! ## And the paper has no straight line
+//!
+//! The paper's curves, digitised from KODAK publication E-4071 page 4, do not
+//! have the shape the negative's do. Measured through a half-decade window, the
+//! blue-sensitive layer's slope runs 0.08, 0.20, 0.75, 1.63, 2.63, 3.97, 4.47,
+//! 4.50, 3.12, 1.94, 1.31 — it rises to a peak and falls away. There is no
+//! stretch over which the slope is constant, which means there is no straight
+//! line to have a slope, and `gamma` alone cannot describe the curve.
+//!
+//! The same family covers both, because a soft corner and a short straight line
+//! look alike: at a transition of 10 the corners of the paper's trapezoid reach
+//! across its whole straight line, and what comes out is the sigmoid the data
+//! sheet drew. Fitted that way the paper's curves are reproduced to 0.007–0.013
+//! of density, against 0.14 with the negative's transition of 4 — a shape that
+//! cannot bend fast enough to be a paper.
+//!
+//! So `a` is a property of the material and lives on the curve. It is still not
+//! resolved per layer: the three paper layers want 8, 8 and 9.
 
 /// How sharply the straight line turns into the toe and the shoulder, per
-/// decade of exposure.
+/// decade of exposure, for a **negative film**.
 ///
-/// Fitted from the measured curves at 1.09–1.33 per stop, which is 3.6–4.4 per
-/// decade. One constant for every stock: the data does not resolve it per layer,
-/// and a per-stock value would be a parameter fitted to noise.
-const TRANSITION: f64 = 4.0;
+/// Fitted from the measured VISION3 500T curves at 1.09–1.33 per stop, which is
+/// 3.6–4.4 per decade.
+pub const TRANSITION: f64 = 4.0;
+
+/// The same number for a **paper**, where there is no straight line.
+///
+/// Fitted from the measured ENDURA Premier Metallic curves. Below 6 the model
+/// cannot turn fast enough and the fit collapses; at 10 the paper's three layers
+/// land within 0.013 of the data sheet, and the `gamma` it settles on is within
+/// 1.4× of the steepest slope the chart draws.
+pub const PAPER_TRANSITION: f64 = 10.0;
 
 /// Numerically stable `ln(1 + e^u)`.
 ///
@@ -85,18 +111,26 @@ pub fn logit(p: f64) -> f64 {
     (p / (1.0 - p)).ln()
 }
 
-/// The curve's density at a log exposure, given the four parameters.
+/// The curve's density at a log exposure, given the four parameters plus the
+/// shape's transition.
 ///
 /// Shared by [`CharacteristicCurve::density`] and the GPU model, which is why it
 /// takes the numbers rather than the struct: the shader has the numbers and
 /// nothing else.
 #[inline]
 #[must_use]
-pub fn density_from(d_min: f64, d_max: f64, gamma: f64, log_e0: f64, log_e: f64) -> f64 {
+pub fn density_from(
+    d_min: f64,
+    d_max: f64,
+    gamma: f64,
+    log_e0: f64,
+    transition: f64,
+    log_e: f64,
+) -> f64 {
     let span = (d_max - d_min).max(1e-9);
     let gamma = gamma.max(1e-9);
     let half = 0.5 * span / gamma;
-    let slope = TRANSITION;
+    let slope = transition.max(1e-3);
     d_min
         + (gamma / slope)
             * (softplus(slope * (log_e - (log_e0 - half)))
@@ -106,11 +140,18 @@ pub fn density_from(d_min: f64, d_max: f64, gamma: f64, log_e0: f64, log_e: f64)
 /// The curve's local slope at a log exposure, in density per decade.
 #[inline]
 #[must_use]
-pub fn slope_from(d_min: f64, d_max: f64, gamma: f64, log_e0: f64, log_e: f64) -> f64 {
+pub fn slope_from(
+    d_min: f64,
+    d_max: f64,
+    gamma: f64,
+    log_e0: f64,
+    transition: f64,
+    log_e: f64,
+) -> f64 {
     let span = (d_max - d_min).max(1e-9);
     let gamma = gamma.max(1e-9);
     let half = 0.5 * span / gamma;
-    let slope = TRANSITION;
+    let slope = transition.max(1e-3);
     gamma
         * (sigmoid(slope * (log_e - (log_e0 - half))) - sigmoid(slope * (log_e - (log_e0 + half))))
 }
@@ -123,13 +164,23 @@ pub struct CharacteristicCurve {
     /// Density at full exposure (the shoulder).
     pub d_max: f64,
     /// Slope of the straight line, in density per decade of exposure.
+    ///
+    /// On a paper, which has no straight line, this is the slope the trapezoid
+    /// would have if its corners were sharp; it comes out within 1.4× of the
+    /// steepest slope the data sheet draws. [`Self::slope_at`] is the honest
+    /// observable.
     pub gamma: f64,
     /// log10 exposure at the middle of the straight line.
     pub log_e0: f64,
+    /// How sharply the toe and the shoulder turn, per decade.
+    ///
+    /// [`TRANSITION`] for a negative, [`PAPER_TRANSITION`] for a paper.
+    pub transition: f64,
 }
 
 impl CharacteristicCurve {
-    /// Build a curve from its four photographic parameters.
+    /// Build a curve from its four photographic parameters, at the negative's
+    /// transition.
     #[must_use]
     pub const fn new(d_min: f64, d_max: f64, gamma: f64, log_e0: f64) -> Self {
         Self {
@@ -137,7 +188,14 @@ impl CharacteristicCurve {
             d_max,
             gamma,
             log_e0,
+            transition: TRANSITION,
         }
+    }
+
+    /// The same curve, made of a material that turns its corners differently.
+    #[must_use]
+    pub const fn with_transition(self, transition: f64) -> Self {
+        Self { transition, ..self }
     }
 
     /// Height of the curve, in density units.
@@ -160,13 +218,27 @@ impl CharacteristicCurve {
     /// Density at a given log10 exposure.
     #[must_use]
     pub fn density(&self, log_e: f64) -> f64 {
-        density_from(self.d_min, self.d_max, self.gamma, self.log_e0, log_e)
+        density_from(
+            self.d_min,
+            self.d_max,
+            self.gamma,
+            self.log_e0,
+            self.transition,
+            log_e,
+        )
     }
 
     /// Local slope at a given log10 exposure, in density per decade.
     #[must_use]
     pub fn slope_at(&self, log_e: f64) -> f64 {
-        slope_from(self.d_min, self.d_max, self.gamma, self.log_e0, log_e)
+        slope_from(
+            self.d_min,
+            self.d_max,
+            self.gamma,
+            self.log_e0,
+            self.transition,
+            log_e,
+        )
     }
 
     /// log10 exposure at which `density` is reached; the inverse of [`Self::density`].
@@ -291,6 +363,42 @@ mod tests {
         assert!(
             on_plateau > 200,
             "only {on_plateau}/400 samples within 10 % of gamma"
+        );
+    }
+
+    /// The transition is what lets one shape be two materials. Turned softly,
+    /// the corners reach across the straight line and the curve is the sigmoid a
+    /// paper actually has; turned sharply, the straight line is real and its
+    /// slope is `gamma`.
+    #[test]
+    fn the_transition_decides_how_much_of_gamma_the_curve_reaches() {
+        fn peak(curve: CharacteristicCurve) -> f64 {
+            (0..400)
+                .map(|i| curve.slope_at(curve.log_e0 - 1.0 + f64::from(i) / 200.0))
+                .fold(f64::NEG_INFINITY, f64::max)
+        }
+
+        // The paper's measured red layer, at both materials' transitions.
+        let paper = CharacteristicCurve::new(0.2078, 2.7739, 5.24, -1.1750);
+        let sharp = peak(paper.with_transition(PAPER_TRANSITION));
+        let soft = peak(paper.with_transition(TRANSITION));
+        assert!(
+            (sharp - 4.4).abs() < 0.2,
+            "at the paper's transition the slope peaks at {sharp}, not near the 4.8 the sheet draws"
+        );
+        assert!(
+            soft < 0.6 * sharp,
+            "the negative's transition still reached {soft} of {sharp}"
+        );
+
+        // The negative's layer keeps `gamma` as its peak, which is the property
+        // the shape was chosen for.
+        let negative = CharacteristicCurve::new(0.0, 1.6818, 0.4745, -0.7582);
+        assert!(
+            (peak(negative) - negative.gamma).abs() < 0.01 * negative.gamma,
+            "the negative peaked at {} against gamma {}",
+            peak(negative),
+            negative.gamma
         );
     }
 

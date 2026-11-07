@@ -113,6 +113,7 @@ impl DevelopmentParams {
             d_max: nominal.d_max,
             gamma: nominal.gamma * self.gamma_factor(),
             log_e0: nominal.log_e0 + self.speed_delta(),
+            transition: nominal.transition,
         }
     }
 }
