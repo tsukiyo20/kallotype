@@ -734,24 +734,24 @@ fn uniform(
     for curve in &scalar.curve {
         push_f32(&mut out, &curve.map(|value| value as f32));
     }
-    // (paper d_min, paper span, enlarger slope, exposure shift)
+    // (paper d_min, paper d_max, paper gamma, exposure shift)
     push_f32(
         &mut out,
         &[
             scalar.paper[0] as f32,
             scalar.paper[1] as f32,
-            scalar.print[0] as f32,
+            scalar.paper[2] as f32,
             scalar.exposure_shift as f32,
         ],
     );
-    // The three anchors, padded to a vec4.
+    // The enlarger's shift per layer, then the paper's log_e0.
     push_f32(
         &mut out,
         &[
-            scalar.print[1] as f32,
-            scalar.print[2] as f32,
-            scalar.print[3] as f32,
-            0.0,
+            scalar.print_shift[0] as f32,
+            scalar.print_shift[1] as f32,
+            scalar.print_shift[2] as f32,
+            scalar.paper[3] as f32,
         ],
     );
     push_f32(

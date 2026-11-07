@@ -244,10 +244,12 @@ fn model_positive(status: vec3<f32>) -> vec3<f32> {
         log_transmittance = print_expose(status);
     }
 
+    // The paper's curve, and the enlarger's shift per layer: the print balance
+    // solved it so that a mid-grey negative lands on the target density.
+    let paper = vec4<f32>(params.image.x, params.image.y, params.image.z, params.anchor.w);
     var printed = vec3<f32>(0.0);
     for (var layer = 0u; layer < 3u; layer = layer + 1u) {
-        let z = params.image.z * (log_transmittance[layer] - params.anchor[layer]);
-        printed[layer] = params.image.x + params.image.y * sigmoid(z);
+        printed[layer] = curve_density(paper, log_transmittance[layer] + params.anchor[layer]);
     }
 
     if (params.flags.z > 0.5) {

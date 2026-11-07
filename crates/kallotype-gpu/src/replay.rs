@@ -56,24 +56,31 @@ fn developed(
     index: usize,
     layer: usize,
 ) -> f64 {
-    let mean = curve[0] + curve[1] * sigmoid(curve[2] * (log_e + shift - curve[3]));
+    let mean = curve_density(*curve, log_e + shift);
     match grain {
         None => mean,
         Some(grain) => {
             let (x, y) = (index % grain.width.max(1), index / grain.width.max(1));
             let jitter = grain_jitter(grain, x, y, layer, mean);
-            curve[0] + curve[1] * sigmoid(curve[2] * (log_e + jitter + shift - curve[3]))
+            curve_density(*curve, log_e + jitter + shift)
         }
     }
 }
 
-fn sigmoid(z: f64) -> f64 {
-    if z >= 0.0 {
-        1.0 / (1.0 + (-z).exp())
-    } else {
-        let e = z.exp();
-        e / (1.0 + e)
-    }
+fn softplus(u: f64) -> f64 {
+    u.max(0.0) + (-u.abs()).exp().ln_1p()
+}
+
+/// The characteristic curve, from its four numbers. Mirrors `common.wgsl`.
+fn curve_density(c: [f64; 4], x: f64) -> f64 {
+    let span = (c[1] - c[0]).max(1e-9);
+    let gamma = c[2].max(1e-9);
+    let half = 0.5 * span / gamma;
+    let toe = c[3] - half;
+    let shoulder = c[3] + half;
+    let transition = 4.0;
+    c[0] + (gamma / transition)
+        * (softplus(transition * (x - toe)) - softplus(transition * (x - shoulder)))
 }
 
 /// `scalar.wgsl`, stage for stage.
@@ -93,8 +100,7 @@ fn scalar(
             index,
             layer,
         );
-        let z = model.print[0] * (-negative - model.print[layer + 1]);
-        let printed = model.paper[0] + model.paper[1] * sigmoid(z);
+        let printed = curve_density(model.paper, -negative + model.print_shift[layer]);
         (-printed * LOG2_10).exp2().clamp(0.0, 1.0)
     })
 }
@@ -128,8 +134,10 @@ fn spectral(
     };
 
     let printed: [f64; 3] = std::array::from_fn(|layer| {
-        let z = model.scalar.print[0] * (log_transmittance[layer] - model.scalar.print[layer + 1]);
-        model.scalar.paper[0] + model.scalar.paper[1] * sigmoid(z)
+        curve_density(
+            model.scalar.paper,
+            log_transmittance[layer] + model.scalar.print_shift[layer],
+        )
     });
 
     match &model.scan {

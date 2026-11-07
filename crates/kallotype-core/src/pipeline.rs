@@ -12,7 +12,7 @@
 //!  (development)              balanced on 18 % grey
 //! ```
 
-use crate::curve::{CharacteristicCurve, sigmoid};
+use crate::curve::CharacteristicCurve;
 use crate::development::DevelopmentParams;
 use crate::emulsion::{FilmStock, PaperStock};
 use crate::lut::ExposureLut;
@@ -102,14 +102,14 @@ impl RenderParams {
             std::array::from_fn(|i| self.development.apply_to(self.film.channels[i]));
 
         let paper = self.paper.channel;
-        let print_slope = paper.slope_factor();
 
         // Solve the enlarger exposure so that a mid-grey negative prints at
         // the paper's target reflectance. This is what an operator does with
-        // the aperture and the test strip, done in closed form.
+        // the aperture and the test strip, done in closed form: find the log
+        // exposure at which the paper reaches the target density, and shift the
+        // enlarger's exposure by however far mid grey is from it.
         let target_density = -self.paper.target_mid_reflectance.log10();
-        let t_target = ((target_density - paper.d_min) / paper.span()).clamp(1e-4, 1.0 - 1e-4);
-        let z_target = (t_target / (1.0 - t_target)).ln();
+        let target_log_e = paper.log_exposure_at(target_density);
 
         let mid = mid_grey_log_e();
         let density_mid: [f64; 3] = std::array::from_fn(|i| channels[i].density(mid));
@@ -120,21 +120,20 @@ impl RenderParams {
         let print = self
             .spectral_print
             .then(|| PrintContext::measured(density_mid));
-        let print_log_e0: [f64; 3] = match &print {
+        let print_shift: [f64; 3] = match &print {
             // The spectral model is anchored on neutral grey, so the actual
             // mid-grey exposure is subtracted here rather than assumed to be 0.
             Some(context) => {
                 let mid_exposure = context.expose(density_mid);
-                std::array::from_fn(|i| mid_exposure[i] - z_target / print_slope)
+                std::array::from_fn(|i| target_log_e - mid_exposure[i])
             }
-            None => std::array::from_fn(|i| -density_mid[i] - z_target / print_slope),
+            None => std::array::from_fn(|i| target_log_e + density_mid[i]),
         };
 
         PreparedRender {
             channels,
             paper,
-            print_slope,
-            print_log_e0,
+            print_shift,
             print,
             scan: self.spectral_scan.then(ScanContext::measured),
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
@@ -173,12 +172,12 @@ impl RenderParams {
 /// them has to port the integration rather than the numbers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ScalarModel {
-    /// Per layer: `d_min`, `span`, `slope_factor`, `log_e0`.
+    /// Per layer: `d_min`, `d_max`, `gamma`, `log_e0`.
     pub curve: [[f64; 4]; 3],
-    /// The paper's `d_min` and `span`.
-    pub paper: [f64; 2],
-    /// The enlarger's slope, then the per-layer anchor log exposure.
-    pub print: [f64; 4],
+    /// The paper's `d_min`, `d_max`, `gamma` and `log_e0`.
+    pub paper: [f64; 4],
+    /// The enlarger's exposure shift per layer, in decades.
+    pub print_shift: [f64; 3],
     /// Exposure offset applied before the curve, in decades.
     pub exposure_shift: f64,
 }
@@ -188,8 +187,7 @@ pub struct ScalarModel {
 pub struct PreparedRender {
     channels: [CharacteristicCurve; 3],
     paper: CharacteristicCurve,
-    print_slope: f64,
-    print_log_e0: [f64; 3],
+    print_shift: [f64; 3],
     exposure_shift: f64,
     /// The live spectral model, when no table was baked.
     spectral: Option<SpectralContext>,
@@ -211,20 +209,15 @@ impl PreparedRender {
         ScalarModel {
             curve: std::array::from_fn(|layer| {
                 let curve = &self.channels[layer];
-                [
-                    curve.d_min,
-                    curve.span(),
-                    curve.slope_factor(),
-                    curve.log_e0,
-                ]
+                [curve.d_min, curve.d_max, curve.gamma, curve.log_e0]
             }),
-            paper: [self.paper.d_min, self.paper.span()],
-            print: [
-                self.print_slope,
-                self.print_log_e0[0],
-                self.print_log_e0[1],
-                self.print_log_e0[2],
+            paper: [
+                self.paper.d_min,
+                self.paper.d_max,
+                self.paper.gamma,
+                self.paper.log_e0,
             ],
+            print_shift: self.print_shift,
             exposure_shift: self.exposure_shift,
         }
     }
@@ -364,8 +357,9 @@ impl PreparedRender {
                 Some(values) => values[channel],
                 None => -density_cmy[channel],
             };
-            let z = self.print_slope * (log_transmittance - self.print_log_e0[channel]);
-            density_print[channel] = self.paper.d_min + self.paper.span() * sigmoid(z);
+            density_print[channel] = self
+                .paper
+                .density(log_transmittance + self.print_shift[channel]);
         }
 
         match &self.scan {
