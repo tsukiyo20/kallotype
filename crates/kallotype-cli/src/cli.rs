@@ -30,10 +30,30 @@ pub enum Command {
     Render(RenderArgs),
     /// List the built-in film and paper stocks.
     Stocks,
+    /// Work with a stock file: its provenance, its curves and its spectra.
+    Stock {
+        /// What to do with it.
+        #[command(subcommand)]
+        command: StockCommand,
+    },
     /// Show what a development does to the curves.
     Curve(CurveArgs),
     /// Bake the spectral exposure into a reusable table.
     Bake(BakeArgs),
+}
+
+/// What `kalo stock` can do.
+#[derive(Debug, Subcommand)]
+pub enum StockCommand {
+    /// Check a stock file: provenance, curves and spectra.
+    Check(StockCheckArgs),
+}
+
+/// `kalo stock check <FILE>`
+#[derive(Debug, Args)]
+pub struct StockCheckArgs {
+    /// The stock file to check.
+    pub file: PathBuf,
 }
 
 /// Options shared by every command that touches a film and a paper.

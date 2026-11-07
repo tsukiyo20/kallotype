@@ -4,4 +4,5 @@ pub mod bake;
 pub mod common;
 pub mod curve;
 pub mod render;
+pub mod stock;
 pub mod stocks;

@@ -37,6 +37,13 @@ pub enum CliError {
         /// The underlying decoder error.
         source: IoError,
     },
+    /// A stock file could not be read, parsed or checked.
+    Stock {
+        /// The file that failed.
+        path: PathBuf,
+        /// What the checker said.
+        message: String,
+    },
     /// The dictionary could not be read.
     Dictionary {
         /// The file that failed.
@@ -94,6 +101,9 @@ impl std::fmt::Display for CliError {
             Self::Dictionary { path, message } => {
                 write!(f, "could not read dictionary {}: {message}", path.display())
             }
+            Self::Stock { path, message } => {
+                write!(f, "stock {}: {message}", path.display())
+            }
             Self::Gpu { message } => write!(f, "{message}"),
             Self::Camera { path, message } => {
                 write!(f, "camera sensitivity {}: {message}", path.display())
@@ -118,7 +128,8 @@ impl std::error::Error for CliError {
             | Self::Dictionary { .. }
             | Self::Camera { .. }
             | Self::Gpu { .. }
-            | Self::Lut { .. } => None,
+            | Self::Lut { .. }
+            | Self::Stock { .. } => None,
         }
     }
 }

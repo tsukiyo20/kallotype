@@ -16,6 +16,7 @@
 pub mod cli;
 pub mod commands;
 pub mod error;
+pub mod stockfile;
 
 use cli::{Cli, Command};
 use error::CliError;
@@ -32,6 +33,9 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
             commands::stocks::run();
             Ok(())
         }
+        Command::Stock { command } => match command {
+            cli::StockCommand::Check(args) => commands::stock::run(args),
+        },
         Command::Bake(args) => commands::bake::run(args),
     }
 }

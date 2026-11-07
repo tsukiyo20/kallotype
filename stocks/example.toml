@@ -1,0 +1,37 @@
+# A stock file: a film or a paper as data, with its provenance.
+#
+# Check one with `kalo stock check <file>`. See `stocks/README.md` for the
+# format, and the private notes for ADR 0012, which is where the reasoning is.
+#
+# This example is a placeholder: it claims nothing, names no document, and has
+# no spectra of its own. `kalo stock check` accepts it and says so.
+
+[stock]
+id = "example_negative"
+label = "An example negative, with plausible numbers"
+kind = "film"                   # or "paper"
+claim = "placeholder"           # or "measured", which then requires provenance
+
+[curve.red]
+d_min = 0.0
+d_max = 1.70
+gamma = 0.48
+log_e0 = -0.76
+
+[curve.green]
+d_min = 0.0
+d_max = 2.00
+gamma = 0.56
+log_e0 = -0.73
+
+[curve.blue]
+d_min = 0.0
+d_max = 1.92
+gamma = 0.55
+log_e0 = -0.75
+
+[base]
+# Status densities of the unexposed film: base, fog and mask.
+density = [0.19, 0.58, 0.83]
+# Developed grains per square micrometre, per layer.
+grains_per_um2 = [3.6, 3.6, 3.6]
