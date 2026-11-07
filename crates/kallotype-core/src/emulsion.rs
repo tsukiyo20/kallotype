@@ -224,6 +224,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "fuji_nph400",
         process: FilmProcess::Negative,
@@ -241,6 +247,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "kodak_portra_400",
         process: FilmProcess::Negative,
@@ -258,6 +270,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.4500, 3.4100, 3.0800]),
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "kodak_ektar_100",
         process: FilmProcess::Negative,
@@ -275,6 +293,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.8700, 3.6700, 3.4900]),
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "kodak_gold200",
         process: FilmProcess::Negative,
@@ -292,6 +316,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "kodak_portra_160",
         process: FilmProcess::Negative,
@@ -309,6 +339,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.8400, 3.0700, 3.4400]),
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "kodak_portra_800",
         process: FilmProcess::Negative,
@@ -326,6 +362,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.7500, 3.7000, 3.0000]),
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "fuji_c200",
         process: FilmProcess::Negative,
@@ -343,6 +385,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([3.3800, 3.3800, 3.3800]),
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "fuji200",
         process: FilmProcess::Negative,
@@ -360,6 +408,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
     },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "fuji400",
         process: FilmProcess::Negative,
@@ -376,6 +430,75 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+    },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "vision3_250d",
+        process: FilmProcess::Negative,
+        label: "KODAK VISION3 250D 5207/7207, ECN-2",
+        note: "Measured: curves, base density, modulation transfer and the three layer sensitivities, each from its own raster on H-1-5207. The dyes were digitised too and compared against the 500T's compiled tables — the model carries one dye set, and this sheet's agrees with it to 0.12 density and 5 nm, which is why the shared set is kept rather than duplicated. Borrowed: the grain density (this sheet's granularity chart defeats the dot tracker; see the header) and the mask, which is the 500T's minimum-density spectrum.",
+        channels: [
+            curve(0.0, 1.6714, 0.4745, -0.7697),
+            curve(0.0, 1.9925, 0.5573, -0.7182),
+            curve(0.0, 1.9037, 0.5428, -0.7463),
+        ],
+        base_density: [0.1742, 0.5739, 0.8354],
+        grains_per_um2: [0.6200, 0.5100, 0.0700],
+        layers: &crate::measured::VISION3_250D_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: Some([4.2500, 3.3400, 3.0900]),
+    },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "vision3_50d",
+        process: FilmProcess::Negative,
+        label: "KODAK VISION3 50D 5203/7203, ECN-2",
+        note: "Measured: curves, base density, modulation transfer and the three layer sensitivities. The sheet's red characteristic curve is dotted and the tracker reads it as such. Its sensitivity chart prints its tick labels in the wrong place — the ticks and rules agree on a 0-4 axis, the printed numbers do not — and the axis is taken from the ticks (see the header). Borrowed: the grain density, which this sheet's granularity chart does not give up to the dot tracker, and the mask, which is the 500T's minimum-density spectrum.",
+        channels: [
+            curve(0.0, 1.7439, 0.5024, -0.7995),
+            curve(0.0, 2.0727, 0.5937, -0.7195),
+            curve(0.0, 1.9992, 0.5719, -0.7152),
+        ],
+        base_density: [0.1457, 0.5574, 0.8393],
+        grains_per_um2: [0.6200, 0.5100, 0.0700],
+        layers: &crate::measured::VISION3_50D_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: Some([4.5300, 4.4100, 4.2600]),
+    },
+    // A measurement may sit on a constant by chance — the 200T's blue layer
+    // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "vision3_200t",
+        process: FilmProcess::Negative,
+        label: "KODAK VISION3 200T 5213/7213, ECN-2",
+        note: "Measured: curves, base density, modulation transfer and the three layer sensitivities. Two traps on the page: the dye panel's process note is printed inside the plot and has to be masked, and the sensitivity chart's cyan curve starts at a dip, so its tails are clamped rather than extrapolated. Borrowed: the grain density, which this sheet's granularity chart does not give up, and the mask, which is the 500T's minimum-density spectrum.",
+        channels: [
+            curve(0.0, 1.6591, 0.4825, -0.7771),
+            curve(0.0, 1.9752, 0.5652, -0.7227),
+            curve(0.0, 1.8847, 0.5411, -0.7344),
+        ],
+        base_density: [0.1683, 0.5679, 0.8369],
+        grains_per_um2: [0.6200, 0.5100, 0.0700],
+        layers: &crate::measured::VISION3_200T_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: Some([4.2500, 3.4900, 3.1400]),
     },
 ];
 

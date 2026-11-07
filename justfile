@@ -28,7 +28,9 @@ stocks:
         private/stocks/kodak_portra_160.toml private/stocks/kodak_portra_800.toml \
         private/stocks/kodak_ektar_100.toml private/stocks/kodak_gold200.toml \
         private/stocks/fuji_nph400.toml private/stocks/fuji_c200.toml \
-        private/stocks/fuji200.toml private/stocks/fuji400.toml
+        private/stocks/fuji200.toml private/stocks/fuji400.toml \
+        private/stocks/vision3_250d.toml private/stocks/vision3_50d.toml \
+        private/stocks/vision3_200t.toml
 
 # Run the whole test suite.
 test:
