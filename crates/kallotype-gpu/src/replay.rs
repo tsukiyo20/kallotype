@@ -75,13 +75,18 @@ fn softplus(u: f64) -> f64 {
 /// The characteristic curve, from its numbers and its transition. Mirrors
 /// `common.wgsl`.
 fn curve_density(c: [f64; 4], transition: f64, x: f64) -> f64 {
-    let span = (c[1] - c[0]).max(1e-9);
+    // A negative rises with exposure and a reversal falls; the signed span says
+    // which, and `gamma` stays the magnitude of the slope. Mirrors `curve.rs`.
+    let span = c[1] - c[0];
     let gamma = c[2].max(1e-9);
-    let half = 0.5 * span / gamma;
+    let half = 0.5 * span.abs() / gamma;
+    let direction = if span < 0.0 { -1.0 } else { 1.0 };
     let toe = c[3] - half;
     let shoulder = c[3] + half;
     let slope = transition.max(1e-3);
-    c[0] + (gamma / slope) * (softplus(slope * (x - toe)) - softplus(slope * (x - shoulder)))
+    c[0] + direction
+        * (gamma / slope)
+        * (softplus(slope * (x - toe)) - softplus(slope * (x - shoulder)))
 }
 
 /// `scalar.wgsl`, stage for stage.

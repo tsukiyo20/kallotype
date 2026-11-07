@@ -130,6 +130,17 @@ impl StockFile {
             .unwrap_or(false)
     }
 
+    /// Whether this is a reversal film, whose curve falls with exposure.
+    ///
+    /// # Errors
+    ///
+    /// Cannot fail: an absent `stock.process` is a negative.
+    pub fn is_reversal(&self) -> bool {
+        self.string("stock.process")
+            .map(|p| p == "reversal")
+            .unwrap_or(false)
+    }
+
     /// Whether the file claims the numbers were measured.
     #[must_use]
     pub fn claims_measured(&self) -> bool {
@@ -210,7 +221,22 @@ impl StockFile {
                     continue;
                 }
             };
-            if curve.d_min >= curve.d_max {
+            // A negative's density rises with exposure and a reversal's falls,
+            // so which end is which depends on the process — the one place the
+            // curve's two numbers are not interchangeable.
+            if self.is_reversal() {
+                if curve.d_min <= curve.d_max {
+                    findings.push(Finding::fail(
+                        layer,
+                        format!(
+                            "d_min {} is not above d_max {} — a reversal starts at its \
+                             maximum density on unexposed film and clears as the image forms",
+                            curve.d_min, curve.d_max
+                        ),
+                    ));
+                    continue;
+                }
+            } else if curve.d_min >= curve.d_max {
                 findings.push(Finding::fail(
                     layer,
                     format!("d_min {} is not below d_max {}", curve.d_min, curve.d_max),
@@ -227,7 +253,7 @@ impl StockFile {
             // The renderer adds `base.density` to the curve, so a film's curve
             // is dye above base and its d_min is zero. A file that puts the base
             // in both places would render the film twice as dense as it is.
-            if self.is_film() && curve.d_min.abs() > 1e-9 {
+            if self.is_film() && !self.is_reversal() && curve.d_min.abs() > 1e-9 {
                 findings.push(Finding::fail(
                     layer,
                     format!(
@@ -238,7 +264,14 @@ impl StockFile {
                 ));
                 continue;
             }
-            match self.check_fit(&prefix, &curve, base.as_ref().map(|b| b[index])) {
+            // A reversal's curve is total density, base included, so there is
+            // nothing to add back before comparing it with the sheet's points.
+            let base_for_fit = if self.is_reversal() {
+                None
+            } else {
+                base.as_ref().map(|b| b[index])
+            };
+            match self.check_fit(&prefix, &curve, base_for_fit) {
                 Ok(text) => findings.push(Finding::ok(layer, text)),
                 Err(error) => findings.push(Finding::fail(layer, error.to_string())),
             }

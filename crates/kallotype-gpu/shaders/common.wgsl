@@ -32,14 +32,18 @@ fn softplus(u: f32) -> f32 {
 // for the corners to bound and is expressed by letting them overlap. See
 // `kallotype_core::curve`.
 fn curve_density(c: vec4<f32>, transition: f32, x: f32) -> f32 {
-    let span = max(c.y - c.x, 1e-9);
+    // A negative rises with exposure and a reversal falls: the signed span says
+    // which and gamma stays the magnitude of the slope. Mirrors `curve.rs`.
+    let span = c.y - c.x;
     let gamma = max(c.z, 1e-9);
-    let half = 0.5 * span / gamma;
+    let half = 0.5 * abs(span) / gamma;
+    let direction = select(-1.0, 1.0, span >= 0.0);
     let toe = c.w - half;
     let shoulder = c.w + half;
     let slope = max(transition, 1e-3);
     return c.x
-        + (gamma / slope)
+        + direction
+            * (gamma / slope)
             * (softplus(slope * (x - toe)) - softplus(slope * (x - shoulder)));
 }
 

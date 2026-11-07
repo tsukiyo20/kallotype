@@ -125,12 +125,18 @@ pub fn density_from(
     transition: f64,
     log_e: f64,
 ) -> f64 {
-    let span = (d_max - d_min).max(1e-9);
+    let span = d_max - d_min;
     let gamma = gamma.max(1e-9);
-    let half = 0.5 * span / gamma;
+    let half = 0.5 * span.abs() / gamma;
     let slope = transition.max(1e-3);
+    // A negative's density rises with exposure and a reversal's falls. The curve
+    // is the same shape either way — toe, straight line, shoulder — so the span
+    // carries the direction and `gamma` stays the magnitude of the slope. See
+    // the note on [`CharacteristicCurve::d_min`].
+    let direction = if span < 0.0 { -1.0 } else { 1.0 };
     d_min
-        + (gamma / slope)
+        + direction
+            * (gamma / slope)
             * (softplus(slope * (log_e - (log_e0 - half)))
                 - softplus(slope * (log_e - (log_e0 + half))))
 }
@@ -146,11 +152,13 @@ pub fn slope_from(
     transition: f64,
     log_e: f64,
 ) -> f64 {
-    let span = (d_max - d_min).max(1e-9);
+    let span = d_max - d_min;
     let gamma = gamma.max(1e-9);
-    let half = 0.5 * span / gamma;
+    let half = 0.5 * span.abs() / gamma;
     let slope = transition.max(1e-3);
-    gamma
+    let direction = if span < 0.0 { -1.0 } else { 1.0 };
+    direction
+        * gamma
         * (sigmoid(slope * (log_e - (log_e0 - half))) - sigmoid(slope * (log_e - (log_e0 + half))))
 }
 
@@ -158,8 +166,16 @@ pub fn slope_from(
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CharacteristicCurve {
     /// Density of the unexposed, processed material (base + fog).
+    ///
+    /// For film this is zero: the curve describes how much dye has formed, and
+    /// the base — fog and the orange mask — is carried separately. It is the
+    /// exception that proves the rule: a **reversal** film starts at its
+    /// maximum density on unexposed film and clears as the image forms, so its
+    /// `d_min` is the density of the unexposed slide (about 3.4) and its
+    /// `d_max` is the clear film (0). `d_min > d_max` is a reversal, and the
+    /// curve shape is the same one turned over.
     pub d_min: f64,
-    /// Density at full exposure (the shoulder).
+    /// Density at full exposure (the shoulder), or zero for a reversal.
     pub d_max: f64,
     /// Slope of the straight line, in density per decade of exposure.
     ///
@@ -197,10 +213,27 @@ impl CharacteristicCurve {
         Self { transition, ..self }
     }
 
-    /// Height of the curve, in density units.
+    /// Height of the curve, in density units, **signed**.
+    ///
+    /// Positive for a material that darkens with exposure — paper, a negative —
+    /// and negative for a reversal, whose density starts at its maximum on
+    /// unexposed film and falls as the image forms. The sign is what makes one
+    /// curve shape serve both; [`Self::amplitude`] is its magnitude.
     #[must_use]
     pub fn span(&self) -> f64 {
-        (self.d_max - self.d_min).max(1e-9)
+        self.d_max - self.d_min
+    }
+
+    /// How far the curve travels, in density units, whichever way it goes.
+    #[must_use]
+    pub fn amplitude(&self) -> f64 {
+        self.span().abs().max(1e-9)
+    }
+
+    /// Whether the density rises with exposure.
+    #[must_use]
+    pub fn rises(&self) -> bool {
+        self.span() >= 0.0
     }
 
     /// Slope of the straight line, which is `gamma` itself.
@@ -249,14 +282,17 @@ impl CharacteristicCurve {
     /// of steps and cannot wander.
     #[must_use]
     pub fn log_exposure_at(&self, density: f64) -> f64 {
-        let half = 0.5 * self.span() / self.gamma.max(1e-9);
-        let target = (density - self.d_min) / self.span();
-        // Below the toe and above the shoulder the answer is the asymptote.
+        let span = self.span();
+        let half = 0.5 * span.abs() / self.gamma.max(1e-9);
+        let target = (density - self.d_min) / span;
+        // A density at (or past) the ends of the curve is the asymptote of the
+        // exposure axis, on whichever side the curve starts.
+        let direction = if span < 0.0 { -1.0 } else { 1.0 };
         if target <= 1e-12 {
-            return self.log_e0 - half - 10.0;
+            return self.log_e0 - direction * (half + 10.0);
         }
         if target >= 1.0 - 1e-12 {
-            return self.log_e0 + half + 10.0;
+            return self.log_e0 + direction * (half + 10.0);
         }
 
         // A bracket wide enough to contain the answer for any sane curve, then
@@ -265,7 +301,12 @@ impl CharacteristicCurve {
         let mut high = self.log_e0 + half + 10.0;
         for _ in 0..200 {
             let middle = 0.5 * (low + high);
-            if self.density(middle) < density {
+            let below = if direction > 0.0 {
+                self.density(middle) < density
+            } else {
+                self.density(middle) > density
+            };
+            if below {
                 low = middle;
             } else {
                 high = middle;
@@ -308,6 +349,49 @@ mod tests {
                 "escaped the curve at {d}"
             );
             previous = d;
+        }
+    }
+
+    /// A reversal film is the same curve turned over: density starts at its
+    /// maximum on unexposed film and falls to clear as the image forms. The
+    /// shape, the straight line and the corners are the negative's; only the
+    /// direction of the span changes, so nothing about the model doubles.
+    #[test]
+    fn a_reversal_falls_instead_of_rising() {
+        // A harder corner than a negative's default, so the straight line is
+        // actually straight over its middle: the test is about the direction.
+        let reversal = CharacteristicCurve::new(3.4, 0.0, 1.9, -0.4).with_transition(8.0);
+        assert!(!reversal.rises());
+        assert!((reversal.span() + 3.4).abs() < 1e-12);
+        assert!((reversal.amplitude() - 3.4).abs() < 1e-12);
+
+        let mut previous = f64::INFINITY;
+        for i in -900..900 {
+            let log_e = f64::from(i) / 100.0;
+            let d = reversal.density(log_e);
+            // Flat where the curve has flattened: the toe is a plateau and f64
+            // gets there exactly, so the test allows equality there and demands
+            // a fall everywhere the curve is still moving.
+            assert!(d <= previous + 1e-12, "a reversal's density must not rise");
+            assert!(
+                (-1e-6..=3.4 + 1e-6).contains(&d),
+                "escaped the curve at {d}"
+            );
+            previous = d;
+        }
+        assert!(reversal.density(-2.0) - reversal.density(2.0) > 2.5);
+
+        // The straight line still has slope gamma, in the other direction.
+        let middle = reversal.slope_at(reversal.log_e0);
+        assert!(
+            (middle + 1.9).abs() < 0.02 * 1.9,
+            "centre slope {middle} vs -gamma"
+        );
+
+        // And the inverse still inverts, on both sides of the middle.
+        for density in [3.2, 2.0, 1.0, 0.2] {
+            let back = reversal.density(reversal.log_exposure_at(density));
+            assert!((back - density).abs() < 1e-6, "{density} came back {back}");
         }
     }
 

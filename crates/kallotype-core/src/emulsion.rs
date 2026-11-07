@@ -734,13 +734,28 @@ mod tests {
     #[test]
     fn film_curves_start_at_zero_density() {
         for stock in FILM_STOCKS {
+            // A reversal is the exception, and not a small one: its unexposed
+            // film is its densest state, so the curve starts at about 3.4 and
+            // falls to clear. A negative's curve is dye above base and starts at
+            // zero; a reversal's is the picture and starts at its maximum.
+            let reversal = stock.process == FilmProcess::Reversal;
             for (layer, channel) in stock.channels.iter().enumerate() {
-                assert!(
-                    channel.d_min.abs() < 1e-9,
-                    "{} layer {layer}: d_min {}",
-                    stock.id,
-                    channel.d_min
-                );
+                if reversal {
+                    assert!(
+                        channel.d_min > channel.d_max,
+                        "{} layer {layer}: reversal curve rises, d_min {} d_max {}",
+                        stock.id,
+                        channel.d_min,
+                        channel.d_max
+                    );
+                } else {
+                    assert!(
+                        channel.d_min.abs() < 1e-9,
+                        "{} layer {layer}: d_min {}",
+                        stock.id,
+                        channel.d_min
+                    );
+                }
             }
         }
     }
