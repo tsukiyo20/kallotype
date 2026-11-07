@@ -143,6 +143,7 @@ impl StockFile {
     pub fn check(&self) -> Vec<Finding> {
         let mut findings = Vec::new();
         findings.push(self.check_provenance());
+        findings.push(self.check_process());
         findings.push(self.check_borrowed());
         findings.extend(self.check_curves());
         findings.push(self.check_base());
@@ -353,6 +354,48 @@ impl StockFile {
                 ),
                 Err(_) => Finding::fail("base", "a paper needs `base.target_mid_reflectance`"),
             }
+        }
+    }
+
+    /// The chemistry the stock declares, and whether its blocks can serve it.
+    ///
+    /// The requirement comes from the process, not from the checker's taste: a
+    /// reversal film is the picture and needs its own dyes, a monochrome film
+    /// has no dyes to give, and a negative borrows them when the sheet does not
+    /// print them.
+    fn check_process(&self) -> Finding {
+        let process = self
+            .string("stock.process")
+            .unwrap_or_else(|_| "negative".to_owned());
+        let dyes = self
+            .strings("spectra.dyes")
+            .map(|d| !d.is_empty())
+            .unwrap_or(false);
+        match process.as_str() {
+            "negative" => Finding::ok(
+                "process",
+                if dyes {
+                    "negative, dyes on the sheet".to_owned()
+                } else {
+                    "negative, dyes borrowed".to_owned()
+                },
+            ),
+            "reversal" if dyes => {
+                Finding::ok("reversal", "dyes are its own, and there is no print")
+            }
+            "reversal" => Finding::fail(
+                "reversal",
+                "a reversal film is its own picture: it needs `spectra.dyes`",
+            ),
+            "monochrome" if dyes => Finding::fail(
+                "monochrome",
+                "a silver film has no dyes; a chromogenic one needs a process this format lacks",
+            ),
+            "monochrome" => Finding::ok("monochrome", "one record, no dyes, no mask"),
+            other => Finding::fail(
+                "process",
+                format!("{other:?} is not negative, reversal or monochrome"),
+            ),
         }
     }
 

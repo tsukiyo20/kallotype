@@ -244,6 +244,14 @@ pub fn print_report(
     println!("  film      {}  ({})", params.film.id, params.film.label);
     println!("  paper     {}  ({})", params.paper.id, params.paper.label);
     println!(
+        "  process   {}",
+        match params.film.process {
+            kallotype_core::FilmProcess::Negative => "negative — developed, printed, scanned",
+            kallotype_core::FilmProcess::Reversal => "reversal — the film is the picture",
+            kallotype_core::FilmProcess::Monochrome => "monochrome — one record, no dyes",
+        }
+    );
+    println!(
         "  print     {}",
         if prepared.is_spectral_print() {
             "spectral (dye absorption × paper layers)"

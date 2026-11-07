@@ -44,11 +44,29 @@ use crate::curve::CharacteristicCurve;
 use crate::measured::{PAPER_DYES, PAPER_DYES_E4021, PAPER_LAYERS, PAPER_LAYERS_E4021};
 use crate::spectral::GRID_LEN;
 
+/// Which chemistry the stock is, and therefore which stages the render runs.
+///
+/// A negative is developed, printed onto paper and scanned; a reversal is
+/// developed to a positive and scanned directly, with no print between; a silver
+/// image has one curve and one sensitivity, no dye and no mask. The stock
+/// declares which one it is, and the pipeline follows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FilmProcess {
+    /// Colour negative: developed, printed onto paper, scanned.
+    Negative,
+    /// Colour reversal: the film is the picture, and there is no print stage.
+    Reversal,
+    /// Silver image: one curve, one sensitivity, no dye, no mask.
+    Monochrome,
+}
 /// A film stock: one characteristic curve per colour layer.
 #[derive(Debug, Clone, Copy)]
+
 pub struct FilmStock {
     /// Stable identifier used on the command line.
     pub id: &'static str,
+    /// The chemistry, and therefore which stages the render runs.
+    pub process: FilmProcess,
     /// Human-readable name.
     pub label: &'static str,
     /// What this stock is, and what it is not.
@@ -121,6 +139,7 @@ const fn curve(d_min: f64, d_max: f64, gamma: f64, log_e0: f64) -> Characteristi
 pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "vision3_500t",
+        process: FilmProcess::Negative,
         label: "KODAK VISION3 500T 5219/7219, ECN-2",
         note: "Measured. Curves digitised from data sheet H-1-5219 page 3, spectra \
                from page 4; see the notes in kallotype-private for each extraction.",
@@ -150,6 +169,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     FilmStock {
         id: "c41_standard",
+        process: FilmProcess::Negative,
         label: "Colour negative, standard development",
         note: "Placeholder C-41 curve: moderate contrast, even layer speeds.",
         channels: [
@@ -170,6 +190,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     FilmStock {
         id: "c41_contrast",
+        process: FilmProcess::Negative,
         label: "Colour negative, high-contrast",
         note: "Placeholder C-41 curve with a steeper shoulder and stronger layer separation.",
         channels: [
@@ -186,6 +207,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     FilmStock {
         id: "bw_classic",
+        process: FilmProcess::Negative,
         label: "Black and white, classic",
         note: "Placeholder B&W curve: identical layers, longer straight line.",
         channels: [
@@ -204,6 +226,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     FilmStock {
         id: "fuji_nph400",
+        process: FilmProcess::Negative,
         label: "FUJICOLOR NPH 400 PROFESSIONAL, CN-16",
         note: "Measured, except for the dyes and the mask. Curves from data sheet \
                AF3-865E page 6, digitised 2026-11-07; layer sensitivities from figure \
@@ -231,6 +254,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     FilmStock {
         id: "kodak_portra_400",
+        process: FilmProcess::Negative,
         label: "KODAK PROFESSIONAL PORTRA 400",
         note: "Generated from kodak_portra_400.toml; borrowed: spectra.dyes.",
         channels: [
@@ -247,6 +271,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     FilmStock {
         id: "kodak_ektar_100",
+        process: FilmProcess::Negative,
         label: "KODAK PROFESSIONAL EKTAR 100",
         note: "Generated from kodak_ektar_100.toml; borrowed: spectra.dyes.",
         channels: [
@@ -263,6 +288,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     FilmStock {
         id: "kodak_gold200",
+        process: FilmProcess::Negative,
         label: "KODAK GOLD 200",
         note: "Generated from kodak_gold200.toml; borrowed: spectra.layers, spectra.dyes, emulsion.sigma_um.",
         channels: [

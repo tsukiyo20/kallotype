@@ -47,7 +47,9 @@ pub use color::{linear_to_srgb, srgb_to_linear};
 pub use couplers::{Couplers, fit_inhibition};
 pub use curve::CharacteristicCurve;
 pub use development::DevelopmentParams;
-pub use emulsion::{FILM_STOCKS, FilmStock, PAPER_STOCKS, PaperStock, film_stock, paper_stock};
+pub use emulsion::{
+    FILM_STOCKS, FilmProcess, FilmStock, PAPER_STOCKS, PaperStock, film_stock, paper_stock,
+};
 pub use grain::GrainField;
 pub use halation::{Halation, Halo};
 pub use lut::ExposureLut;
