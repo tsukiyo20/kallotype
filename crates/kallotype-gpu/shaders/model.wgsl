@@ -237,9 +237,11 @@ fn model_exposure(linear: vec3<f32>) -> vec3<f32> {
 }
 
 fn model_positive(status: vec3<f32>) -> vec3<f32> {
-    // What the enlarger sees: the channel's own light loss, or the light the
-    // negative's dyes transmit.
-    var log_transmittance = -status;
+    // What the enlarger sees: the channel's own light loss, with the film's base
+    // density riding in the exponent, or the light the negative's dyes transmit.
+    // The spectral print puts the measured mask into its integral instead, so the
+    // base is added here only on the non-spectral path.
+    var log_transmittance = -(status + params.film_base.xyz);
     if (params.flags.y > 0.5) {
         log_transmittance = print_expose(status);
     }

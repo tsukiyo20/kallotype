@@ -730,7 +730,7 @@ fn uniform(
     let enlarger = spectral.and_then(|model| model.enlarger.as_ref());
     let scan = spectral.and_then(|model| model.scan.as_ref());
 
-    let mut out = Vec::with_capacity(24 * 16);
+    let mut out = Vec::with_capacity(25 * 16);
     for curve in &scalar.curve {
         push_f32(&mut out, &curve.map(|value| value as f32));
     }
@@ -752,6 +752,16 @@ fn uniform(
             scalar.print_shift[1] as f32,
             scalar.print_shift[2] as f32,
             scalar.paper[3] as f32,
+        ],
+    );
+    // The film's minimum density in status terms, for the non-spectral print.
+    push_f32(
+        &mut out,
+        &[
+            scalar.base_density[0] as f32,
+            scalar.base_density[1] as f32,
+            scalar.base_density[2] as f32,
+            0.0,
         ],
     );
     push_f32(
@@ -1381,7 +1391,7 @@ mod tests {
         let model = prepared.spectral_model().expect("all three stages");
         assert_eq!(spectral_tables(&model).len(), TABLE_FLOATS);
 
-        // Twenty-four lanes in `params.wgsl`, whatever the render asks for.
+        // Twenty-five lanes in `params.wgsl`, whatever the render asks for.
         let grain = GrainField::new(WIDTH, HEIGHT, 36.0, 1);
         let halation = Halation::typical(6.0);
         let couplers = Couplers::typical(6.0);
@@ -1407,7 +1417,7 @@ mod tests {
                 finishing.couplers.copied(),
                 &kernels,
             );
-            assert_eq!(bytes.len(), 24 * 16, "twenty-four lanes");
+            assert_eq!(bytes.len(), 25 * 16, "twenty-five lanes");
         }
     }
 

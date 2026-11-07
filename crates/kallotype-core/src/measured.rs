@@ -169,6 +169,29 @@ mod tests {
         assert_eq!(one.len(), GRID_LEN);
     }
 
+    /// The model carries the film's minimum density twice — as this spectrum for
+    /// the print, and as three status densities on the stock for the scalar path
+    /// — because those are the two shapes the two paths need. This is the test
+    /// that they are the same quantity.
+    ///
+    /// Sampled at the status filter peaks, which is the approximation the
+    /// model's status-to-analytical unmixing already makes. Green is the loosest
+    /// of the three for that reason: 550 nm is the middle of a broad band, not a
+    /// wavelength anything is measured at.
+    #[test]
+    fn the_mask_is_the_measured_minimum_density() {
+        // Plateaus of the data sheet's sensitometric curves at -8 stops.
+        const MEASURED: [f64; 3] = [0.1867, 0.5782, 0.8319];
+        let mask = spectrum(&FILM_MASK);
+        for (wavelength, expected) in [650.0, 550.0, 450.0].iter().zip(MEASURED) {
+            let at = mask.interpolate(*wavelength);
+            assert!(
+                (at - expected).abs() < 0.06,
+                "{wavelength} nm: mask {at:.4} against measured {expected:.4}"
+            );
+        }
+    }
+
     /// The mask absorbs blue and passes red: that is the whole reason it exists.
     #[test]
     fn the_mask_is_orange() {

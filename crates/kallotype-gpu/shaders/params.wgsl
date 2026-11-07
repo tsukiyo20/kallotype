@@ -24,6 +24,8 @@ struct Params {
     image: vec4<f32>,
     // The enlarger's exposure shift per layer, then the paper's log_e0.
     anchor: vec4<f32>,
+    // The film's minimum density in status terms: base, fog and mask.
+    film_base: vec4<f32>,
     // (wavelength samples, wavelength step, unused, unused).
     grid: vec4<f32>,
     // The film's response to a reconstructed 18 % grey, per layer.

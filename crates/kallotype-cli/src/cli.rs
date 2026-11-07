@@ -40,7 +40,11 @@ pub enum Command {
 #[derive(Debug, Args)]
 pub struct StockArgs {
     /// Film stock id (see `kalo stocks`).
-    #[arg(long, default_value = "c41_standard")]
+    ///
+    /// The default is the one measured stock: its curves are digitised from the
+    /// manufacturer's data sheet and its spectra are the ones compiled in. The
+    /// others are placeholders, and say so.
+    #[arg(long, default_value = "vision3_500t")]
     pub film: String,
 
     /// Paper stock id (see `kalo stocks`).

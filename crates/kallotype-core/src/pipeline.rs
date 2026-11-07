@@ -55,7 +55,7 @@ pub struct RenderParams {
 impl Default for RenderParams {
     fn default() -> Self {
         Self {
-            film: crate::emulsion::film_stock("c41_standard").expect("built-in stock"),
+            film: crate::emulsion::film_stock("vision3_500t").expect("built-in stock"),
             paper: crate::emulsion::paper_stock("c41_paper").expect("built-in stock"),
             development: DevelopmentParams::default(),
             exposure_ev: 0.0,
@@ -127,11 +127,16 @@ impl RenderParams {
                 let mid_exposure = context.expose(density_mid);
                 std::array::from_fn(|i| target_log_e - mid_exposure[i])
             }
-            None => std::array::from_fn(|i| target_log_e + density_mid[i]),
+            // The non-spectral print has no mask to add, so the film's base
+            // density goes into the exponent with the dye.
+            None => {
+                std::array::from_fn(|i| target_log_e + density_mid[i] + self.film.base_density[i])
+            }
         };
 
         PreparedRender {
             channels,
+            base_density: self.film.base_density,
             paper,
             print_shift,
             print,
@@ -176,6 +181,8 @@ pub struct ScalarModel {
     pub curve: [[f64; 4]; 3],
     /// The paper's `d_min`, `d_max`, `gamma` and `log_e0`.
     pub paper: [f64; 4],
+    /// The film's minimum density in status terms: base, fog and mask.
+    pub base_density: [f64; 3],
     /// The enlarger's exposure shift per layer, in decades.
     pub print_shift: [f64; 3],
     /// Exposure offset applied before the curve, in decades.
@@ -186,6 +193,7 @@ pub struct ScalarModel {
 #[derive(Debug, Clone)]
 pub struct PreparedRender {
     channels: [CharacteristicCurve; 3],
+    base_density: [f64; 3],
     paper: CharacteristicCurve,
     print_shift: [f64; 3],
     exposure_shift: f64,
@@ -217,6 +225,7 @@ impl PreparedRender {
                 self.paper.gamma,
                 self.paper.log_e0,
             ],
+            base_density: self.base_density,
             print_shift: self.print_shift,
             exposure_shift: self.exposure_shift,
         }
@@ -353,9 +362,12 @@ impl PreparedRender {
         for channel in 0..3 {
             // The enlarger sees the light the negative transmitted: per channel
             // in the scalar model, through the dye spectra in the spectral one.
+            // The non-spectral print has no spectrum for the base, so the
+            // film's minimum density rides in the exponent with the dye. The
+            // spectral one puts the measured mask into the integral instead.
             let log_transmittance = match &print_exposure {
                 Some(values) => values[channel],
-                None => -density_cmy[channel],
+                None => -(density_cmy[channel] + self.base_density[channel]),
             };
             density_print[channel] = self
                 .paper
@@ -747,8 +759,14 @@ mod tests {
     /// in a flat white, and unmistakably in between. Both ends are flat for a
     /// reason that is not written down anywhere — one characteristic curve is in
     /// its toe, the other in its shoulder.
+    ///
+    /// The peak is not at mid grey, and it should not be. Visible grain is the
+    /// counting noise multiplied by the curve's local slope, and on a negative the
+    /// straight line extends a couple of stops *above* mid grey, so the product
+    /// peaks there. Measured with the measured stock, the spread runs 0.0003 at
+    /// −8 EV, 0.0123 at 0, a peak of 0.0174 at +2, and 0.0004 by +8.
     #[test]
-    fn grain_peaks_in_the_midtones() {
+    fn grain_peaks_inside_the_straight_line() {
         const SIDE: usize = 64;
         let mut grain = crate::grain::GrainField::new(SIDE, SIDE, 36.0, 11);
         // A 6 µm pixel: a 6000-pixel scan of a 35 mm frame, where grain is real.
@@ -766,15 +784,21 @@ mod tests {
             (pixels.iter().map(|p| (p[0] - mean).powi(2)).sum::<f64>() / pixels.len() as f64).sqrt()
         };
 
-        // Measured on this model: 0.00003 at −8 EV, a broad peak of 0.021 around
-        // 0 to +2 EV, 0.0018 at +6 EV.
         let dark = spread(-8.0);
         let mid = spread(0.0);
-        let bright = spread(6.0);
+        let peak = spread(2.0);
+        let bright = spread(8.0);
         assert!(
-            mid > 5.0 * dark && mid > 5.0 * bright,
-            "mid {mid}  dark {dark}  bright {bright}"
+            peak > 5.0 * dark && peak > 5.0 * bright,
+            "peak {peak}  dark {dark}  bright {bright}"
         );
+        assert!(
+            peak > spread(-2.0) && peak > spread(6.0),
+            "the peak is not in the middle: -2 {}, +2 {peak}, +6 {}",
+            spread(-2.0),
+            spread(6.0)
+        );
+        assert!(mid > 0.5 * peak, "mid {mid} against peak {peak}");
     }
 
     #[test]

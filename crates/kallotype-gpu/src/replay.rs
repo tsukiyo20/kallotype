@@ -100,7 +100,10 @@ fn scalar(
             index,
             layer,
         );
-        let printed = curve_density(model.paper, -negative + model.print_shift[layer]);
+        let printed = curve_density(
+            model.paper,
+            -(negative + model.base_density[layer]) + model.print_shift[layer],
+        );
         (-printed * LOG2_10).exp2().clamp(0.0, 1.0)
     })
 }
@@ -130,7 +133,7 @@ fn spectral(
 
     let log_transmittance = match &model.enlarger {
         Some(enlarger) => print_expose(enlarger, model.step_nm, density),
-        None => density.map(|value| -value),
+        None => std::array::from_fn(|layer| -(density[layer] + model.scalar.base_density[layer])),
     };
 
     let printed: [f64; 3] = std::array::from_fn(|layer| {

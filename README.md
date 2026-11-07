@@ -16,7 +16,10 @@ developed* as a first-class parameter, not as a separate preset.
 
 Phases 0–3 are in place: the characteristic curve and its dependence on
 development time and temperature, the spectral exposure path, the spectral print
-and the spectral scan. Phase 5 is in: **grain** (`--grain`), modelled as a
+and the spectral scan. The curve is the **measured** one, digitised from the
+VISION3 500T data sheet, and so is everything the spectral path integrates — so
+`--film vision3_500t`, the default, is a film rather than an impression of one.
+The other stocks are placeholders, and their notes say so. Phase 5 is in: **grain** (`--grain`), modelled as a
 particle process on the film's own scale, and **halation** (`--halation`), the
 light that scatters in the emulsion and reflects off the base. Phase 6 has
 started with **DIR couplers** (`--couplers`): development inhibition between
@@ -59,7 +62,7 @@ Or install the binary from crates.io:
 cargo install kallotype-cli
 kalo stocks
 kalo curve --dev 9.0 --temp 22 --sweep
-kalo render photo.png -o photo_c41.png --film c41_standard --dev 9.0 --ev +0.3
+kalo render photo.png -o photo_c41.png --film vision3_500t --dev 9.0 --ev +0.3
 ```
 
 The library is on crates.io too — [`kallotype-core`](https://crates.io/crates/kallotype-core),
@@ -170,6 +173,29 @@ Three things are worth calling out:
 | Crate | Role |
 |---|---|
 | `kallotype-core` | The reference model: curves, development kinetics, built-in stocks, render. No I/O, no unsafe. |
+
+## The curve
+
+Density against log exposure, four parameters, and a shape taken from the
+measurement rather than chosen for convenience:
+
+```text
+D(x) = d_min + (gamma/a)·[ softplus(a·(x − toe)) − softplus(a·(x − shoulder)) ]
+```
+
+The derivative is `gamma` times the difference of two logistic steps — a plateau
+between the corners, flat outside. A single logistic, which is what this used to
+be, has a *point* of maximum contrast and no straight line; fitted to the data
+sheet's three curves it is four times worse, and the parameters it lands on are
+wrong in the way that matters for a negative (`d_min` 0.635 against a measured
+0.84). A sensitometric curve has a toe, a straight line and a shoulder, and a
+model that cannot express a straight line cannot express a negative.
+
+A colour negative's minimum density is not part of its curve. It is base, fog and
+the orange mask — spectrally structured, so the model carries it as a spectrum
+and the curve describes only the dye, which is zero where nothing was exposed.
+The non-spectral print has no spectrum to put there, so the stock carries the
+same quantity as three status densities, and a test checks that the two agree.
 | `kallotype-io` | Decoding and encoding images. The only place that touches a file format. |
 | `kallotype-cli` | The `kalo` binary. |
 
