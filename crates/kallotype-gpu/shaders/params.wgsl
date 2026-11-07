@@ -66,6 +66,10 @@ struct Params {
     couplers2: vec4<f32>,
     // (inhibition row 2, kernel offset).
     couplers3: vec4<f32>,
+    // Where each layer's emulsion blur kernel starts in the kernel table.
+    blur_offsets: vec4<u32>,
+    // How long each layer's blur kernel is; zero means the layer is not blurred.
+    blur_lengths: vec4<u32>,
 };
 
 // The spectral model's constants, in the order `kallotype_core::model` writes

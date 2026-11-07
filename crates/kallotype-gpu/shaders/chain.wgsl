@@ -40,6 +40,104 @@ fn tap_index(value: i32, limit: u32) -> u32 {
     return u32(clamp(value, 0, i32(limit) - 1));
 }
 
+// A lane of a `vec3`, by index. WGSL will not index a vector with a runtime
+// value in a uniform-control-flow context, and the loop over layers is exactly
+// that.
+fn channel(value: vec3<f32>, layer: u32) -> f32 {
+    if (layer == 0u) {
+        return value.x;
+    }
+    if (layer == 1u) {
+        return value.y;
+    }
+    return value.z;
+}
+
+fn with_channel(value: vec3<f32>, layer: u32, replacement: f32) -> vec3<f32> {
+    var out = value;
+    if (layer == 0u) {
+        out.x = replacement;
+    } else if (layer == 1u) {
+        out.y = replacement;
+    } else {
+        out.z = replacement;
+    }
+    return out;
+}
+
+// ---------------------------------------------------------------------------
+// The emulsion's own blur, before development: the film's point spread.
+//
+// It is a separable Gaussian per layer, and it runs on the exposure — light
+// that has already been scattered in the emulsion, not density. The three
+// layers have their own width, which is why the kernels are indexed by layer
+// and a layer with no kernel is passed over rather than convolved with zero.
+// ---------------------------------------------------------------------------
+
+@compute @workgroup_size(64)
+fn blur_horizontal(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
+    if (index >= arrayLength(&scratch)) {
+        return;
+    }
+    let width = image_width();
+    let x = i32(index % width);
+    let row = index - u32(x);
+
+    var blurred = vec3<f32>(0.0);
+    for (var layer = 0u; layer < 3u; layer = layer + 1u) {
+        let length = params.blur_lengths[layer];
+        if (length == 0u) {
+            continue;
+        }
+        let radius = i32(length / 2u);
+        let offset = params.blur_offsets[layer];
+        var sum = 0.0;
+        for (var tap = 0u; tap < length; tap = tap + 1u) {
+            let source_x = tap_index(x + i32(tap) - radius, width);
+            let source = exposure[row + source_x].xyz;
+            sum = sum + kernels[offset + tap] * exp2(channel(source, layer) * LOG2_10);
+        }
+        blurred = with_channel(blurred, layer, sum);
+    }
+    scratch[index] = vec4<f32>(blurred, 0.0);
+}
+
+@compute @workgroup_size(64)
+fn blur_vertical(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
+    if (index >= arrayLength(&exposure)) {
+        return;
+    }
+    let width = image_width();
+    let height = image_height();
+    let x = index % width;
+    let y = i32(index / width);
+
+    var updated = exposure[index].xyz;
+    for (var layer = 0u; layer < 3u; layer = layer + 1u) {
+        let length = params.blur_lengths[layer];
+        if (length == 0u) {
+            continue;
+        }
+        let radius = i32(length / 2u);
+        let offset = params.blur_offsets[layer];
+        var sum = 0.0;
+        for (var tap = 0u; tap < length; tap = tap + 1u) {
+            let source_y = tap_index(y + i32(tap) - radius, height);
+            sum = sum + kernels[offset + tap] * channel(scratch[source_y * width + x].xyz, layer);
+        }
+        updated = with_channel(updated, layer, log10_cpu(max(sum, 1e-10)));
+    }
+    exposure[index] = vec4<f32>(updated, 0.0);
+}
+
 // ---------------------------------------------------------------------------
 // Halation, before development: it is light exposing the emulsion.
 // ---------------------------------------------------------------------------

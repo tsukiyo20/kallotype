@@ -22,11 +22,16 @@
 //! ## Two ways to run it
 //!
 //! A render with grain and no spatial effect is one dispatch: the whole model,
-//! one invocation per pixel. Halation and the DIR couplers move light between
-//! pixels, which needs the frame in a buffer and a separable blur, so they run as
-//! a chain of passes — exposure, halation, development, inhibitors, print — with
-//! the ones that are off skipped. The chain is tested against the single dispatch
-//! with no effects, because two ways to run a model is two ways to disagree.
+//! one invocation per pixel. The emulsion's own blur, halation and the DIR
+//! couplers move light between pixels, which needs the frame in a buffer and a
+//! separable convolution, so they run as a chain of passes — exposure, the
+//! film's blur, halation, development, inhibitors, print — with the ones that
+//! are off skipped. The chain is tested against the single dispatch with no
+//! effects, because two ways to run a model is two ways to disagree.
+//!
+//! Every spatial effect is three or four kernels wide and each layer has its
+//! own width, so the kernels ride in one table and a lane of the uniform says
+//! where each one starts.
 //!
 //! Grain is in both, and it is the sharpest constraint on the transcription: its
 //! draw is SplitMix64, WGSL has no 64-bit integers, so `grain.wgsl` runs the same
@@ -97,7 +102,8 @@ use kallotype_core::model::NEUTRAL_ENTRIES;
 use kallotype_core::psf::gaussian_kernel;
 use kallotype_core::spectral::GRID_LEN;
 use kallotype_core::{
-    Couplers, Finishing, GrainField, Halation, PreparedRender, ScalarModel, SpectralModel,
+    Couplers, EmulsionBlur, Finishing, GrainField, Halation, PreparedRender, ScalarModel,
+    SpectralModel,
 };
 
 /// The largest per-channel difference the two backends are allowed, in linear
@@ -181,6 +187,8 @@ struct Passes {
     simple: wgpu::ComputePipeline,
     expose: wgpu::ComputePipeline,
     positive: wgpu::ComputePipeline,
+    blur_horizontal: wgpu::ComputePipeline,
+    blur_vertical: wgpu::ComputePipeline,
     halation_horizontal: wgpu::ComputePipeline,
     halation_vertical: wgpu::ComputePipeline,
     develop: wgpu::ComputePipeline,
@@ -229,8 +237,16 @@ impl Gpu {
         // which is what every current backend offers and what WebGPU itself
         // requires. Asking for it explicitly means a device that cannot fails
         // here, where the caller can fall back, instead of at the bind group.
-        let mut limits = wgpu::Limits::downlevel_defaults();
+        // The defaults are tuned for a texture-sized buffer: 256 MiB, and 128
+        // MiB of it bindable. A full-frame 16-bit scan is 500 MiB of working
+        // buffer per plane, so the limits are taken from the adapter rather
+        // than from the defaults — which is what makes a camera-sized frame
+        // render instead of panicking inside wgpu.
+        let supported = adapter.limits();
+        let mut limits = wgpu::Limits::downlevel_defaults().using_resolution(supported.clone());
         limits.max_storage_buffers_per_shader_stage = 8;
+        limits.max_buffer_size = supported.max_buffer_size;
+        limits.max_storage_buffer_binding_size = supported.max_storage_buffer_binding_size;
 
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("kallotype"),
@@ -282,6 +298,8 @@ impl Gpu {
             simple: pipeline("simple", &simple_module, "main"),
             expose: pipeline("expose", &end_module, "expose"),
             positive: pipeline("positive", &end_module, "positive"),
+            blur_horizontal: pipeline("blur_horizontal", &chain_module, "blur_horizontal"),
+            blur_vertical: pipeline("blur_vertical", &chain_module, "blur_vertical"),
             halation_horizontal: pipeline(
                 "halation_horizontal",
                 &chain_module,
@@ -381,15 +399,6 @@ impl Gpu {
             }
         };
 
-        // The emulsion's blur is one more per-channel convolution than the
-        // chain has passes for, and the GPU would rather say so than run a
-        // render that is sharper than the CPU's and quietly disagree.
-        if finishing.emulsion.is_some_and(|blur| !blur.is_noop()) {
-            return Err(GpuError::Unsupported(
-                "the emulsion blur, which the chain does not convolve",
-            ));
-        }
-
         // An effect that is all zeros is a no-op, and running the chain for it
         // would cost five dispatches to change nothing.
         let halation = finishing
@@ -400,7 +409,11 @@ impl Gpu {
             .couplers
             .filter(|couplers| !couplers.is_noop())
             .copied();
-        let kernels = EffectKernels::build(halation, couplers)?;
+        let emulsion = finishing
+            .emulsion
+            .filter(|emulsion| !emulsion.is_noop())
+            .copied();
+        let kernels = EffectKernels::build(halation, couplers, emulsion)?;
 
         let uniform = uniform(
             &scalar,
@@ -478,7 +491,7 @@ impl Gpu {
 
         // The chain's working buffers. The single dispatch does not touch them,
         // but the bind group has to name something for every binding.
-        let chain = force_chain || halation.is_some() || couplers.is_some();
+        let chain = force_chain || halation.is_some() || couplers.is_some() || emulsion.is_some();
         let work = |label| {
             self.buffer(
                 label,
@@ -552,6 +565,10 @@ impl Gpu {
             };
             if chain {
                 dispatch(&self.passes.expose);
+                if emulsion.is_some() {
+                    dispatch(&self.passes.blur_horizontal);
+                    dispatch(&self.passes.blur_vertical);
+                }
                 if halation.is_some() {
                     dispatch(&self.passes.halation_horizontal);
                     dispatch(&self.passes.halation_vertical);
@@ -659,10 +676,18 @@ struct EffectKernels {
     scatter: Kernel,
     reflection: Kernel,
     couplers: Kernel,
+    /// The emulsion's blur, one kernel per layer: the three have their own
+    /// sigma and a single kernel would flatten the film's blue layer into its
+    /// red one.
+    blur: [Kernel; 3],
 }
 
 impl EffectKernels {
-    fn build(halation: Option<Halation>, couplers: Option<Couplers>) -> Result<Self, GpuError> {
+    fn build(
+        halation: Option<Halation>,
+        couplers: Option<Couplers>,
+        emulsion: Option<EmulsionBlur>,
+    ) -> Result<Self, GpuError> {
         let mut floats = Vec::new();
         let mut append = |sigma_px: f64| -> Result<Kernel, GpuError> {
             if sigma_px <= 0.0 {
@@ -693,11 +718,18 @@ impl EffectKernels {
             Some(couplers) => append(couplers.sigma_um / couplers.pixel_um.max(1e-9))?,
             None => Kernel::default(),
         };
+        let mut blur = [Kernel::default(); 3];
+        if let Some(emulsion) = emulsion {
+            for (kernel, sigma) in blur.iter_mut().zip(emulsion.sigma_um) {
+                *kernel = append(sigma / emulsion.pixel_um.max(1e-9))?;
+            }
+        }
 
         Ok(Self {
             floats,
             scatter,
             reflection,
+            blur,
             couplers,
         })
     }
@@ -744,7 +776,7 @@ fn uniform(
     let enlarger = spectral.and_then(|model| model.enlarger.as_ref());
     let scan = spectral.and_then(|model| model.scan.as_ref());
 
-    let mut out = Vec::with_capacity(26 * 16);
+    let mut out = Vec::with_capacity(28 * 16);
     for curve in &scalar.curve {
         push_f32(&mut out, &curve.map(|value| value as f32));
     }
@@ -897,6 +929,24 @@ fn uniform(
     push_lane(&mut out, inhibition[0], half_saturation as f32);
     push_lane(&mut out, inhibition[1], kernels.couplers.length as f32);
     push_lane(&mut out, inhibition[2], kernels.couplers.offset as f32);
+    push_u32(
+        &mut out,
+        &[
+            kernels.blur[0].offset as u32,
+            kernels.blur[1].offset as u32,
+            kernels.blur[2].offset as u32,
+            0,
+        ],
+    );
+    push_u32(
+        &mut out,
+        &[
+            kernels.blur[0].length as u32,
+            kernels.blur[1].length as u32,
+            kernels.blur[2].length as u32,
+            0,
+        ],
+    );
     out
 }
 
@@ -1276,6 +1326,28 @@ mod tests {
         );
     }
 
+    /// The emulsion's blur is the three-layer point spread of the film itself,
+    /// and it runs on the exposure before anything is developed. Six micrometres
+    /// per pixel puts the widest layer at 0.85 of a pixel — the resolution where
+    /// a real scan starts to see it — and the narrowest at 0.52, so the three
+    /// kernels are different lengths and any mix-up between them shows.
+    #[test]
+    fn the_emulsion_blur_matches_the_cpu() {
+        let emulsion = crate::EmulsionBlur::measured(6.0);
+        assert!(!emulsion.is_noop(), "the test needs a blur that acts");
+        let finishing = Finishing {
+            emulsion: Some(&emulsion),
+            ..Finishing::default()
+        };
+        compare_finished(
+            &RenderParams::default().prepare(),
+            &frame(),
+            WIDTH,
+            HEIGHT,
+            &finishing,
+        );
+    }
+
     /// Everything at once: five passes, the widest frame of error, and the case a
     /// user actually asks for.
     #[test]
@@ -1351,7 +1423,7 @@ mod tests {
     /// photograph, and silently rendering it would be worse than falling back.
     #[test]
     fn an_impossibly_wide_kernel_is_refused() {
-        let kernels = EffectKernels::build(Some(Halation::typical(0.001)), None);
+        let kernels = EffectKernels::build(Some(Halation::typical(0.001)), None, None);
         assert!(matches!(kernels, Err(GpuError::KernelTooWide(_))));
     }
 
@@ -1376,7 +1448,7 @@ mod tests {
     fn the_kernels_are_the_cpus_kernels_at_the_stated_offsets() {
         let halation = Halation::typical(6.0);
         let couplers = Couplers::typical(6.0);
-        let kernels = EffectKernels::build(Some(halation), Some(couplers)).expect("kernels");
+        let kernels = EffectKernels::build(Some(halation), Some(couplers), None).expect("kernels");
 
         let scatter = gaussian_kernel(halation.scatter.sigma_um / halation.pixel_um);
         let reflection = gaussian_kernel(halation.reflection.sigma_um / halation.pixel_um);
@@ -1438,7 +1510,7 @@ mod tests {
         let grain = GrainField::new(WIDTH, HEIGHT, 36.0, 1);
         let halation = Halation::typical(6.0);
         let couplers = Couplers::typical(6.0);
-        let kernels = EffectKernels::build(Some(halation), Some(couplers)).expect("kernels");
+        let kernels = EffectKernels::build(Some(halation), Some(couplers), None).expect("kernels");
         for (spectral, finishing) in [
             (None, Finishing::default()),
             (
@@ -1461,7 +1533,7 @@ mod tests {
                 finishing.couplers.copied(),
                 &kernels,
             );
-            assert_eq!(bytes.len(), 26 * 16, "twenty-six lanes");
+            assert_eq!(bytes.len(), 28 * 16, "twenty-eight lanes");
         }
     }
 

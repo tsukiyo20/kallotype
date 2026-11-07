@@ -313,7 +313,10 @@ readback:
 | the same, with halation and couplers | 3 356 ms | 45 ms | 74 × |
 
 The spectral path is where the device earns its place: seventy-one wavelength
-samples per pixel across four integrations is exactly the work a GPU is for. Below
+samples per pixel across four integrations is exactly the work a GPU is for.
+The spatial stages are on it too — the film's own three-layer blur, halation,
+the DIR couplers — so a full-frame 32.7 MP photo runs the whole spectral chain
+in about two and a half seconds. Below
 about a megapixel of scalar work the fixed cost of a device and a readback is the
 larger term, and the CPU wins — which is worth knowing before reaching for
 `--no-gpu` to make a large one.
