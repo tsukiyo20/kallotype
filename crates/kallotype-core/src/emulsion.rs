@@ -343,6 +343,40 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([3.3800, 3.3800, 3.3800]),
     },
+    FilmStock {
+        id: "fuji200",
+        process: FilmProcess::Negative,
+        label: "FUJIFILM 200 Color Negative Film",
+        note: "Measured, except for the dyes, the mask and the blur. Curves and layer sensitivities are this sheet's; figure 16 prints a mid-scale neutral rather than three dyes, and the sheet carries no MTF panel and no granularity figure, so the dye shapes, the mask and the blur are the compiled ones.",
+        channels: [
+            curve(0.0, 1.9123, 0.5333, -0.8183),
+            curve(0.0, 2.1830, 0.6311, -0.9264),
+            curve(0.0, 2.5467, 0.6156, -0.4895),
+        ],
+        base_density: [0.1375, 0.3292, 0.8267],
+        grains_per_um2: [0.62, 0.51, 0.07],
+        layers: &crate::measured::FUJI200_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
+    },
+    FilmStock {
+        id: "fuji400",
+        process: FilmProcess::Negative,
+        label: "FUJIFILM 400 Color Negative Film",
+        note: "Measured, except for the dyes, the mask and the blur. Curves and layer sensitivities are this sheet's; figure 16 prints a mid-scale neutral rather than three dyes, and the sheet carries no MTF panel and no granularity figure, so the dye shapes, the mask and the blur are the compiled ones.",
+        channels: [
+            curve(0.0, 2.1944, 0.5696, -0.7423),
+            curve(0.0, 2.3913, 0.6415, -0.9248),
+            curve(0.0, 2.6525, 0.6022, -0.5670),
+        ],
+        base_density: [0.1793, 0.3869, 0.8946],
+        grains_per_um2: [0.62, 0.51, 0.07],
+        layers: &crate::measured::FUJI400_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
+    },
 ];
 
 /// Every paper stock compiled into the binary.
