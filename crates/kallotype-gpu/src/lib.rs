@@ -89,7 +89,12 @@ impl Gpu {
     /// [`GpuError::NoAdapter`] when there is no adapter to open, which is the
     /// normal case on a CI runner.
     pub fn new() -> Result<Self, GpuError> {
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
+        // `default()` would compile every backend and still honour nothing: the
+        // environment override lives in `from_env_or_default`, so a machine with
+        // a broken driver — or a laptop with two GPUs and the wrong one first —
+        // can be told `WGPU_BACKEND=vulkan` without a rebuild.
+        let descriptor = wgpu::InstanceDescriptor::from_env_or_default();
+        let instance = wgpu::Instance::new(&descriptor);
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             force_fallback_adapter: false,
@@ -406,5 +411,49 @@ mod tests {
             gpu.render(&[[0.18; 3]], &prepared),
             Err(GpuError::NotScalar)
         ));
+    }
+}
+
+#[cfg(test)]
+mod timing {
+    use super::*;
+    use kallotype_core::RenderParams;
+
+    /// Not an assertion, a measurement: how fast the two backends actually are,
+    /// transfer included, on a frame big enough to matter.
+    ///
+    /// Ignored by default because it takes seconds and because a GPU benchmark on
+    /// a CI runner measures the absence of a GPU.
+    #[test]
+    #[ignore = "timing, not correctness; run with --ignored --nocapture"]
+    fn how_fast_is_it_actually() {
+        let gpu = Gpu::new().expect("a GPU adapter");
+        let prepared = RenderParams::default().prepare();
+        let mut pixels = Vec::with_capacity(1920 * 1080);
+        for y in 0..1080u32 {
+            for x in 0..1920u32 {
+                let a = x as f64 / 1920.0;
+                let b = y as f64 / 1080.0;
+                pixels.push([a, b, (a * b).sqrt()]);
+            }
+        }
+
+        let mut cpu = pixels.clone();
+        let start = std::time::Instant::now();
+        kallotype_core::render_pixels(&mut cpu, &prepared);
+        let cpu_time = start.elapsed();
+
+        let start = std::time::Instant::now();
+        let gpu_out = gpu.render(&pixels, &prepared).expect("renders");
+        let gpu_time = start.elapsed();
+
+        println!(
+            "{} px: cpu {:.1} ms, gpu {:.1} ms (upload + dispatch + readback), ratio {:.2}x",
+            pixels.len(),
+            cpu_time.as_secs_f64() * 1e3,
+            gpu_time.as_secs_f64() * 1e3,
+            cpu_time.as_secs_f64() / gpu_time.as_secs_f64()
+        );
+        assert_eq!(gpu_out.len(), cpu.len());
     }
 }
