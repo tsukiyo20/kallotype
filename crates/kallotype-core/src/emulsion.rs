@@ -290,7 +290,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         id: "kodak_gold200",
         process: FilmProcess::Negative,
         label: "KODAK GOLD 200",
-        note: "Generated from kodak_gold200.toml; borrowed: spectra.layers, spectra.dyes, emulsion.sigma_um.",
+        note: "Generated from kodak_gold200.toml; borrowed: spectra.dyes, emulsion.sigma_um.",
         channels: [
             curve(0.0, 1.5411, 0.5473, -0.7300),
             curve(0.0, 1.6367, 0.5659, -0.7680),
@@ -298,7 +298,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         ],
         base_density: [0.2611, 0.6662, 0.9944],
         grains_per_um2: [0.62, 0.51, 0.07],
-        layers: &kallotype_spectral::layers::CHANNELS,
+        layers: &crate::measured::KODAK_GOLD200_LAYERS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
@@ -453,6 +453,42 @@ mod tests {
                 assert!(
                     table.iter().all(|value| *value >= 0.0),
                     "{} layer {channel} has a negative sensitivity",
+                    stock.id
+                );
+            }
+        }
+    }
+
+    /// Each colour layer records where its own sheet says it does.
+    ///
+    /// The failure this catches is a panel read the wrong way round. The three
+    /// curves are labelled by the dye they form — Cyan-, Magenta- and
+    /// Yellow-Forming — and an extractor that assigns them by position instead
+    /// of by label can put the cyan layer's peak in the blue, produce three
+    /// smooth plausible tables, and never fail anything else. GOLD 200's sheet
+    /// draws four strokes for three layers, so the risk is not hypothetical.
+    #[test]
+    fn every_colour_layer_peaks_in_its_own_band() {
+        for stock in FILM_STOCKS {
+            if stock.process == FilmProcess::Monochrome {
+                continue;
+            }
+            for (layer, low, high) in [(0, 590.0, 700.0), (1, 490.0, 600.0), (2, 380.0, 500.0)] {
+                let (index, value) = stock.layers[layer].iter().enumerate().fold(
+                    (0, f64::NEG_INFINITY),
+                    |best, (i, &v)| {
+                        if v > best.1 { (i, v) } else { best }
+                    },
+                );
+                let wavelength = 380.0 + 5.0 * index as f64;
+                assert!(
+                    (low..=high).contains(&wavelength),
+                    "{} layer {layer} peaks at {wavelength} nm, outside {low}-{high}",
+                    stock.id
+                );
+                assert!(
+                    value > 0.0,
+                    "{} layer {layer} is dark at its peak",
                     stock.id
                 );
             }
