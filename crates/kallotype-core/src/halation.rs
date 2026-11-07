@@ -24,13 +24,26 @@
 //! where it happens: it is light exposing the emulsion, not a property of the
 //! developed image. That is why it runs before grain rather than after it.
 //!
-//! ## What is not modelled
+//! ## What is not modelled, and how it would be
 //!
-//! The strengths and the two radii are placeholders. The red bias has the right
-//! *shape* — a double pass through the yellow filter layer cannot leave blue
-//! intact — but the numbers describe a modern colour negative in general, not
-//! this film. Measuring them means photographing a controlled highlight and
-//! reading the halo's falloff, which is a camera experiment, not a data sheet.
+//! The strengths and the two radii are **placeholders**. The red bias has the
+//! right *shape* — a double pass through the yellow filter layer cannot leave
+//! blue intact — but the numbers describe a modern colour negative in general,
+//! not this film, and `Halation::typical` is named for what it is.
+//!
+//! There is no data sheet for this. It is a property of the film *in a camera* —
+//! base, anti-halation backing, pressure plate — and the only way to have it is
+//! to expose film to a controlled highlight and read the halo's falloff. The
+//! experiment is designed in `docs/0011-halation-experiment.md`, with the two
+//! scripts that carry it out: `scripts/halo_profile.py` turns a scan into a
+//! radial profile, and `scripts/fit_halation.py` fits these eight numbers to it.
+//!
+//! Both have self-tests that run without a camera, and those already say what
+//! the measurement has to achieve. The fit separates the lens from the emulsion
+//! only if the lens's own point-spread function is measured to a few tenths of a
+//! micrometre — a 0.6 µm error doubles the reflection strength. And the blue
+//! layer's reflection, at 1.2 % of the highlight, is invisible at a single
+//! frame's scan noise: it needs a profile averaged to about 1e-3 of density.
 
 /// One halation component: how far the light spreads and how much returns.
 #[derive(Debug, Clone, Copy)]
