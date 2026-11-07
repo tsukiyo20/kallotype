@@ -8,19 +8,11 @@
 # unavailable (sandboxes, CI images without a writable ~/.cargo).
 /.cargo-home/
 
-# Research notes, datasets and the tooling that ingests them are kept locally.
-# The published repository is the code; see README.md for what they contain.
-/docs/
-/data/
-/scripts/
-/ROADMAP.md
-/CHANGELOG.md
-/NOTICE.md
-/CONTRIBUTING.md
-
-# Camera sensitivities are imported locally: the source database is
-# CC BY-NC-SA, so it is not vendored.
-/data/cameras/*.csv
+# The research this model is built on: the manufacturer data sheets, the
+# digitised curves, the extractors, and the design notes. Kept locally because
+# the published repository is the code, and because the data sheets are not ours
+# to redistribute. `private/README.md` says what is in there and why.
+/private/
 
 # Compiled Python from the scripts in scripts/
 __pycache__/
