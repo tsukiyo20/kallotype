@@ -41,18 +41,27 @@ no escapes, numbers, and lists that may span lines.
 `transition` defaults to the negative's 4.0 per decade; a paper wants about 7 to
 10, because a paper's curve has no straight line for its corners to bound.
 
+For a film, `[base].density` is the status density of the unexposed processed
+film — base, fog and mask — one per layer in the order red, green, blue. The
+curve is dye *above* that base, so its `d_min` is zero and `d_max` is measured
+from the base too.
+
 ## What the checker enforces
 
 1. **A stock that claims to be measured must name its document**, page,
    retrieval date and checksum. Without them it is a placeholder whatever it
    says, and a render that uses it says so too.
 2. **The curve must be a curve**: `d_min < d_max`, positive `gamma`, a non-zero
-   transition.
+   transition. A film's `d_min` must be exactly zero: the renderer adds
+   `base.density` to the curve, so a file that puts the base in both places would
+   render the film twice as dense as it is.
 3. **The numbers must match the points.** If `points` is given, the curve is
    evaluated against them and the residual compared with the declared `rms` to
    within ten per cent — the fit's own uncertainty. A transposed decimal, a
    dropped minus or a layer swapped by accident fails here instead of rendering
-   plausibly.
+   plausibly. For a film the base is added back before the comparison, because a
+   data sheet plots base plus dye while the model's curve is dye alone; that is
+   also what makes `base.density` a checked number rather than a comment.
 4. **The spectra must be on the grid the model integrates on**: 71 samples from
    380 nm in 5 nm steps, finite and non-negative.
 

@@ -193,7 +193,12 @@ impl StockFile {
     /// The three layers, and the fit against the points when they are named.
     fn check_curves(&self) -> Vec<Finding> {
         let mut findings = Vec::new();
-        for layer in ["red", "green", "blue"] {
+        let base = if self.is_film() {
+            self.floats("base.density").ok().filter(|v| v.len() == 3)
+        } else {
+            None
+        };
+        for (index, layer) in ["red", "green", "blue"].into_iter().enumerate() {
             let prefix = format!("curve.{layer}");
             let curve = match self.curve(&prefix) {
                 Ok(curve) => curve,
@@ -216,7 +221,21 @@ impl StockFile {
                 ));
                 continue;
             }
-            match self.check_fit(&prefix, &curve) {
+            // The renderer adds `base.density` to the curve, so a film's curve
+            // is dye above base and its d_min is zero. A file that puts the base
+            // in both places would render the film twice as dense as it is.
+            if self.is_film() && curve.d_min.abs() > 1e-9 {
+                findings.push(Finding::fail(
+                    layer,
+                    format!(
+                        "d_min {} — a film's curve is dye above base, so d_min is 0 and \
+                         `base.density` carries the rest",
+                        curve.d_min
+                    ),
+                ));
+                continue;
+            }
+            match self.check_fit(&prefix, &curve, base.as_ref().map(|b| b[index])) {
                 Ok(text) => findings.push(Finding::ok(layer, text)),
                 Err(error) => findings.push(Finding::fail(layer, error.to_string())),
             }
@@ -225,7 +244,17 @@ impl StockFile {
     }
 
     /// Re-derive the fit from the named points and compare with the file's rms.
-    fn check_fit(&self, prefix: &str, curve: &CharacteristicCurve) -> Result<String, StockError> {
+    ///
+    /// `base` is this layer's base density when the stock is a film. The model's
+    /// film curve is dye above base, but a data sheet plots total density, so
+    /// the base is added back before the comparison — which is also what makes
+    /// `base.density` a checked number rather than a comment.
+    fn check_fit(
+        &self,
+        prefix: &str,
+        curve: &CharacteristicCurve,
+        base: Option<f64>,
+    ) -> Result<String, StockError> {
         let Ok(points) = self.string(&format!("{prefix}.points")) else {
             return Ok("no digitised points named; the curve is taken on trust".to_owned());
         };
@@ -251,8 +280,9 @@ impl StockFile {
             1.0
         };
         let mut sum = 0.0;
+        let offset = base.unwrap_or(0.0);
         for (x, density) in &rows {
-            let model = curve.density(x * factor);
+            let model = curve.density(x * factor) + offset;
             sum += (model - density) * (model - density);
         }
         let rms = (sum / rows.len() as f64).sqrt();
@@ -871,5 +901,96 @@ target_mid_reflectance = 0.18
         assert!(file.float("a.c").is_err());
         assert!(file.string("a.c").is_ok());
         assert!(file.string("a.b").is_err());
+    }
+
+    #[test]
+    fn a_film_may_not_carry_its_base_in_the_curve() {
+        let text = EXAMPLE.replace("kind = \"paper\"", "kind = \"film\"");
+        let table = parse(&text, Path::new("t.toml")).expect("parses");
+        let file = StockFile {
+            path: PathBuf::from("t.toml"),
+            table,
+        };
+        let findings = file.check_curves();
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.verdict == Verdict::Fail && f.message.contains("dye above base")),
+            "{findings:?}"
+        );
+    }
+
+    /// A data sheet plots base plus dye; the model's curve is dye alone, so the
+    /// points are only reproduced once `base.density` is added back. This is the
+    /// check that makes those three numbers mean something.
+    #[test]
+    fn a_films_points_are_base_plus_dye() {
+        let root = std::env::temp_dir().join(format!("kallotype-stock-{}", std::process::id()));
+        std::fs::create_dir_all(&root).expect("a temporary directory");
+        let layers = ["red", "green", "blue"];
+        let curves = [
+            CharacteristicCurve::new(0.0, 1.70, 0.48, -0.76),
+            CharacteristicCurve::new(0.0, 2.00, 0.56, -0.73),
+            CharacteristicCurve::new(0.0, 1.92, 0.55, -0.75),
+        ];
+        let base = [0.19, 0.58, 0.83];
+
+        let text = |base: [f64; 3]| {
+            let mut text = String::from(
+                "[stock]\nid = \"test_film\"\nlabel = \"A film\"\nkind = \"film\"\n\
+                 claim = \"placeholder\"\n",
+            );
+            for (index, layer) in layers.iter().enumerate() {
+                let name = format!("{layer}.csv");
+                let mut csv = String::from("log_exposure,density\n");
+                let mut x = -4.0;
+                while x <= 1.0 {
+                    let density = curves[index].density(x) + base[index];
+                    csv.push_str(&format!("{x:.3},{density:.4}\n"));
+                    x += 0.02;
+                }
+                std::fs::write(root.join(&name), csv).expect("a points file");
+                let curve = &curves[index];
+                text.push_str(&format!(
+                    "\n[curve.{layer}]\nd_min = {:.4}\nd_max = {:.4}\ngamma = {:.4}\n\
+                     log_e0 = {:.4}\npoints = \"{name}\"\nrms = 0.001\n",
+                    curve.d_min, curve.d_max, curve.gamma, curve.log_e0
+                ));
+            }
+            text.push_str(&format!(
+                "\n[base]\ndensity = [{}, {}, {}]\ngrains_per_um2 = [1.0, 1.0, 1.0]\n",
+                base[0], base[1], base[2]
+            ));
+            text
+        };
+
+        let written = text(base);
+        let right = root.join("right.toml");
+        std::fs::write(&right, &written).expect("a stock file");
+        let findings = StockFile::read(&right).expect("reads").check_curves();
+        assert!(
+            findings.iter().all(|f| f.verdict == Verdict::Ok),
+            "{findings:?}"
+        );
+
+        // The same points, with the base declared a tenth higher: the curve no
+        // longer reaches the sheet's numbers, and the check has to say so.
+        let wrong = root.join("wrong.toml");
+        std::fs::write(
+            &wrong,
+            written.replace(
+                "density = [0.19, 0.58, 0.83]",
+                "density = [0.29, 0.58, 0.83]",
+            ),
+        )
+        .expect("a stock file");
+        let findings = StockFile::read(&wrong).expect("reads").check_curves();
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.verdict == Verdict::Fail && f.message.contains("rms")),
+            "{findings:?}"
+        );
+        std::fs::remove_dir_all(&root).expect("clean up");
     }
 }
