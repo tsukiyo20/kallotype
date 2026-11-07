@@ -280,10 +280,23 @@ impl PrintContext {
     /// Cannot panic: the tables are compile-time constants on the internal grid.
     #[must_use]
     pub fn measured(reference_density: [f64; 3]) -> Self {
+        Self::measured_with(reference_density, &crate::measured::PAPER_LAYERS)
+    }
+
+    /// As [`Self::measured`], on the layer sensitivities of a particular paper.
+    ///
+    /// The paper's spectra are a property of the stock — the dye set and the
+    /// layer speeds differ between products — so the caller passes them rather
+    /// than this taking whichever sheet was digitised first.
+    #[must_use]
+    pub fn measured_with(
+        reference_density: [f64; 3],
+        layers: &[[f64; crate::spectral::GRID_LEN]; 3],
+    ) -> Self {
         Self::new(reference_density)
             .with_spectra(
                 crate::measured::FILM_DYES.map(|table| crate::measured::spectrum(&table)),
-                crate::measured::PAPER_LAYERS.map(|table| crate::measured::spectrum(&table)),
+                layers.map(|table| crate::measured::spectrum(&table)),
             )
             .with_base_density(crate::measured::spectrum(&crate::measured::FILM_MASK))
             .with_masking(Masking::default())

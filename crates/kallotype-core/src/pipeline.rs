@@ -119,7 +119,7 @@ impl RenderParams {
         // dyes' absorption bands against the paper's layer sensitivities.
         let print = self
             .spectral_print
-            .then(|| PrintContext::measured(density_mid));
+            .then(|| PrintContext::measured_with(density_mid, self.paper.layers));
         let print_shift: [f64; 3] = match &print {
             // The spectral model is anchored on neutral grey, so the actual
             // mid-grey exposure is subtracted here rather than assumed to be 0.
@@ -140,7 +140,9 @@ impl RenderParams {
             paper,
             print_shift,
             print,
-            scan: self.spectral_scan.then(ScanContext::measured),
+            scan: self
+                .spectral_scan
+                .then(|| ScanContext::measured_with(self.paper.dyes)),
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
             spectral: self
                 .spectral

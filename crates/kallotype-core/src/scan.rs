@@ -173,8 +173,13 @@ impl ScanContext {
     /// Cannot panic: the tables are compile-time constants on the internal grid.
     #[must_use]
     pub fn measured() -> Self {
-        Self::new()
-            .with_dyes(crate::measured::PAPER_DYES.map(|table| crate::measured::spectrum(&table)))
+        Self::measured_with(&crate::measured::PAPER_DYES)
+    }
+
+    /// As [`Self::measured`], on the dyes of a particular paper.
+    #[must_use]
+    pub fn measured_with(dyes: &[[f64; GRID_LEN]; 3]) -> Self {
+        Self::new().with_dyes(dyes.map(|table| crate::measured::spectrum(&table)))
     }
 
     /// White, the neutral-axis table and every derived quantity are recomputed,

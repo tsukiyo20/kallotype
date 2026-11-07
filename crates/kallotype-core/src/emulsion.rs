@@ -29,6 +29,8 @@
 //! of its own, it has no mask, and there is no second place to put it.
 
 use crate::curve::CharacteristicCurve;
+use crate::measured::{PAPER_DYES, PAPER_DYES_E4021, PAPER_LAYERS, PAPER_LAYERS_E4021};
+use crate::spectral::GRID_LEN;
 
 /// A film stock: one characteristic curve per colour layer.
 #[derive(Debug, Clone, Copy)]
@@ -71,6 +73,13 @@ pub struct PaperStock {
     /// Linear reflectance a correctly balanced print should reach for an
     /// 18 % grey card. This is what the print balance is solved against.
     pub target_mid_reflectance: f64,
+    /// The paper's cyan, magenta and yellow dyes, peak-normalised absorption,
+    /// 380–730 nm at 5 nm. What the spectral scan puts between the light and
+    /// the eye.
+    pub dyes: &'static [[f64; GRID_LEN]; 3],
+    /// The paper's three layer sensitivities on one relative scale, 380–730 nm
+    /// at 5 nm. What the spectral print integrates the enlarger's light against.
+    pub layers: &'static [[f64; GRID_LEN]; 3],
 }
 
 const fn curve(d_min: f64, d_max: f64, gamma: f64, log_e0: f64) -> CharacteristicCurve {
@@ -143,11 +152,10 @@ pub static PAPER_STOCKS: &[PaperStock] = &[
     PaperStock {
         id: "portra_endura",
         label: "KODAK PROFESSIONAL PORTRA ENDURA, RA-4",
-        note: "Measured. Curve digitised from data sheet E-4021 page 7, the \
-               normal-contrast professional paper. White 0.096 status density, \
-               a print's, not the metallic stock's. Its dye spectra and layer \
-               sensitivities are not digitised yet: the spectral print uses the \
-               ENDURA Premier Metallic ones, which the scalar path does not.",
+        note: "Measured. Curve from data sheet E-4021 page 7, the \
+               normal-contrast professional paper; dyes and layer \
+               sensitivities from page 8 of the same sheet. White 0.096 status \
+               density, a print's, not the metallic stock's.",
         // The mean of the three measured layers at a transition of 7. Per layer
         // they are red (0.0909, 2.6087, 3.68, −1.4125), green (0.0929, 2.5928,
         // 3.38, −1.3950) and blue (0.1048, 2.4137, 4.57, −1.4275), reproduced to
@@ -156,6 +164,8 @@ pub static PAPER_STOCKS: &[PaperStock] = &[
         // any fit — the model is at that floor, not above it.
         channel: curve(0.0964, 2.5358, 3.7821, -1.4125).with_transition(7.0),
         target_mid_reflectance: 0.18,
+        dyes: &PAPER_DYES_E4021,
+        layers: &PAPER_LAYERS_E4021,
     },
     PaperStock {
         id: "supra_endura",
@@ -167,6 +177,9 @@ pub static PAPER_STOCKS: &[PaperStock] = &[
         // and blue (0.1073, 2.5307, 5.16, −1.1750), rms 0.025, 0.024, 0.032.
         channel: curve(0.1010, 2.5847, 4.7309, -1.1575).with_transition(8.0),
         target_mid_reflectance: 0.18,
+        // E-4021 draws one set of spectra for both its papers.
+        dyes: &PAPER_DYES_E4021,
+        layers: &PAPER_LAYERS_E4021,
     },
     PaperStock {
         id: "endura_premier_metallic",
@@ -183,6 +196,8 @@ pub static PAPER_STOCKS: &[PaperStock] = &[
         // single curve cannot say.
         channel: curve(0.1944, 2.5902, 5.5716, -1.1900).with_transition(10.0),
         target_mid_reflectance: 0.18,
+        dyes: &PAPER_DYES,
+        layers: &PAPER_LAYERS,
     },
     PaperStock {
         id: "c41_paper",
@@ -190,6 +205,9 @@ pub static PAPER_STOCKS: &[PaperStock] = &[
         note: "Placeholder RA-4 paper: low d_min, short contrasty curve.",
         channel: curve(0.06, 2.05, 2.40, 0.0),
         target_mid_reflectance: 0.18,
+        // No measurement of its own: the metallic sheet's spectra stand in.
+        dyes: &PAPER_DYES,
+        layers: &PAPER_LAYERS,
     },
     PaperStock {
         id: "bw_paper",
@@ -197,6 +215,8 @@ pub static PAPER_STOCKS: &[PaperStock] = &[
         note: "Placeholder B&W paper: deeper blacks, steeper curve.",
         channel: curve(0.05, 2.10, 2.80, 0.0),
         target_mid_reflectance: 0.18,
+        dyes: &PAPER_DYES,
+        layers: &PAPER_LAYERS,
     },
 ];
 
@@ -314,6 +334,52 @@ mod tests {
             ) < 0.7,
             "the metallic paper is not greyer than a print"
         );
+    }
+
+    /// The paper's spectra belong to the stock, not to the model: E-4021 draws
+    /// one set for PORTRA and SUPRA ENDURA, the metallic sheet another, and the
+    /// E-4021 paper is the default. If a stock were pointed at the wrong tables
+    /// nothing would fail except a spectral render's colour — which is exactly
+    /// the failure mode this project exists to make loud.
+    #[test]
+    fn the_measured_papers_carry_their_own_spectra() {
+        let peak = |table: &[f64; crate::spectral::GRID_LEN]| {
+            let (index, value) =
+                table
+                    .iter()
+                    .enumerate()
+                    .fold((0, f64::NEG_INFINITY), |best, (i, &v)| {
+                        if v > best.1 { (i, v) } else { best }
+                    });
+            (380.0 + 5.0 * index as f64, value)
+        };
+
+        let portra = paper_stock("portra_endura").expect("the default paper");
+        // The dye peaks the sheet draws: yellow 445, magenta 550, cyan 630 nm.
+        for (layer, expected) in [(2, 445.0), (1, 550.0), (0, 630.0)] {
+            let (wavelength, value) = peak(&portra.dyes[layer]);
+            assert!(
+                (wavelength - expected).abs() < 15.0,
+                "layer {layer} peaks at {wavelength} nm, not {expected}"
+            );
+            assert!((value - 1.0).abs() < 0.02, "layer {layer} peaks at {value}");
+        }
+        // The layer sensitivities: yellow-forming at 475, magenta at 550, cyan
+        // at 705, and they are on one scale, so their peaks differ by two orders.
+        let yellow = peak(&portra.layers[2]).1;
+        let cyan = peak(&portra.layers[0]).1;
+        assert!(
+            yellow > 20.0 * cyan,
+            "the layer speeds came out {yellow:.2} and {cyan:.2}"
+        );
+
+        // And the metallic stock is a different paper, with different tables.
+        let metallic = paper_stock("endura_premier_metallic").expect("the metallic paper");
+        assert!(
+            !std::ptr::eq(portra.dyes, metallic.dyes),
+            "the two papers share one dye set"
+        );
+        assert!((peak(&metallic.dyes[0]).0 - peak(&portra.dyes[0]).0).abs() > 5.0);
     }
 
     #[test]
