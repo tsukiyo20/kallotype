@@ -26,10 +26,16 @@
 //!
 //! ## What is not modelled, and how it would be
 //!
-//! The strengths and the two radii are **placeholders**. The red bias has the
-//! right *shape* — a double pass through the yellow filter layer cannot leave
-//! blue intact — but the numbers describe a modern colour negative in general,
-//! not this film, and `Halation::typical` is named for what it is.
+//! The **strengths** and the **scatter width** are placeholders. The red bias
+//! has the right *shape* — a double pass through the yellow filter layer cannot
+//! leave blue intact — but the numbers describe a modern colour negative in
+//! general, not this film.
+//!
+//! The reflection width is not a placeholder any more: it is the geometry of a
+//! 135 µm base and the aperture's cone, and [`Halation::reflection_radius_um`]
+//! computes it. At f/1.4 the halo reaches 62 µm across the film, at f/4 22 µm,
+//! at f/16 5.6 µm. The old fixed 30 µm was the wide-open case — not wrong,
+//! just always at f/1.4.
 //!
 //! There is no data sheet for this. It is a property of the film *in a camera* —
 //! base, anti-halation backing, pressure plate — and the only way to have it is
@@ -77,12 +83,44 @@ pub struct Halation {
 }
 
 impl Halation {
-    /// Placeholder values for a modern colour negative.
+    /// Thickness of the film base, in millimetres.
+    ///
+    /// The halo's size follows from it and from nothing else that varies: a
+    /// photographic base is 0.125–0.135 mm across every manufacturer's sheet,
+    /// and 0.135 is the thick end.
+    pub const BASE_THICKNESS_MM: f64 = 0.135;
+
+    /// Refractive index of the base, which is what bends the returning cone.
+    pub const FILM_INDEX: f64 = 1.5;
+
+    /// How far the reflection halo reaches on the film, at a given aperture.
+    ///
+    /// The light that comes back travelled down through the base and up again,
+    /// so its cone is the lens's, refracted into the base and stretched over
+    /// twice 135 µm. The marginal ray outside is `atan(1/2N)`; inside it is
+    /// `asin(sin(θ)/n)`; the radius at the emulsion is `2B·tan` of that.
+    ///
+    /// There is no free parameter here, which is the point: the sigma was the
+    /// one number in this file that could be derived instead of guessed.
+    #[must_use]
+    pub fn reflection_radius_um(f_number: f64) -> f64 {
+        let outside = (1.0 / (2.0 * f_number.max(1e-3))).atan();
+        let inside = (outside.sin() / Self::FILM_INDEX).asin();
+        2.0 * Self::BASE_THICKNESS_MM * 1000.0 * inside.tan()
+    }
+
+    /// Both components for an exposure made at a particular aperture.
     ///
     /// `pixel_um` is the film-plane size of one pixel, so the kernels are
     /// expressed in micrometres and do not change when the scan resolution does.
+    ///
+    /// The reflection halo's **width** now comes from the geometry; its
+    /// **strength**, and both of the scatter term's numbers, are still
+    /// placeholders — see the module documentation. A Gaussian of
+    /// `radius / 2` carries the same second moment as a disc of that radius,
+    /// which is as much as a geometry can say about the shape.
     #[must_use]
-    pub fn typical(pixel_um: f64) -> Self {
+    pub fn for_aperture(pixel_um: f64, f_number: f64) -> Self {
         Self {
             pixel_um,
             scatter: Halo {
@@ -90,10 +128,20 @@ impl Halation {
                 strength: [0.020, 0.018, 0.015],
             },
             reflection: Halo {
-                sigma_um: 30.0,
+                sigma_um: 0.5 * Self::reflection_radius_um(f_number),
                 strength: [0.090, 0.030, 0.012],
             },
         }
+    }
+
+    /// The same, at a normal shooting aperture.
+    ///
+    /// f/4 rather than f/1.4: the old fixed 30 µm was the wide-open case for a
+    /// 135 µm base, which is where a lens that vignettes its corners stops
+    /// being a lens. The placeholder was not wrong so much as always wide open.
+    #[must_use]
+    pub fn typical(pixel_um: f64) -> Self {
+        Self::for_aperture(pixel_um, 4.0)
     }
 
     /// Whether either component would change anything.
@@ -201,6 +249,43 @@ mod tests {
 
     /// The halo has to be red: the same returned light, weighted by how much of
     /// each layer survives the double pass.
+    /// The reflection halo's size is geometry: the lens's cone, refracted into
+    /// a 135 µm base and stretched over the two trips through it. These numbers
+    /// are the whole reason this width is no longer a placeholder.
+    #[test]
+    fn the_reflection_halo_is_the_size_the_base_allows() {
+        assert!((Halation::reflection_radius_um(5.6) - 16.0).abs() < 0.5);
+        assert!((Halation::reflection_radius_um(1.4) - 62.1).abs() < 1.0);
+        assert!((Halation::reflection_radius_um(16.0) - 5.6).abs() < 0.3);
+
+        // A wider aperture throws a wider cone, and the halo with it.
+        let mut previous = f64::INFINITY;
+        for aperture in [1.4, 2.0, 2.8, 4.0, 5.6, 8.0, 11.0, 16.0] {
+            let radius = Halation::reflection_radius_um(aperture);
+            assert!(
+                radius < previous,
+                "f/{aperture} is not narrower than the last"
+            );
+            previous = radius;
+        }
+
+        // And the base's own refraction is a third of the effect: in air the
+        // cone would reach 2B·tan(atan(1/2N)), which at f/4 is 33.8 µm.
+        let straight = 2.0 * Halation::BASE_THICKNESS_MM * 1000.0 * (1.0_f64 / 8.0).atan().tan();
+        let ratio = Halation::reflection_radius_um(4.0) / straight;
+        assert!(
+            (0.6..0.75).contains(&ratio),
+            "the index of the base is not bending the cone the way it should: {ratio}"
+        );
+
+        // `typical` is f/4, and the scatter term does not move with the lens.
+        let typical = Halation::typical(6.0);
+        assert!(
+            (typical.reflection.sigma_um - 0.5 * Halation::reflection_radius_um(4.0)).abs() < 1e-9
+        );
+        assert!((typical.scatter.sigma_um - 6.0).abs() < 1e-9);
+    }
+
     #[test]
     fn the_glow_is_red() {
         let mut buffer = highlight(3.0);
