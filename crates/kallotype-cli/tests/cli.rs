@@ -119,6 +119,38 @@ fn grain_is_deterministic_in_its_seed() {
     assert_ne!(first, other, "a different seed must change the grain");
 }
 
+/// A uniform frame at a known luminance, written as the 8-bit PNG the CLI reads.
+///
+/// The luminance is linear light; `save` encodes it to sRGB, so what comes back
+/// is within half a code value of what went in.
+fn flat_frame(dir: &Path, name: &str, linear: f64) -> PathBuf {
+    let path = dir.join(name);
+    let image = kallotype_io::Image {
+        width: 8,
+        height: 8,
+        pixels: vec![[linear; 3]; 64],
+    };
+    kallotype_io::save(&path, &image).expect("write the frame");
+    path
+}
+
+/// The offset the report says it applied, exactly as it printed it.
+fn printed_ev(report: &str) -> String {
+    let line = report
+        .lines()
+        .find(|line| line.trim_start().starts_with("ev "))
+        .expect("the report must contain an ev line");
+    line.split_whitespace()
+        .find(|word| word.parse::<f64>().is_ok())
+        .expect("the ev line must carry a number")
+        .to_owned()
+}
+
+/// The same, as a number.
+fn ev(report: &str) -> f64 {
+    printed_ev(report).parse().expect("a number of stops")
+}
+
 #[test]
 fn render_writes_an_image_and_creates_directories() {
     let dir = scratch("render");
@@ -142,6 +174,106 @@ fn render_writes_an_image_and_creates_directories() {
     assert_eq!((image.width, image.height), (1200, 800));
 
     std::fs::remove_dir_all(&dir).expect("cleanup");
+}
+
+#[test]
+fn auto_exposure_places_the_frames_mean_on_mid_grey() {
+    let dir = scratch("auto-ev");
+    // Two stops below 18 % grey: a dim scene, or a camera file normalised to a
+    // white point nobody documented.
+    let input = flat_frame(&dir, "dark.png", 0.045);
+    let render = |stops: &str, name: &str| {
+        let out = dir.join(name);
+        let output = kalo()
+            .arg("render")
+            .arg(&input)
+            .arg("-o")
+            .arg(&out)
+            .args(["--ev", stops])
+            .output()
+            .expect("kalo should start");
+        assert!(output.status.success(), "stderr: {}", stderr(&output));
+        (stdout(&output), out)
+    };
+
+    let (report, auto_out) = render("auto", "auto.png");
+    let solved = ev(&report);
+    assert!(
+        (solved - 2.0).abs() < 0.05,
+        "a frame of 0.045 should be metered to +2 stops, got {solved:+.3}\n{report}"
+    );
+    assert!(report.contains("auto — frame mean 0.045"), "{report}");
+
+    // The meter is a solve, not a heuristic: the number it prints, typed back
+    // in, has to reproduce the frame. It agrees to a code value and not bit
+    // for bit, because the report rounds the offset to 0.01 stop.
+    let (_, manual_out) = render(&printed_ev(&report), "manual.png");
+    let codepoints = |path: &Path| -> Vec<u8> {
+        kallotype_io::load(path, kallotype_io::InputEncoding::Srgb)
+            .expect("a rendered frame")
+            .pixels
+            .iter()
+            .flatten()
+            .map(|value| (kallotype_core::linear_to_srgb(*value) * 255.0).round() as u8)
+            .collect()
+    };
+    let (metered, hand) = (codepoints(&auto_out), codepoints(&manual_out));
+    let worst = metered
+        .iter()
+        .zip(&hand)
+        .map(|(a, b)| a.abs_diff(*b))
+        .max()
+        .expect("a frame");
+    assert!(
+        worst <= 1,
+        "the printed offset must reproduce the metered frame, worst {worst} code values"
+    );
+
+    // And it has to have moved: a meter that solves to zero is not a meter.
+    let (_, zero_out) = render("0", "zero.png");
+    assert_ne!(
+        std::fs::read(&auto_out).expect("the metered frame"),
+        std::fs::read(&zero_out).expect("the unmetered frame")
+    );
+}
+
+#[test]
+fn a_black_frame_is_not_lifted_by_a_meter_that_cannot_read_it() {
+    let dir = scratch("black-ev");
+    let input = flat_frame(&dir, "black.png", 0.0);
+    let out = dir.join("out.png");
+
+    let output = kalo()
+        .arg("render")
+        .arg(&input)
+        .arg("-o")
+        .arg(&out)
+        .args(["--ev", "auto"])
+        .output()
+        .expect("kalo should start");
+
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    // No light is no exposure to recover: the offset is zero, not infinite.
+    assert!(ev(&stdout(&output)).abs() < 1e-9, "{}", stdout(&output));
+}
+
+#[test]
+fn an_exposure_that_is_neither_a_number_nor_auto_is_refused() {
+    let output = run(&[
+        "render",
+        chart().to_str().expect("a utf-8 path"),
+        "-o",
+        "out/never.png",
+        "--ev",
+        "auto2",
+    ]);
+    assert!(!output.status.success(), "{}", stdout(&output));
+    let message = stderr(&output);
+    assert!(
+        message.contains("expected a number of stops or `auto`"),
+        "{message}"
+    );
+    assert!(message.contains("auto2"), "{message}");
 }
 
 #[test]

@@ -34,6 +34,7 @@ pub mod grain;
 pub mod halation;
 pub mod lut;
 mod measured;
+pub mod meter;
 pub mod model;
 pub mod mtf;
 pub mod pipeline;
@@ -50,6 +51,7 @@ pub use emulsion::{FILM_STOCKS, FilmStock, PAPER_STOCKS, PaperStock, film_stock,
 pub use grain::GrainField;
 pub use halation::{Halation, Halo};
 pub use lut::ExposureLut;
+pub use meter::Metering;
 pub use model::{ExposureModel, PrintModel, ScanModel, SpectralModel};
 pub use mtf::EmulsionBlur;
 pub use pipeline::{

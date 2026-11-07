@@ -3,11 +3,11 @@
 use std::path::Path;
 
 use kallotype_core::{
-    Couplers, EmulsionBlur, Finishing, GrainField, Halation, render_pixels_finished,
+    Couplers, EmulsionBlur, Finishing, GrainField, Halation, Metering, render_pixels_finished,
 };
 use kallotype_io::{load, save};
 
-use crate::cli::RenderArgs;
+use crate::cli::{Exposure, RenderArgs};
 use crate::commands::common::{Rendering, print_report, resolve};
 use crate::error::CliError;
 
@@ -110,8 +110,6 @@ fn render_on_cpu(
 /// Run the subcommand.
 pub fn run(args: RenderArgs) -> Result<(), CliError> {
     let selection = resolve(&args.stock)?;
-    let params = selection.render_params(args.ev);
-    let prepared = selection.prepare(args.ev)?;
 
     let mut image =
         load(&args.input, args.input_encoding.into()).map_err(|source| CliError::Read {
@@ -119,6 +117,18 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             source,
         })?;
     let (width, height) = (image.width, image.height);
+
+    // The meter reads the frame, and the offset it solves is part of the
+    // parameters, so it runs between the decode and the prepare.
+    let (exposure_ev, metering) = match args.ev {
+        Exposure::Stops(ev) => (ev, None),
+        Exposure::Auto => {
+            let metered = Metering::of(&image.pixels);
+            (metered.ev, Some(metered))
+        }
+    };
+    let params = selection.render_params(exposure_ev);
+    let prepared = selection.prepare(exposure_ev)?;
 
     let pixel_um = args.frame_mm * 1000.0 / width.max(1) as f64;
     // The field takes its grain density from the stock: the measured one differs
@@ -168,6 +178,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             emulsion: emulsion.as_ref(),
             halation: halation.as_ref(),
             couplers: couplers.as_ref(),
+            metering,
             backend: backend.to_string(),
         },
     );

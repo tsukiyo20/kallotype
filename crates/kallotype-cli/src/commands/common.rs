@@ -210,6 +210,8 @@ pub struct Rendering<'a> {
     pub halation: Option<&'a kallotype_core::Halation>,
     /// DIR couplers, if they were on.
     pub couplers: Option<&'a kallotype_core::Couplers>,
+    /// What the meter read, if the exposure was metered rather than named.
+    pub metering: Option<kallotype_core::Metering>,
     /// Which backend did the work, already formatted.
     pub backend: String,
 }
@@ -221,6 +223,7 @@ impl Default for Rendering<'_> {
             emulsion: None,
             halation: None,
             couplers: None,
+            metering: None,
             backend: "cpu".to_owned(),
         }
     }
@@ -266,6 +269,13 @@ pub fn print_report(
             "scalar per channel"
         }
     );
+    match rendering.metering {
+        Some(metering) => println!(
+            "  ev        {:+.2}  auto — frame mean {:.3} → mid grey 0.180",
+            params.exposure_ev, metering.key
+        ),
+        None => println!("  ev        {:+.2}", params.exposure_ev),
+    }
     if prepared.is_spectral() || prepared.lut().is_some() {
         println!("  camera    {}", params.camera.name());
     }

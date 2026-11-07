@@ -89,6 +89,8 @@ cargo install kallotype-cli
 kalo stocks
 kalo curve --dev 9.0 --temp 22 --sweep
 kalo render photo.png -o photo_c41.png --film vision3_500t --dev 9.0 --ev +0.3
+# A camera file with an unknown white point: let the frame meter itself.
+kalo render photo_linear.tif -o photo_nph400.png --input-encoding linear --ev auto
 ```
 
 The library is on crates.io too — [`kallotype-core`](https://crates.io/crates/kallotype-core),
@@ -152,33 +154,41 @@ linear RGB ──► log10 E ──► negative density ──► print density 
                              └─────────────────────┘
 ```
 
-Three things are worth calling out:
+A few things are worth calling out:
 
-1. **Development is kinetic, not a preset.** Contrast follows
+1. **The exposure is metered, not guessed.** The input is linear light on the
+   scale *1 is white*, and 18 % grey is then at `log10(0.18)` by definition. A
+   camera file whose developer normalised the white point to something else has
+   lost that scale, so `--ev auto` measures the frame's mean luminance and
+   places it on 18 % — the rule an averaging exposure meter and a laboratory's
+   average printer both rest on, solved in closed form instead of by a test
+   strip. The report prints what it solved, so the number can be pinned down
+   afterwards with a fixed `--ev`.
+2. **Development is kinetic, not a preset.** Contrast follows
    `γ(t) = γ∞ − (γ∞ − γ₀)·e^(−t/τ)` over an *effective* time that compensates
    temperature with a Q10 law. Long development also raises fog and shifts speed.
-2. **The print balance is solved, not dialled in.** The enlarger exposure is
+3. **The print balance is solved, not dialled in.** The enlarger exposure is
    computed in closed form so that an 18 % grey card lands on the paper's target
    reflectance. This is what an operator does with a test strip.
-3. **Everything is f64 and in physical units**, so a GPU implementation can be
+4. **Everything is f64 and in physical units**, so a GPU implementation can be
    checked against this one rather than trusted.
-4. **Halation is light, so it is added to the exposure.** Two unit-sum Gaussian
+5. **Halation is light, so it is added to the exposure.** Two unit-sum Gaussian
    kernels — a short near-neutral scatter and a long red reflection, both in
    micrometres of film rather than pixels — move the exposure around, and a
    documented fraction returns. It runs before grain, because it is light
    exposing the emulsion and grain is what that light develops.
-5. **Couplers are chemistry, not a colour matrix.** A layer that develops releases
+6. **Couplers are chemistry, not a colour matrix.** A layer that develops releases
    an inhibitor that suppresses its neighbours', and its own, further
    development — which is where interimage colour correction and the light line
    along a dark edge come from. It is a matrix with a spatial kernel, and the
    matrix can be fitted rather than typed: `fit_inhibition` recovers the matrix
    that produced a set of measured patch densities.
-6. **The orange mask is not a colour, it is a coupler.** The cyan layer carries
+7. **The orange mask is not a colour, it is a coupler.** The cyan layer carries
    a coloured coupler that absorbs blue and is destroyed wherever cyan dye is
    made, so the mask's absorption and the dye's unwanted absorption cancel. That
    is why an unexposed negative is orange and an exposed one is not, and it is
    modelled as a term on the base density rather than as a constant.
-7. **Grain is a count, not noise.** A pixel is an aperture over a random
+8. **Grain is a count, not noise.** A pixel is an aperture over a random
    arrangement of developed grains, so its exposure has counting statistics:
    `σ_logE = 1/(ln 10 · √N)` where `N` is how many grains the pixel holds. That
    one expression gives Selwyn granularity (`σ ∝ 1/√area`, so grain survives a

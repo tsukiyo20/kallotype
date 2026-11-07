@@ -135,13 +135,20 @@ pub struct RenderArgs {
     pub stock: StockArgs,
 
     /// Exposure offset in stops, applied before the negative.
+    ///
+    /// Pass `auto` to meter the frame instead of naming the offset: the render
+    /// then places the frame's mean luminance at 18 % grey, the way an
+    /// averaging exposure meter and a laboratory's average printer both do.
+    /// The report says what it solved, so the result can be repeated with a
+    /// fixed number. A scene whose key is not the average — a night street, a
+    /// snowfield — is better served by a fixed offset.
     #[arg(
         long,
-        value_name = "EV",
-        default_value_t = 0.0,
+        value_name = "EV|auto",
+        default_value = "0",
         allow_hyphen_values = true
     )]
-    pub ev: f64,
+    pub ev: Exposure,
 
     /// How to interpret the values stored in the input file.
     #[arg(long, value_enum, default_value_t = EncodingArg::Srgb)]
@@ -255,6 +262,40 @@ impl From<EncodingArg> for InputEncoding {
         match value {
             EncodingArg::Srgb => Self::Srgb,
             EncodingArg::Linear => Self::Linear,
+        }
+    }
+}
+
+/// How the exposure was given on the command line: a fixed offset, or `auto`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Exposure {
+    /// A fixed offset in stops.
+    Stops(f64),
+    /// Meter the frame and place its mean luminance at 18 % grey.
+    Auto,
+}
+
+impl std::str::FromStr for Exposure {
+    type Err = String;
+
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        if text.eq_ignore_ascii_case("auto") {
+            return Ok(Self::Auto);
+        }
+        match text.parse::<f64>() {
+            Ok(ev) => Ok(Self::Stops(ev)),
+            Err(_) => Err(format!(
+                "expected a number of stops or `auto`, got {text:?}"
+            )),
+        }
+    }
+}
+
+impl std::fmt::Display for Exposure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Stops(ev) => write!(formatter, "{ev}"),
+            Self::Auto => write!(formatter, "auto"),
         }
     }
 }
