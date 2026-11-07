@@ -44,6 +44,17 @@
 //! micrometre — a 0.6 µm error doubles the reflection strength. And the blue
 //! layer's reflection, at 1.2 % of the highlight, is invisible at a single
 //! frame's scan noise: it needs a profile averaged to about 1e-3 of density.
+//!
+//! ## And the model is much sharper than a film
+//!
+//! Checking whether the data sheet's modulation-transfer curve could replace
+//! that experiment turned up something else: it cannot, because at these
+//! strengths halation only puts a floor under the response at 90 %, 95 % and
+//! 97 %, while the sheet draws 35 %, 28 % and 20 % at 90 cycles/mm. **Fifty to
+//! eighty points of that loss is the emulsion's own blur**, and there is no term
+//! here for it — a pixel rendered by this model is as sharp as the arithmetic
+//! that made it, where a real negative would already be soft. Halation is the
+//! only spatial effect the model has, and it is the smaller of the two.
 
 /// One halation component: how far the light spreads and how much returns.
 #[derive(Debug, Clone, Copy)]
