@@ -18,6 +18,15 @@ fmt-check:
 lint:
     cargo clippy --workspace --all-targets --all-features -- -D warnings
 
+# Regenerate-and-compare the compiled stock table against the stock files.
+#
+# Local only: the stock files live in `private/`, which is not published, so CI
+# cannot run this. It fails when a stock file and `emulsion.rs` disagree.
+stocks:
+    PYTHONPATH=private/.pylib313 /opt/homebrew/bin/python3.13 \
+        private/scripts/compile_stocks.py --check private/stocks/kodak_portra_400.toml \
+        private/stocks/kodak_ektar_100.toml private/stocks/kodak_gold200.toml
+
 # Run the whole test suite.
 test:
     cargo test --workspace --all-features

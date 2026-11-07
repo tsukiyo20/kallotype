@@ -231,12 +231,8 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     FilmStock {
         id: "kodak_portra_400",
-        label: "KODAK PROFESSIONAL PORTRA 400, C-41",
-        note: "Measured curves and base (E-4050 p4, vector paths) and a measured \
-               MTF (sigma 4.01/3.00/2.76 um) and layer sensitivities in the stock \
-               file. The dye shapes are borrowed, because E-4050 prints a neutral \
-               subject and D-min rather than three dye curves. Grain is the \
-               VISION3 placeholder.",
+        label: "KODAK PROFESSIONAL PORTRA 400",
+        note: "Generated from kodak_portra_400.toml; borrowed: spectra.dyes.",
         channels: [
             curve(0.0, 1.6578, 0.6299, -0.6947),
             curve(0.0, 1.7095, 0.6276, -0.7407),
@@ -247,14 +243,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         layers: &crate::measured::KODAK_PORTRA400_LAYERS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
-        sigma_um: Some([4.01, 3.00, 2.76]),
+        sigma_um: Some([4.0100, 3.0000, 2.7600]),
     },
     FilmStock {
         id: "kodak_ektar_100",
-        label: "KODAK PROFESSIONAL EKTAR 100, C-41",
-        note: "Measured curves and base (E-4046 p4), layer sensitivities (p4) and \
-               MTF (sigma 4.45/3.39/3.18 um). Dye shapes are borrowed, as for \
-               PORTRA 400, and grain is the VISION3 placeholder.",
+        label: "KODAK PROFESSIONAL EKTAR 100",
+        note: "Generated from kodak_ektar_100.toml; borrowed: spectra.dyes.",
         channels: [
             curve(0.0, 1.6713, 0.6038, -0.7120),
             curve(0.0, 1.6693, 0.5911, -0.7400),
@@ -265,13 +259,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         layers: &crate::measured::KODAK_EKTAR100_LAYERS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
-        sigma_um: Some([4.45, 3.39, 3.18]),
+        sigma_um: Some([4.4500, 3.3900, 3.1800]),
     },
     FilmStock {
         id: "kodak_gold200",
-        label: "KODAK GOLD 200, C-41",
-        note: "Measured curves and base (E-7022 p4); its untitled curve panel sits \
-               above the sensitivity plot. Spectra, blur and grain are borrowed.",
+        label: "KODAK GOLD 200",
+        note: "Generated from kodak_gold200.toml; borrowed: spectra.layers, spectra.dyes, emulsion.sigma_um.",
         channels: [
             curve(0.0, 1.5411, 0.5473, -0.7300),
             curve(0.0, 1.6367, 0.5659, -0.7680),
