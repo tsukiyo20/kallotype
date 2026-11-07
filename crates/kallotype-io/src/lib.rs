@@ -81,7 +81,9 @@ impl From<image::ImageError> for IoError {
 /// leaves the guard in place rather than removing it.
 pub fn load(path: impl AsRef<Path>, encoding: InputEncoding) -> Result<Image, IoError> {
     let reader = image::ImageReader::open(path).map_err(image::ImageError::IoError)?;
-    let mut reader = reader.with_guessed_format().map_err(image::ImageError::IoError)?;
+    let mut reader = reader
+        .with_guessed_format()
+        .map_err(image::ImageError::IoError)?;
     let mut limits = image::Limits::default();
     limits.max_image_width = Some(65_535);
     limits.max_image_height = Some(65_535);
