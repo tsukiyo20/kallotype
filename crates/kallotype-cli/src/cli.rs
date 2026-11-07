@@ -162,13 +162,13 @@ pub struct RenderArgs {
     #[arg(long)]
     pub couplers: bool,
 
-    /// Add the film's own blur, from the measured modulation-transfer curve.
+    /// Skip the film's own blur, from the measured modulation-transfer curve.
     ///
-    /// This is what makes a rendered frame as soft as a negative rather than as
-    /// sharp as the arithmetic. It needs --frame-mm for the same reason the
-    /// others do: the blur is in micrometres of film.
-    #[arg(long)]
-    pub emulsion: bool,
+    /// It is on by default and is a no-op below about 12 megapixels: a 35 mm
+    /// frame sampled every 30 µm cannot show a 3 µm blur. Render at 12000 pixels
+    /// across and it starts to bite.
+    #[arg(long = "no-emulsion")]
+    pub no_emulsion: bool,
 
     /// Add halation: light scattered in the emulsion and reflected off the base.
     ///

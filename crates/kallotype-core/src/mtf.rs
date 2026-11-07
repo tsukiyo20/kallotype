@@ -61,10 +61,20 @@ impl EmulsionBlur {
         }
     }
 
-    /// Whether the blur would change anything.
+    /// Whether the blur would change anything **at this pixel size**.
+    ///
+    /// A film's blur is a few micrometres. A 35 mm frame rendered at 1200 pixels
+    /// across is sampled every 30 µm, so the blur is a tenth of a pixel wide and
+    /// doing it would be arithmetic that cannot show in the output. The same
+    /// frame at 12000 pixels is sampled every 3 µm and the blur is most of a
+    /// pixel — which is the resolution at which this term starts to matter, and
+    /// the reason it is not simply always on.
     #[must_use]
     pub fn is_noop(&self) -> bool {
-        self.sigma_um.iter().all(|&sigma| sigma <= 0.0)
+        let per_pixel = self.pixel_um.max(1e-9);
+        self.sigma_um
+            .iter()
+            .all(|&sigma| sigma <= 0.0 || sigma / per_pixel < 0.5)
     }
 
     /// Blur the exposure, in place, layer by layer.
@@ -138,6 +148,23 @@ mod tests {
             nearby[0] > nearby[2],
             "red {nearby:?} should be sharper than blue"
         );
+    }
+
+    /// The term is a few micrometres wide, so it only exists at resolutions
+    /// that sample the film at a few micrometres. This is the property that
+    /// decides whether a 1200-pixel render needs it at all.
+    #[test]
+    fn the_blur_is_a_no_op_below_the_film_s_blur() {
+        // A 35 mm frame at 1200 px across: sampled every 30 µm.
+        assert!(EmulsionBlur::measured(30.0).is_noop());
+        // At 6000 px across: every 6 µm, where blue is nearly a pixel wide.
+        assert!(!EmulsionBlur::measured(6.0).is_noop());
+        // And at 12000: every 3 µm, where all three layers blur.
+        let fine = EmulsionBlur::measured(3.0);
+        assert!(!fine.is_noop());
+        for sigma in fine.sigma_um {
+            assert!(sigma / 3.0 >= 0.5);
+        }
     }
 
     /// A flat frame is the identity: this is a blur, and a uniform field has

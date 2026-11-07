@@ -31,6 +31,11 @@ started with **DIR couplers** (`--couplers`): development inhibition between
 layers, with diffusion, and **masking couplers**: the orange mask is consumed as
 the cyan dye forms, so the mask and the dye's unwanted absorption cancel.
 
+The film's own **blur** is measured too, from the MTF curve on the same datasheet,
+and it is on by default — though it is a no-op below about twelve megapixels,
+because a 35 mm frame sampled every 30 µm cannot show a 3 µm blur. Render at
+12000 pixels across and it starts to bite. `--no-emulsion` turns it off.
+
 The spectral path is reached with `--spectral` (and `--spectral-print`,
 `--spectral-scan`); without those flags the renderer uses the per-channel scalar
 model, which is exact for neutrals and cheap everywhere. The spectral path runs

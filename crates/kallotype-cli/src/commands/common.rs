@@ -281,8 +281,15 @@ pub fn print_report(
     }
     if let Some(emulsion) = rendering.emulsion {
         println!(
-            "  blur      σ {:.2}/{:.2}/{:.2} µm  (measured MTF, H-1-5219 p.3)",
-            emulsion.sigma_um[0], emulsion.sigma_um[1], emulsion.sigma_um[2]
+            "  blur      σ {:.2}/{:.2}/{:.2} µm, {}  (measured MTF, H-1-5219 p.3)",
+            emulsion.sigma_um[0],
+            emulsion.sigma_um[1],
+            emulsion.sigma_um[2],
+            if emulsion.is_noop() {
+                "below the pixel"
+            } else {
+                "applied"
+            }
         );
     }
     if let Some(halation) = rendering.halation {

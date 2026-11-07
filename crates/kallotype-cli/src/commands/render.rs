@@ -133,7 +133,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             selection.film,
         )
     });
-    let emulsion = args.emulsion.then(|| EmulsionBlur::measured(pixel_um));
+    let emulsion = (!args.no_emulsion).then(|| EmulsionBlur::measured(pixel_um));
     let halation = args.halation.then(|| Halation::typical(pixel_um));
     let couplers = args.couplers.then(|| Couplers::typical(pixel_um));
     let finishing = Finishing {
