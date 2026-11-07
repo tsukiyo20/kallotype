@@ -1293,6 +1293,30 @@ mod tests {
         }
     }
 
+    /// An effect whose kernel would be thousands of taps is refused, not
+    /// truncated: a shorter kernel is a smaller blur, which is a different
+    /// photograph, and silently rendering it would be worse than falling back.
+    #[test]
+    fn an_impossibly_wide_kernel_is_refused() {
+        let kernels = EffectKernels::build(Some(Halation::typical(0.001)), None);
+        assert!(matches!(kernels, Err(GpuError::KernelTooWide(_))));
+    }
+
+    /// The spatial effects index by position, so a frame shape that does not
+    /// describe the pixels is an error rather than a guess about the layout.
+    #[test]
+    fn a_frame_shape_that_does_not_match_is_refused() {
+        let gpu = match Gpu::new() {
+            Ok(gpu) => gpu,
+            Err(_) => return,
+        };
+        let prepared = RenderParams::default().prepare();
+        assert!(matches!(
+            gpu.render_finished(&[[0.18; 3]; 4], &prepared, 3, 3, &Finishing::default()),
+            Err(GpuError::Shape { .. })
+        ));
+    }
+
     /// The kernels are the CPU's own, and the offsets are where the shader is
     /// told to look. This runs without an adapter, which is where CI lives.
     #[test]
