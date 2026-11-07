@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use kallotype_core::{Finishing, GrainField, Halation, render_pixels_finished};
+use kallotype_core::{Couplers, Finishing, GrainField, Halation, render_pixels_finished};
 use kallotype_io::{load, save};
 
 use crate::cli::RenderArgs;
@@ -32,9 +32,11 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         )
     });
     let halation = args.halation.then(|| Halation::typical(pixel_um));
+    let couplers = args.couplers.then(|| Couplers::typical(pixel_um));
     let finishing = Finishing {
         halation: halation.as_ref(),
         grain: grain.as_ref(),
+        couplers: couplers.as_ref(),
     };
     render_pixels_finished(
         &mut image.pixels,
@@ -58,6 +60,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         height,
         grain.as_ref(),
         halation.as_ref(),
+        couplers.as_ref(),
     );
     println!();
     println!(

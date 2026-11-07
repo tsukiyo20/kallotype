@@ -18,8 +18,9 @@ Phases 0–3 are in place: the characteristic curve and its dependence on
 development time and temperature, the spectral exposure path, the spectral print
 and the spectral scan. Phase 5 is in: **grain** (`--grain`), modelled as a
 particle process on the film's own scale, and **halation** (`--halation`), the
-light that scatters in the emulsion and reflects off the base. Couplers are not
-modelled yet.
+light that scatters in the emulsion and reflects off the base. Phase 6 has
+started with **DIR couplers** (`--couplers`): development inhibition between
+layers, with diffusion. Masking couplers are not modelled yet.
 
 The spectral path is reached with `--spectral` (and `--spectral-print`,
 `--spectral-scan`); without those flags the renderer uses the per-channel scalar
@@ -134,7 +135,13 @@ Three things are worth calling out:
    micrometres of film rather than pixels — move the exposure around, and a
    documented fraction returns. It runs before grain, because it is light
    exposing the emulsion and grain is what that light develops.
-5. **Grain is a count, not noise.** A pixel is an aperture over a random
+5. **Couplers are chemistry, not a colour matrix.** A layer that develops releases
+   an inhibitor that suppresses its neighbours', and its own, further
+   development — which is where interimage colour correction and the light line
+   along a dark edge come from. It is a matrix with a spatial kernel, and the
+   matrix can be fitted rather than typed: `fit_inhibition` recovers the matrix
+   that produced a set of measured patch densities.
+6. **Grain is a count, not noise.** A pixel is an aperture over a random
    arrangement of developed grains, so its exposure has counting statistics:
    `σ_logE = 1/(ln 10 · √N)` where `N` is how many grains the pixel holds. That
    one expression gives Selwyn granularity (`σ ∝ 1/√area`, so grain survives a

@@ -295,6 +295,8 @@ pub struct Finishing<'a> {
     pub halation: Option<&'a crate::halation::Halation>,
     /// The emulsion's grain.
     pub grain: Option<&'a crate::grain::GrainField>,
+    /// DIR couplers, acting on the developed densities.
+    pub couplers: Option<&'a crate::couplers::Couplers>,
 }
 
 /// Render a whole image with the finishing effects.
@@ -311,22 +313,50 @@ pub fn render_pixels_finished(
     finishing: &Finishing,
 ) {
     let width = width.max(1);
-    if let Some(halation) = finishing.halation {
-        let mut log_e: Vec<[f64; 3]> = pixels
-            .iter()
-            .map(|pixel| prepared.log_exposure(*pixel))
-            .collect();
-        halation.apply(&mut log_e, width, height);
+
+    // Without a spatial effect there is nothing to keep a frame for.
+    if finishing.halation.is_none() && finishing.couplers.is_none() {
         for (index, pixel) in pixels.iter_mut().enumerate() {
             let (x, y) = (index % width, index / width);
-            *pixel = prepared.finish(log_e[index], x, y, finishing.grain);
+            let log_e = prepared.log_exposure(*pixel);
+            *pixel = prepared.finish(log_e, x, y, finishing.grain);
         }
         return;
     }
-    for (index, pixel) in pixels.iter_mut().enumerate() {
-        let (x, y) = (index % width, index / width);
-        let log_e = prepared.log_exposure(*pixel);
-        *pixel = prepared.finish(log_e, x, y, finishing.grain);
+
+    // Exposure first: halation moves light between pixels, before anything is
+    // developed.
+    let mut log_e: Vec<[f64; 3]> = pixels
+        .iter()
+        .map(|pixel| prepared.log_exposure(*pixel))
+        .collect();
+    if let Some(halation) = finishing.halation {
+        halation.apply(&mut log_e, width, height);
+    }
+
+    // Then the emulsion: grain on the exposure, the curve on the result.
+    let mut density: Vec<[f64; 3]> = log_e
+        .iter()
+        .enumerate()
+        .map(|(index, log_e)| {
+            let mean = prepared.negative_density(*log_e);
+            match finishing.grain {
+                Some(grain) => prepared.negative_density(std::array::from_fn(|channel| {
+                    log_e[channel]
+                        + grain.jitter(index % width, index / width, mean[channel], channel)
+                })),
+                None => mean,
+            }
+        })
+        .collect();
+
+    // Then the chemistry: the inhibitors act on what has already developed.
+    if let Some(couplers) = finishing.couplers {
+        couplers.apply(&mut density, width, height);
+    }
+
+    for (pixel, density) in pixels.iter_mut().zip(density) {
+        *pixel = prepared.positive(density);
     }
 }
 
@@ -355,6 +385,7 @@ pub fn render_pixels_with_grain(
         &Finishing {
             halation: None,
             grain: Some(grain),
+            couplers: None,
         },
     );
 }

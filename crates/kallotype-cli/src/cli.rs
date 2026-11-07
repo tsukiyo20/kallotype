@@ -141,6 +141,13 @@ pub struct RenderArgs {
     #[arg(long, value_name = "N", default_value_t = 0)]
     pub grain_seed: u64,
 
+    /// Add DIR couplers: development inhibition between layers, with diffusion.
+    ///
+    /// This is what produces interimage colour correction and the Mackie line
+    /// along an edge. The matrix is a placeholder.
+    #[arg(long)]
+    pub couplers: bool,
+
     /// Add halation: light scattered in the emulsion and reflected off the base.
     ///
     /// Needs --frame-mm for the same reason grain does — the kernels are

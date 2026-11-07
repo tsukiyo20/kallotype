@@ -26,6 +26,7 @@
 #![forbid(unsafe_code)]
 
 pub mod color;
+pub mod couplers;
 pub mod curve;
 pub mod development;
 pub mod emulsion;
@@ -34,10 +35,12 @@ pub mod halation;
 pub mod lut;
 pub mod pipeline;
 pub mod print;
+pub mod psf;
 pub mod scan;
 pub mod spectral;
 
 pub use color::{linear_to_srgb, srgb_to_linear};
+pub use couplers::{Couplers, fit_inhibition};
 pub use curve::CharacteristicCurve;
 pub use development::DevelopmentParams;
 pub use emulsion::{FILM_STOCKS, FilmStock, PAPER_STOCKS, PaperStock, film_stock, paper_stock};

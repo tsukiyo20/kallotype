@@ -205,6 +205,7 @@ pub fn print_report(
     height: u32,
     grain: Option<&kallotype_core::GrainField>,
     halation: Option<&kallotype_core::Halation>,
+    couplers: Option<&kallotype_core::Couplers>,
 ) {
     let development = params.development;
 
@@ -239,6 +240,16 @@ pub fn print_report(
     );
     if prepared.is_spectral() || prepared.lut().is_some() {
         println!("  camera    {}", params.camera.name());
+    }
+    if let Some(couplers) = couplers {
+        let [row0, row1, row2] = couplers.inhibition;
+        println!(
+            "  couplers  inhibition R←{:?} G←{:?} B←{:?}  σ {:.0} µm  (placeholder)",
+            [row0[0], row0[1], row0[2]],
+            [row1[0], row1[1], row1[2]],
+            [row2[0], row2[1], row2[2]],
+            couplers.sigma_um
+        );
     }
     if let Some(halation) = halation {
         println!(

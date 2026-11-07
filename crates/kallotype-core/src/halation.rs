@@ -125,73 +125,15 @@ impl Halation {
             return vec![0.0; source.len()];
         }
         let sigma_px = halo.sigma_um / self.pixel_um.max(1e-9);
-        blur(source, width, height, sigma_px)
+        crate::psf::gaussian_blur(source, width, height, sigma_px)
     }
-}
-
-/// Separable Gaussian blur with clamped edges, unit sum.
-fn blur(plane: &[f64], width: usize, height: usize, sigma_px: f64) -> Vec<f64> {
-    if sigma_px <= 0.0 || width == 0 || height == 0 {
-        return vec![0.0; plane.len()];
-    }
-    let kernel = gaussian_kernel(sigma_px);
-    let radius = kernel.len() / 2;
-    let last_x = width.saturating_sub(1) as isize;
-    let last_y = height.saturating_sub(1) as isize;
-
-    // Horizontal pass.
-    let mut horizontal = vec![0.0; plane.len()];
-    for y in 0..height {
-        let row = &plane[y * width..(y + 1) * width];
-        for (x, out) in horizontal[y * width..(y + 1) * width]
-            .iter_mut()
-            .enumerate()
-        {
-            let mut sum = 0.0;
-            for (offset, &weight) in kernel.iter().enumerate() {
-                let source_x = (x as isize + offset as isize - radius as isize).clamp(0, last_x);
-                sum += weight * row[source_x as usize];
-            }
-            *out = sum;
-        }
-    }
-
-    // Vertical pass.
-    let mut out = vec![0.0; plane.len()];
-    for y in 0..height {
-        for x in 0..width {
-            let mut sum = 0.0;
-            for (offset, &weight) in kernel.iter().enumerate() {
-                let source_y = (y as isize + offset as isize - radius as isize).clamp(0, last_y);
-                sum += weight * horizontal[source_y as usize * width + x];
-            }
-            out[y * width + x] = sum;
-        }
-    }
-    out
-}
-
-/// A normalised 1-2-1-style Gaussian, three standard deviations out.
-fn gaussian_kernel(sigma_px: f64) -> Vec<f64> {
-    let radius = (3.0 * sigma_px).ceil().max(1.0) as usize;
-    let mut kernel: Vec<f64> = (0..=2 * radius)
-        .map(|index| {
-            let distance = index as f64 - radius as f64;
-            (-0.5 * (distance / sigma_px).powi(2)).exp()
-        })
-        .collect();
-    let sum: f64 = kernel.iter().sum();
-    if sum > 0.0 {
-        for weight in &mut kernel {
-            *weight /= sum;
-        }
-    }
-    kernel
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::psf::gaussian_blur as blur;
+    use crate::psf::gaussian_kernel;
 
     const W: usize = 64;
     const H: usize = 64;
