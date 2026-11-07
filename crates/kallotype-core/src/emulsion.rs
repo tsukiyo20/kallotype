@@ -28,7 +28,7 @@
 //! Paper is the exception and keeps its `d_min`: unexposed paper has a density
 //! of its own, it has no mask, and there is no second place to put it.
 
-use crate::curve::{CharacteristicCurve, PAPER_TRANSITION};
+use crate::curve::CharacteristicCurve;
 
 /// A film stock: one characteristic curve per colour layer.
 #[derive(Debug, Clone, Copy)]
@@ -141,6 +141,34 @@ pub static FILM_STOCKS: &[FilmStock] = &[
 /// Every paper stock compiled into the binary.
 pub static PAPER_STOCKS: &[PaperStock] = &[
     PaperStock {
+        id: "portra_endura",
+        label: "KODAK PROFESSIONAL PORTRA ENDURA, RA-4",
+        note: "Measured. Curve digitised from data sheet E-4021 page 7, the \
+               normal-contrast professional paper. White 0.096 status density, \
+               a print's, not the metallic stock's. Its dye spectra and layer \
+               sensitivities are not digitised yet: the spectral print uses the \
+               ENDURA Premier Metallic ones, which the scalar path does not.",
+        // The mean of the three measured layers at a transition of 7. Per layer
+        // they are red (0.0909, 2.6087, 3.68, −1.4125), green (0.0929, 2.5928,
+        // 3.38, −1.3950) and blue (0.1048, 2.4137, 4.57, −1.4275), reproduced to
+        // an rms of 0.017, 0.024 and 0.015. This chart is drawn as straight
+        // segments rather than cubics, which puts a floor of about 0.01 under
+        // any fit — the model is at that floor, not above it.
+        channel: curve(0.0964, 2.5358, 3.7821, -1.4125).with_transition(7.0),
+        target_mid_reflectance: 0.18,
+    },
+    PaperStock {
+        id: "supra_endura",
+        label: "KODAK PROFESSIONAL SUPRA ENDURA, RA-4",
+        note: "Measured. Curve digitised from the same sheet and page as PORTRA \
+               ENDURA: the higher-contrast professional paper. White 0.102.",
+        // The mean of the three layers at a transition of 8; per layer red
+        // (0.0943, 2.6607, 5.13, −1.1550), green (0.1048, 2.5631, 4.31, −1.1400)
+        // and blue (0.1073, 2.5307, 5.16, −1.1750), rms 0.025, 0.024, 0.032.
+        channel: curve(0.1010, 2.5847, 4.7309, -1.1575).with_transition(8.0),
+        target_mid_reflectance: 0.18,
+    },
+    PaperStock {
         id: "endura_premier_metallic",
         label: "KODAK PROFESSIONAL ENDURA Premier Metallic, RA-4",
         note: "Measured. Curve digitised from data sheet E-4071 page 4; its three \
@@ -153,7 +181,7 @@ pub static PAPER_STOCKS: &[PaperStock] = &[
         // 0.007. One curve serves the print, so this one is their average and
         // the layer spread at the shoulder — 0.30 of density — is what that
         // single curve cannot say.
-        channel: curve(0.1943, 2.5899, 5.7667, -1.1908).with_transition(PAPER_TRANSITION),
+        channel: curve(0.1944, 2.5902, 5.5716, -1.1900).with_transition(10.0),
         target_mid_reflectance: 0.18,
     },
     PaperStock {
@@ -243,39 +271,49 @@ mod tests {
     }
 
     /// Paper keeps its `d_min`, unlike film: unexposed paper has a density of
-    /// its own and no mask to carry it. The measured one's is the toe the data
-    /// sheet draws, and it is the paper's white — a print on it cannot reflect
-    /// more than a tenth of what 0.21 of density allows.
+    /// its own and no mask to carry it. That `d_min` is the paper's white, and
+    /// the three measured stocks have three different ones — 0.19 for the
+    /// metallic sheet, 0.10 for the two E-4021 papers. The default is one of
+    /// the latter, because a model whose prints cannot reflect more than 62 %
+    /// is modelling a specialty, not a print.
     #[test]
-    fn the_measured_paper_carries_its_white_as_the_toe() {
-        let paper = paper_stock("endura_premier_metallic").expect("the measured paper");
-        assert!(
-            (paper.channel.d_min - 0.1943).abs() < 1e-9,
-            "d_min {} is not the measured toe",
-            paper.channel.d_min
-        );
-        assert!(
-            (paper.channel.transition - PAPER_TRANSITION).abs() < 1e-9,
-            "a paper at a negative's transition cannot turn fast enough"
-        );
-        // The white is the base's reflectance, and the placeholder paper's is
-        // what a normal RA-4 sheet gives. This one is metallic and grey.
-        let white = 10.0_f64.powf(-paper.channel.d_min);
-        assert!(
-            white < 0.7,
-            "a metallic paper's white came out at {white}, too bright for its measured toe"
-        );
-        // And every other paper keeps the negative's transition away from it.
-        for stock in PAPER_STOCKS {
-            if stock.id != paper.id {
-                assert!(
-                    (stock.channel.transition - PAPER_TRANSITION).abs() > 1e-9
-                        || stock.channel.d_min > 0.15,
-                    "{} claims the paper transition without a measured curve",
-                    stock.id
-                );
-            }
+    fn the_measured_papers_carry_their_white_as_the_toe() {
+        let measured = [
+            ("portra_endura", 0.0964, 7.0),
+            ("supra_endura", 0.1010, 8.0),
+            ("endura_premier_metallic", 0.1944, 10.0),
+        ];
+        for (id, toe, transition) in measured {
+            let paper = paper_stock(id).unwrap_or_else(|| panic!("{id} is not a stock"));
+            assert!(
+                (paper.channel.d_min - toe).abs() < 1e-9,
+                "{id}: d_min {} is not the measured toe {toe}",
+                paper.channel.d_min
+            );
+            assert!(
+                (paper.channel.transition - transition).abs() < 1e-9,
+                "{id}: transition {}, not the {transition} its sheet fitted",
+                paper.channel.transition
+            );
         }
+
+        // The default paper is a print: its white is around 80 % reflectance,
+        // where the metallic stock's is around 62 %.
+        let default = paper_stock("portra_endura").expect("the default paper");
+        let white = 10.0_f64.powf(-default.channel.d_min);
+        assert!(
+            (0.7..0.9).contains(&white),
+            "the default paper's white came out at {white}"
+        );
+        assert!(
+            10.0_f64.powf(
+                -paper_stock("endura_premier_metallic")
+                    .unwrap()
+                    .channel
+                    .d_min
+            ) < 0.7,
+            "the metallic paper is not greyer than a print"
+        );
     }
 
     #[test]

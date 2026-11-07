@@ -59,6 +59,9 @@ fn stocks_lists_every_builtin() {
         "c41_standard",
         "c41_contrast",
         "bw_classic",
+        "portra_endura",
+        "supra_endura",
+        "endura_premier_metallic",
         "c41_paper",
         "bw_paper",
     ] {

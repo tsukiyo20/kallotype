@@ -155,42 +155,51 @@ fn curve_csv(stem: &str) -> Vec<(f64, f64)> {
         .collect()
 }
 
-/// The compiled paper curve is a compromise between three measured layers, and
-/// a compromise has a testable definition: it must lie inside the envelope the
-/// three data-sheet curves draw, everywhere. A regression that moved any of the
-/// four parameters through the side of the envelope would fail here.
+/// A paper stock carries one curve for three measured layers, which differ. The
+/// stock is therefore the four-parameter fit of their *mean*, and that is what
+/// this checks: recompute the mean from the data sheet and hold the compiled
+/// curve to it. A parameter that drifted would show up here as an rms, not as a
+/// plausible-looking curve.
 #[ignore = "reads the digitised datasets, which are not in this repository"]
 #[test]
-fn the_measured_paper_curve_lies_inside_its_three_layers() {
-    let paper = paper_stock("endura_premier_metallic").expect("the measured paper");
-    let layers = ["red", "green", "blue"]
-        .map(|name| curve_csv(&format!("paper_endura_premier_metallic_{name}")));
-    for layer in &layers {
-        assert!(layer.len() > 200, "only {} points", layer.len());
-    }
+fn the_measured_paper_curve_is_the_fit_of_its_three_layers_mean() {
+    for (stock, stem) in [
+        ("portra_endura", "portra_endura"),
+        ("supra_endura", "supra_endura"),
+        ("endura_premier_metallic", "paper_endura_premier_metallic"),
+    ] {
+        let paper = paper_stock(stock).unwrap_or_else(|| panic!("{stock} is not a stock"));
+        let layers = ["red", "green", "blue"].map(|name| curve_csv(&format!("{stem}_{name}")));
+        for layer in &layers {
+            assert!(layer.len() > 200, "{stem}: only {} points", layer.len());
+        }
 
-    let mut worst_inside: f64 = f64::NEG_INFINITY;
-    for (index, (log_e, _)) in layers[0].iter().enumerate() {
-        let low = layers
+        let mut sum = 0.0;
+        let mut worst: f64 = 0.0;
+        for (index, (log_e, _)) in layers[0].iter().enumerate() {
+            let mean = layers.iter().map(|layer| layer[index].1).sum::<f64>() / 3.0;
+            let error = paper.channel.density(*log_e) - mean;
+            sum += error * error;
+            worst = worst.max(error.abs());
+        }
+        let rms = (sum / layers[0].len() as f64).sqrt();
+        assert!(rms < 0.03, "{stock}: rms {rms:.4} against the layer mean");
+        assert!(
+            worst < 0.07,
+            "{stock}: worst {worst:.4} against the layer mean"
+        );
+
+        // And the mean cannot have been mistaken for one of the layers: the
+        // layers differ at the shoulder, most of all on the metallic sheet.
+        let shoulder = |layer: &Vec<(f64, f64)>| layer[layer.len() - 10].1;
+        let spread = layers
             .iter()
-            .map(|layer| layer[index].1)
-            .fold(f64::INFINITY, f64::min);
-        let high = layers
-            .iter()
-            .map(|layer| layer[index].1)
-            .fold(f64::NEG_INFINITY, f64::max);
-        let value = paper.channel.density(*log_e);
-        // How far the curve is from leaving the envelope, negative when inside.
-        worst_inside = worst_inside.max(low - value).max(value - high);
+            .map(&shoulder)
+            .fold(f64::NEG_INFINITY, f64::max)
+            - layers.iter().map(&shoulder).fold(f64::INFINITY, f64::min);
+        assert!(
+            spread > 0.05,
+            "{stock}: the layers only differ by {spread:.3}, so this test proves little"
+        );
     }
-    assert!(
-        worst_inside < 0.0,
-        "the stock's curve leaves the measured envelope by {}",
-        worst_inside
-    );
-    assert!(
-        worst_inside > -0.05,
-        "the stock's curve is {} inside the envelope — too far to be the mean",
-        -worst_inside
-    );
 }

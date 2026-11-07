@@ -63,23 +63,21 @@
 //! of density, against 0.14 with the negative's transition of 4 — a shape that
 //! cannot bend fast enough to be a paper.
 //!
-//! So `a` is a property of the material and lives on the curve. It is still not
-//! resolved per layer: the three paper layers want 8, 8 and 9.
+//! So `a` lives on the curve, and it is not even one number per material family:
+//! the two data sheets that have been digitised want different ones. ENDURA
+//! Premier Metallic turns at 10, the PORTRA and SUPRA ENDURA of E-4021 at 7 and
+//! 8 — a newer emulsion with a harder corner, and two older ones with a softer.
+//! Each stock carries what its own sheet was fitted at, and the value is not
+//! resolved per layer within a stock.
 
 /// How sharply the straight line turns into the toe and the shoulder, per
-/// decade of exposure, for a **negative film**.
+/// decade of exposure.
 ///
-/// Fitted from the measured VISION3 500T curves at 1.09–1.33 per stop, which is
-/// 3.6–4.4 per decade.
+/// This is the negative's value, fitted from the measured VISION3 500T curves at
+/// 1.09–1.33 per stop, and it is the default for a curve built without a
+/// measurement of its own. It is **not** a universal constant: every measured
+/// stock carries the value its own sheet was fitted at. See the module docs.
 pub const TRANSITION: f64 = 4.0;
-
-/// The same number for a **paper**, where there is no straight line.
-///
-/// Fitted from the measured ENDURA Premier Metallic curves. Below 6 the model
-/// cannot turn fast enough and the fit collapses; at 10 the paper's three layers
-/// land within 0.013 of the data sheet, and the `gamma` it settles on is within
-/// 1.4× of the steepest slope the chart draws.
-pub const PAPER_TRANSITION: f64 = 10.0;
 
 /// Numerically stable `ln(1 + e^u)`.
 ///
@@ -174,7 +172,8 @@ pub struct CharacteristicCurve {
     pub log_e0: f64,
     /// How sharply the toe and the shoulder turn, per decade.
     ///
-    /// [`TRANSITION`] for a negative, [`PAPER_TRANSITION`] for a paper.
+    /// [`TRANSITION`] unless a measurement said otherwise: the measured stocks
+    /// carry their own, from 7 for a print to 10 for a harder-cornered one.
     pub transition: f64,
 }
 
@@ -380,7 +379,8 @@ mod tests {
 
         // The paper's measured red layer, at both materials' transitions.
         let paper = CharacteristicCurve::new(0.2078, 2.7739, 5.24, -1.1750);
-        let sharp = peak(paper.with_transition(PAPER_TRANSITION));
+        // The transition the metallic paper's own sheet fitted.
+        let sharp = peak(paper.with_transition(10.0));
         let soft = peak(paper.with_transition(TRANSITION));
         assert!(
             (sharp - 4.4).abs() < 0.2,

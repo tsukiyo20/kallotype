@@ -56,7 +56,7 @@ impl Default for RenderParams {
     fn default() -> Self {
         Self {
             film: crate::emulsion::film_stock("vision3_500t").expect("built-in stock"),
-            paper: crate::emulsion::paper_stock("c41_paper").expect("built-in stock"),
+            paper: crate::emulsion::paper_stock("portra_endura").expect("built-in stock"),
             development: DevelopmentParams::default(),
             exposure_ev: 0.0,
             spectral: false,

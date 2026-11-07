@@ -48,7 +48,7 @@ pub struct StockArgs {
     pub film: String,
 
     /// Paper stock id (see `kalo stocks`).
-    #[arg(long, default_value = "c41_paper")]
+    #[arg(long, default_value = "portra_endura")]
     pub paper: String,
 
     /// Development time in minutes.
