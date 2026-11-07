@@ -1,43 +1,72 @@
 //! A wgpu backend that must agree with [`kallotype_core`].
 //!
-//! The point of this crate is not speed yet. It is that a second implementation
-//! of the model exists and is held to a number: [`Gpu::render`] and
+//! The point of this crate is not speed. It is that a second implementation of
+//! the model exists and is held to a number: [`Gpu::render`] and
 //! [`kallotype_core::render_pixels`] are compared on the same pixels, and the
 //! difference is asserted against [`TOLERANCE`]. A GPU port that "looks right"
 //! is how a film simulation acquires two different films.
 //!
 //! ## What it covers
 //!
-//! The **scalar path only**. The spectral stages integrate over wavelength, so a
-//! backend that wants them has to port the integration rather than a handful of
-//! solved constants; that is a later phase, and [`Gpu::render`] returns
-//! [`GpuError::NotScalar`] rather than silently rendering something else.
+//! Both exposed models:
+//!
+//! - the **scalar path**, where the CPU hands over the numbers it solved;
+//! - the **spectral path**, where there are no numbers to hand over because the
+//!   model integrates over wavelength. That one gets the tables instead — the
+//!   polynomial basis, the film layers, the dye spectra, the illuminants, the
+//!   observer — plus the three 3×3 systems already inverted, so the shader
+//!   multiplies where the CPU would solve.
+//!
+//! The exposure, the print and the scan are independent stages, and every
+//! combination of them anywhere between has a branch in `spectral.wgsl`. What
+//! is *not* covered is deliberate: a baked table and a dictionary prior are
+//! their own models — a sampled cube and a per-pixel non-negative least squares
+//! — and [`Gpu::render`] returns [`GpuError::Unsupported`] rather than
+//! rendering something adjacent.
+//!
+//! Grain, halation and DIR couplers are spatial and live outside both shaders;
+//! the caller decides what to do about that rather than being told the render
+//! succeeded.
 //!
 //! ## Where the tolerance comes from
 //!
-//! The CPU runs in f64 and the shader in f32, so the difference is rounding, and
-//! the interesting part is how the model amplifies it. Two places do: the
-//! characteristic curve's slope (about `gamma` densities per decade) and the
-//! print's logistic, which is steepest near the anchor. Both are *stable* —
-//! they multiply an error rather than growing one — so the difference stays
-//! bounded. Measured across a 2 048-pixel grid that spans the toe and the
-//! shoulder, the worst per-channel difference is `2.2e-7` in linear light, and
-//! [`TOLERANCE`] is set nearly three orders of magnitude above it.
+//! The CPU runs in f64 and the shaders in f32, so the difference is rounding,
+//! and the interesting part is how the model amplifies it. The scalar path has
+//! two amplifiers: the characteristic curve's slope (about `gamma` densities per
+//! decade) and the print's logistic, which is steepest near the anchor. Both are
+//! *stable* — they multiply an error rather than growing one. Measured across a
+//! 2 048-pixel grid that spans the toe and the shoulder, the worst per-channel
+//! difference on the scalar path is `2.2e-7` in linear light.
+//!
+//! The spectral path adds four more: two `log10` per pixel, a `10^-d` per
+//! wavelength, and a larger dynamic range on the way — the paper's blue layer
+//! integrates to about 13 before normalisation and the observer to about 9 000.
+//! Cancellation is the thing to watch, and it does not appear: the reconstruction
+//! matrix is small and well scaled, and every table is non-negative. Measured
+//! over the same grid, the worst difference is `3.6e-7` with the spectral
+//! exposure, `8.2e-7` with the spectral print and `1.0e-6` with all three
+//! stages, which is why one [`TOLERANCE`] covers both shaders.
 //!
 //! ## No adapter, no test
 //!
-//! CI runners have no GPU and some have no software rasteriser either. The test
-//! skips when no adapter can be opened, and says so, because a GPU test that
-//! fails on a machine without a GPU teaches people to ignore it.
+//! CI runners have no GPU and some have no software rasteriser either. The tests
+//! skip when no adapter can be opened, and say so, because a GPU test that fails
+//! on a machine without a GPU teaches people to ignore it.
 
-use kallotype_core::{PreparedRender, ScalarModel};
+#[cfg(test)]
+mod replay;
+
+use kallotype_core::model::NEUTRAL_ENTRIES;
+use kallotype_core::spectral::GRID_LEN;
+use kallotype_core::{PreparedRender, ScalarModel, SpectralModel};
 
 /// The largest per-channel difference the two backends are allowed, in linear
 /// light.
 ///
-/// Measured on this model the worst difference is `2.2e-7`; the bound is set
-/// nearly three orders of magnitude above it so it catches a wrong
-/// implementation rather than a rounding mode.
+/// Measured on this model the worst difference is `2.2e-7` on the scalar path
+/// and `1.0e-6` on the full spectral one; the bound is set two orders of
+/// magnitude above them so it catches a wrong implementation rather than a
+/// rounding mode.
 pub const TOLERANCE: f64 = 1.0e-4;
 
 /// Why the GPU backend could not render.
@@ -46,7 +75,7 @@ pub enum GpuError {
     /// No adapter, or the device could not be created.
     NoAdapter(String),
     /// The render uses a stage this backend does not implement.
-    NotScalar,
+    Unsupported,
     /// The pixel count does not match the buffer size used.
     Empty,
 }
@@ -55,10 +84,10 @@ impl std::fmt::Display for GpuError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NoAdapter(message) => write!(formatter, "no GPU adapter: {message}"),
-            Self::NotScalar => write!(
+            Self::Unsupported => write!(
                 formatter,
-                "this backend implements the scalar path only; turn off --spectral, \
-                 --spectral-print, --spectral-scan and --lut"
+                "the gpu backend replays closed-form models only; this render uses a baked \
+                 exposure table or a dictionary prior, both of which are solvers"
             ),
             Self::Empty => write!(formatter, "no pixels to render"),
         }
@@ -67,13 +96,19 @@ impl std::fmt::Display for GpuError {
 
 impl std::error::Error for GpuError {}
 
-/// A device and a compute pipeline, reused across renders.
+/// A device and the two compute pipelines, reused across renders.
 pub struct Gpu {
     device: wgpu::Device,
     queue: wgpu::Queue,
+    scalar: Stage,
+    spectral: Stage,
+    adapter: wgpu::AdapterInfo,
+}
+
+/// One pipeline and the layout its bind group has to match.
+struct Stage {
     pipeline: wgpu::ComputePipeline,
     binder: wgpu::BindGroupLayout,
-    adapter: wgpu::AdapterInfo,
 }
 
 impl std::fmt::Debug for Gpu {
@@ -92,7 +127,7 @@ impl Gpu {
         format!("{} ({:?})", self.adapter.name, self.adapter.backend)
     }
 
-    /// Open the default adapter and build the pipeline.
+    /// Open the default adapter and build both pipelines.
     ///
     /// # Errors
     ///
@@ -120,87 +155,51 @@ impl Gpu {
         }))
         .map_err(|error| GpuError::NoAdapter(error.to_string()))?;
 
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("scalar"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/scalar.wgsl").into()),
-        });
-
-        let binder = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("scalar"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-        });
-
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("scalar"),
-            bind_group_layouts: &[&binder],
-            push_constant_ranges: &[],
-        });
-
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("scalar"),
-            layout: Some(&layout),
-            module: &shader,
-            entry_point: Some("main"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let scalar = Stage::build(
+            &device,
+            "scalar",
+            include_str!("../shaders/scalar.wgsl"),
+            false,
+        );
+        let spectral = Stage::build(
+            &device,
+            "spectral",
+            include_str!("../shaders/spectral.wgsl"),
+            true,
+        );
 
         Ok(Self {
             device,
             queue,
-            pipeline,
-            binder,
+            scalar,
+            spectral,
             adapter: adapter.get_info(),
         })
     }
 
-    /// Render pixels through the scalar model.
+    /// Render pixels through whichever model the render prepared.
     ///
     /// # Errors
     ///
-    /// [`GpuError::NotScalar`] when the prepared render uses any spectral stage,
-    /// and [`GpuError::Empty`] for an empty image.
+    /// [`GpuError::Unsupported`] when the render uses a stage this backend does
+    /// not implement, and [`GpuError::Empty`] for an empty image.
     pub fn render(
         &self,
         pixels: &[[f64; 3]],
         prepared: &PreparedRender,
     ) -> Result<Vec<[f64; 3]>, GpuError> {
-        let model = prepared.scalar_model().ok_or(GpuError::NotScalar)?;
-        self.render_model(pixels, &model)
+        // Exactly one of these describes a given render; the scalar case comes
+        // first only because it is the one with fewer numbers in it.
+        if let Some(model) = prepared.scalar_model() {
+            return self.render_model(pixels, &model);
+        }
+        if let Some(model) = prepared.spectral_model() {
+            return self.render_spectral(pixels, &model);
+        }
+        Err(GpuError::Unsupported)
     }
 
-    /// The same, from the flattened numbers.
+    /// Render pixels through the scalar model.
     ///
     /// # Errors
     ///
@@ -210,19 +209,52 @@ impl Gpu {
         pixels: &[[f64; 3]],
         model: &ScalarModel,
     ) -> Result<Vec<[f64; 3]>, GpuError> {
+        self.execute(&self.scalar, "scalar", pixels, &scalar_uniform(model), None)
+    }
+
+    /// Render pixels through the spectral model.
+    ///
+    /// # Errors
+    ///
+    /// [`GpuError::Empty`] for an empty image.
+    pub fn render_spectral(
+        &self,
+        pixels: &[[f64; 3]],
+        model: &SpectralModel,
+    ) -> Result<Vec<[f64; 3]>, GpuError> {
+        self.execute(
+            &self.spectral,
+            "spectral",
+            pixels,
+            &spectral_uniform(model),
+            Some(&spectral_tables(model)),
+        )
+    }
+
+    /// Upload, dispatch, read back.
+    ///
+    /// Shared by both pipelines because the only thing that differs between
+    /// them is what is in the uniform and whether there are tables.
+    fn execute(
+        &self,
+        stage: &Stage,
+        label: &'static str,
+        pixels: &[[f64; 3]],
+        uniform: &[u8],
+        tables: Option<&[u8]>,
+    ) -> Result<Vec<[f64; 3]>, GpuError> {
         if pixels.is_empty() {
             return Err(GpuError::Empty);
         }
 
         let bytes = (pixels.len() * 16) as u64;
-        let uniform = self.uniform(model);
         let uniform_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("params"),
             size: uniform.len() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        self.queue.write_buffer(&uniform_buffer, 0, &uniform);
+        self.queue.write_buffer(&uniform_buffer, 0, uniform);
 
         let mut input_bytes = Vec::with_capacity(bytes as usize);
         for pixel in pixels {
@@ -252,36 +284,53 @@ impl Gpu {
             mapped_at_creation: false,
         });
 
+        let table_buffer = tables.map(|tables| {
+            let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("tables"),
+                size: tables.len() as u64,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            self.queue.write_buffer(&buffer, 0, tables);
+            buffer
+        });
+
+        let mut entries = vec![
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: uniform_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: input.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: output.as_entire_binding(),
+            },
+        ];
+        if let Some(buffer) = &table_buffer {
+            entries.push(wgpu::BindGroupEntry {
+                binding: 3,
+                resource: buffer.as_entire_binding(),
+            });
+        }
+
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("scalar"),
-            layout: &self.binder,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: uniform_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: input.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: output.as_entire_binding(),
-                },
-            ],
+            label: Some(label),
+            layout: &stage.binder,
+            entries: &entries,
         });
 
         let mut encoder = self
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("scalar"),
-            });
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some(label) });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("scalar"),
+                label: Some(label),
                 timestamp_writes: None,
             });
-            pass.set_pipeline(&self.pipeline);
+            pass.set_pipeline(&stage.pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
             let groups = pixels.len().div_ceil(64) as u32;
             pass.dispatch_workgroups(groups, 1, 1);
@@ -321,26 +370,252 @@ impl Gpu {
         staging.unmap();
         Ok(out)
     }
+}
 
-    /// The uniform buffer for a model, in the layout `scalar.wgsl` expects.
-    fn uniform(&self, model: &ScalarModel) -> Vec<u8> {
-        let mut floats: Vec<f32> = Vec::with_capacity(20);
-        for curve in &model.curve {
-            floats.extend(curve.iter().map(|&value| value as f32));
+impl Stage {
+    fn build(
+        device: &wgpu::Device,
+        label: &'static str,
+        source: &'static str,
+        tables: bool,
+    ) -> Self {
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some(label),
+            source: wgpu::ShaderSource::Wgsl(source.into()),
+        });
+
+        let entry = |binding: u32, ty: wgpu::BufferBindingType| wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+                ty,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        };
+        let mut entries = vec![
+            entry(0, wgpu::BufferBindingType::Uniform),
+            entry(1, wgpu::BufferBindingType::Storage { read_only: true }),
+            entry(2, wgpu::BufferBindingType::Storage { read_only: false }),
+        ];
+        if tables {
+            entries.push(entry(
+                3,
+                wgpu::BufferBindingType::Storage { read_only: true },
+            ));
         }
-        // (paper d_min, paper span, enlarger slope, exposure shift)
-        floats.push(model.paper[0] as f32);
-        floats.push(model.paper[1] as f32);
-        floats.push(model.print[0] as f32);
-        floats.push(model.exposure_shift as f32);
-        // The three anchors, padded to a vec4.
-        floats.extend(model.print[1..4].iter().map(|&value| value as f32));
-        floats.push(0.0);
-        floats
-            .iter()
-            .flat_map(|value| value.to_le_bytes())
-            .collect()
+
+        let binder = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some(label),
+            entries: &entries,
+        });
+        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some(label),
+            bind_group_layouts: &[&binder],
+            push_constant_ranges: &[],
+        });
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some(label),
+            layout: Some(&layout),
+            module: &module,
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+
+        Self { pipeline, binder }
     }
+}
+
+// ---------------------------------------------------------------------------
+// The uniform and the tables, in the layout the shaders declare.
+// ---------------------------------------------------------------------------
+
+/// The uniform buffer for a scalar model, in the layout `scalar.wgsl` expects.
+fn scalar_uniform(model: &ScalarModel) -> Vec<u8> {
+    let mut floats: Vec<f32> = Vec::with_capacity(20);
+    for curve in &model.curve {
+        floats.extend(curve.iter().map(|&value| value as f32));
+    }
+    // (paper d_min, paper span, enlarger slope, exposure shift)
+    floats.push(model.paper[0] as f32);
+    floats.push(model.paper[1] as f32);
+    floats.push(model.print[0] as f32);
+    floats.push(model.exposure_shift as f32);
+    // The three anchors, padded to a vec4.
+    floats.extend(model.print[1..4].iter().map(|&value| value as f32));
+    floats.push(0.0);
+    floats
+        .iter()
+        .flat_map(|value| value.to_le_bytes())
+        .collect()
+}
+
+/// The uniform buffer for a spectral model, in the layout `spectral.wgsl`
+/// expects: fifteen `vec4` lanes, in the order the struct declares them.
+fn spectral_uniform(model: &SpectralModel) -> Vec<u8> {
+    let scalar = &model.scalar;
+    let exposure = model.exposure.as_ref();
+    let enlarger = model.enlarger.as_ref();
+    let scan = model.scan.as_ref();
+
+    let mut lanes: Vec<[f32; 4]> = Vec::with_capacity(15);
+    for curve in &scalar.curve {
+        lanes.push(curve.map(|value| value as f32));
+    }
+    lanes.push([
+        scalar.paper[0] as f32,
+        scalar.paper[1] as f32,
+        scalar.print[0] as f32,
+        scalar.exposure_shift as f32,
+    ]);
+    lanes.push([
+        scalar.print[1] as f32,
+        scalar.print[2] as f32,
+        scalar.print[3] as f32,
+        0.0,
+    ]);
+    lanes.push([GRID_LEN as f32, model.step_nm as f32, 0.0, 0.0]);
+    // `f32::from(bool)` does not exist, and a `0.0`/`1.0` lane is what the
+    // shader compares against `0.5`.
+    lanes.push(lane(
+        exposure.map_or([0.0; 3], |model| model.reference),
+        0.0,
+    ));
+    lanes.push(lane(
+        enlarger.map_or([0.0; 3], |model| model.reference),
+        0.0,
+    ));
+    lanes.push([
+        enlarger.map_or(0.0, |model| model.masking[0]) as f32,
+        enlarger.map_or(0.0, |model| model.masking[1]) as f32,
+        enlarger.map_or(0.0, |model| model.masking[2]) as f32,
+        enlarger.map_or(1.0, |model| model.masking_reference) as f32,
+    ]);
+    lanes.push(lane(enlarger.map_or([0.0; 3], |model| model.filters), 0.0));
+    lanes.push(lane(scan.map_or([1.0; 3], |model| model.white_xyz), 0.0));
+    lanes.push(lane(scan.map_or([1.0; 3], |model| model.white_rgb), 0.0));
+    lanes.push([
+        scan.map_or(0.0, |model| model.neutral_max_density) as f32,
+        // Derived from the table rather than from a second constant: the
+        // neutral axis runs from density zero to its span in `len - 1` steps.
+        scan.map_or(0.0, |model| (model.neutral.len() - 1) as f64) as f32,
+        scan.map_or(0.0, |model| model.base_density) as f32,
+        0.0,
+    ]);
+    lanes.push([
+        flag(model.exposure.is_some()),
+        flag(model.enlarger.is_some()),
+        flag(model.scan.is_some()),
+        flag(enlarger.is_some_and(|model| model.clamped)),
+    ]);
+    lanes.push([flag(scan.is_some_and(|model| model.clamped)), 0.0, 0.0, 0.0]);
+
+    lanes
+        .iter()
+        .flatten()
+        .flat_map(|value| value.to_le_bytes())
+        .collect()
+}
+
+/// Append `values` as f32, which is the only conversion the tables need.
+fn push(out: &mut Vec<f32>, values: &[f64]) {
+    out.extend(values.iter().map(|&value| value as f32));
+}
+
+fn flag(value: bool) -> f32 {
+    if value { 1.0 } else { 0.0 }
+}
+
+fn lane(values: [f64; 3], fourth: f64) -> [f32; 4] {
+    [
+        values[0] as f32,
+        values[1] as f32,
+        values[2] as f32,
+        fourth as f32,
+    ]
+}
+
+/// Floats in `spectral.wgsl`'s `Tables` struct, in its declared order.
+///
+/// Kept as arithmetic rather than a number so that it follows [`GRID_LEN`] and
+/// [`NEUTRAL_ENTRIES`]; a test asserts the writer produces exactly this many.
+/// Reconstruction, basis, film layers.
+const EXPOSURE_FLOATS: usize = 9 + 6 * GRID_LEN;
+/// Unmixing, dye, paper layers, illuminant, mask, filter bands.
+const PRINT_FLOATS: usize = 9 + 11 * GRID_LEN;
+/// Unmixing, dye, observer, illuminant, matrix, neutral axis.
+const SCAN_FLOATS: usize = 9 + 7 * GRID_LEN + 9 + 3 * NEUTRAL_ENTRIES;
+
+const TABLE_FLOATS: usize = EXPOSURE_FLOATS + PRINT_FLOATS + SCAN_FLOATS;
+
+/// The tables buffer, in the order `spectral.wgsl`'s `Tables` declares.
+///
+/// A stage that is not active still occupies its slice: the struct has a fixed
+/// shape, and a buffer that grew and shrank would put the scan's dye table where
+/// the print expected its own the moment someone turned a flag off.
+fn spectral_tables(model: &SpectralModel) -> Vec<u8> {
+    let mut floats: Vec<f32> = Vec::with_capacity(TABLE_FLOATS);
+
+    match &model.exposure {
+        Some(exposure) => {
+            push(&mut floats, &exposure.reconstruct.concat());
+            for row in &exposure.basis {
+                push(&mut floats, row);
+            }
+            for row in &exposure.film {
+                push(&mut floats, row);
+            }
+        }
+        None => floats.resize(floats.len() + EXPOSURE_FLOATS, 0.0),
+    }
+
+    match &model.enlarger {
+        Some(enlarger) => {
+            push(&mut floats, &enlarger.analytical.concat());
+            for row in &enlarger.dye {
+                push(&mut floats, row);
+            }
+            for row in &enlarger.paper {
+                push(&mut floats, row);
+            }
+            push(&mut floats, &enlarger.illuminant);
+            push(&mut floats, &enlarger.mask);
+            for row in &enlarger.filter_bands {
+                push(&mut floats, row);
+            }
+        }
+        None => floats.resize(floats.len() + PRINT_FLOATS, 0.0),
+    }
+
+    match &model.scan {
+        Some(scan) => {
+            push(&mut floats, &scan.analytical.concat());
+            for row in &scan.dye {
+                push(&mut floats, row);
+            }
+            for row in &scan.cmf {
+                push(&mut floats, row);
+            }
+            push(&mut floats, &scan.illuminant);
+            push(&mut floats, &scan.matrix.concat());
+            for level in &scan.neutral {
+                push(&mut floats, level);
+            }
+        }
+        None => floats.resize(floats.len() + SCAN_FLOATS, 0.0),
+    }
+
+    debug_assert_eq!(
+        floats.len(),
+        TABLE_FLOATS,
+        "the tables buffer must cover exactly what the shader declares"
+    );
+    floats
+        .iter()
+        .flat_map(|value| value.to_le_bytes())
+        .collect()
 }
 
 #[cfg(test)]
@@ -364,35 +639,36 @@ mod tests {
         out.push([0.0; 3]);
         out.push([1.0; 3]);
         out.push([0.0001, 0.5, 4.0]);
+        // The spectral path's reconstruction is a quadratic in wavelength, so a
+        // saturated primary drives the clamp and a nearly-neutral colour drives
+        // the grey balance. Both belong in the comparison.
+        out.push([0.9, 0.05, 0.02]);
+        out.push([0.02, 0.6, 0.02]);
+        out.push([0.02, 0.05, 0.9]);
+        out.push([0.18; 3]);
         out
     }
 
-    /// The whole point of the crate: two implementations, one number between
-    /// them.
-    #[test]
-    fn the_gpu_matches_the_cpu_within_the_stated_tolerance() {
+    /// The difference between the two backends, worst channel first.
+    fn compare(prepared: &kallotype_core::PreparedRender) -> f64 {
         let gpu = match Gpu::new() {
             Ok(gpu) => gpu,
             Err(error) => {
                 eprintln!("skipping the GPU comparison: {error}");
-                return;
+                return 0.0;
             }
         };
-        let prepared = RenderParams::default().prepare();
         let input = pixels();
-
         let mut cpu = input.clone();
-        render_pixels(&mut cpu, &prepared);
-        let gpu_out = gpu
-            .render(&input, &prepared)
-            .expect("the scalar path renders");
+        render_pixels(&mut cpu, prepared);
+        let gpu_out = gpu.render(&input, prepared).expect("the model renders");
 
         assert_eq!(cpu.len(), gpu_out.len());
         let mut worst = 0.0_f64;
         let mut where_worst = [0.0; 3];
-        for (index, (a, b)) in cpu.iter().zip(&gpu_out).enumerate() {
+        for (index, (expected, actual)) in cpu.iter().zip(&gpu_out).enumerate() {
             for channel in 0..3 {
-                let difference = (a[channel] - b[channel]).abs();
+                let difference = (expected[channel] - actual[channel]).abs();
                 if difference > worst {
                     worst = difference;
                     where_worst = input[index];
@@ -403,25 +679,142 @@ mod tests {
             worst < TOLERANCE,
             "worst difference {worst:.2e} at input {where_worst:?}, tolerance {TOLERANCE:.0e}"
         );
+        println!("worst difference {worst:.2e}");
+        worst
     }
 
-    /// A spectral render cannot be pushed through a backend that does not
-    /// integrate, and it must say so instead of rendering the scalar path.
+    /// CI has no adapter, so the tests above skip there. This one does not: it
+    /// replays the shader arithmetic from the same model the buffer writer uses
+    /// and compares it against the CPU, which catches a table left out of the
+    /// buffer even on a machine that cannot run the shader at all.
     #[test]
-    fn a_spectral_render_is_refused() {
+    fn the_replayed_shaders_agree_with_the_cpu() {
+        let input = pixels();
+        for (name, params) in [
+            ("scalar", RenderParams::default()),
+            (
+                "exposure",
+                RenderParams {
+                    spectral: true,
+                    ..RenderParams::default()
+                },
+            ),
+            (
+                "print",
+                RenderParams {
+                    spectral_print: true,
+                    ..RenderParams::default()
+                },
+            ),
+            (
+                "chain",
+                RenderParams {
+                    spectral: true,
+                    spectral_print: true,
+                    spectral_scan: true,
+                    ..RenderParams::default()
+                },
+            ),
+        ] {
+            let prepared = params.prepare();
+            let mut cpu = input.clone();
+            render_pixels(&mut cpu, &prepared);
+            let replayed = replay::render(&input, &prepared);
+
+            let mut worst = 0.0_f64;
+            for (expected, actual) in cpu.iter().zip(&replayed) {
+                for channel in 0..3 {
+                    worst = worst.max((expected[channel] - actual[channel]).abs());
+                }
+            }
+            assert!(worst < 1e-9, "{name}: the replay differs by {worst:.2e}");
+        }
+    }
+
+    /// The whole point of the crate: two implementations, one number between
+    /// them.
+    #[test]
+    fn the_scalar_path_matches_the_cpu() {
+        compare(&RenderParams::default().prepare());
+    }
+
+    /// The exposure integrates over wavelength, and the print and the strip stay
+    /// per channel.
+    #[test]
+    fn the_spectral_exposure_matches_the_cpu() {
+        compare(
+            &RenderParams {
+                spectral: true,
+                ..RenderParams::default()
+            }
+            .prepare(),
+        );
+    }
+
+    /// The print integrates and the exposure does not: one of the two mixed
+    /// cases, and the one where the dye tables and the mask matter.
+    #[test]
+    fn the_spectral_print_matches_the_cpu() {
+        compare(
+            &RenderParams {
+                spectral_print: true,
+                ..RenderParams::default()
+            }
+            .prepare(),
+        );
+    }
+
+    /// All three stages, which is the full chain and the longest error path.
+    #[test]
+    fn the_whole_spectral_chain_matches_the_cpu() {
+        compare(
+            &RenderParams {
+                spectral: true,
+                spectral_print: true,
+                spectral_scan: true,
+                ..RenderParams::default()
+            }
+            .prepare(),
+        );
+    }
+
+    /// A baked table is a sampled cube, not an integration, and a dictionary is
+    /// a per-pixel solve. Both must be refused rather than approximated.
+    #[test]
+    fn a_table_or_a_dictionary_is_refused() {
         let gpu = match Gpu::new() {
             Ok(gpu) => gpu,
             Err(_) => return,
         };
-        let prepared = RenderParams {
+
+        let baked = RenderParams {
             spectral: true,
+            lut_size: 17,
             ..RenderParams::default()
         }
         .prepare();
         assert!(matches!(
-            gpu.render(&[[0.18; 3]], &prepared),
-            Err(GpuError::NotScalar)
+            gpu.render(&[[0.18; 3]], &baked),
+            Err(GpuError::Unsupported)
         ));
+    }
+
+    /// The CPU writes the tables; the shader declares them. Nothing else checks
+    /// that the two agree about how many there are.
+    #[test]
+    fn the_tables_buffer_is_the_length_the_shader_declares() {
+        let prepared = RenderParams {
+            spectral: true,
+            spectral_print: true,
+            spectral_scan: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        let model = prepared.spectral_model().expect("all three stages");
+        assert_eq!(spectral_tables(&model).len(), TABLE_FLOATS * 4);
+
+        let uniform = spectral_uniform(&model);
+        assert_eq!(uniform.len(), 15 * 16, "fifteen vec4 lanes");
     }
 }
 
@@ -439,7 +832,6 @@ mod timing {
     #[ignore = "timing, not correctness; run with --ignored --nocapture"]
     fn how_fast_is_it_actually() {
         let gpu = Gpu::new().expect("a GPU adapter");
-        let prepared = RenderParams::default().prepare();
         let mut pixels = Vec::with_capacity(1920 * 1080);
         for y in 0..1080u32 {
             for x in 0..1920u32 {
@@ -449,22 +841,36 @@ mod timing {
             }
         }
 
-        let mut cpu = pixels.clone();
-        let start = std::time::Instant::now();
-        kallotype_core::render_pixels(&mut cpu, &prepared);
-        let cpu_time = start.elapsed();
+        for (name, params) in [
+            ("scalar", RenderParams::default()),
+            (
+                "spectral",
+                RenderParams {
+                    spectral: true,
+                    spectral_print: true,
+                    spectral_scan: true,
+                    ..RenderParams::default()
+                },
+            ),
+        ] {
+            let prepared = params.prepare();
+            let mut cpu = pixels.clone();
+            let start = std::time::Instant::now();
+            kallotype_core::render_pixels(&mut cpu, &prepared);
+            let cpu_time = start.elapsed();
 
-        let start = std::time::Instant::now();
-        let gpu_out = gpu.render(&pixels, &prepared).expect("renders");
-        let gpu_time = start.elapsed();
+            let start = std::time::Instant::now();
+            let gpu_out = gpu.render(&pixels, &prepared).expect("renders");
+            let gpu_time = start.elapsed();
 
-        println!(
-            "{} px: cpu {:.1} ms, gpu {:.1} ms (upload + dispatch + readback), ratio {:.2}x",
-            pixels.len(),
-            cpu_time.as_secs_f64() * 1e3,
-            gpu_time.as_secs_f64() * 1e3,
-            cpu_time.as_secs_f64() / gpu_time.as_secs_f64()
-        );
-        assert_eq!(gpu_out.len(), cpu.len());
+            println!(
+                "{name:8} {} px: cpu {:.1} ms, gpu {:.1} ms (upload + dispatch + readback), ratio {:.2}x",
+                pixels.len(),
+                cpu_time.as_secs_f64() * 1e3,
+                gpu_time.as_secs_f64() * 1e3,
+                cpu_time.as_secs_f64() / gpu_time.as_secs_f64()
+            );
+            assert_eq!(gpu_out.len(), cpu.len());
+        }
     }
 }

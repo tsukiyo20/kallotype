@@ -7,9 +7,9 @@ use kallotype_io::InputEncoding;
 
 /// Render a linear image through a physical film-and-paper model.
 ///
-/// Phase 0 models the characteristic curve and its dependence on development
-/// time and temperature. It does not yet model spectra, couplers, grain or
-/// halation.
+/// The model covers the characteristic curve and its dependence on development
+/// time and temperature, spectral exposure, dye-based printing and scanning,
+/// grain, halation and DIR couplers.
 #[derive(Debug, Parser)]
 #[command(
     name = "kalo",
@@ -143,9 +143,11 @@ pub struct RenderArgs {
 
     /// Render on the GPU instead of the CPU.
     ///
-    /// Only the scalar path is implemented on the GPU: with any spectral stage
-    /// on, the render falls back to the CPU and says so. Needs a build with the
-    /// `gpu` feature; `cargo install kallotype-cli --features gpu`.
+    /// Both the scalar path and the closed-form spectral one are implemented.
+    /// What is not: a baked table, a dictionary prior, and the spatial effects
+    /// (grain, halation, couplers). Any of those falls back to the CPU and says
+    /// so. Needs a build with the `gpu` feature;
+    /// `cargo install kallotype-cli --features gpu`.
     #[arg(long)]
     pub gpu: bool,
 

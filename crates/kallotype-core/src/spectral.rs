@@ -16,6 +16,8 @@
 
 use kallotype_spectral::{DictionaryUpsampler, PolynomialUpsampler, Sensor, Spectrum, Upsampler};
 
+use crate::model::{ExposureModel, inverse3, tables};
+
 /// First wavelength of the internal grid, in nanometres.
 pub const GRID_START_NM: f64 = 380.0;
 /// Wavelength step of the internal grid.
@@ -204,6 +206,44 @@ impl SpectralContext {
     #[must_use]
     pub fn camera(&self) -> &Sensor {
         &self.camera
+    }
+
+    /// The film's three layer sensitivities.
+    #[must_use]
+    pub fn film(&self) -> &Sensor {
+        &self.film
+    }
+
+    /// The film's response to a reconstructed 18 % grey, per layer.
+    ///
+    /// The anchor [`Self::expose`] divides by: an integrator that wants the
+    /// same anchor needs this number rather than a second reconstruction.
+    #[must_use]
+    pub fn reference(&self) -> [f64; 3] {
+        self.reference
+    }
+
+    /// The constants this context integrates with, flattened for another backend.
+    ///
+    /// `None` when a dictionary prior is active, or when a table is not on the
+    /// model's grid. Both mean the closed form below is not what this context
+    /// computes, and a backend that rendered anyway would be rendering a
+    /// different model without saying so.
+    #[must_use]
+    pub fn model(&self) -> Option<ExposureModel> {
+        if self.has_dictionary() {
+            return None;
+        }
+        let basis = PolynomialUpsampler::basis(&self.grid);
+        let system = self.upsampler.system(&self.camera, &self.grid).ok()?;
+        Some(ExposureModel {
+            // The CPU's own fallback for a singular system is zero
+            // coefficients, which is exactly the zero matrix for every input.
+            reconstruct: inverse3(system).unwrap_or([[0.0; 3]; 3]),
+            basis: tables(&basis)?,
+            film: tables(self.film.channels())?,
+            reference: self.reference,
+        })
     }
 
     /// Per-layer log10 exposure for a linear-light pixel.

@@ -175,20 +175,31 @@ Three things are worth calling out:
 
 ### `kallotype-gpu`
 
-A wgpu backend that must agree with `kallotype-core`. It is a transcription of
-the scalar model into WGSL and nothing else: the prepared render hands over the
-numbers it solved, the shader applies the same arithmetic in f32, and a test
-compares the two on the same pixels. Across a 2 048-pixel grid that spans the toe
-and the shoulder, the worst per-channel difference is **2.2 × 10⁻⁷** in linear
-light, against a stated tolerance of 1 × 10⁻⁴.
+A wgpu backend that must agree with `kallotype-core`. Both models are
+transcribed into WGSL and nothing else: the prepared render hands over what the
+CPU solved, or — where the model integrates over wavelength and there is no
+answer to hand over — the tables it integrates on, and tests compare the two on
+the same pixels.
+
+Across a 2 048-pixel grid that spans the toe and the shoulder, the worst
+per-channel difference in linear light is:
+
+| render | worst difference |
+|---|---|
+| scalar | 2.2 × 10⁻⁷ |
+| spectral exposure | 3.6 × 10⁻⁷ |
+| spectral print | 8.2 × 10⁻⁷ |
+| all three stages | 1.0 × 10⁻⁶ |
+
+against a stated tolerance of 1 × 10⁻⁴.
 
 The tolerance is the contract. A GPU port that "looks right" is how a film
 simulation acquires two different films.
 
-The crate covers the **scalar path only**: the spectral stages integrate over
-wavelength, so a backend that wants them has to port the integration rather than
-a handful of solved constants, and asking for one returns an error rather than
-silently rendering something else.
+What is refused — with an error, not a shrug — is a **baked exposure table** and
+a **dictionary prior**: a sampled cube and a per-pixel non-negative least
+squares are their own models, and neither is expressible as a constant matrix.
+Grain, halation and couplers are spatial and live outside both shaders.
 
 It is wired into the CLI behind a feature flag, because wgpu is about two hundred
 crates and a command line tool does not need a GPU to be useful:
@@ -205,12 +216,25 @@ The report always says which backend ran and which device it was:
 ```
 
 `--gpu` falls back to the CPU with a warning — never silently, never with an
-error — when there is no adapter, when the render uses a spectral stage, or when
-grain, halation or couplers are on. At eight bits per channel the two backends
-produce byte-identical files, which is the practical form of the tolerance.
+error — when there is no adapter, when the render needs a table or a dictionary,
+or when grain, halation or couplers are on. At eight bits per channel the two
+backends agree to within one level; under a megapixel the files are usually
+byte-identical, but that is a coincidence of where samples land on rounding
+boundaries rather than a promise.
 
-Measured on 2 073 600 pixels of the scalar model: **92.4 ms** on the CPU against
-**22.8 ms** on the GPU including upload, dispatch and readback, a ratio of 4.06.
+Measured on 2 073 600 pixels, CPU against GPU including upload, dispatch and
+readback:
+
+| render | cpu | gpu | ratio |
+|---|---|---|---|
+| scalar | 92.6 ms | 24.5 ms | 3.8 × |
+| all three spectral stages | 3 093 ms | 41 ms | 76 × |
+
+The spectral path is where the device earns its place: seventy-one wavelength
+samples per pixel across four integrations is exactly the work a GPU is for.
+Below about a megapixel of scalar work the fixed cost of a device and a readback
+is the larger term, and the CPU wins — which is worth knowing before passing
+`--gpu` to make a small image.
 
 ## Licence
 

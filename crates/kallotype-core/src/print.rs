@@ -26,6 +26,7 @@
 
 use kallotype_spectral::Spectrum;
 
+use crate::model::{PrintModel, inverse3, table, tables};
 use crate::scan::solve3;
 
 use crate::spectral::{GRID_LEN, GRID_START_NM, GRID_STEP_NM};
@@ -371,7 +372,10 @@ impl PrintContext {
     /// channel already contains all three dyes. The dye curves are per-dye
     /// shapes. Feeding one into the other double-counts the overlap; the same
     /// correction the scan needed applies here.
-    fn analytical(&self, status: [f64; 3]) -> [f64; 3] {
+    ///
+    /// The system depends only on the dyes, so it is built once per call and
+    /// inverted once per render — see [`Self::model`].
+    fn analytical_matrix(&self) -> [[f64; 3]; 3] {
         let probes = [650.0, 550.0, 450.0];
         let mut matrix = [[0.0_f64; 3]; 3];
         for (row, wavelength) in probes.iter().enumerate() {
@@ -379,9 +383,43 @@ impl PrintContext {
                 matrix[row][column] = dye.interpolate(*wavelength);
             }
         }
-        solve3(matrix, status)
+        matrix
+    }
+
+    fn analytical(&self, status: [f64; 3]) -> [f64; 3] {
+        solve3(self.analytical_matrix(), status)
             .map(|values| values.map(|value| value.max(0.0)))
             .unwrap_or(status)
+    }
+
+    /// The constants this context integrates with, flattened for another backend.
+    ///
+    /// `None` when a table is not on the model's grid, which
+    /// [`Self::new`] rules out but [`Self::with_spectra`] does not have to.
+    #[must_use]
+    pub fn model(&self) -> Option<PrintModel> {
+        let inverse = inverse3(self.analytical_matrix());
+        // No base density prints as a zero mask, and no masking prints as zero
+        // strengths: the surviving fraction is then one, so the mask is a
+        // constant, which is what masking off means.
+        Some(PrintModel {
+            analytical: inverse.unwrap_or([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+            clamped: inverse.is_some(),
+            dye: tables(&self.dye)?,
+            paper: tables(&self.paper)?,
+            illuminant: table(&self.illuminant)?,
+            mask: match &self.base_density {
+                Some(base) => table(base)?,
+                None => [0.0; GRID_LEN],
+            },
+            masking: self.masking.map_or([0.0; 3], |masking| masking.strength),
+            masking_reference: self
+                .masking
+                .map_or(1.0, |masking| masking.reference_density),
+            filters: self.filters,
+            filter_bands: tables(&self.filter_bands)?,
+            reference: self.reference,
+        })
     }
 
     fn response(&self, status_density: [f64; 3]) -> [f64; 3] {

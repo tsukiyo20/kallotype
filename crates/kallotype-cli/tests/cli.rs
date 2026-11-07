@@ -280,3 +280,128 @@ fn gpu_renders_or_falls_back_and_says_which() {
         "unexpected backend line: {line}"
     );
 }
+
+/// The spectral path is no longer CPU-only, and the agreement that matters is
+/// the one a user can see: the two backends have to give the same eight-bit
+/// file. If the adapter is missing the render still has to succeed, and to say
+/// which machine did it.
+///
+/// The frame is drawn here rather than taken from the asset, because a slow
+/// spectral render in a debug build costs a minute per image and a test nobody
+/// wants to run protects nothing. What the path does does not depend on the
+/// picture; what it does depend on is the three stages, and those are all on.
+#[cfg(feature = "gpu")]
+#[test]
+fn gpu_renders_the_spectral_path_to_the_same_pixels() {
+    let dir = scratch("gpu-spectral");
+    let on_cpu = dir.join("cpu.png");
+    let on_gpu = dir.join("gpu.png");
+    let stages = ["--spectral", "--spectral-print", "--spectral-scan"];
+
+    let input = dir.join("input.png");
+    const WIDTH: u32 = 48;
+    const HEIGHT: u32 = 32;
+    let mut pixels = Vec::with_capacity((WIDTH * HEIGHT) as usize);
+    for y in 0..HEIGHT {
+        for x in 0..WIDTH {
+            let a = f64::from(x) / f64::from(WIDTH - 1);
+            let b = f64::from(y) / f64::from(HEIGHT - 1);
+            pixels.push([a, b, (a * b).sqrt()]);
+        }
+    }
+    kallotype_io::save(
+        &input,
+        &kallotype_io::Image {
+            width: WIDTH,
+            height: HEIGHT,
+            pixels,
+        },
+    )
+    .expect("the test frame");
+
+    let cpu = kalo()
+        .arg("render")
+        .arg(&input)
+        .arg("-o")
+        .arg(&on_cpu)
+        .args(stages)
+        .output()
+        .expect("kalo should start");
+    assert!(cpu.status.success(), "stderr: {}", stderr(&cpu));
+
+    let gpu = kalo()
+        .arg("render")
+        .arg(&input)
+        .arg("-o")
+        .arg(&on_gpu)
+        .arg("--gpu")
+        .args(stages)
+        .output()
+        .expect("kalo should start");
+    assert!(gpu.status.success(), "stderr: {}", stderr(&gpu));
+
+    let report = stdout(&gpu);
+    let backend = report
+        .lines()
+        .find(|line| line.trim_start().starts_with("backend"))
+        .expect("the report must name the backend")
+        .to_owned();
+    if backend.contains("gpu —") {
+        let decoded_cpu =
+            kallotype_io::load(&on_cpu, kallotype_io::InputEncoding::Srgb).expect("the cpu render");
+        let decoded_gpu =
+            kallotype_io::load(&on_gpu, kallotype_io::InputEncoding::Srgb).expect("the gpu render");
+        assert_eq!(decoded_cpu.pixels.len(), decoded_gpu.pixels.len());
+
+        // Under a megapixel the two files are usually byte-identical, but that
+        // is not a property: the tolerance is about 1e-6 in linear light, which
+        // is 3e-4 of an eight-bit level, so a sample lands on a rounding
+        // boundary every few thousand pixels and the byte flips. One level is
+        // the promise; byte equality is a coincidence.
+        let mut worst = 0_i32;
+        let mut differing = 0_usize;
+        for (cpu, gpu) in decoded_cpu.pixels.iter().zip(&decoded_gpu.pixels) {
+            let mut moved = false;
+            for channel in 0..3 {
+                let left = (kallotype_core::linear_to_srgb(cpu[channel]) * 255.0).round() as i32;
+                let right = (kallotype_core::linear_to_srgb(gpu[channel]) * 255.0).round() as i32;
+                worst = worst.max((left - right).abs());
+                moved |= left != right;
+            }
+            if moved {
+                differing += 1;
+            }
+        }
+        assert!(
+            worst <= 1,
+            "the backends differ by {worst} levels on {differing} pixels: {backend}"
+        );
+    } else {
+        assert!(
+            stderr(&gpu).contains("warning"),
+            "a fallback has to say so: {backend}"
+        );
+    }
+}
+
+/// Without an adapter — or without the feature — a spectral render must not be
+/// quietly approximated. Either it runs and says where, or it refuses.
+#[cfg(not(feature = "gpu"))]
+#[test]
+fn a_spectral_render_without_the_feature_is_refused() {
+    let dir = scratch("spectral-off");
+    let output = kalo()
+        .arg("render")
+        .arg(chart())
+        .arg("-o")
+        .arg(dir.join("out.png"))
+        .args(["--spectral", "--gpu"])
+        .output()
+        .expect("kalo should start");
+    assert!(!output.status.success());
+    assert!(
+        stderr(&output).contains("--features gpu"),
+        "{}",
+        stderr(&output)
+    );
+}

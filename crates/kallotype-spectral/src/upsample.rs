@@ -44,7 +44,13 @@ pub struct PolynomialUpsampler;
 
 impl PolynomialUpsampler {
     /// The three basis functions on `grid`, normalised to `[-1, 1]`.
-    fn basis(grid: &Spectrum) -> [Spectrum; 3] {
+    ///
+    /// Public because a second implementation has to replay the *same* basis.
+    /// It is the only thing standing between a camera's three numbers and a
+    /// spectrum, so a backend that invented its own would be reproducing a
+    /// different model and would look right while disagreeing.
+    #[must_use]
+    pub fn basis(grid: &Spectrum) -> [Spectrum; 3] {
         let mut constant = Spectrum::filled(grid.clone(), 0.0);
         let mut linear = Spectrum::filled(grid.clone(), 0.0);
         let mut quadratic = Spectrum::filled(grid.clone(), 0.0);
@@ -62,6 +68,32 @@ impl PolynomialUpsampler {
     }
 }
 
+impl PolynomialUpsampler {
+    /// The system [`Upsampler::reconstruct`] solves: each camera channel's
+    /// response to each basis term.
+    ///
+    /// Split out because the matrix does not depend on the pixel — only on the
+    /// camera and the grid — so a backend that renders many pixels at once
+    /// inverts it once. Exposing it here rather than re-deriving it on the
+    /// other side is what keeps the two implementations solving the same
+    /// system.
+    ///
+    /// # Errors
+    ///
+    /// [`SpectralError::GridMismatch`] if a channel and the basis disagree
+    /// about the grid.
+    pub fn system(&self, sensor: &Sensor, grid: &Spectrum) -> Result<[[f64; 3]; 3], SpectralError> {
+        let basis = Self::basis(grid);
+        let mut matrix = [[0.0_f64; 3]; 3];
+        for (channel, row) in sensor.channels().iter().zip(matrix.iter_mut()) {
+            for (term, cell) in basis.iter().zip(row.iter_mut()) {
+                *cell = channel.dot(term)?;
+            }
+        }
+        Ok(matrix)
+    }
+}
+
 impl Upsampler for PolynomialUpsampler {
     fn name(&self) -> &str {
         "polynomial"
@@ -74,13 +106,7 @@ impl Upsampler for PolynomialUpsampler {
         grid: &Spectrum,
     ) -> Result<Spectrum, SpectralError> {
         let basis = Self::basis(grid);
-        let mut matrix = [[0.0_f64; 3]; 3];
-        for (channel, row) in sensor.channels().iter().zip(matrix.iter_mut()) {
-            for (term, cell) in basis.iter().zip(row.iter_mut()) {
-                *cell = channel.dot(term)?;
-            }
-        }
-
+        let matrix = self.system(sensor, grid)?;
         let coefficients = solve3(matrix, *response).unwrap_or([0.0; 3]);
 
         let mut out = Spectrum::filled(grid.clone(), 0.0);

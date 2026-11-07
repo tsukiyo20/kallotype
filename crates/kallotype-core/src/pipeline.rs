@@ -16,6 +16,7 @@ use crate::curve::{CharacteristicCurve, sigmoid};
 use crate::development::DevelopmentParams;
 use crate::emulsion::{FilmStock, PaperStock};
 use crate::lut::ExposureLut;
+use crate::model::SpectralModel;
 use crate::print::PrintContext;
 use crate::scan::ScanContext;
 use crate::spectral::{CameraProfile, SpectralContext};
@@ -201,18 +202,13 @@ pub struct PreparedRender {
 }
 
 impl PreparedRender {
-    /// The scalar model as plain numbers, when the render uses only the scalar
-    /// path. `None` the moment any spectral stage is active.
-    #[must_use]
-    pub fn scalar_model(&self) -> Option<ScalarModel> {
-        if self.spectral.is_some()
-            || self.lut.is_some()
-            || self.print.is_some()
-            || self.scan.is_some()
-        {
-            return None;
-        }
-        Some(ScalarModel {
+    /// The curve, the paper and the enlarger as plain numbers.
+    ///
+    /// Always available, because a spectral render runs the same three stages:
+    /// it only reaches the paper through an integration instead of through a
+    /// per-channel subtraction.
+    fn numbers(&self) -> ScalarModel {
+        ScalarModel {
             curve: std::array::from_fn(|layer| {
                 let curve = &self.channels[layer];
                 [
@@ -230,7 +226,69 @@ impl PreparedRender {
                 self.print_log_e0[2],
             ],
             exposure_shift: self.exposure_shift,
-        })
+        }
+    }
+
+    /// The scalar model as plain numbers, when the render uses only the scalar
+    /// path. `None` the moment any spectral stage is active.
+    #[must_use]
+    pub fn scalar_model(&self) -> Option<ScalarModel> {
+        if self.spectral.is_some()
+            || self.lut.is_some()
+            || self.print.is_some()
+            || self.scan.is_some()
+        {
+            return None;
+        }
+        Some(self.numbers())
+    }
+
+    /// The spectral model as plain numbers, when this render integrates over
+    /// wavelength and nothing in it needs a solver or a sampled cube.
+    ///
+    /// `None` in three cases, and the distinction matters to a caller that has
+    /// to choose a backend rather than to a caller that has to render:
+    ///
+    /// - nothing is spectral, so [`Self::scalar_model`] describes it;
+    /// - a baked table is in use, which is a sampled approximation rather than
+    ///   an integration;
+    /// - a dictionary prior is in use, which solves a non-negative least
+    ///   squares per pixel instead of a fixed matrix.
+    ///
+    /// The last two are their own models. A backend that implemented them would
+    /// be porting a solver, not replaying numbers, and it should say so rather
+    /// than substitute the closed form.
+    #[must_use]
+    pub fn spectral_model(&self) -> Option<SpectralModel> {
+        if self.lut.is_some() {
+            return None;
+        }
+        // All three stages integrate on the model grid, so the first one that
+        // is present carries the step and the others cannot disagree.
+        let step_nm = self
+            .spectral
+            .as_ref()
+            .map(|context| context.grid().step_nm())
+            .or_else(|| self.print.as_ref().map(|context| context.grid().step_nm()))
+            .or_else(|| self.scan.as_ref().map(|context| context.grid().step_nm()))
+            .unwrap_or(0.0);
+        let model = SpectralModel {
+            scalar: self.numbers(),
+            step_nm,
+            exposure: match &self.spectral {
+                Some(context) => Some(context.model()?),
+                None => None,
+            },
+            enlarger: match &self.print {
+                Some(context) => Some(context.model()?),
+                None => None,
+            },
+            scan: match &self.scan {
+                Some(context) => Some(context.model()?),
+                None => None,
+            },
+        };
+        model.is_spectral().then_some(model)
     }
 
     /// The three negative curves after development.
@@ -723,5 +781,78 @@ mod tests {
             mid > 5.0 * dark && mid > 5.0 * bright,
             "mid {mid}  dark {dark}  bright {bright}"
         );
+    }
+
+    #[test]
+    fn probe() {
+        for (name, params) in [
+            (
+                "spectral",
+                RenderParams {
+                    spectral: true,
+                    ..RenderParams::default()
+                },
+            ),
+            (
+                "print",
+                RenderParams {
+                    spectral_print: true,
+                    ..RenderParams::default()
+                },
+            ),
+            (
+                "scan",
+                RenderParams {
+                    spectral_print: true,
+                    spectral_scan: true,
+                    ..RenderParams::default()
+                },
+            ),
+        ] {
+            let prepared = params.prepare();
+            let model = prepared.spectral_model().expect(name);
+            println!("== {name}");
+            if let Some(e) = &model.exposure {
+                println!("  reconstruct = {:?}", e.reconstruct);
+                println!("  reference   = {:?}", e.reference);
+                println!(
+                    "  basis max   = {:?}",
+                    [
+                        e.basis[0].iter().fold(f64::MIN, |a, &b| a.max(b)),
+                        e.basis[1].iter().fold(f64::MIN, |a, &b| a.max(b)),
+                        e.basis[2].iter().fold(f64::MIN, |a, &b| a.max(b)),
+                    ]
+                );
+                println!(
+                    "  film max    = {:?}",
+                    [
+                        e.film[0].iter().fold(f64::MIN, |a, &b| a.max(b)),
+                        e.film[1].iter().fold(f64::MIN, |a, &b| a.max(b)),
+                        e.film[2].iter().fold(f64::MIN, |a, &b| a.max(b)),
+                    ]
+                );
+            }
+            if let Some(p) = &model.enlarger {
+                println!("  analytical  = {:?}", p.analytical);
+                println!(
+                    "  clamped={} reference={:?} masking={:?} ref={}",
+                    p.clamped, p.reference, p.masking, p.masking_reference
+                );
+                println!(
+                    "  paper max   = {:?}",
+                    [0, 1, 2].map(|c| p.paper[c].iter().fold(f64::MIN, |a, &b| a.max(b)))
+                );
+            }
+            if let Some(s) = &model.scan {
+                println!(
+                    "  scan clamped={} white_xyz={:?} white_rgb={:?}",
+                    s.clamped, s.white_xyz, s.white_rgb
+                );
+                println!(
+                    "  neutral[0]={:?} neutral[32]={:?}",
+                    s.neutral[0], s.neutral[32]
+                );
+            }
+        }
     }
 }

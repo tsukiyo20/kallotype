@@ -15,6 +15,7 @@
 use kallotype_spectral::Spectrum;
 use kallotype_spectral::sensor::cie1931_xyz;
 
+use crate::model::{ScanModel, inverse3, table, tables};
 use crate::spectral::{GRID_LEN, GRID_START_NM, GRID_STEP_NM};
 
 /// A dye's absorption band, as a Gaussian.
@@ -47,6 +48,9 @@ const PAPER_BASE_DENSITY: f64 = 0.06;
 const NEUTRAL_MAX_DENSITY: f64 = 3.0;
 /// Entries in the grey-balance table.
 const NEUTRAL_STEPS: usize = 32;
+/// Entries in [`ScanContext::neutral_rgb`], the density levels 0 to
+/// `NEUTRAL_MAX_DENSITY` inclusive.
+pub(crate) const NEUTRAL_ENTRIES: usize = NEUTRAL_STEPS + 1;
 
 /// CIE standard illuminant D50 on the internal grid, 5 nm steps.
 ///
@@ -201,6 +205,65 @@ impl ScanContext {
         &self.grid
     }
 
+    /// The paper's image dyes.
+    #[must_use]
+    pub fn dye(&self) -> &[Spectrum; 3] {
+        &self.dye
+    }
+
+    /// The viewing illuminant.
+    #[must_use]
+    pub fn illuminant(&self) -> &Spectrum {
+        &self.illuminant
+    }
+
+    /// The colour matching functions, one per axis.
+    #[must_use]
+    pub fn cmf(&self) -> &[Spectrum; 3] {
+        &self.cmf
+    }
+
+    /// XYZ of paper white.
+    #[must_use]
+    pub fn white_xyz(&self) -> [f64; 3] {
+        self.white_xyz
+    }
+
+    /// RGB of paper white.
+    #[must_use]
+    pub fn white_rgb(&self) -> [f64; 3] {
+        self.white_rgb
+    }
+
+    /// RGB along the neutral axis, evenly spaced in density from zero to the
+    /// span [`Self::model`] reports as `neutral_max_density`.
+    #[must_use]
+    pub fn neutral_rgb(&self) -> &[[f64; 3]] {
+        &self.neutral_rgb
+    }
+
+    /// The constants this context integrates with, flattened for another backend.
+    ///
+    /// `None` when a table is not on the model's grid, which [`Self::new`] rules
+    /// out but [`Self::with_dyes`] does not have to.
+    #[must_use]
+    pub fn model(&self) -> Option<ScanModel> {
+        let inverse = inverse3(self.analytical_matrix());
+        Some(ScanModel {
+            analytical: inverse.unwrap_or([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+            clamped: inverse.is_some(),
+            dye: tables(&self.dye)?,
+            illuminant: table(&self.illuminant)?,
+            cmf: tables(&self.cmf)?,
+            matrix: XYZ_TO_SRGB,
+            white_xyz: self.white_xyz,
+            white_rgb: self.white_rgb,
+            neutral: self.neutral_rgb.as_slice().try_into().ok()?,
+            neutral_max_density: NEUTRAL_MAX_DENSITY,
+            base_density: PAPER_BASE_DENSITY,
+        })
+    }
+
     /// Solve for the per-dye analytical densities behind a set of status densities.
     ///
     /// The characteristic curves report **status** densities: each channel is
@@ -212,7 +275,7 @@ impl ScanContext {
     /// The mixing matrix samples the dye curves at the status filter peaks
     /// (650/550/450 nm). Real status filters are broad; sampling their peaks is
     /// the documented approximation.
-    fn analytical(&self, status: [f64; 3]) -> [f64; 3] {
+    fn analytical_matrix(&self) -> [[f64; 3]; 3] {
         let probes = [650.0, 550.0, 450.0];
         let mut matrix = [[0.0_f64; 3]; 3];
         for (row, wavelength) in probes.iter().enumerate() {
@@ -220,7 +283,11 @@ impl ScanContext {
                 matrix[row][column] = dye.interpolate(*wavelength);
             }
         }
-        solve3(matrix, status)
+        matrix
+    }
+
+    fn analytical(&self, status: [f64; 3]) -> [f64; 3] {
+        solve3(self.analytical_matrix(), status)
             .map(|values| values.map(|value| value.max(0.0)))
             .unwrap_or(status)
     }
