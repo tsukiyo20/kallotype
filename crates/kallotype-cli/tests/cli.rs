@@ -237,30 +237,34 @@ fn non_positive_development_time_is_rejected() {
     );
 }
 
-/// Without the feature the flag still exists, so the answer is a sentence
-/// instead of clap's "unexpected argument".
+/// With the GPU off at build time the default render still has to work, on the
+/// CPU, and the report has to say so rather than implying a device that was
+/// never compiled in.
 #[cfg(not(feature = "gpu"))]
 #[test]
-fn gpu_asks_for_a_build_that_has_one() {
+fn a_build_without_the_gpu_renders_on_the_cpu() {
     let dir = scratch("gpu-off");
     let output = kalo()
         .arg("render")
         .arg(chart())
         .arg("-o")
         .arg(dir.join("out.png"))
-        .arg("--gpu")
         .output()
         .expect("kalo should start");
-    assert!(!output.status.success(), "the render should be refused");
-    let message = stderr(&output);
-    assert!(message.contains("--features gpu"), "{message}");
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    let report = stdout(&output);
+    let line = report
+        .lines()
+        .find(|line| line.trim_start().starts_with("backend"))
+        .expect("the report must name the backend");
+    assert!(line.contains("cpu"), "unexpected backend line: {line}");
 }
 
-/// With the feature the render has to succeed whether or not there is an
-/// adapter: a missing GPU is a warning and a CPU render, not a failure.
+/// The GPU is the default, and the render has to succeed whether or not there
+/// is an adapter: a missing GPU is a warning and a CPU render, not a failure.
 #[cfg(feature = "gpu")]
 #[test]
-fn gpu_renders_or_falls_back_and_says_which() {
+fn the_default_backend_is_the_gpu_or_says_why_it_is_not() {
     let dir = scratch("gpu-on");
     let out = dir.join("out.png");
     let output = kalo()
@@ -268,7 +272,7 @@ fn gpu_renders_or_falls_back_and_says_which() {
         .arg(chart())
         .arg("-o")
         .arg(&out)
-        .args(["--dev", "9", "--gpu"])
+        .args(["--dev", "9"])
         .output()
         .expect("kalo should start");
     assert!(output.status.success(), "stderr: {}", stderr(&output));
@@ -299,7 +303,7 @@ fn gpu_renders_or_falls_back_and_says_which() {
 /// false — the two backends either draw the same number or they are two films.
 #[cfg(feature = "gpu")]
 #[test]
-fn gpu_renders_the_effects_to_the_same_pixels() {
+fn the_gpu_renders_the_effects_to_the_same_pixels_as_the_cpu() {
     let dir = scratch("gpu-spectral");
     let on_cpu = dir.join("cpu.png");
     let on_gpu = dir.join("gpu.png");
@@ -336,6 +340,7 @@ fn gpu_renders_the_effects_to_the_same_pixels() {
         .arg(&input)
         .arg("-o")
         .arg(&on_cpu)
+        .arg("--no-gpu")
         .args(stages)
         .output()
         .expect("kalo should start");
@@ -346,7 +351,6 @@ fn gpu_renders_the_effects_to_the_same_pixels() {
         .arg(&input)
         .arg("-o")
         .arg(&on_gpu)
-        .arg("--gpu")
         .args(stages)
         .output()
         .expect("kalo should start");
@@ -396,24 +400,25 @@ fn gpu_renders_the_effects_to_the_same_pixels() {
     }
 }
 
-/// Without an adapter — or without the feature — a spectral render must not be
-/// quietly approximated. Either it runs and says where, or it refuses.
-#[cfg(not(feature = "gpu"))]
+/// `--no-gpu` has to be honoured even when no device exists: it is the escape
+/// hatch for a machine whose driver is worse than its CPU.
+#[cfg(feature = "gpu")]
 #[test]
-fn a_spectral_render_without_the_feature_is_refused() {
-    let dir = scratch("spectral-off");
+fn the_cpu_can_be_forced() {
+    let dir = scratch("cpu-forced");
     let output = kalo()
         .arg("render")
         .arg(chart())
         .arg("-o")
         .arg(dir.join("out.png"))
-        .args(["--spectral", "--gpu"])
+        .args(["--spectral", "--no-gpu"])
         .output()
         .expect("kalo should start");
-    assert!(!output.status.success());
-    assert!(
-        stderr(&output).contains("--features gpu"),
-        "{}",
-        stderr(&output)
-    );
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    let report = stdout(&output);
+    let line = report
+        .lines()
+        .find(|line| line.trim_start().starts_with("backend"))
+        .expect("the report must name the backend");
+    assert!(line.contains("cpu"), "unexpected backend line: {line}");
 }

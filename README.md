@@ -278,26 +278,29 @@ table** and a **dictionary prior**: a sampled cube and a per-pixel non-negative
 least squares are their own models, and neither is expressible as a constant
 matrix.
 
-It is wired into the CLI behind a feature flag, because wgpu is about two hundred
-crates and a command line tool does not need a GPU to be useful:
+It is the **default backend**: a renderer that ignores the device on a machine
+that has one is leaving the largest single speed-up on the table. The price is
+that the binary pulls in wgpu and about two hundred crates, which is why the
+feature can be turned off at build time:
 
 ```bash
-cargo install kallotype-cli --features gpu
-kalo render photo.png -o out/photo.png --gpu
+kalo render photo.png -o out/photo.png            # gpu when there is one
+kalo render photo.png -o out/photo.png --no-gpu   # the CPU, for certain
+cargo install kallotype-cli --no-default-features # a binary without wgpu
 ```
 
-The report always says which backend ran and which device it was:
+The report always says which backend ran and which device it was, or says `cpu`:
 
 ```text
   backend   gpu — Apple M4 (Metal)
 ```
 
-`--gpu` falls back to the CPU with a warning — never silently, never with an
-error — when there is no adapter or when the render needs a table or a dictionary.
-The message names the stage, because the backend is asked rather than assumed. At eight bits per channel the two
-backends agree to within one level; under a megapixel the files are usually
-byte-identical, but that is a coincidence of where samples land on rounding
-boundaries rather than a promise.
+A missing adapter, or a render that needs a table or a dictionary, falls back to
+the CPU with a warning — never silently, never with an error. The message names
+the stage, because the backend is asked rather than assumed. At eight bits per
+channel the two backends agree to within one level; under a megapixel the files
+are usually byte-identical, but that is a coincidence of where samples land on
+rounding boundaries rather than a promise.
 
 Measured on 2 073 600 pixels, CPU against GPU including upload, dispatch and
 readback:
@@ -312,8 +315,20 @@ readback:
 The spectral path is where the device earns its place: seventy-one wavelength
 samples per pixel across four integrations is exactly the work a GPU is for. Below
 about a megapixel of scalar work the fixed cost of a device and a readback is the
-larger term, and the CPU wins — which is worth knowing before passing `--gpu` to
-make a small image.
+larger term, and the CPU wins — which is worth knowing before reaching for
+`--no-gpu` to make a large one.
+
+The CPU path is itself parallel: the pixel loop runs on every core through rayon
+(`parallel`, on by default), which is worth about four times on the spectral
+stages and seven of the eight cores here. Measured on an 8.2 MP frame,
+3514 × 2344, single thread → rayon → GPU:
+
+| render | one core | every core | gpu |
+|---|---|---|---|
+| scalar | 1.07 s | 0.73 s | 0.2 s |
+| spectral exposure | 5.12 s | 1.40 s | 0.60 s |
+| all three spectral stages | 13.13 s | 3.37 s | 0.65 s |
+| grain, halation and couplers | 2.39 s | 1.20 s | 0.68 s |
 
 ## Licence
 

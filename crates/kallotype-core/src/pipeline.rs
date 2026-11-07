@@ -442,6 +442,30 @@ pub struct Finishing<'a> {
     pub couplers: Option<&'a crate::couplers::Couplers>,
 }
 
+/// Run `f` over every pixel, in parallel when the `parallel` feature is on.
+///
+/// The render is embarrassingly parallel: a pixel's exposure, its density and
+/// its print depend on that pixel alone. So this is the whole of the speed-up —
+/// no tiling, no work queue, no second code path that could disagree with the
+/// serial one. The spatial stages (halation, the couplers) run before and after
+/// and stay serial, because they are the ones that genuinely look sideways.
+#[inline]
+fn each_pixel<T: Send>(data: &mut [T], width: usize, f: impl Fn(usize, usize, &mut T) + Sync) {
+    #[cfg(feature = "parallel")]
+    {
+        use rayon::prelude::*;
+        data.par_iter_mut()
+            .enumerate()
+            .for_each(|(index, slot)| f(index % width, index / width, slot));
+    }
+    #[cfg(not(feature = "parallel"))]
+    {
+        for (index, slot) in data.iter_mut().enumerate() {
+            f(index % width, index / width, slot);
+        }
+    }
+}
+
 /// Render a whole image with the finishing effects.
 ///
 /// Halation runs first and needs the whole frame, because it moves light
@@ -460,20 +484,19 @@ pub fn render_pixels_finished(
     // Without a spatial effect there is nothing to keep a frame for.
     if finishing.emulsion.is_none() && finishing.halation.is_none() && finishing.couplers.is_none()
     {
-        for (index, pixel) in pixels.iter_mut().enumerate() {
-            let (x, y) = (index % width, index / width);
+        each_pixel(pixels, width, |x, y, pixel| {
             let log_e = prepared.log_exposure(*pixel);
             *pixel = prepared.finish(log_e, x, y, finishing.grain);
-        }
+        });
         return;
     }
 
     // Exposure first: halation moves light between pixels, before anything is
     // developed.
-    let mut log_e: Vec<[f64; 3]> = pixels
-        .iter()
-        .map(|pixel| prepared.log_exposure(*pixel))
-        .collect();
+    let mut log_e: Vec<[f64; 3]> = pixels.to_vec();
+    each_pixel(&mut log_e, width, |_, _, pixel| {
+        *pixel = prepared.log_exposure(*pixel);
+    });
     // The emulsion's own blur comes first: it is the lens's image being
     // softened by the film, and the halo is light that entered the film and
     // came back, so it is distributed by the same blur afterwards.
@@ -485,36 +508,34 @@ pub fn render_pixels_finished(
     }
 
     // Then the emulsion: grain on the exposure, the curve on the result.
-    let mut density: Vec<[f64; 3]> = log_e
-        .iter()
-        .enumerate()
-        .map(|(index, log_e)| {
-            let mean = prepared.negative_density(*log_e);
-            match finishing.grain {
-                Some(grain) => prepared.negative_density(std::array::from_fn(|channel| {
-                    log_e[channel]
-                        + grain.jitter(index % width, index / width, mean[channel], channel)
-                })),
-                None => mean,
-            }
-        })
-        .collect();
+    let mut density: Vec<[f64; 3]> = log_e.clone();
+    each_pixel(&mut density, width, |x, y, slot| {
+        let log_e = log_e[y * width + x];
+        let mean = prepared.negative_density(log_e);
+        *slot = match finishing.grain {
+            Some(grain) => prepared.negative_density(std::array::from_fn(|channel| {
+                log_e[channel] + grain.jitter(x, y, mean[channel], channel)
+            })),
+            None => mean,
+        };
+    });
 
     // Then the chemistry: the inhibitors act on what has already developed.
     if let Some(couplers) = finishing.couplers {
         couplers.apply(&mut density, width, height);
     }
 
-    for (pixel, density) in pixels.iter_mut().zip(density) {
-        *pixel = prepared.positive(density);
-    }
+    each_pixel(pixels, width, |x, y, pixel| {
+        *pixel = prepared.positive(density[y * width + x]);
+    });
 }
 
 /// Render a whole image in place.
 pub fn render_pixels(pixels: &mut [[f64; 3]], prepared: &PreparedRender) {
-    for pixel in pixels.iter_mut() {
+    // Width only matters to the grain, which this path has none of.
+    each_pixel(pixels, 1, |_, _, pixel| {
         *pixel = prepared.render_pixel(*pixel);
-    }
+    });
 }
 
 /// Render a whole image with grain.

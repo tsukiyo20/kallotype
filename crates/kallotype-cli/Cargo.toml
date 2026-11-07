@@ -21,8 +21,11 @@ name = "kalo"
 path = "src/main.rs"
 
 [features]
-# Opt-in: enabling it drags wgpu and about two hundred crates into the build of
-# a command line tool that does not need a GPU to be useful.
+default = ["gpu"]
+# On by default: the backend is a working implementation of the same model, and
+# a renderer that ignores the GPU on a machine that has one is leaving the
+# largest single speed-up on the table. It drags wgpu and about two hundred
+# crates into the build, which is the price of that.
 gpu = ["dep:kallotype-gpu"]
 
 [dependencies]

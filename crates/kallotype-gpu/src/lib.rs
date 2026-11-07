@@ -529,7 +529,12 @@ impl Gpu {
             ],
         });
 
-        let groups = (count.div_ceil(64)) as u32;
+        // One workgroup row per image row. A flat dispatch would need
+        // `count / 64` workgroups in one dimension, and WebGPU caps that at
+        // 65535 — a limit a 4 MP image crosses. Splitting the grid over two
+        // dimensions keeps every dispatch inside it however large the frame.
+        let groups_x = width.div_ceil(64);
+        let groups_y = height;
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -543,7 +548,7 @@ impl Gpu {
             pass.set_bind_group(0, &bind_group, &[]);
             let mut dispatch = |pipeline: &wgpu::ComputePipeline| {
                 pass.set_pipeline(pipeline);
-                pass.dispatch_workgroups(groups, 1, 1);
+                pass.dispatch_workgroups(groups_x, groups_y, 1);
             };
             if chain {
                 dispatch(&self.passes.expose);

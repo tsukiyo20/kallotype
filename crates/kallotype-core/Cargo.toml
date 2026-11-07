@@ -12,8 +12,15 @@ readme.workspace = true
 keywords = ["film", "simulation", "photography", "colour", "development"]
 categories = ["graphics", "simulation"]
 
+[features]
+default = ["parallel"]
+# Render the pixels on every core. On by default because the render is
+# embarrassingly parallel; turn it off for a target without threads.
+parallel = ["dep:rayon"]
+
 [dependencies]
 kallotype-spectral = { path = "../kallotype-spectral", version = "0.1.0" }
+rayon = { version = "1", optional = true }
 
 [lints]
 workspace = true

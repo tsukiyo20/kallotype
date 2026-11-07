@@ -165,14 +165,14 @@ pub struct RenderArgs {
     #[arg(long, value_name = "N", default_value_t = 0)]
     pub grain_seed: u64,
 
-    /// Render on the GPU instead of the CPU.
+    /// Render on the CPU.
     ///
-    /// Everything the model does — both paths, grain, halation, the DIR
-    /// couplers — except a baked table and a dictionary prior, which are
-    /// solvers rather than models. A render that needs one falls back to the
-    /// CPU and says so. Needs a build with the `gpu` feature;
-    /// `cargo install kallotype-cli --features gpu`.
-    #[arg(long)]
+    /// The GPU is the default: everything the model does — both exposure paths,
+    /// grain, halation, the DIR couplers — except a baked table and a dictionary
+    /// prior, which are solvers rather than models. A render that needs one, or
+    /// a machine with no adapter, falls back to the CPU and says so. Use this
+    /// flag to stay on the CPU anyway.
+    #[arg(long = "no-gpu", action = clap::ArgAction::SetFalse, default_value_t = true)]
     pub gpu: bool,
 
     /// Add DIR couplers: development inhibition between layers, with diffusion.

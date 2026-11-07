@@ -8,7 +8,13 @@
 // Camera triple in, log exposure out.
 @compute @workgroup_size(64)
 fn expose(@builtin(global_invocation_id) id: vec3<u32>) {
-    let index = id.x;
+    // One workgroup row per image row: 65 535 workgroups per dispatch
+    // dimension is the WebGPU limit, which a 4 MP image already exceeds
+    // in one dimension.
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
     if (index >= arrayLength(&exposure)) {
         return;
     }
@@ -18,7 +24,13 @@ fn expose(@builtin(global_invocation_id) id: vec3<u32>) {
 // Negative density in, linear-light RGB out.
 @compute @workgroup_size(64)
 fn positive(@builtin(global_invocation_id) id: vec3<u32>) {
-    let index = id.x;
+    // One workgroup row per image row: 65 535 workgroups per dispatch
+    // dimension is the WebGPU limit, which a 4 MP image already exceeds
+    // in one dimension.
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
     if (index >= arrayLength(&output)) {
         return;
     }

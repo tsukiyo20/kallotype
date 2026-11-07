@@ -46,7 +46,13 @@ fn tap_index(value: i32, limit: u32) -> u32 {
 
 @compute @workgroup_size(64)
 fn halation_horizontal(@builtin(global_invocation_id) id: vec3<u32>) {
-    let index = id.x;
+    // One workgroup row per image row: 65 535 workgroups per dispatch
+    // dimension is the WebGPU limit, which a 4 MP image already exceeds
+    // in one dimension.
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
     if (index >= arrayLength(&scratch)) {
         return;
     }
@@ -81,7 +87,13 @@ fn halation_horizontal(@builtin(global_invocation_id) id: vec3<u32>) {
 
 @compute @workgroup_size(64)
 fn halation_vertical(@builtin(global_invocation_id) id: vec3<u32>) {
-    let index = id.x;
+    // One workgroup row per image row: 65 535 workgroups per dispatch
+    // dimension is the WebGPU limit, which a 4 MP image already exceeds
+    // in one dimension.
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
     if (index >= arrayLength(&exposure)) {
         return;
     }
@@ -131,7 +143,13 @@ fn halation_vertical(@builtin(global_invocation_id) id: vec3<u32>) {
 
 @compute @workgroup_size(64)
 fn develop_pass(@builtin(global_invocation_id) id: vec3<u32>) {
-    let index = id.x;
+    // One workgroup row per image row: 65 535 workgroups per dispatch
+    // dimension is the WebGPU limit, which a 4 MP image already exceeds
+    // in one dimension.
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
     if (index >= arrayLength(&density)) {
         return;
     }
@@ -144,7 +162,13 @@ fn develop_pass(@builtin(global_invocation_id) id: vec3<u32>) {
 
 @compute @workgroup_size(64)
 fn couplers_horizontal(@builtin(global_invocation_id) id: vec3<u32>) {
-    let index = id.x;
+    // One workgroup row per image row: 65 535 workgroups per dispatch
+    // dimension is the WebGPU limit, which a 4 MP image already exceeds
+    // in one dimension.
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
     if (index >= arrayLength(&scratch)) {
         return;
     }
@@ -177,7 +201,13 @@ fn couplers_horizontal(@builtin(global_invocation_id) id: vec3<u32>) {
 
 @compute @workgroup_size(64)
 fn couplers_vertical(@builtin(global_invocation_id) id: vec3<u32>) {
-    let index = id.x;
+    // One workgroup row per image row: 65 535 workgroups per dispatch
+    // dimension is the WebGPU limit, which a 4 MP image already exceeds
+    // in one dimension.
+    if (id.x >= params.grain.z) {
+        return;
+    }
+    let index = id.y * params.grain.z + id.x;
     if (index >= arrayLength(&density)) {
         return;
     }

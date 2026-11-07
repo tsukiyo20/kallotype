@@ -32,10 +32,9 @@ impl std::fmt::Display for Backend {
 
 /// Render the pixels, on the GPU if asked and possible, on the CPU otherwise.
 ///
-/// The fallback is deliberate and loud. A user who passes `--gpu` on a machine
-/// with no adapter, or with a spectral render the backend does not implement,
-/// gets a warning and a correct image, not an error and not a silently different
-/// one.
+/// The fallback is deliberate and loud. A machine with no adapter, or a render
+/// the backend does not implement, gets a warning and a correct image, not an
+/// error and not a silently different one.
 #[cfg(feature = "gpu")]
 fn render_pixels(
     pixels: &mut [[f64; 3]],
@@ -66,7 +65,9 @@ fn render_pixels(
         // asking it is what decides: the CLI keeps no second list of supported
         // stages to drift out of step with the crate's.
         Err(kallotype_gpu::GpuError::Unsupported(stage)) => {
-            eprintln!("warning: --gpu does not implement {stage} yet; rendering on the cpu");
+            eprintln!(
+                "warning: the gpu backend does not implement {stage} yet; rendering on the cpu"
+            );
             Ok(render_on_cpu(pixels, prepared, width, height, finishing))
         }
         Err(error) => Err(CliError::Gpu {
@@ -75,8 +76,9 @@ fn render_pixels(
     }
 }
 
-/// Without the feature the flag still exists, so the answer is a sentence rather
-/// than clap's "unexpected argument".
+/// Without the feature there is no device to ask for, so the render is the CPU's
+/// and the report says so. A build that cannot honour the default must not fail
+/// because of it.
 #[cfg(not(feature = "gpu"))]
 fn render_pixels(
     pixels: &mut [[f64; 3]],
@@ -87,11 +89,9 @@ fn render_pixels(
     on_gpu: bool,
 ) -> Result<Backend, CliError> {
     if on_gpu {
-        return Err(CliError::Gpu {
-            message: "this build has no GPU backend: \
-                      `cargo install kallotype-cli --features gpu`"
-                .to_owned(),
-        });
+        eprintln!(
+            "warning: this build has no GPU backend (rebuild without              --no-default-features); rendering on the cpu"
+        );
     }
     Ok(render_on_cpu(pixels, prepared, width, height, finishing))
 }
