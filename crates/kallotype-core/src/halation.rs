@@ -39,8 +39,19 @@
 //!
 //! There is no data sheet for this. It is a property of the film *in a camera* —
 //! base, anti-halation backing, pressure plate — and the only way to have it is
-//! to expose film to a controlled highlight and read the halo's falloff. The
-//! experiment is designed in `docs/0011-halation-experiment.md`, with the two
+//! to expose film to a controlled highlight and read the halo's falloff.
+//!
+//! One published measurement does exist, and it brackets these numbers. The ENS
+//! Louis Lumière mémoire (*Study of Film Texture*, 2023) measured halation from
+//! an edge-spread function and reports its "halation ratio" — the halo's level
+//! at 3–10 pixels from an edge, relative to the illuminated side — as
+//! **0.12–0.13 red, 0.066 green, 0.037 blue**. The placeholders here total
+//! 0.110 / 0.048 / 0.027, so they are 10–35 % low and in the right colour order.
+//! The two are not the same quantity — a ratio at a position is not a fraction of
+//! the source's energy — so that paper brackets these numbers rather than
+//! replacing them; what it does establish is that they are the right size.
+//!
+//! The experiment is designed in `docs/0011-halation-experiment.md`, with the two
 //! scripts that carry it out: `scripts/halo_profile.py` turns a scan into a
 //! radial profile, and `scripts/fit_halation.py` fits these eight numbers to it.
 //!
