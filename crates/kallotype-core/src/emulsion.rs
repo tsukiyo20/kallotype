@@ -2,9 +2,21 @@
 //!
 //! Two of them are measured — the film `vision3_500t` and the paper
 //! `endura_premier_metallic`. Their curves are digitised from the manufacturer's
-//! data sheets, and the film's spectra are the ones compiled into
-//! `crate::measured`. Everything else is a stand-in with realistic numbers, and
-//! the notes on each say which it is.
+//! data sheets. Everything else is a stand-in with realistic numbers, and the
+//! notes on each say which it is.
+//!
+//! ## A stock carries its own spectra
+//!
+//! A film stock is not only a curve. It is also which wavelengths each layer
+//! records ([`FilmStock::layers`]), what the negative absorbs at print time
+//! ([`FilmStock::dyes`]) and the mask between the two ([`FilmStock::mask`]).
+//! Those three are what make two films with the same contrast look like
+//! different products, and they ride on the stock so that choosing a film
+//! changes the colour and not only the density.
+//!
+//! The placeholder stocks borrow the measured VISION3 spectra and say so in
+//! their notes. That is the honest version of a placeholder: the curve is
+//! invented, and the colour response is somebody else's.
 //!
 //! The ids of the stand-ins deliberately name no real product. A stock called
 //! `portra400` that is not Portra 400 would be a lie, and the whole point of this
@@ -17,7 +29,7 @@
 //! curve**. It is base, fog and — the part that matters — the orange mask: a
 //! coloured coupler that absorbs blue and is consumed where cyan dye forms. It
 //! is spectrally structured, so the model carries it as a spectrum
-//! (`crate::measured::FILM_MASK`), not as a scalar under the curve.
+//! ([`FilmStock::mask`]), not as a scalar under the curve.
 //!
 //! The curve therefore describes how much *dye* has formed, which is zero where
 //! nothing was exposed. [`FilmStock::base_density`] is the same minimum density
@@ -56,6 +68,19 @@ pub struct FilmStock {
     /// halide grains. It is whatever reproduces the manufacturer's granularity
     /// curve, and [`crate::GrainField::for_stock`] is where it goes.
     pub grains_per_um2: [f64; 3],
+    /// The layer sensitivities on one relative scale, 380–730 nm at 5 nm.
+    ///
+    /// Which wavelengths reach each layer, and how fast each layer is. This is
+    /// the film's *record* of colour: two stocks with the same curves but
+    /// different layers separate a scene differently.
+    pub layers: &'static [[f64; GRID_LEN]; 3],
+    /// The cyan, magenta and yellow dyes, peak-normalised absorption.
+    ///
+    /// The film's *return* of colour: what the negative passes at print time.
+    /// The published curves have D-min subtracted, so the mask is separate.
+    pub dyes: &'static [[f64; GRID_LEN]; 3],
+    /// Spectral density of base, fog and the orange mask, 380–730 nm at 5 nm.
+    pub mask: &'static [f64; GRID_LEN],
 }
 
 /// A paper stock: one curve, because paper only has to record what is on the
@@ -108,6 +133,13 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         // density of 1 through a 48 µm aperture. Blue is the front layer and the
         // grainiest by a factor of nine.
         grains_per_um2: [0.62, 0.51, 0.07],
+        // H-1-5219 page 4, digitised at 5 nm and normalised by one constant
+        // across the three, so the layers' relative speed survives.
+        layers: &kallotype_spectral::layers::CHANNELS,
+        // The dye curves are peak-normalised absorption; the mask is the
+        // minimum-density spectrum from the same page.
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
     },
     FilmStock {
         id: "c41_standard",
@@ -120,6 +152,13 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         ],
         base_density: [0.22, 0.22, 0.22],
         grains_per_um2: [3.6, 3.6, 3.6],
+        // A placeholder has to put *something* here. This one borrows the
+        // measured VISION3 spectra, which is why its note still says
+        // placeholder: the curve is invented and the colour response is not
+        // its own.
+        layers: &kallotype_spectral::layers::CHANNELS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
     },
     FilmStock {
         id: "c41_contrast",
@@ -132,6 +171,9 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         ],
         base_density: [0.20, 0.20, 0.20],
         grains_per_um2: [3.6, 3.6, 3.6],
+        layers: &kallotype_spectral::layers::CHANNELS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
     },
     FilmStock {
         id: "bw_classic",
@@ -144,6 +186,11 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         ],
         base_density: [0.10, 0.10, 0.10],
         grains_per_um2: [3.6, 3.6, 3.6],
+        // A B&W film has one emulsion, not three: all three entries are the
+        // same curve, and the spectra are borrowed until one is digitised.
+        layers: &kallotype_spectral::layers::CHANNELS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
     },
 ];
 
@@ -236,6 +283,49 @@ pub fn paper_stock(id: &str) -> Option<&'static PaperStock> {
 mod tests {
     use super::*;
     use crate::grain::GrainField;
+
+    /// Every film carries three dyes, three layer sensitivities and a mask, on
+    /// the grid the model integrates over, and none of them is negative.
+    ///
+    /// This is the check that catches a table pasted in at the wrong length or
+    /// with a minus dropped: a stock with a truncated spectrum still renders,
+    /// and it renders the wrong colour in a way nothing else would notice.
+    #[test]
+    fn every_film_carries_its_own_three_spectra() {
+        for stock in FILM_STOCKS {
+            for (channel, table) in stock.dyes.iter().enumerate() {
+                let peak = table.iter().copied().fold(0.0_f64, f64::max);
+                assert!(
+                    (peak - 1.0).abs() < 0.02,
+                    "{} dye {channel} peaks at {peak:.3}, not at 1",
+                    stock.id
+                );
+                assert!(
+                    table.iter().all(|value| *value >= 0.0),
+                    "{} dye {channel} has a negative density",
+                    stock.id
+                );
+            }
+            assert!(
+                stock.mask.iter().all(|value| *value >= 0.0),
+                "{} has a negative mask density",
+                stock.id
+            );
+            for (channel, table) in stock.layers.iter().enumerate() {
+                let peak = table.iter().copied().fold(0.0_f64, f64::max);
+                assert!(
+                    peak > 0.0,
+                    "{} layer {channel} is dark everywhere",
+                    stock.id
+                );
+                assert!(
+                    table.iter().all(|value| *value >= 0.0),
+                    "{} layer {channel} has a negative sensitivity",
+                    stock.id
+                );
+            }
+        }
+    }
 
     /// The measured stock's status base and the mask the spectral print adds are
     /// one measurement written two ways. If they ever drift apart, one of the two

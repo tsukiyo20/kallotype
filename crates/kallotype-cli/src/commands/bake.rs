@@ -17,8 +17,14 @@ pub fn run(args: BakeArgs) -> Result<(), CliError> {
         });
     }
 
-    let mut context =
-        SpectralContext::new().with_camera(super::common::camera_profile(args.camera.as_deref())?);
+    let film =
+        kallotype_core::emulsion::film_stock(&args.film).ok_or_else(|| CliError::UnknownStock {
+            kind: "film",
+            id: args.film.clone(),
+        })?;
+    let mut context = SpectralContext::for_stock(film)
+        .with_camera(super::common::camera_profile(args.camera.as_deref())?);
+    println!("  film {} ({})", film.label, film.note);
     println!("  camera {}", context.camera().name());
     let mut atoms = Vec::new();
     for path in &args.dictionary {

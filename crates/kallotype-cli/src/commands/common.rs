@@ -62,7 +62,7 @@ impl Selection {
                 message: error.to_string(),
             })?;
 
-            let expected = kallotype_core::SpectralContext::new().identity();
+            let expected = kallotype_core::SpectralContext::for_stock(self.film).identity();
             if let Err(message) = check_model(table.identity(), &expected) {
                 if !self.allow_model_mismatch {
                     return Err(CliError::Lut {

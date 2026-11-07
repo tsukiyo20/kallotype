@@ -280,25 +280,33 @@ impl PrintContext {
     /// Cannot panic: the tables are compile-time constants on the internal grid.
     #[must_use]
     pub fn measured(reference_density: [f64; 3]) -> Self {
-        Self::measured_with(reference_density, &crate::measured::PAPER_LAYERS)
+        Self::measured_with(
+            reference_density,
+            &crate::measured::FILM_DYES,
+            &crate::measured::FILM_MASK,
+            &crate::measured::PAPER_LAYERS,
+        )
     }
 
-    /// As [`Self::measured`], on the layer sensitivities of a particular paper.
+    /// As [`Self::measured`], on one film's spectra and one paper's layers.
     ///
-    /// The paper's spectra are a property of the stock — the dye set and the
-    /// layer speeds differ between products — so the caller passes them rather
-    /// than this taking whichever sheet was digitised first.
+    /// Both are properties of the stock — the dye set and the layer speeds
+    /// differ between products — so the caller passes them rather than this
+    /// taking whichever sheet was digitised first. The film's dyes are what the
+    /// print sees; the paper's layers are what it responds with.
     #[must_use]
     pub fn measured_with(
         reference_density: [f64; 3],
-        layers: &[[f64; crate::spectral::GRID_LEN]; 3],
+        film_dyes: &[[f64; crate::spectral::GRID_LEN]; 3],
+        film_mask: &[f64; crate::spectral::GRID_LEN],
+        paper_layers: &[[f64; crate::spectral::GRID_LEN]; 3],
     ) -> Self {
         Self::new(reference_density)
             .with_spectra(
-                crate::measured::FILM_DYES.map(|table| crate::measured::spectrum(&table)),
-                layers.map(|table| crate::measured::spectrum(&table)),
+                film_dyes.map(|table| crate::measured::spectrum(&table)),
+                paper_layers.map(|table| crate::measured::spectrum(&table)),
             )
-            .with_base_density(crate::measured::spectrum(&crate::measured::FILM_MASK))
+            .with_base_density(crate::measured::spectrum(film_mask))
             .with_masking(Masking::default())
     }
 
@@ -546,6 +554,43 @@ mod tests {
 
     fn reference_density() -> [f64; 3] {
         [1.2, 1.1, 1.0]
+    }
+
+    /// The film's dyes are what the print sees, so a different dye set prints a
+    /// neutral negative differently. Swapping cyan and yellow is the cheapest
+    /// stand-in for "another manufacturer's film": same densities, different
+    /// absorbed wavelengths.
+    #[test]
+    fn another_films_dyes_print_another_colour() {
+        let density = [0.9, 0.9, 0.9];
+        let vision = PrintContext::measured_with(
+            reference_density(),
+            &crate::measured::FILM_DYES,
+            &crate::measured::FILM_MASK,
+            &crate::measured::PAPER_LAYERS,
+        )
+        .expose(density);
+
+        let mut swapped = crate::measured::FILM_DYES;
+        swapped.swap(0, 2);
+        let other = PrintContext::measured_with(
+            reference_density(),
+            &swapped,
+            &crate::measured::FILM_MASK,
+            &crate::measured::PAPER_LAYERS,
+        )
+        .expose(density);
+
+        // A third of a stop between two dye sets at one density: that is the
+        // difference the user sees when they change film, and it comes from the
+        // spectra rather than from the curve.
+        let shift = (0..3)
+            .map(|channel| (other[channel] - vision[channel]).abs())
+            .fold(0.0_f64, f64::max);
+        assert!(
+            shift > 0.05,
+            "swapping the dyes should move the print: {vision:?} vs {other:?}"
+        );
     }
 
     #[test]

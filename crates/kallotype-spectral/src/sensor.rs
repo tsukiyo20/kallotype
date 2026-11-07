@@ -224,13 +224,25 @@ impl Sensor {
     /// `grid`, so the caller's grid does not have to match.
     #[must_use]
     pub fn film_layers(grid: &Spectrum) -> Self {
+        Self::film_layers_from(grid, "vision3-500t", &layers::CHANNELS)
+    }
+
+    /// A film stock's own layer sensitivities.
+    ///
+    /// The tables are divided by one constant — the largest sample across all
+    /// three — rather than normalised per channel, so the layers' relative
+    /// sensitivity survives. That is part of what a stock is: a film whose blue
+    /// layer is twice as fast as another's renders differently, and normalising
+    /// each channel would erase it.
+    #[must_use]
+    pub fn film_layers_from(grid: &Spectrum, name: &str, tables: &[[f64; layers::LEN]; 3]) -> Self {
         let native = Spectrum::uniform(layers::START_NM, layers::STEP_NM, layers::LEN)
             .expect("the layer table's grid is a valid constant");
-        let peak = layers::CHANNELS
+        let peak = tables
             .iter()
             .flat_map(|table| table.iter())
             .fold(0.0_f64, |a, &b| a.max(b));
-        let channels: [Spectrum; 3] = layers::CHANNELS.map(|table| {
+        let channels: [Spectrum; 3] = tables.map(|table| {
             let mut channel = Spectrum::filled(native.clone(), 0.0);
             for (value, sample) in channel.values_mut().iter_mut().zip(table.iter()) {
                 *value = sample / peak;
@@ -238,7 +250,7 @@ impl Sensor {
             channel.resampled(grid)
         });
         Self {
-            name: "vision3-500t".to_owned(),
+            name: name.to_owned(),
             channels,
         }
     }
@@ -292,6 +304,44 @@ pub fn cie1931_xyz(wavelength: f64) -> [f64; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A film stock's own layers are used, not the default film's.
+    ///
+    /// The two films here differ only in which layer is which, so a context
+    /// that quietly kept the built-in table would answer both the same way.
+    #[test]
+    fn a_stocks_layers_are_the_ones_it_responds_with() {
+        let grid = Spectrum::uniform(380.0, 5.0, 71).unwrap();
+        let default = Sensor::film_layers(&grid);
+        assert_eq!(default.name(), "vision3-500t");
+
+        // Blue light: the default film's blue-sensitive layer is the third.
+        let blue = {
+            let mut spectrum = Spectrum::filled(grid.clone(), 0.0);
+            let index = ((450.0 - 380.0) / 5.0) as usize;
+            spectrum.values_mut()[index] = 1.0;
+            spectrum
+        };
+        let response = default.respond(&blue);
+        assert!(
+            response[2] > 10.0 * response[0] && response[2] > 10.0 * response[1],
+            "{response:?}"
+        );
+
+        // Swap the tables: now the same light must land in channel 0.
+        let swapped: [[f64; layers::LEN]; 3] = [
+            layers::CHANNELS[2],
+            layers::CHANNELS[1],
+            layers::CHANNELS[0],
+        ];
+        let other = Sensor::film_layers_from(&grid, "swapped", &swapped);
+        let response = other.respond(&blue);
+        assert_eq!(other.name(), "swapped");
+        assert!(
+            response[0] > 10.0 * response[2],
+            "the swapped film should see blue through its first channel: {response:?}"
+        );
+    }
 
     #[test]
     fn a_flat_spectrum_responds_with_unit_area_mass() {

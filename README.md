@@ -24,7 +24,15 @@ The paper's curve is measured too, and the default paper is a measured one: the
 density. It turns out to be a different *shape* from a negative's — no straight
 line anywhere — so how sharply a curve turns is a property of the stock, fitted
 at 4 for the negative and 7, 8 or 10 for the three papers. The remaining stocks
-are placeholders, and their notes say so. Phase 5 is in: **grain** (`--grain`), modelled as a
+are placeholders, and their notes say so.
+
+A stock carries its **spectra** as well as its curve: the three layer
+sensitivities that decide which wavelengths each layer records, the three dyes
+the print sees the negative through, and the orange mask between them. `--film`
+therefore changes the colour and not only the contrast — for a stock that has
+its own. The placeholders borrow the measured VISION3 spectra and say so in
+their notes, because an invented curve on somebody else's colour is half a
+stock. Phase 5 is in: **grain** (`--grain`), modelled as a
 particle process on the film's own scale, and **halation** (`--halation`), the
 light that scatters in the emulsion and reflects off the base. Phase 6 has
 started with **DIR couplers** (`--couplers`): development inhibition between
@@ -101,7 +109,7 @@ are `#[ignore]`d, and the benchmark needs a reflectance CSV passed to `--data`.
 just check     # fmt + clippy + tests — the same three CI runs
 just run render crates/kallotype-cli/assets/testchart.png -o out/a.png --dev 9
 just bench     # compare RGB → spectrum reconstructions
-kalo bake -o out/model.klut --size 33 --dictionary spectra.csv
+kalo bake -o out/model.klut --size 33 --film vision3_500t   # a table is per stock
 kalo render photo.png -o out/photo.png --dev 9 --lut out/model.klut
 just deny      # licences, advisories and sources
 ```

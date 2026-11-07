@@ -218,6 +218,14 @@ pub struct BakeArgs {
     /// `--camera` used to render, or the table will be refused.
     #[arg(long, value_name = "NAME|PATH")]
     pub camera: Option<String>,
+
+    /// Which film's layer sensitivities the table is baked against.
+    ///
+    /// A table holds the film's spectral response, not just the camera's, so it
+    /// is only valid for the stock named here. Must match the `--film` used to
+    /// render, or the table will be refused.
+    #[arg(long, value_name = "ID", default_value = "vision3_500t")]
+    pub film: String,
 }
 
 /// `kalo curve`

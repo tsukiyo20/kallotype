@@ -117,9 +117,14 @@ impl RenderParams {
         // Two ways to describe what reaches the paper. The scalar one treats each
         // density as that channel's light loss; the spectral one integrates the
         // dyes' absorption bands against the paper's layer sensitivities.
-        let print = self
-            .spectral_print
-            .then(|| PrintContext::measured_with(density_mid, self.paper.layers));
+        let print = self.spectral_print.then(|| {
+            PrintContext::measured_with(
+                density_mid,
+                self.film.dyes,
+                self.film.mask,
+                self.paper.layers,
+            )
+        });
         let print_shift: [f64; 3] = match &print {
             // The spectral model is anchored on neutral grey, so the actual
             // mid-grey exposure is subtracted here rather than assumed to be 0.
@@ -147,7 +152,8 @@ impl RenderParams {
             spectral: self
                 .spectral
                 .then(|| {
-                    let context = SpectralContext::new().with_camera(self.camera.clone());
+                    let context =
+                        SpectralContext::for_stock(self.film).with_camera(self.camera.clone());
                     match atoms {
                         Some(atoms) => context.with_atoms(atoms),
                         None => context,
@@ -155,7 +161,8 @@ impl RenderParams {
                 })
                 .filter(|_| self.lut_size < 2),
             lut: (self.spectral && self.lut_size >= 2).then(|| {
-                let context = SpectralContext::new().with_camera(self.camera.clone());
+                let context =
+                    SpectralContext::for_stock(self.film).with_camera(self.camera.clone());
                 let context = match atoms {
                     Some(atoms) => context.with_atoms(atoms),
                     None => context,

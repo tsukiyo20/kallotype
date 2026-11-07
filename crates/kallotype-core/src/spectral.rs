@@ -96,22 +96,46 @@ impl Default for SpectralContext {
 }
 
 impl SpectralContext {
-    /// Build the context on the internal grid, with the default camera profile.
+    /// Build the context on the internal grid, with the default camera profile
+    /// and the default film's layers.
     ///
     /// The film's layers are measured from the manufacturer's data sheet; the
     /// camera is [`CameraProfile::default`], the input's own definition. Both
     /// are ordered R, G, B, and getting that order wrong is invisible until a
     /// red patch comes out blue.
     ///
+    /// This is the context for whichever stock [`crate::RenderParams::default`]
+    /// uses. A render of any other film wants [`Self::for_stock`], or the
+    /// exposure is computed with VISION3's spectral response and only the curve
+    /// changes.
+    ///
     /// # Panics
     ///
     /// Cannot panic: the grid is a compile-time constant with a valid step.
     #[must_use]
     pub fn new() -> Self {
+        Self::for_layers("vision3_500t", &kallotype_spectral::layers::CHANNELS)
+    }
+
+    /// The context for a particular film stock: its own layer sensitivities.
+    ///
+    /// This is the difference between "a film with a different curve" and "a
+    /// different film": which wavelengths each layer records decides how the
+    /// scene separates into dyes, and no curve can stand in for it.
+    #[must_use]
+    pub fn for_stock(stock: &crate::emulsion::FilmStock) -> Self {
+        Self::for_layers(stock.id, stock.layers)
+    }
+
+    /// # Panics
+    ///
+    /// Cannot panic: the grid is a compile-time constant with a valid step.
+    #[must_use]
+    fn for_layers(name: &str, layers: &[[f64; GRID_LEN]; 3]) -> Self {
         let grid = Spectrum::uniform(GRID_START_NM, GRID_STEP_NM, GRID_LEN)
             .expect("the internal grid is a valid constant");
         let camera = CameraProfile::default().sensor(&grid);
-        let film = Sensor::film_layers(&grid);
+        let film = Sensor::film_layers_from(&grid, name, layers);
         let upsampler = PolynomialUpsampler;
 
         let mut context = Self {

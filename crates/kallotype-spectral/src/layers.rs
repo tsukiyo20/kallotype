@@ -66,8 +66,9 @@ const YELLOW: [f64; LEN] = [
     0.55009, 0.55009, 0.55009, 0.55009, 0.55009, 0.55009, 0.55009, 0.55009,
 ];
 
-/// The three layers in R, G, B order.
-pub(crate) const CHANNELS: [&[f64; LEN]; 3] = [&CYAN, &MAGENTA, &YELLOW];
+/// The three tables, in the order the rest of the crate reads them: cyan,
+/// magenta, yellow — that is, red-, green- and blue-sensitive.
+pub const CHANNELS: [[f64; LEN]; 3] = [CYAN, MAGENTA, YELLOW];
 
 #[cfg(test)]
 mod tests {
