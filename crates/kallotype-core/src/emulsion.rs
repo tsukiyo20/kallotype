@@ -227,26 +227,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "fuji_nph400",
         process: FilmProcess::Negative,
-        label: "FUJICOLOR NPH 400 PROFESSIONAL, CN-16",
-        note: "Measured, except for the dyes and the mask. Curves from data sheet \
-               AF3-865E page 6, digitised 2026-11-07; layer sensitivities from figure \
-               19 on the same page. Figure 21 publishes the density of a mid-scale \
-               neutral subject rather than the three dyes separately, so the dye \
-               shapes are borrowed from the VISION3 digitisation and the mask with \
-               them — which is why this stock is not yet as measured as it looks.",
-        // Red, green and blue. `d_max` is the span above the base; transition 3 is
-        // what the three curves of this stock prefer when fitted together.
+        label: "FUJICOLOR NPH 400 PROFESSIONAL (NPH)",
+        note: "Measured, except for the dyes and the mask. Curves from data sheet AF3-865E page 6, digitised 2026-11-07; layer sensitivities from figure 19 on the same page. Figure 21 publishes the density of a mid-scale neutral subject rather than the three dyes separately, so the dye shapes are borrowed from the VISION3 digitisation and the mask with them — which is why this stock is not yet as measured as it looks.",
         channels: [
             curve(0.0, 2.8856, 0.7520, -0.6371).with_transition(3.0),
             curve(0.0, 2.6366, 0.8859, -1.1100).with_transition(3.0),
             curve(0.0, 3.4299, 0.8066, -0.4871).with_transition(3.0),
         ],
-        // The toe plateaus of the same curves: cyan, magenta, yellow.
         base_density: [0.2053, 0.3996, 0.7863],
-        // One published figure — diffuse rms granularity 4 through a 48 µm
-        // aperture — inverted through the model's grain statistics. One number,
-        // so all three layers carry it; the real cyan record is finer.
-        grains_per_um2: [5.42, 5.42, 5.42],
+        grains_per_um2: [5.4200, 5.4200, 5.4200],
         layers: &crate::measured::FUJI_NPH400_LAYERS,
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
@@ -256,7 +245,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         id: "kodak_portra_400",
         process: FilmProcess::Negative,
         label: "KODAK PROFESSIONAL PORTRA 400",
-        note: "Generated from kodak_portra_400.toml; borrowed: spectra.dyes.",
+        note: "Generated from kodak_portra_400.toml; borrowed: spectra.dyes; grain is the compiled placeholder, not a measurement",
         channels: [
             curve(0.0, 1.6578, 0.6299, -0.6947),
             curve(0.0, 1.7095, 0.6276, -0.7407),
@@ -273,7 +262,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         id: "kodak_ektar_100",
         process: FilmProcess::Negative,
         label: "KODAK PROFESSIONAL EKTAR 100",
-        note: "Generated from kodak_ektar_100.toml; borrowed: spectra.dyes.",
+        note: "Generated from kodak_ektar_100.toml; borrowed: spectra.dyes; grain is the compiled placeholder, not a measurement",
         channels: [
             curve(0.0, 1.6713, 0.6038, -0.7120),
             curve(0.0, 1.6693, 0.5911, -0.7400),
@@ -290,7 +279,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         id: "kodak_gold200",
         process: FilmProcess::Negative,
         label: "KODAK GOLD 200",
-        note: "Generated from kodak_gold200.toml; borrowed: spectra.dyes, emulsion.sigma_um.",
+        note: "Generated from kodak_gold200.toml; borrowed: spectra.dyes, emulsion.sigma_um; grain is the compiled placeholder, not a measurement",
         channels: [
             curve(0.0, 1.5411, 0.5473, -0.7300),
             curve(0.0, 1.6367, 0.5659, -0.7680),
@@ -307,7 +296,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         id: "kodak_portra_160",
         process: FilmProcess::Negative,
         label: "KODAK PROFESSIONAL PORTRA 160",
-        note: "Generated from kodak_portra_160.toml; borrowed: spectra.dyes.",
+        note: "Generated from kodak_portra_160.toml; borrowed: spectra.dyes; grain is the compiled placeholder, not a measurement",
         channels: [
             curve(0.0, 1.5459, 0.5658, -0.7281),
             curve(0.0, 1.6641, 0.6012, -0.7461),
@@ -324,7 +313,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         id: "kodak_portra_800",
         process: FilmProcess::Negative,
         label: "KODAK PROFESSIONAL PORTRA 800",
-        note: "Generated from kodak_portra_800.toml; borrowed: spectra.dyes.",
+        note: "Generated from kodak_portra_800.toml; borrowed: spectra.dyes; grain is the compiled placeholder, not a measurement",
         channels: [
             curve(0.0, 1.5435, 0.5855, -0.7187),
             curve(0.0, 1.6521, 0.5926, -0.7947),
@@ -336,6 +325,23 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.7500, 3.7000, 3.0000]),
+    },
+    FilmStock {
+        id: "fuji_c200",
+        process: FilmProcess::Negative,
+        label: "FUJICOLOR C200",
+        note: "Measured, except for the dyes and the mask. Every chart is a 1-bit mask: characteristic curves, sensitivity, MTF and the dye panel are artwork rather than renders. Two traps on the page. The sensitivity chart is five images — two raster strips with the seam through the middle of the plot, and the decade line the curves stand on — and is reassembled from their page coordinates before it is read. And the characteristic curves name their layers in white lozenges painted over the curves, so the columns are paired by order rather than followed by continuity: a characteristic plot's three layers differ in speed, not shape. The MTF panel publishes one curve for the film, which is why all three layers carry the same blur.",
+        channels: [
+            curve(0.0, 2.3726, 0.5974, -0.6739),
+            curve(0.0, 2.6085, 0.6530, -0.6738),
+            curve(0.0, 2.4459, 0.6764, -0.8865),
+        ],
+        base_density: [0.1410, 0.4131, 0.7210],
+        grains_per_um2: [5.4200, 5.4200, 5.4200],
+        layers: &crate::measured::FUJI_C200_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: Some([3.3800, 3.3800, 3.3800]),
     },
 ];
 
