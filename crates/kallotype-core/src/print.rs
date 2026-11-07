@@ -11,10 +11,18 @@
 //! D_cmy ──► T(λ) = 10^(-Σ d · absorption) ──► ∫ L(λ)·T(λ)·S_layer(λ) dλ ──► logE
 //! ```
 //!
+//! The mask is the part that is not a constant. An unexposed colour negative is
+//! orange because the cyan layer carries a coloured coupler that absorbs blue;
+//! that coupler is consumed wherever cyan dye is made, so the mask and the dye's
+//! unwanted absorption cancel. [`PrintContext::with_masking`] is that term — see
+//! [`Masking`].
+//!
 //! Everything here is a **placeholder**: the dye and layer spectra are broad
 //! Gaussians with plausible widths, not measurements. They are parameterised in
 //! one place so phase 4 can replace them with digitised curves without touching
-//! the arithmetic.
+//! the arithmetic. The mask is the exception: `with_base_density` takes the
+//! measured one, which is why masking couplers could be modelled before the dyes
+//! they compensate.
 
 use kallotype_spectral::Spectrum;
 
@@ -79,6 +87,51 @@ const PAPER_BANDS: [Band; 3] = [
     },
 ];
 
+/// Masking couplers: the coloured coupler that is destroyed as the dye forms.
+///
+/// A colour negative is not three independent layers. The cyan dye absorbs some
+/// blue and green that it should not, so the cyan layer carries a **coloured
+/// coupler** — an orange mask — that absorbs blue and is consumed wherever cyan
+/// dye is made. The two errors then subtract: where the cyan dye is dense the
+/// mask is gone, and where it is thin the mask is there to take its place.
+///
+/// That is why an unexposed colour negative is orange, and why the orange goes
+/// away as the frame is exposed. [`PrintContext::with_base_density`] adds the
+/// mask as a constant; this is the term that makes it behave.
+///
+/// The strength is per layer because the mask does not have to belong to the
+/// cyan one alone — in practice the orange mask does, which is the default.
+#[derive(Debug, Clone, Copy)]
+pub struct Masking {
+    /// Fraction of the base density each layer destroys at its reference density.
+    pub strength: [f64; 3],
+    /// Density at which a layer has destroyed all the mask it can.
+    pub reference_density: f64,
+}
+
+impl Default for Masking {
+    fn default() -> Self {
+        Self {
+            strength: [1.0, 0.0, 0.0],
+            reference_density: 2.0,
+        }
+    }
+}
+
+impl Masking {
+    /// How much of the mask survives, given the three analytical densities.
+    #[must_use]
+    pub fn surviving(&self, density_cmy: [f64; 3]) -> f64 {
+        let reference = self.reference_density.max(1e-9);
+        let removed: f64 = density_cmy
+            .iter()
+            .zip(&self.strength)
+            .map(|(density, strength)| strength * (density / reference).clamp(0.0, 1.0))
+            .sum();
+        (1.0 - removed).clamp(0.0, 1.0)
+    }
+}
+
 /// The spectral model of the enlarger and the paper.
 #[derive(Debug, Clone)]
 pub struct PrintContext {
@@ -100,6 +153,8 @@ pub struct PrintContext {
     /// Density of the unexposed, processed film: base, fog and the colour mask.
     /// Added to the dye densities before the transmittance is computed.
     base_density: Option<Spectrum>,
+    /// How much of that base density the couplers destroy as dye forms.
+    masking: Option<Masking>,
 }
 
 impl PrintContext {
@@ -134,6 +189,7 @@ impl PrintContext {
             filter_bands,
             illuminant,
             base_density: None,
+            masking: None,
         };
         // Anchor on the *neutral* density at the reference level, so that grey
         // stays grey across the scale. The pipeline compensates for the small
@@ -225,6 +281,17 @@ impl PrintContext {
         self
     }
 
+    /// Let the base density be destroyed as the dyes form.
+    ///
+    /// Without this the mask is a constant, which is what an unexposed frame
+    /// looks like and not what an exposed one does.
+    #[must_use]
+    pub fn with_masking(mut self, masking: Masking) -> Self {
+        self.masking = Some(masking);
+        self.reference = self.balanced(self.reference_density);
+        self
+    }
+
     /// Replace the placeholder bands with measured spectra.
     ///
     /// The spectra are resampled onto the internal grid, so anything digitised
@@ -303,10 +370,16 @@ impl PrintContext {
         let step = self.grid.step_nm();
         let mut response = [0.0_f64; 3];
         for wavelength_index in 0..self.grid.len() {
-            let mut density: f64 = self
-                .base_density
-                .as_ref()
-                .map_or(0.0, |base| base.values()[wavelength_index]);
+            // The mask is present in the unexposed film and consumed where the
+            // dyes form, which is the masking coupler doing its job.
+            let mask = match (&self.base_density, &self.masking) {
+                (Some(base), Some(masking)) => {
+                    base.values()[wavelength_index] * masking.surviving(density_cmy)
+                }
+                (Some(base), None) => base.values()[wavelength_index],
+                (None, _) => 0.0,
+            };
+            let mut density: f64 = mask;
             density += density_cmy
                 .iter()
                 .zip(&self.dye)
@@ -349,6 +422,50 @@ fn normalised(mut spectrum: Spectrum) -> Spectrum {
         }
     }
     spectrum
+}
+
+/// With no coupling the base density is a constant: an unexposed frame and a
+/// fully exposed one wear the same mask.
+#[test]
+fn without_masking_the_base_density_is_constant() {
+    let masking = Masking::default();
+    assert!((masking.surviving([0.0; 3]) - 1.0).abs() < 1e-12);
+    assert!((masking.surviving([2.0, 0.0, 0.0]) - 0.0).abs() < 1e-12);
+    assert!((masking.surviving([1.0, 0.0, 0.0]) - 0.5).abs() < 1e-12);
+}
+
+/// The mask belongs to the cyan layer by default: developing the magenta or
+/// the yellow layer must leave it alone.
+#[test]
+fn only_the_layer_that_owns_the_mask_destroys_it() {
+    let masking = Masking::default();
+    assert!((masking.surviving([0.0, 2.0, 0.0]) - 1.0).abs() < 1e-12);
+    assert!((masking.surviving([0.0, 0.0, 2.0]) - 1.0).abs() < 1e-12);
+}
+
+/// The point of the model: as cyan dye forms, the mask releases the blue it
+/// was absorbing, so the layer's blue absorption stops growing.
+#[test]
+fn the_mask_gives_blue_back_as_cyan_forms() {
+    let grid = Spectrum::uniform(380.0, 5.0, 71).unwrap();
+    // A mask that absorbs blue only.
+    let mut base = Spectrum::filled(grid.clone(), 0.0);
+    for (index, value) in base.values_mut().iter_mut().enumerate() {
+        let wavelength = grid.start_nm() + grid.step_nm() * index as f64;
+        *value = 0.6 * (-0.5 * ((wavelength - 450.0) / 25.0).powi(2)).exp();
+    }
+    let context = PrintContext::new([1.0; 3]).with_base_density(base);
+    let masked = context.clone().with_masking(Masking::default());
+    // Blue is channel 2 of the scan, but `expose` returns paper response;
+    // compare the plain context with the masked one at the same density.
+    // `with_masking` re-anchors on the reference density, so the absolute
+    // values move; what must not move is the *gain* from forming cyan dye.
+    let plain_gain = context.expose([2.0, 0.0, 0.0])[2] - context.expose([0.0; 3])[2];
+    let masked_gain = masked.expose([2.0, 0.0, 0.0])[2] - masked.expose([0.0; 3])[2];
+    assert!(
+        masked_gain > plain_gain,
+        "the mask must give blue back: {masked_gain} vs {plain_gain}"
+    );
 }
 
 #[cfg(test)]

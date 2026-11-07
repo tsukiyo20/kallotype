@@ -51,6 +51,6 @@ pub use pipeline::{
     Finishing, PreparedRender, RenderParams, render_pixels, render_pixels_finished,
     render_pixels_with_grain,
 };
-pub use print::PrintContext;
+pub use print::{Masking, PrintContext};
 pub use scan::ScanContext;
 pub use spectral::{CameraProfile, SpectralContext};

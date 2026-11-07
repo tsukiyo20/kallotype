@@ -105,3 +105,25 @@ fn the_measured_scan_prints_neutral_grey() {
         assert!(rgb[1] > 0.01, "density {density} clipped to black: {rgb:?}");
     }
 }
+
+/// The measured minimum density is a mask, and a mask is only a mask if it is
+/// consumed. This is the one test that needs the real spectrum: an unexposed
+/// frame carries the orange cast, and developing the cyan layer takes it away.
+#[ignore = "reads the digitised datasets, which are not in this repository"]
+#[test]
+fn the_orange_mask_is_consumed_by_cyan_development() {
+    use kallotype_core::Masking;
+
+    let clear = measured_print();
+    let coupled = measured_print().with_masking(Masking::default());
+
+    // Blue is the layer the mask absorbs in, so it is where the effect shows.
+    // `expose` is anchored on a reference density, so compare gains, not levels.
+    let clear_gain = coupled.expose([2.0, 0.0, 0.0])[2] - coupled.expose([0.0; 3])[2];
+    let plain_gain = clear.expose([2.0, 0.0, 0.0])[2] - clear.expose([0.0; 3])[2];
+    assert!(
+        clear_gain > plain_gain + 0.02,
+        "the mask gave back {:.3} decades of blue, not enough to be a coupler: {clear_gain} vs {plain_gain}",
+        clear_gain - plain_gain
+    );
+}

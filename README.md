@@ -20,7 +20,8 @@ and the spectral scan. Phase 5 is in: **grain** (`--grain`), modelled as a
 particle process on the film's own scale, and **halation** (`--halation`), the
 light that scatters in the emulsion and reflects off the base. Phase 6 has
 started with **DIR couplers** (`--couplers`): development inhibition between
-layers, with diffusion. Masking couplers are not modelled yet.
+layers, with diffusion, and **masking couplers**: the orange mask is consumed as
+the cyan dye forms, so the mask and the dye's unwanted absorption cancel.
 
 The spectral path is reached with `--spectral` (and `--spectral-print`,
 `--spectral-scan`); without those flags the renderer uses the per-channel scalar
@@ -141,7 +142,12 @@ Three things are worth calling out:
    along a dark edge come from. It is a matrix with a spatial kernel, and the
    matrix can be fitted rather than typed: `fit_inhibition` recovers the matrix
    that produced a set of measured patch densities.
-6. **Grain is a count, not noise.** A pixel is an aperture over a random
+6. **The orange mask is not a colour, it is a coupler.** The cyan layer carries
+   a coloured coupler that absorbs blue and is destroyed wherever cyan dye is
+   made, so the mask's absorption and the dye's unwanted absorption cancel. That
+   is why an unexposed negative is orange and an exposed one is not, and it is
+   modelled as a term on the base density rather than as a constant.
+7. **Grain is a count, not noise.** A pixel is an aperture over a random
    arrangement of developed grains, so its exposure has counting statistics:
    `σ_logE = 1/(ln 10 · √N)` where `N` is how many grains the pixel holds. That
    one expression gives Selwyn granularity (`σ ∝ 1/√area`, so grain survives a
