@@ -126,7 +126,14 @@ impl RenderParams {
         let target_log_e = paper.log_exposure_at(target_density);
 
         let mid = mid_grey_log_e();
-        let density_mid: [f64; 3] = std::array::from_fn(|i| channels[i].density(mid));
+        let mut density_mid: [f64; 3] = std::array::from_fn(|i| channels[i].density(mid));
+        // The cyan dye's second emulsion develops at mid grey too. Leaving it
+        // out of this number would balance the enlarger on a negative the film
+        // does not make, and every four-layer stock would print a stop dark in
+        // cyan.
+        if let Some(extra) = extra {
+            density_mid[0] += extra.density(mid);
+        }
 
         // Two ways to describe what reaches the paper. The scalar one treats each
         // density as that channel's light loss; the spectral one integrates the
@@ -825,6 +832,32 @@ mod tests {
         for (halated, plain) in pixels.iter().zip(&plain) {
             for (left, right) in halated.iter().zip(plain) {
                 assert!((left - right).abs() < 0.5, "{halated:?} vs {plain:?}");
+            }
+        }
+    }
+
+    /// The enlarger is balanced on the density the negative actually has, so a
+    /// four-layer stock must still print mid grey as mid grey. If the balance
+    /// ignored the second emulsion, the printed grey would come out too dark in
+    /// cyan by exactly that density.
+    #[test]
+    fn a_four_layer_stock_still_prints_mid_grey_as_mid_grey() {
+        for curve in [[0.0, 1.0, 1.0, -1.0], [0.0, 2.0, 0.7, -0.2]] {
+            let prepared = RenderParams {
+                film: four_layer(curve),
+                ..RenderParams::default()
+            }
+            .prepare();
+            let exposure = prepared.expose([0.18, 0.18, 0.18]);
+            let printed = prepared.positive(prepared.negative_density_with(
+                exposure.layers,
+                exposure.extra,
+            ));
+            for value in printed {
+                assert!(
+                    (value - 0.18).abs() < 0.02,
+                    "curve {curve:?} printed {printed:?}"
+                );
             }
         }
     }

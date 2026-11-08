@@ -602,6 +602,29 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         reference_time_min: 8.0000,
         reference_temp_c: 20.0000,
     },
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "fuji_pro400h",
+        process: FilmProcess::Negative,
+        extra_cyan: None,
+        label: "FUJICOLOR PRO 400H PROFESSIONAL",
+        note: "Measured, except for the dyes, the mask and the grain. Curves and the four layer sensitivities from data sheet AF3-176E page 8, digitised 2026-11-08. The fourth, cyan-sensitive layer is digitised but not modelled: panel 19 publishes its sensitivity and panel 18 publishes only the summed cyan curve, so the layer's share of the cyan density is not identifiable from this sheet, and the split fit runs to its boundary instead of finding a value. The cyan channel therefore carries the summed curve and the red-sensitive sensitivity. Grain is borrowed from NPH 400 — this sheet publishes no granularity figure — and the dyes and mask from the VISION3 digitisation.",
+        channels: [
+            curve(0.0, 1.7932, 0.9559, -0.9190).with_transition(2.0),
+            curve(0.0, 1.7188, 0.8611, -0.9790).with_transition(2.0),
+            curve(0.0, 1.6615, 0.8003, -1.0190).with_transition(2.0),
+        ],
+        base_density: [0.1343, 0.6358, 0.9020],
+        grains_per_um2: [5.4200, 5.4200, 5.4200],
+        layers: &crate::measured::FUJI_PRO400H_LAYERS,
+        dyes: &crate::measured::FILM_DYES,
+        mask: &crate::measured::FILM_MASK,
+        sigma_um: None,
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
+    },
 ];
 
 /// Every paper stock compiled into the binary.
