@@ -131,10 +131,10 @@ LGPL-2.1 obligations for that part. If you would rather not, decode elsewhere
 
 ## What is published, and what is not
 
-This repository is the **code**, plus a [`films/`](films/) directory holding two
-film stocks as data files: a colour reversal and a colour negative, each
-digitised from its manufacturer's data sheet and each carrying a field-by-field
-account of what was measured and what was borrowed.
+This repository is the **code**, plus a [`films/`](films/) directory holding
+three film stocks as data files: two colour reversals and a colour negative,
+each digitised from its manufacturer's data sheet and each carrying a
+field-by-field account of what was measured and what was borrowed.
 
 The rest of the datasets the model was developed against, and the research notes
 that record the reasoning, stay local: they are the product of a separate
@@ -143,7 +143,7 @@ redistributable in any case. The data sheets themselves are not republished —
 only the numbers read from them.
 
 The consequence is deliberate: the model is self-contained — every measured
-constant it needs is compiled in, and two of those stocks also exist as files —
+constant it needs is compiled in, and three of those stocks also exist as files —
 but the tests that re-read the raw datasets are `#[ignore]`d, and the benchmark
 needs a reflectance CSV passed to `--data`.
 
