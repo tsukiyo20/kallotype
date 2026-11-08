@@ -84,8 +84,9 @@ fn longer_development_raises_contrast() {
 
 #[test]
 fn temperature_trades_against_time() {
-    // Q10 = 2: ten degrees warmer halves the time for the same result.
-    let warm_short = stdout(&run(&["curve", "--dev", "3.25", "--temp", "30"]));
+    // The fitted q10 is 1.70, not the photographer's two: ten degrees warmer
+    // divides the time by 1.70, so 6.5 minutes at 20 °C is 3.82 at 30 °C.
+    let warm_short = stdout(&run(&["curve", "--dev", "3.8235", "--temp", "30"]));
     let cool_normal = stdout(&run(&["curve", "--dev", "6.5", "--temp", "20"]));
 
     let delta = (contrast(&warm_short) - contrast(&cool_normal)).abs();

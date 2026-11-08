@@ -13,9 +13,29 @@
 //! assert!(pushed.gamma_factor() > normal.gamma_factor());
 //! ```
 //!
-//! The constants below are *priors*, not measurements. They are chosen so the
-//! model behaves like a real C-41 or B&W process over the usual 3–15 minute
-//! range; phase 1 replaces them with values fitted to published curve families.
+//! The constants below were chosen so the model behaves like a real process over
+//! the usual 3–15 minute range. They are now **fitted to a measured curve
+//! family**: ILFORD DELTA 400's contrast-against-time graphs (publication
+//! `d400_a.pdf`, page 5), two temperatures and four developers. Fitted jointly to
+//! the ID-11 pair — 15 points, 20 °C and 24 °C — this form reproduces the
+//! measured contrast to **0.005**, and the fitted numbers are not the ones the
+//! priors guessed:
+//!
+//! | | prior | fitted |
+//! |---|---|---|
+//! | `gamma_inf` | 1.00 | 2.20 |
+//! | `gamma_0` | 0.15 | 0.18 |
+//! | `tau_min` | 4.5 | **39.0** |
+//! | `q10` | 2.00 | 1.70 |
+//!
+//! `tau` is the one that mattered. At 4.5 minutes the prior model reaches 94 % of
+//! its final contrast by twelve minutes; the film is at 47 % at six and 71 % at
+//! twelve. A push built on the prior was a saturated curve pushed further, not a
+//! curve that is still building.
+//!
+//! What is still a prior: `fog_rate` and `speed_gain`. No sheet in the archive
+//! plots fog or the speed point against development time, and inventing a
+//! measurement for them would be worse than saying so.
 
 /// How a development time and temperature move the characteristic curve.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -28,7 +48,9 @@ pub struct DevelopmentParams {
     pub reference_time_min: f64,
     /// Temperature at which the data-sheet time applies.
     pub reference_temp_c: f64,
-    /// Rate multiplier per 10 °C. Two is the usual photographic rule of thumb.
+    /// Rate multiplier per 10 °C. 1.70, fitted to DELTA 400's time-temperature
+    /// pair; the photographer's rule of thumb says two and the measurement says
+    /// less.
     pub q10: f64,
     /// Contrast the process converges to as time goes to infinity.
     pub gamma_inf: f64,
@@ -49,10 +71,10 @@ impl Default for DevelopmentParams {
             temp_c: 20.0,
             reference_time_min: 6.5,
             reference_temp_c: 20.0,
-            q10: 2.0,
-            gamma_inf: 1.0,
-            gamma_0: 0.15,
-            tau_min: 4.5,
+            q10: 1.70,
+            gamma_inf: 2.20,
+            gamma_0: 0.18,
+            tau_min: 39.0,
             fog_rate: 0.02,
             speed_gain: 0.06,
         }
@@ -147,12 +169,28 @@ mod tests {
     fn temperature_trades_against_time() {
         let base = DevelopmentParams::default();
         let warm_short = DevelopmentParams {
-            time_min: 3.25,
+            time_min: base.reference_time_min / base.q10,
             temp_c: 30.0,
             ..base
         };
-        // q10 = 2 means +10 °C halves the time for the same result.
+        // +10 °C divides the time by q10 for the same result.
         assert!((warm_short.gamma_factor() - 1.0).abs() < 1e-6);
+    }
+
+    /// The model against the sheet it was fitted to: DELTA 400 in ID-11 at
+    /// 20 °C, referenced to the six-and-a-half minute development Ilford prints
+    /// as normal. Contrast at 12 and 18 minutes is 1.46 and 1.89 times the
+    /// contrast at 6.5, and the model reproduces both to 0.01.
+    #[test]
+    fn the_gamma_factor_matches_the_measured_contrast_time_curve() {
+        let base = DevelopmentParams {
+            reference_time_min: 6.5,
+            ..DevelopmentParams::default()
+        };
+        let at = |time_min: f64| DevelopmentParams { time_min, ..base }.gamma_factor();
+        assert!((at(12.0) - 1.46).abs() < 0.02, "12 min: {}", at(12.0));
+        assert!((at(18.0) - 1.89).abs() < 0.02, "18 min: {}", at(18.0));
+        assert!(at(6.5) - 1.0 < 1e-12);
     }
 
     #[test]
