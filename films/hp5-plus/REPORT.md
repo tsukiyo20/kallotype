@@ -1,6 +1,6 @@
 # ILFORD HP5 PLUS: one measurement out of five
 
-*Kallotype film-data series, report 8 of 13. Version 1, 2026-11-08.
+*Kallotype film-data series, report 8 of 16. Version 1, 2026-11-08.
 Data: `hp5-plus.kalofilm` (5,552 bytes). Code: `films/tools/`.*
 
 ## Abstract

@@ -1,6 +1,6 @@
 # Kalofilm — film stocks as data
 
-Thirteen films, each measured from its manufacturer's data sheet and from real
+Sixteen films, each measured from its manufacturer's data sheet and from real
 film, packed into one file per film.
 
 | film | process | paper it is printed on | what is measured |
@@ -18,6 +18,9 @@ film, packed into one file per film.
 | [KODAK GOLD 200](gold-200/) | C-41 negative | RA-4 paper | curves, layer sensitivities, orange mask; dyes and blur borrowed, grain not claimed |
 | [KODAK PROFESSIONAL T-MAX 400](tmax-400/) | B&W negative | RA-4 paper | curve, layer sensitivity, MTF, grain — nothing borrowed |
 | [ILFORD DELTA 400](delta-400/) | B&W negative | RA-4 paper | curve; no MTF, no grain figure, no sensitivity chart — three declared absences |
+| [KODAK VISION3 50D](vision3-50d/) | ECN-2 negative | RA-4 paper | curves, layer sensitivities, MTF; grain, dyes and mask borrowed |
+| [KODAK VISION3 200T](vision3-200t/) | ECN-2 negative | RA-4 paper | curves, layer sensitivities, MTF; grain, dyes and mask borrowed |
+| [KODAK VISION3 250D](vision3-250d/) | ECN-2 negative | RA-4 paper | curves, layer sensitivities, MTF; grain, dyes and mask borrowed |
 
 A `.kalofilm` file is the film: a header that says where every number came from,
 the spectra as binary tables, and a SHA-256 over the lot. It is about 6 kB. The format

@@ -1,6 +1,6 @@
 # KODAK GOLD 200: the negative base density
 
-*Kallotype film-data series, report 11 of 13. Version 1, 2026-11-09.
+*Kallotype film-data series, report 11 of 16. Version 1, 2026-11-09.
 Data: `gold-200.kalofilm` (6,237 bytes). Code: `films/tools/`.*
 
 ## Abstract
