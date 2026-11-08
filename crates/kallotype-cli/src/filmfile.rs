@@ -401,6 +401,7 @@ mod tests {
             ("ektachrome_e100", "ektachrome-e100"),
             ("velvia_50", "velvia-50"),
             ("kodak_portra_400", "portra-400"),
+            ("kodak_portra_800", "portra-800"),
         ] {
             let loaded = read(
                 films()
