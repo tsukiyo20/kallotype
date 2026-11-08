@@ -38,7 +38,7 @@
 //! from the film: a fixed pattern is *not* independent between scans. This
 //! model draws it fresh, and says so here rather than in a footnote.
 
-use crate::psf::{gaussian_blur, gaussian_kernel};
+use crate::psf::{convolve, gaussian_blur, gaussian_kernel};
 
 /// The aperture granularity is quoted through, in micrometres.
 pub const APERTURE_UM: f64 = 48.0;
@@ -137,45 +137,36 @@ impl Scanner {
         let common_scale = shared.sqrt() * sigma;
         let own_scale = spread * sigma;
 
-        for y in 0..height {
-            for x in 0..width {
-                let common = self.filtered(x, y, width, height, 0, &kernel);
-                let pixel = &mut pixels[y * width + x];
-                for (channel, value) in pixel.iter_mut().enumerate() {
-                    let own = self.filtered(x, y, width, height, 1 + channel, &kernel);
-                    let density = common_scale * common + own_scale * own;
-                    *value *= 10.0_f64.powf(-density);
-                }
+        // One white plane per field, filtered once: hashing the noise inside the
+        // stencil would compute the same numbers `k²` times, and a twelve
+        // megapixel frame then takes a minute instead of a second.
+        let common = convolve(&self.white(width, height, 0), width, height, &kernel);
+        let mut own = Vec::with_capacity(3);
+        for channel in 0..3 {
+            own.push(convolve(
+                &self.white(width, height, 1 + channel),
+                width,
+                height,
+                &kernel,
+            ));
+        }
+        for (index, pixel) in pixels.iter_mut().enumerate() {
+            for (channel, value) in pixel.iter_mut().enumerate() {
+                let density = common_scale * common[index] + own_scale * own[channel][index];
+                *value *= 10.0_f64.powf(-density);
             }
         }
     }
 
-    /// One layer of the texture at a pixel: white noise through the stencil.
-    ///
-    /// The edge is repeated, so the draw is a pure function of the pixel and two
-    /// renders of the same frame agree.
-    fn filtered(
-        &self,
-        x: usize,
-        y: usize,
-        width: usize,
-        height: usize,
-        lane: usize,
-        kernel: &[f64],
-    ) -> f64 {
-        let radius = kernel.len() / 2;
-        let mut sum = 0.0;
-        for (dy, &wy) in kernel.iter().enumerate() {
-            let row = (y as isize + dy as isize - radius as isize)
-                .clamp(0, height.saturating_sub(1) as isize) as usize;
-            for (dx, &wx) in kernel.iter().enumerate() {
-                let column = (x as isize + dx as isize - radius as isize)
-                    .clamp(0, width.saturating_sub(1) as isize)
-                    as usize;
-                sum += wy * wx * self.unit_normal(column, row, lane);
+    /// A white field of unit variance, one per texture lane.
+    fn white(&self, width: usize, height: usize, lane: usize) -> Vec<f64> {
+        let mut plane = Vec::with_capacity(width * height);
+        for y in 0..height {
+            for x in 0..width {
+                plane.push(self.unit_normal(x, y, lane));
             }
         }
-        sum
+        plane
     }
 
     /// A standard normal, deterministic in the pixel, the layer and the seed.

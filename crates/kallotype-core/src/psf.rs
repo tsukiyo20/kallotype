@@ -15,7 +15,20 @@ pub fn gaussian_blur(plane: &[f64], width: usize, height: usize, sigma_px: f64) 
     if sigma_px <= 0.0 || width == 0 || height == 0 || plane.len() < width * height {
         return vec![0.0; plane.len()];
     }
-    let kernel = gaussian_kernel(sigma_px);
+    convolve(plane, width, height, &gaussian_kernel(sigma_px))
+}
+
+/// One separable pass with an arbitrary kernel, clamped at the edges.
+///
+/// Separated from [`gaussian_blur`] because the kernel is not always the L1
+/// Gaussian: the grain and the scan's texture filter with an L2-normalised one,
+/// which keeps variance instead of light, and rebuilding the convolution for
+/// that would be a second definition of the edge rule.
+#[must_use]
+pub fn convolve(plane: &[f64], width: usize, height: usize, kernel: &[f64]) -> Vec<f64> {
+    if kernel.is_empty() || width == 0 || height == 0 || plane.len() < width * height {
+        return vec![0.0; plane.len()];
+    }
     let radius = kernel.len() / 2;
     let last_x = width.saturating_sub(1) as isize;
     let last_y = height.saturating_sub(1) as isize;
