@@ -15,33 +15,85 @@ density is absolute — about 3.3 in the darkest part of an unexposed frame,
 | grain | 6.17 grains/µm², from the sheet's diffuse rms granularity of 8 |
 | blur | σ 4.68 µm, one MTF curve for the film, carried by all three layers |
 
-## Where the numbers came from
+## How the numbers were read
 
-FUJIFILM product information bulletin **AF3-036E**, page 6. The document's
-SHA-256 is recorded in the file's `[provenance]` section, so a reader can check
-that the sheet they are holding is the one this was read from.
+All four panels are on one page, and each needed a different reading.
 
-The page is unusual in the archive: its panels are **vector artwork**, not
-rasters, so the layer sensitivities were read from their stroked Bézier paths
-rather than tracked pixel by pixel. Three curves, one colour each: the
+**The characteristic curves** are three separate ink plates printed over one
+another. The red plate is complete. The green and blue plates overlap it for
+most of their length, so instead of tracking three curves through a region where
+two inks are the same colour, each of the other two carries the red layer's
+shape with its own measured offset. The residuals against the digitised points
+are what that costs:
+
+| layer | points | rms | why |
+|---|---|---|---|
+| red | 768 | 0.0254 | its own plate, no overlap |
+| green | 183 | 0.0090 | one offset from red, and the plates barely overlap |
+| blue | 320 | 0.0510 | two overprinted inks; the worst reading on the page |
+
+The columns, the file and the figure all say which layer is which and how the
+fit was done, so a reader can recompute the residual rather than take the number
+on trust. `curves/` holds the points; `figures/curves.png` draws them under the
+fitted curve.
+
+**The layer sensitivities** are the only panel in this project's archive that is
+**vector artwork** rather than a raster. That means they were read from their
+stroked Bézier paths, not tracked pixel by pixel, at 5 nm resolution: the
 blue-sensitive layer peaks at 455 nm and 1.09 decade, the green at 543 and 0.82,
 the red at 642 and 1.00. Outside each drawn path the response is held at a floor
-a decade below its minimum — a path stops where the layer stops responding, and
-a slope continued for fifty nanometres would invent a response the sheet does
-not show.
+one decade below its minimum — a path stops where the layer stops responding,
+and a slope continued for fifty nanometres would invent a response the sheet
+does not show.
 
-The characteristic curves are **three separate ink plates**. The red plate is
-complete; the green and blue plates overlap it for most of their length, so
-they carry the red layer's shape with their own measured offsets. The residuals
-against the digitised points are 0.009 and 0.051 — the second is what a curve
-read through two overprinted inks costs, and it is recorded here rather than
-smoothed away.
+**The dyes** are three plates too, but each is a single ink, so there is no
+overlap problem: yellow absorbs at 443 nm, magenta at 543, cyan at 658 with its
+red edge out at 700 nm. They are peak-normalised, which is the convention the
+model's print stage expects.
 
-The three dyes are the sheet's own, and are the reason this film was the first
-to be worth releasing: most negative sheets publish one mid-scale neutral
-subject rather than three dyes, and their dye shapes have to be borrowed. These
-were digitised one per ink plate — yellow absorbing at 443 nm, magenta at 543,
-cyan at 658 with its red edge out at 700 nm.
+**The MTF** is one curve for the film, both axes logarithmic. A Gaussian point
+spread of σ has a transfer function `exp(−2π²σ²f²)`, so `ln(MTF)` is a straight
+line against `f²` and the fit is an exact solve with one free parameter. Over
+5–60 cycles/mm it gives **σ 4.68 µm, rms 2.8 % of response**. The panel publishes
+one curve, so all three layers carry that blur; splitting it would be invention.
+
+**The grain** is not digitised from a curve — the sheet prints one number, a
+diffuse rms granularity of 8 at a 48 µm aperture, and the grain density is
+derived from it. At a mean density `D` a fraction `c = 1 − 10^(−D)` of the layer
+is covered, an aperture of area `A` holds `n·A·c` developed grains, and the
+density fluctuates by
+
+    sigma_D = slope / (ln 10 · sqrt(n · A · c))
+
+so with the sheet's number, the curve's slope at that density and the coverage,
+`n = 6.17 grains/µm²`. That is an **assumption** — that grains are Poisson —
+rather than a measurement of a granularity curve, and it is the weakest number
+in this file.
+
+## The fit
+
+The characteristic curve is a four-parameter model:
+
+    D(x) = d_min + (γ/t) · (softplus(t(x − toe)) − softplus(t(x − shoulder)))
+
+with `d_min`, `d_max` (= d_min + γ·(shoulder − toe)), `γ`, the mid-point
+`log_e0` and the corner sharpness `t`. For a fixed `t` and a pair of corners the
+model is **linear in d_min and the amplitude**, so the fit is an exact
+least-squares solve over a grid of corners rather than a descent that might stop
+in a local minimum. `t = 4.0` for this film, and the choice was made by
+residual: the wider grid with `t` free gained nothing over the reported rms.
+
+## Figures
+
+`figures/curves.png` draws the three fitted curves as lines and the digitised
+points as dots, both in **density above base** — a reversal's `d_min` is the
+density of the unexposed slide, so the file's curve and the sheet's points match
+without an offset. `figures/spectra.png` draws what the `.kalofilm` file
+actually carries: three layer sensitivities and three dyes.
+
+No image of the data sheet is reproduced anywhere in this directory. The figures
+are plots of the digitised numbers, and `tools/plot.py` regenerates them from
+`curves/` and the `.kalofilm` file alone.
 
 ## What is not measured
 

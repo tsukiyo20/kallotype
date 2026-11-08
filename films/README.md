@@ -12,6 +12,22 @@ A `.kalofilm` file is the film: a header that says where every number came from,
 the spectra as binary tables, and a SHA-256 over the lot. It is 5 kB. The format
 is specified in [FORMAT.md](FORMAT.md).
 
+## What a film directory holds
+
+```
+provia-100f/
+  provia-100f.kalofilm   the film: header, tables, digest
+  README.md              the report — how each number was read and fitted
+  curves/                the digitised characteristic points, one CSV per layer
+  figures/               curves.png and spectra.png, regenerated from the above
+```
+
+The points are published so the fit can be **recomputed rather than believed**:
+the report's residual is against those files. The figures are plots of the same
+numbers, drawn by `tools/plot.py` — no image of a data sheet is reproduced
+anywhere here, because the sheets are their publishers' and the numbers are what
+this project actually produced.
+
 ## Loading one
 
 ```bash
