@@ -486,6 +486,7 @@ pub fn print_report(
     );
     println!("  fog       {:+.3} density", development.fog_delta());
     println!("  ceiling   {:+.3} density", development.d_max_delta());
+    println!("  toe       {:+.2} rate", development.toe_delta());
     println!(
         "  speed     {:+.3} log10 E  ({:+.2} stops)",
         development.speed_delta(),

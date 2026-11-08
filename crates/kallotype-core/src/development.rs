@@ -47,6 +47,7 @@
 //! | base plus fog | +0.078 per √min | `fog_rate` |
 //! | ceiling (the highest density drawn, above base) | +0.91 per √min | `d_max_gain` |
 //! | speed | −0.44 per ln(t / t_ref) | `speed_gain` |
+//! | toe rate | +0.40 per minute | `toe_gain` |
 //!
 //! The last three were priors until this sheet. The ceiling is the one that
 //! mattered most: the current model held it fixed while the film's rises by
@@ -55,14 +56,24 @@
 //! fitted, the four curves of the ladder are reproduced to **0.03 of a density**
 //! rms; before, the pushed rungs were off by 0.21, 0.41 and 0.62.
 //!
-//! What the ladder also shows, and this model does not do: the film's **toe
-//! sharpens** as development goes on — the fitted corner rate rises from 3 to 8
-//! between six and twelve minutes — while `toe_transition` is carried through
-//! unchanged. That is why the model's 0.10-over-fog crossing sits 0.1 to 0.3 of
-//! a decade left of the sheet's even when the curves agree: the crossing lives
-//! in the toe, and the toe is the one thing the ladder measures that the model
-//! cannot express yet. The four rungs constrain a toe-sharpening term too weakly
-//! to fit one, so it is written down instead.
+//! The **toe sharpens** as development goes on: the fitted corner rate rises from
+//! 3 to 8 between six and twelve minutes, and it is the last thing the ladder
+//! measures. Without a term for it the model's 0.10-over-fog crossing — the ISO
+//! speed point, which lives in the toe — sat 0.10 to 0.27 of a decade left of the
+//! sheet's even when the densities agreed to 0.03.
+//!
+//! The individual rates are noisy: on a curve that stops climbing at the frame's
+//! edge the toe rate and the ceiling trade against each other, so the two-rate fit
+//! can report 6 where another corner assignment reports 8. `toe_gain` is therefore
+//! not fitted to those rates but to the **densities**: scanning the slope to
+//! minimise the ladder's density residual gives 0.40 per minute, and at that slope
+//! the four rungs' ISO speed points land within **0.035 of a decade** — 0.020,
+//! 0.018, 0.008 and 0.034 — against 0.27 before.
+//!
+//! The term is linear in the development time, which is all four rungs can say. It
+//! is unbounded, and nothing in the archive says what a 30-minute development does
+//! to a toe; the model is used between 3 and 20 minutes, and beyond that the term is
+//!an extrapolation like every other constant here.
 
 /// How a development time and temperature move the characteristic curve.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -87,6 +98,14 @@ pub struct DevelopmentParams {
     pub tau_min: f64,
     /// Base + fog growth per sqrt(effective minute).
     pub fog_rate: f64,
+    /// Sharpening of the toe per effective minute.
+    ///
+    /// The corner rate rises with development — TRI-X 400's ladder goes from 3
+    /// to 8 between six and twelve minutes — and without it the ISO speed point
+    /// sits up to 0.27 of a decade early.  Fitted to the ladder's densities
+    /// rather than to the individual rates, which are degenerate with the
+    /// ceiling on a curve the sheet cuts off.
+    pub toe_gain: f64,
     /// Growth of the curve's ceiling, above base, per sqrt(effective minute).
     ///
     /// A negative's maximum density is not fixed: TRI-X 400's sheet draws the
@@ -110,6 +129,7 @@ impl Default for DevelopmentParams {
             gamma_0: 0.18,
             tau_min: 39.0,
             fog_rate: 0.078,
+            toe_gain: 0.40,
             d_max_gain: 0.91,
             speed_gain: 0.44,
         }
@@ -152,6 +172,12 @@ impl DevelopmentParams {
         self.fog_rate * (t - reference)
     }
 
+    /// Sharpening of the toe, relative to the reference development.
+    #[must_use]
+    pub fn toe_delta(&self) -> f64 {
+        self.toe_gain * (self.effective_time_min() - self.reference_effective_time_min())
+    }
+
     /// Growth of the ceiling above base, relative to the reference development.
     #[must_use]
     pub fn d_max_delta(&self) -> f64 {
@@ -178,7 +204,7 @@ impl DevelopmentParams {
             d_max: nominal.d_max + self.d_max_delta(),
             gamma: nominal.gamma * self.gamma_factor(),
             log_e0: nominal.log_e0 + self.speed_delta(),
-            toe_transition: nominal.toe_transition,
+            toe_transition: (nominal.toe_transition + self.toe_delta()).max(0.05),
             shoulder_transition: nominal.shoulder_transition,
         }
     }
@@ -239,20 +265,21 @@ mod tests {
 
     /// TRI-X 400's D-76 ladder, printed page 12: one film, four times.
     ///
-    /// `(minutes, gamma, fog, ceiling above base, log_e0)` as digitised from the
-    /// sheet — see `docs/measurements/2026-11-08-development-time.md`. The
-    /// contrast column is a cross-stock check: the shape was fitted on DELTA 400
-    /// in ID-11, a different film in a different developer.
+    /// `(minutes, gamma, fog, ceiling above base, log_e0, ISO speed point)` as
+    /// digitised from the sheet — see
+    /// `docs/measurements/2026-11-08-development-time.md`. The contrast column is
+    /// a cross-stock check: the shape was fitted on DELTA 400 in ID-11, a
+    /// different film in a different developer.
     #[test]
     fn the_trix400_ladder_is_reproduced() {
-        const LADDER: [(f64, f64, f64, f64, f64); 4] = [
-            (6.0, 0.5464, 0.0000, 1.4862, -1.0910),
-            (8.0, 0.6290, 0.0252, 1.8240, -1.2210),
-            (10.0, 0.7212, 0.0462, 2.1347, -1.3110),
-            (12.0, 0.8236, 0.0874, 2.4215, -1.4010),
+        const LADDER: [(f64, f64, f64, f64, f64, f64); 4] = [
+            (6.0, 0.5464, 0.0000, 1.4862, -1.0910, -2.5438),
+            (8.0, 0.6290, 0.0252, 1.8240, -1.2210, -2.6900),
+            (10.0, 0.7212, 0.0462, 2.1347, -1.3110, -2.7808),
+            (12.0, 0.8236, 0.0874, 2.4215, -1.4010, -2.8131),
         ];
         let nominal = CharacteristicCurve::new(0.0, 1.4862, 0.5464, -1.0910).with_corners(3.0, 8.0);
-        for (minutes, gamma, fog, ceiling, log_e0) in LADDER {
+        for (minutes, gamma, fog, ceiling, log_e0, speed) in LADDER {
             let curve = DevelopmentParams {
                 time_min: minutes,
                 reference_time_min: 6.0,
@@ -278,6 +305,14 @@ mod tests {
                 (curve.log_e0 - log_e0).abs() < 0.01,
                 "{minutes} min: log_e0 {:.4} against {log_e0:.4}",
                 curve.log_e0
+            );
+            // The ISO speed point is what the toe buys: it is the exposure at
+            // which the density reaches 0.10 above fog, and it is where a model
+            // without `toe_gain` was 0.27 of a decade early.
+            let modelled = curve.log_exposure_at(curve.d_min + 0.10);
+            assert!(
+                (modelled - speed).abs() < 0.04,
+                "{minutes} min: speed point {modelled:.4} against {speed:.4}"
             );
         }
     }

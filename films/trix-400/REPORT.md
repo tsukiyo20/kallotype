@@ -91,8 +91,8 @@ lowest-contrast of the four — γ 0.546 per decade.
 The other three are digitised and kept. They are the development ladder — the
 same film at 6, 8, 10 and 12 minutes — and on the day this report was written they
 became the first manufacturer data the model's kinetics were checked against: the
-four rungs moved the fog, ceiling and speed constants out of the prior column and
-into measurements. The model references the 6 minutes and 20 °C of the curve the
+four rungs moved the fog, ceiling, speed and toe constants out of the prior
+column and into measurements. The model references the 6 minutes and 20 °C of the curve the
 file carries, so `kalo render --dev 6 --temp 20` is this sheet's ink and any other
 setting is a deliberate move away from it.
 

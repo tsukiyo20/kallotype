@@ -165,8 +165,8 @@ development times that produce them are in the development tables elsewhere on
 the sheet and are not read here. When this report was written the model's
 kinetics had never been checked against a manufacturer's ladder; the check was
 run the same day on TRI-X 400's four-time D-76 family, a ladder whose rungs have
-times rather than exposure indices, and it moved the model's fog, ceiling and
-speed constants from priors to measurements. This film's two panels are the
+times rather than exposure indices, and it moved the model's fog, ceiling, speed
+and toe constants from priors to measurements. This film's two panels are the
 colour equivalent and are kept for the same purpose.
 
 ### 3.5 Sensitivity, dye panel, MTF, grain
