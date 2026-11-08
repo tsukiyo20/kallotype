@@ -228,16 +228,22 @@ impl PrintContext {
     /// print's exposure is solved, so a common factor is an exposure time and not
     /// a measurement.
     ///
-    /// The reference is recomputed afterwards, and that ordering is the whole
-    /// point: the grey balance divides by the response to the reference neutral,
-    /// so an enlarger applied *after* the reference would cancel out of
-    /// `expose()` and make the filter invisible.
+    /// The reference is **not** recomputed, and that is the modelling choice:
+    /// the grey balance stands in for dye and coupler design (see `balanced`),
+    /// so it is computed for the print as the film and paper make it, without
+    /// the enlarger. A pack therefore arrives as an *imbalance* — the cast a
+    /// printer sees and dials away — instead of being absorbed into the
+    /// material's own correction. Zero pack and no glass leave the model exactly
+    /// as it was, equal-energy light included.
     #[must_use]
     pub fn with_enlarger(
         mut self,
         pack: crate::filters::FilterPack,
         glass: Option<crate::filters::HeatGlass>,
     ) -> Self {
+        if pack.is_empty() && glass.is_none() {
+            return self;
+        }
         let lamp = crate::filters::lamp(3200.0);
         let pack_transmission = pack.transmittance();
         let glass_transmission = glass.map(|heat| heat.transmittance(2.0));
@@ -257,7 +263,6 @@ impl PrintContext {
         // The bands were a placeholder for absorption that is now in the
         // spectrum; leaving them on would charge the light twice.
         self.filters = [0.0, 0.0, 0.0];
-        self.reference = self.balanced(self.reference_density);
         self
     }
 
