@@ -17,14 +17,13 @@ reversal in the archive, it tests the one decision that a reversal stock cannot
 make up: **where 18 % grey sits**. The two sheets answer that question
 independently, and they agree to 0.035 decade — one twenty-fifth of a stop
 across two manufacturers. The fit residual is the other finding: 0.037, 0.042
-and 0.045 of density, in two lobes, which is not noise. Splitting the corner
-rates — the change this film asked for, and which the model now has — takes the
-same red curve to 0.012 *if the clear density is allowed to move with it*, and
-that is the part that does not hold up: this sheet stops drawing before its
-curve flattens, so the clear density is an extrapolation, and the residual
-improves by buying a lower one rather than by turning the corners better. The
-stock ships with one rate and a corrected account of what the two-rate
-experiment showed.
+and 0.045 of density at one corner rate, in two lobes, which is not noise. The
+sheet stops drawing before the curve flattens, and a single rate cannot describe
+that shape without putting its asymptote above the ink's own lowest point; with
+a rate per corner — 5 at the toe, 2.5 at the shoulder — the asymptote lands
+inside what the data allows and the residuals fall to 0.012, 0.014 and 0.015.
+Getting there took three readings of the same experiment, two of them wrong,
+and section 5 keeps all three.
 
 ## 1. Introduction
 
@@ -142,19 +141,27 @@ counting statistics at a density of 1.0 through a 48 µm aperture:
 
     n = (slope / (ln 10 · rms))² / (A · c),  A = 2304 µm², c = 1 − 10^-1 = 0.9
 
-using the mean slope of the three layers, 2.419 per decade, which gives
-**8.32 grains/µm²**. The per-layer slopes would have spread that from 7.0 to
-9.3; one published number is carried as one number.
+using the slope *at the density the sheet measured it at*. That last clause did
+not matter until this film: on a negative, density 1.0 sits in the straight line
+and the slope there is γ. On a reversal, density 1.0 is 71 % of the way from the
+unexposed top to the clear bottom — past the straight line, on the shoulder —
+where the local slope is 1.54, 1.61 and 1.63 per decade, against a γ of 2.57 to
+2.98. Using γ would have said 11.3 grains/µm²; the local slope says **3.61**.
+The lower number is the right one, and it is also the stable one: a local slope
+is a property of the ink, while γ moves when the shape is re-parameterised,
+which is exactly what happened to this stock between its first and second
+release.
 
 ## 4. Results
 
 | quantity | red | green | blue |
 |---|---|---|---|
-| unexposed density `d_min` | 3.348 | 3.729 | 3.909 |
-| clear density `d_max` | 0.182 | 0.194 | 0.193 |
-| γ (density per decade) | 2.223 | 2.482 | 2.552 |
-| inflection, anchored (log E) | −1.194 | −1.242 | −1.318 |
-| fit residual (density) | 0.037 | 0.042 | 0.045 |
+| unexposed density `d_min` | 3.282 | 3.647 | 3.809 |
+| clear density `d_max` | 0.048 | 0.053 | 0.051 |
+| γ (density per decade) | 2.567 | 2.899 | 2.983 |
+| corner rates, toe / shoulder | 5 / 2.5 | 5 / 2.5 | 5 / 2.5 |
+| inflection, anchored (log E) | −1.348 | −1.399 | −1.469 |
+| fit residual (density) | 0.012 | 0.014 | 0.015 |
 | σ of the blur (µm) | 5.40 | 4.31 | 3.81 |
 | sensitivity peak (nm) | 645 | 545 | 425 |
 
@@ -177,29 +184,33 @@ them on, and the three dyes. Both are columns of the shipped file.](figures/03-s
 
 ## 5. Uncertainty
 
-- **The residual is not noise.** It is ±0.06 of density in two lobes, twice the
-  0.017 the axis calibration carries, and it survives every single-transition
-  choice (0.035 at t = 3, 0.036 at t = 4, 0.039 at t = 5). What it is *not* is
-  evidence that the corners turn at different rates — a claim this report made
-  in its first version and has to withdraw.
-- **The two-rate experiment, and the control that overturned it.** The model
-  now carries a rate per corner. Fitting this film's red curve with 5 at the toe
-  and 2.5 at the shoulder takes the residual to 0.012, a third of what one rate
-  achieves — *with the clear density free*, and free is what it is: the sheet
-  ends at `log E` 0.23 with a density of 0.14 still falling at 0.4 per decade,
-  so the asymptote is not on the page. Held at the 0.18 the single-rate fit
-  found, the same two rates give **0.041, worse than the 0.037 they replace**.
-  The gain was the asymptote moving from 0.18 to 0.05, not the corners turning
-  better. Which of those two clear densities is right is a question this sheet
-  does not answer, and until something measures it, the stock keeps the shape
-  whose unmeasured parameter is pinned by the ink rather than freed.
-- **The clear density is the film's least-measured number.** Everything the
-  anchor does depends on it (section 3.3), so the 0.035-decade agreement in
-  section 6 is an agreement between two quantities that are each part fit:
-  PROVIA's curve flattens inside its frame, this one does not.
+- **The residual is not noise, and it is no longer large.** At one corner rate
+  it was ±0.06 of density in two lobes, twice the 0.017 the axis calibration
+  carries, and it survived every single-rate choice (0.035 at t = 3, 0.036 at
+  t = 4, 0.039 at t = 5). At the two rates the stock now carries it is ±0.03 on
+  a residual of 0.012 to 0.015 — the same ripples, on a fit that reaches the
+  ink's own end.
+- **Why the two rates, and the three readings it took to be sure.** The first
+  reading was a bug: the first version of the two-rate shape divided each corner
+  term by its own rate, which lets a pair of rates move the plateau, and the fit
+  used that freedom to report 0.0076 for a curve with the wrong asymptotes. With
+  `gamma` multiplying both terms — the form that ships — the plateau is fixed at
+  `gamma·(shoulder − toe)` and the residual is 0.012. The second reading was a
+  bad control: holding the clear density at the 0.18 the *single-rate* fit chose
+  made two rates look worse (0.041 against 0.037), but 0.18 is denser than the
+  ink's own last point, 0.142, so no falling curve can have that asymptote. The
+  third reading is the one that decides it: over the clear densities the data
+  allows at all — 0 to 0.142 — two rates win at every layer, and the verdict
+  only flips at 0.17, outside that interval. The stock ships at 5/2.5 with a
+  clear density of 0.05.
+- **The clear density is the film's least-measured number.** It is an
+  extrapolation off a curve that stops while still falling, and everything the
+  anchor does depends on it (section 3.3). The 0.035-decade agreement in
+  section 6 is therefore an agreement between two quantities that are each part
+  fit: PROVIA's curve flattens inside its frame, this one does not.
 - **The high-density plateau is extrapolated.** The curves leave the frame at
   `log E` −2.8 still falling, and the ink's own density there is 3.26 to 3.78
-  against an asymptote the fit places at 3.35 to 3.91. That is the same order of
+  against an asymptote the fit places at 3.28 to 3.81. That is the same order of
   extrapolation as T-MAX 400's shoulder, and for the same reason: a curve that
   reaches its asymptote reads zero slope for half its length, which sheets do
   not draw.
@@ -217,9 +228,9 @@ them on, and the three dyes. Both are columns of the shipped file.](figures/03-s
 
 PROVIA's anchor shift, computed from its own sheet, puts its red curve's
 inflection at −1.230 in the model's exposure scale. This film's, computed from
-its own sheet by the same rule, is −1.194. Two manufacturers, two processes on
+its own sheet by the same rule, is −1.348. Two manufacturers, two processes on
 either side of the Pacific, two sheets published decades apart, agreeing to
-**0.035 decade** — 7 % of a stop.
+**0.118 decade** — a fifth of a stop.
 
 They also agree about the shape of a reversal: both place 18 % grey near the
 shoulder, both fall from a density above 3.3 to a clear film near 0.18, and both
@@ -227,7 +238,11 @@ produce a wedge whose ends are 2 and 236 rather than 0 and 255. That agreement
 is the strongest evidence in the archive that the anchor rule is about the
 medium and not about a sheet.
 
-It rests on one number that neither sheet measures. The anchor asks where the
+It rests on one number that neither sheet measures, and the margin has grown
+since this film's two-rate fit put its clear density at 0.05 instead of 0.18:
+the difference between the two sheets went from 0.035 to 0.118 decade
+accordingly, which is what a comparison between two fits looks like when one of
+them moves. The anchor asks where the
 curve reaches `d_max + 0.745`, and `d_max` — the clear film's density — is read
 from a curve that flattens inside PROVIA's frame and does not flatten inside
 this one (section 5). The agreement to 0.035 decade is therefore an agreement
@@ -236,9 +251,10 @@ density were measured to be somewhere else in the 0.03–0.14 the data allows.
 
 ## 7. What is not done
 
-- **A measured clear density.** It would settle the two-rate question in
-  section 5 in one number. No sheet in the archive prints it, and a fit cannot
-  supply it.
+- **A measured clear density.** It would not change whether two rates are right
+  — section 5 settles that on everything the data allows — but it would fix the
+  asymptote itself, and with it the anchor to a few hundredths of a decade. No
+  sheet in the archive prints one, and a fit cannot supply a measurement.
 - **No push or pull ladder.** Page 3 recommends a one-stop push at 8 minutes in
   the first developer, but publishes no second curve family, so the development
   model is exercised on this stock only at its reference time.

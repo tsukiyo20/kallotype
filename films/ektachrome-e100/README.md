@@ -12,15 +12,19 @@ per-layer MTF and granularity all come from its own sheet.
 - **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
   from `curves/` and the file's tables.
 
-Headline numbers: γ 2.22, 2.48 and 2.55; unexposed film 3.35, 3.73 and 3.91
-against a clear density of 0.18–0.19; sensitivities peaking at 645, 545 and
-425 nm; dyes at 445, 545 and 660 nm; σ 5.40, 4.31 and 3.81 µm — one per layer,
-which no other sheet here publishes; grain 8.32 grains/µm² inverted from the
-sheet's rms granularity of 8.
+Headline numbers: γ 2.57, 2.90 and 2.98 with the corners turning at 5 per decade
+at the toe and 2.5 at the shoulder; unexposed film 3.28, 3.65 and 3.81 against a
+clear density of 0.048–0.053; sensitivities peaking at 645, 545 and 425 nm;
+dyes at 445, 545 and 660 nm; σ 5.40, 4.31 and 3.81 µm — one per layer, which no
+other sheet here publishes; grain 3.61 grains/µm² inverted from the sheet's rms
+granularity of 8 *at the density it was measured at*.
 
-Its anchor puts the film's 18 % grey at a density of `d_max + 0.745`, and the
-exposure that reaches it lands within 0.035 decade of the independent answer
-FUJICHROME PROVIA 100F gives from its own sheet — two manufacturers, one rule.
+It is the stock that made the model carry a corner rate for the toe and another
+for the shoulder, and the report's section 5 is the story of getting that right
+in three readings — two of them wrong. Its clear density is an extrapolation
+either way: the sheet stops drawing while the curve is still falling, which is
+also why its anchor lands 0.118 decade from PROVIA's rather than the 0.035 the
+first fit suggested.
 
 Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).
