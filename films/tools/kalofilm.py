@@ -6,6 +6,7 @@ renderer. The format is specified in `../FORMAT.md`; this script is the shortest
 correct implementation of it.
 
     python3 kalofilm.py --check ../fuji-pro400h/fuji-pro400h.kalofilm
+    python3 kalofilm.py --check ../../data/papers/portra_endura.kalopaper
     python3 kalofilm.py --csv /tmp fuji-pro400h.kalofilm   # one CSV per table
     python3 kalofilm.py --dump fuji-pro400h.kalofilm       # the raw header
 
@@ -24,7 +25,11 @@ import tomllib
 from pathlib import Path
 
 MAGIC = b"KALOFILM"
+PAPER_MAGIC = b"KALOPAPR"
 ROWS = {"layers": 3, "dyes": 3, "mask": 1, "cl_sensitivity": 1}
+# A paper has no mask, no fourth layer and no blur: one curve, one dye set, one
+# layer set. The magic says which reader to use, before the header is parsed.
+PAPER_ROWS = {"dyes": 3, "layers": 3}
 COLUMNS = {
     "layers": ("red_sensitive", "green_sensitive", "blue_sensitive"),
     "dyes": ("cyan", "magenta", "yellow"),
@@ -36,8 +41,8 @@ COLUMNS = {
 def read(path: Path) -> tuple[int, dict, bytes]:
     """Version, header and the raw table blob, with the digest checked."""
     raw = path.read_bytes()
-    if len(raw) < 48 or raw[:8] != MAGIC:
-        raise SystemExit(f"{path}: not a kalofilm file (no KALOFILM magic)")
+    if len(raw) < 48 or raw[:8] not in (MAGIC, PAPER_MAGIC):
+        raise SystemExit(f"{path}: not a kalofilm or kalopaper file")
     version, length = struct.unpack("<II", raw[8:16])
     if version != 1:
         raise SystemExit(f"{path}: version {version}; this script reads version 1")
@@ -49,13 +54,14 @@ def read(path: Path) -> tuple[int, dict, bytes]:
 def tables(header: dict, blob: bytes) -> list[tuple[str, list[list[float]]]]:
     """The blob as named tables of rows, in file order."""
     length = header["grid"]["len"]
+    layout = PAPER_ROWS if header["schema"].startswith("paper/") else ROWS
     at = 0
     found = []
     for name in header["tables"]:
-        if name not in ROWS:
+        if name not in layout:
             raise SystemExit(f"unknown table `{name}`")
         rows = []
-        for _ in range(ROWS[name]):
+        for _ in range(layout[name]):
             rows.append(list(struct.unpack(f"<{length}d", blob[at : at + length * 8])))
             at += length * 8
         found.append((name, rows))
@@ -67,7 +73,8 @@ def tables(header: dict, blob: bytes) -> list[tuple[str, list[list[float]]]]:
 def check(path: Path) -> int:
     version, header, blob = read(path)
     found = tables(header, blob)
-    print(f"{header['label']}  ({header['process']})  schema {header['schema']}")
+    process = header.get("process", "paper")
+    print(f"{header['label']}  ({process})  schema {header['schema']}")
     print(f"  version {version}, {len(blob)} bytes of tables, digest ok")
     provenance = header["provenance"]
     print(f"  from {provenance['publication']} page {provenance['page']}, "

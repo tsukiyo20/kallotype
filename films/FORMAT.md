@@ -45,6 +45,44 @@ so the list alone is enough to walk the blob:
 `mask` may be absent — a reversal has no orange mask — and an absent table is
 how the format says "none", not "forgotten". `cl_sensitivity` is optional.
 
+## Paper files: `.kalopaper`
+
+A paper is not a film with fewer channels, and it is not the same file. It has
+**one** characteristic curve — it records what is on the negative, it does not
+sample a scene — a target reflectance instead of a base density, and no mask,
+grain or blur. The container is identical; the magic and the extension say which
+kind it is, so a reader rejects the wrong one before parsing anything:
+
+```
+offset 0       8    magic "KALOPAPR"
+offset 8       4    version, u32 — currently 1
+offset 12      4    header length, u32
+offset 16      n    header, UTF-8 TOML
+offset 16+n    m    tables, f64, in directory order
+offset 16+n+m  32   SHA-256 of every byte before it
+```
+
+| key | meaning |
+|---|---|
+| `schema` | `"paper/v1"` |
+| `id`, `label` | |
+| `tables` | `["dyes", "layers"]` |
+| `[provenance]` | as a film's |
+| `[curve]` | **one** curve: `d_min`, `d_max`, `gamma`, `log_e0`, `transition` |
+| `[character]` | `target_mid_reflectance` — the linear reflectance a balanced print reaches for an 18 % grey card |
+| `[measured]` | one line per field |
+| `[grid]` | as a film's |
+
+Tables are `dyes` (3 rows) and `layers` (3 rows), both required. There is no
+`mask` table and no `cl_sensitivity`: a paper has neither an orange mask nor a
+second emulsion.
+
+Paper files live in `data/papers/`, one per paper; film files live in `films/`
+(the published series) and `data/films/` (the modelled stocks that have no
+report). The crate's stock tables are generated from both at build time
+(`crates/kallotype-core/build.rs`), and `films/tools/kalofilm.py` reads either
+kind by its magic.
+
 ## Reading it
 
 1. Check the magic and the version; anything else is a different file.

@@ -384,17 +384,18 @@ Code is **Apache-2.0**. See [LICENSE](LICENSE).
 
 The **measurement data is CC BY-SA 4.0**: the `.kalofilm` files, the digitised
 curves and the reports in [films/](films/), and the model files in
-[data/films/](data/films/), may be used for anything, including commercially,
-provided the adaptation is shared under the same terms. See [films/LICENSE](films/LICENSE),
+[data/films/](data/films/) and [data/papers/](data/papers/), may be used for
+anything, including commercially, provided the adaptation is shared under the
+same terms. See [films/LICENSE](films/LICENSE),
 which also records that the three films published before 2026-11-09 went out
 under CC BY 4.0.
 
 The crate does not contain the digitisation. `crates/kallotype-core/build.rs`
-reads the `.kalofilm` files in `films/` and `data/films/` when the crate is
-built and generates the stock table from them, so the program text is
-Apache-2.0 and the film data is CC BY-SA, with the boundary at a file read
-rather than at a comment. Building from source therefore needs those files
-present.
+reads the `.kalofilm` and `.kalopaper` files in `films/`, `data/films/` and
+`data/papers/` when the crate is built and generates the stock tables from
+them, so the program text is Apache-2.0 and the measured data is CC BY-SA, with
+the boundary at a file read rather than at a comment. Building from source
+therefore needs those files present.
 
 One exception, and it is fenced off on purpose: `crates/kallotype-raw` is
 **LGPL-2.1**, because camera raw decoding is built on `rawler`. That crate is

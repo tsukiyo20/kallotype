@@ -41,7 +41,6 @@
 //! of its own, it has no mask, and there is no second place to put it.
 
 use crate::curve::CharacteristicCurve;
-use crate::measured::{PAPER_DYES, PAPER_DYES_E4021, PAPER_LAYERS, PAPER_LAYERS_E4021};
 use crate::spectral::GRID_LEN;
 
 /// Which chemistry the stock is, and therefore which stages the render runs.
@@ -169,78 +168,8 @@ const fn curve(d_min: f64, d_max: f64, gamma: f64, log_e0: f64) -> Characteristi
 // where the two meet. Nothing in this file is a digitised number.
 include!(concat!(env!("OUT_DIR"), "/film_stocks.rs"));
 
-/// Every paper stock compiled into the binary.
-pub static PAPER_STOCKS: &[PaperStock] = &[
-    PaperStock {
-        id: "portra_endura",
-        label: "KODAK PROFESSIONAL PORTRA ENDURA, RA-4",
-        note: "Measured. Curve from data sheet E-4021 page 7, the \
-               normal-contrast professional paper; dyes and layer \
-               sensitivities from page 8 of the same sheet. White 0.096 status \
-               density, a print's, not the metallic stock's.",
-        // The mean of the three measured layers at a transition of 7. Per layer
-        // they are red (0.0909, 2.6087, 3.68, −1.4125), green (0.0929, 2.5928,
-        // 3.38, −1.3950) and blue (0.1048, 2.4137, 4.57, −1.4275), reproduced to
-        // an rms of 0.017, 0.024 and 0.015. This chart is drawn as straight
-        // segments rather than cubics, which puts a floor of about 0.01 under
-        // any fit — the model is at that floor, not above it.
-        channel: curve(0.0964, 2.5358, 3.7821, -1.4125).with_transition(7.0),
-        target_mid_reflectance: 0.18,
-        dyes: &PAPER_DYES_E4021,
-        layers: &PAPER_LAYERS_E4021,
-    },
-    PaperStock {
-        id: "supra_endura",
-        label: "KODAK PROFESSIONAL SUPRA ENDURA, RA-4",
-        note: "Measured. Curve digitised from the same sheet and page as PORTRA \
-               ENDURA: the higher-contrast professional paper. White 0.102.",
-        // The mean of the three layers at a transition of 8; per layer red
-        // (0.0943, 2.6607, 5.13, −1.1550), green (0.1048, 2.5631, 4.31, −1.1400)
-        // and blue (0.1073, 2.5307, 5.16, −1.1750), rms 0.025, 0.024, 0.032.
-        channel: curve(0.1010, 2.5847, 4.7309, -1.1575).with_transition(8.0),
-        target_mid_reflectance: 0.18,
-        // E-4021 draws one set of spectra for both its papers.
-        dyes: &PAPER_DYES_E4021,
-        layers: &PAPER_LAYERS_E4021,
-    },
-    PaperStock {
-        id: "endura_premier_metallic",
-        label: "KODAK PROFESSIONAL ENDURA Premier Metallic, RA-4",
-        note: "Measured. Curve digitised from data sheet E-4071 page 4; its three \
-               dye spectra come from page 5 of the same sheet. The white is the \
-               metallic base's, 0.21 status density, not a normal paper's 0.07.",
-        // The mean of the three measured layers, fitted at the paper's
-        // transition of 10. Per layer they are red (0.2078, 2.7739, 5.24,
-        // −1.175), green (0.2043, 2.5258, 5.40, −1.205) and blue (0.1707,
-        // 2.4699, 6.66, −1.193), each reproduced to an rms of 0.013, 0.010 and
-        // 0.007. One curve serves the print, so this one is their average and
-        // the layer spread at the shoulder — 0.30 of density — is what that
-        // single curve cannot say.
-        channel: curve(0.1944, 2.5902, 5.5716, -1.1900).with_transition(10.0),
-        target_mid_reflectance: 0.18,
-        dyes: &PAPER_DYES,
-        layers: &PAPER_LAYERS,
-    },
-    PaperStock {
-        id: "c41_paper",
-        label: "Colour paper, RA-4",
-        note: "Placeholder RA-4 paper: low d_min, short contrasty curve.",
-        channel: curve(0.06, 2.05, 2.40, 0.0),
-        target_mid_reflectance: 0.18,
-        // No measurement of its own: the metallic sheet's spectra stand in.
-        dyes: &PAPER_DYES,
-        layers: &PAPER_LAYERS,
-    },
-    PaperStock {
-        id: "bw_paper",
-        label: "Fibre-based B&W paper",
-        note: "Placeholder B&W paper: deeper blacks, steeper curve.",
-        channel: curve(0.05, 2.10, 2.80, 0.0),
-        target_mid_reflectance: 0.18,
-        dyes: &PAPER_DYES,
-        layers: &PAPER_LAYERS,
-    },
-];
+// The paper stocks are generated from the `.kalopaper` files the same way the
+// films are; see `build.rs`.
 
 /// Look up a film stock by id.
 #[must_use]
