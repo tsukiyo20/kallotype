@@ -82,9 +82,45 @@ pub struct GrainField {
     /// one field, and drawing it three times gives a monochrome negative a
     /// colour cast made of noise.
     pub monochrome: bool,
+    /// Correlation length of the grain in micrometres, one per layer.
+    ///
+    /// This is the *spatial* scale the counting statistics do not carry: a
+    /// grain covers area, so neighbouring pixels agree over roughly this
+    /// distance, and the published granularity — a variance through a 48 µm
+    /// aperture — averages that correlation away.
+    ///
+    /// It is a correlation length, not a diameter: it is the width of the
+    /// autocovariance of a flat scan's granularity, which is what
+    /// `scripts/grain_spectrum.py` measures. Until a stock's own is measured,
+    /// the mean grain spacing `1/√n` stands in — the distance at which the
+    /// measured density tiles the area, and a lower bound on the real one.
+    pub grain_um: [f64; 3],
+    /// Radius of the correlation stencil, in pixels, one per layer. Zero when
+    /// the grain is smaller than a tenth of a pixel, where the kernel is a
+    /// delta and drawing it would only cost time.
+    pub radius: [usize; 3],
+    /// Separable weights for the stencil, centre at [`Self::CENTRE`].
+    pub weights: [[f64; Self::STENCIL]; 3],
+    /// Reciprocal of the stencil's L2 norm, so the filtered field keeps the
+    /// variance the counting statistics asked for.
+    pub normalise: [f64; 3],
 }
 
 impl GrainField {
+    /// Width of the separable stencil: five taps, so a radius of two.
+    const STENCIL: usize = 5;
+    /// How much narrower a five-tap stencil is than the Gaussian it samples.
+    ///
+    /// A continuous Gaussian of `sigma` has an autocovariance of
+    /// `exp(-r²/4sigma²)`. Its five-tap version is aliased enough that the
+    /// rendered field's correlation length comes out 0.74 of the continuous
+    /// prediction — measured by rendering a flat patch at a known pitch and
+    /// running `scripts/grain_spectrum.py` over it. This is a property of the
+    /// discretisation, not of the film, so it lives here and not in the data.
+    const STENCIL_NARROWING: f64 = 0.74;
+    /// Index of the centre tap.
+    pub const CENTRE: usize = 2;
+
     /// Grain density for a stock that has not been measured, in grains per µm².
     ///
     /// A placeholder, at the order of magnitude a physical grain count would
@@ -112,7 +148,12 @@ impl GrainField {
             grains_per_um2: [Self::DEFAULT_GRAINS_PER_UM2; 3],
             seed,
             monochrome: false,
+            grain_um: [0.0; 3],
+            radius: [0; 3],
+            weights: [[0.0; Self::STENCIL]; 3],
+            normalise: [1.0; 3],
         }
+        .with_grain_sizes(Self::spacing_of(&[Self::DEFAULT_GRAINS_PER_UM2; 3]))
     }
 
     /// A field whose grain density is the stock's own.
@@ -129,6 +170,76 @@ impl GrainField {
             monochrome: stock.process == crate::emulsion::FilmProcess::Monochrome,
             ..Self::new(width, height, frame_mm, seed)
         }
+        .with_grain_sizes(Self::spacing_of(&stock.grains_per_um2))
+    }
+
+    /// Mean grain spacing, `1/√n`, in micrometres, one per layer.
+    ///
+    /// The area one developed grain occupies at the measured density. It is
+    /// what a density of `n` grains per µm² tiles into, and it is the stand-in
+    /// for a grain size until a stock's own has been measured from a scan.
+    #[must_use]
+    pub fn spacing_of(grains_per_um2: &[f64; 3]) -> [f64; 3] {
+        std::array::from_fn(|layer| {
+            let n = grains_per_um2[layer];
+            if n > 0.0 { 1.0 / n.sqrt() } else { 0.0 }
+        })
+    }
+
+    /// Set the grain diameter per layer, and build the stencil it implies.
+    ///
+    /// The kernel is a Gaussian of `sigma = L/(√2)` where `L` is the
+    /// correlation length: a field filtered by a Gaussian of `sigma` has an
+    /// autocovariance of `exp(-r²/4sigma²)`, whose own width is `√2·sigma`, so
+    /// dividing by √2 makes the rendered grain's correlation length the number
+    /// that was measured. A grain narrower than a tenth of a pixel leaves the
+    /// stencil at radius zero — there the kernel is a delta and the per-pixel
+    /// draw is already the answer.
+    ///
+    /// The weights are normalised to unit L2 norm, so a separable filter built
+    /// from them leaves a white field's variance at one: the grain gets its
+    /// *shape* from this stencil and its *size* from the counting statistics,
+    /// and neither one is quietly changed by the other.
+    #[must_use]
+    pub fn with_grain_sizes(mut self, grain_um: [f64; 3]) -> Self {
+        self.grain_um = grain_um;
+        let pixel_um = self.pixel_area_um2.sqrt().max(1e-9);
+        for (layer, &diameter) in grain_um.iter().enumerate() {
+            let sigma_px =
+                diameter.max(0.0) / (std::f64::consts::SQRT_2 * Self::STENCIL_NARROWING) / pixel_um;
+            let radius = if sigma_px < 0.1 {
+                0
+            } else {
+                (3.0 * sigma_px).ceil().min((Self::STENCIL / 2) as f64) as usize
+            };
+            self.radius[layer] = radius;
+            let mut weights = [0.0; Self::STENCIL];
+            if radius == 0 {
+                weights[Self::CENTRE] = 1.0;
+            } else {
+                for (tap, weight) in weights.iter_mut().enumerate() {
+                    let offset = tap as f64 - Self::CENTRE as f64;
+                    if offset.abs() <= radius as f64 {
+                        *weight = (-0.5 * (offset / sigma_px).powi(2)).exp();
+                    }
+                }
+                let norm: f64 = weights.iter().map(|weight| weight * weight).sum::<f64>();
+                let norm = norm.sqrt();
+                for weight in &mut weights {
+                    *weight /= norm;
+                }
+            }
+            self.weights[layer] = weights;
+        }
+        self
+    }
+
+    /// Whether the grain is correlated across pixels.
+    ///
+    /// When it is, the drawing backend has to convolve, and this one knows how.
+    #[must_use]
+    pub fn has_kernel(&self) -> bool {
+        self.radius.iter().any(|&radius| radius > 0)
     }
 
     /// Standard deviation of the log-exposure fluctuation at mean `density`.
@@ -146,7 +257,37 @@ impl GrainField {
     /// The log-exposure fluctuation for one layer of one pixel.
     #[must_use]
     pub fn jitter(&self, x: usize, y: usize, mean_density: f64, channel: usize) -> f64 {
-        self.sigma(mean_density, channel) * self.normal(x, y, channel)
+        self.sigma(mean_density, channel) * self.correlated(x, y, channel)
+    }
+
+    /// One layer's grain at a pixel, with the grain's own spatial size.
+    ///
+    /// A grain is not a point: it covers area, so the fluctuation at one pixel
+    /// is shared with its neighbours. The counting statistics cannot say that
+    /// — they give the variance through an aperture — so the correlation is
+    /// imposed here, by filtering the field with the stencil the grain's
+    /// diameter implies. Coordinates outside the image repeat the edge, which
+    /// keeps the draw a pure function of the pixel and identical on any backend
+    /// that implements the same stencil.
+    fn correlated(&self, x: usize, y: usize, channel: usize) -> f64 {
+        let radius = self.radius[channel];
+        if radius == 0 {
+            return self.normal(x, y, channel);
+        }
+        let weights = &self.weights[channel];
+        let reach = radius as isize;
+        let mut sum = 0.0;
+        for dy in -reach..=reach {
+            let row = clamp(y, dy, self.height);
+            let wy = weights[(dy + Self::CENTRE as isize) as usize];
+            for dx in -reach..=reach {
+                let column = clamp(x, dx, self.width);
+                sum += wy
+                    * weights[(dx + Self::CENTRE as isize) as usize]
+                    * self.normal(column, row, channel);
+            }
+        }
+        sum
     }
 
     /// A standard normal, deterministic in the pixel, the layer and the seed.
@@ -184,6 +325,12 @@ impl GrainField {
     }
 }
 
+/// A coordinate shifted by an offset, held inside the image.
+fn clamp(value: usize, offset: isize, limit: usize) -> usize {
+    let shifted = value as isize + offset;
+    shifted.clamp(0, limit.saturating_sub(1) as isize) as usize
+}
+
 /// SplitMix64: small, fast, and good enough for a grain field.
 ///
 /// The generator is re-seeded from the coordinates for every sample rather than
@@ -205,6 +352,50 @@ fn splitmix64(state: &mut u64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The stencil has to keep the variance the counting statistics set: it
+    /// changes the grain's shape, not its size. And a grain wider than a pixel
+    /// has to make neighbouring pixels agree, which is the whole point.
+    #[test]
+    fn a_wide_grain_correlates_its_neighbours_without_changing_its_size() {
+        // 36 mm across 7040 pixels is 5.11 µm per pixel; a 10 µm grain is
+        // nearly two pixels across.
+        let field = GrainField::new(7040, 100, 36.0, 3).with_grain_sizes([10.0; 3]);
+        assert!(
+            field.has_kernel(),
+            "a 10 µm grain must be wider than a pixel"
+        );
+        let sigma = field.sigma(1.0, 0);
+
+        let (mut sum_sq, mut sum_lag, mut count) = (0.0, 0.0, 0.0);
+        for y in 10..90 {
+            for x in 10..4000 {
+                let here = field.jitter(x, y, 1.0, 0) / sigma;
+                let right = field.jitter(x + 1, y, 1.0, 0) / sigma;
+                sum_sq += here * here;
+                sum_lag += here * right;
+                count += 1.0;
+            }
+        }
+        let variance = sum_sq / count;
+        let lag_one = sum_lag / count;
+        assert!(
+            (variance - 1.0).abs() < 0.1,
+            "the stencil changed the grain's size: variance {variance}"
+        );
+        assert!(
+            lag_one > 0.2,
+            "neighbouring pixels should agree, lag-1 correlation {lag_one}"
+        );
+
+        // And below a tenth of a pixel of stencil width the kernel is a delta:
+        // nothing is correlated and nothing is slower.
+        let narrow = GrainField::new(7040, 100, 36.0, 3).with_grain_sizes([0.3; 3]);
+        assert!(
+            !narrow.has_kernel(),
+            "a third of a micrometre is a delta here"
+        );
+    }
 
     /// A silver film has one record, so its three layers must see one grain
     /// field. Drawing per layer gives a monochrome negative coloured noise —
@@ -245,6 +436,10 @@ mod tests {
             pixel_area_um2: pixel_area,
             grains_per_um2: [GrainField::DEFAULT_GRAINS_PER_UM2; 3],
             seed: 7,
+            grain_um: [0.0; 3],
+            radius: [0; 3],
+            weights: [[0.0; GrainField::STENCIL]; 3],
+            normalise: [1.0; 3],
         }
     }
 

@@ -175,13 +175,17 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
     // by a factor of nine between its layers, and a stock without a measurement
     // falls back to the placeholder.
     let grain = args.grain.then(|| {
-        GrainField::for_stock(
+        let field = GrainField::for_stock(
             width as usize,
             height as usize,
             args.frame_mm,
             args.grain_seed,
             selection.film,
-        )
+        );
+        match args.grain_um {
+            Some(diameter) => field.with_grain_sizes([diameter; 3]),
+            None => field,
+        }
     });
     let emulsion = (!args.no_emulsion).then(|| EmulsionBlur::for_stock(selection.film, pixel_um));
     let halation = args.halation.then(|| Halation::typical(pixel_um));
@@ -192,13 +196,24 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         grain: grain.as_ref(),
         couplers: couplers.as_ref(),
     };
+    // The shader draws its grain from the pixel's own hash and has no stencil,
+    // so a film whose grain is wider than a pixel renders on the CPU. That is
+    // the loud fallback this project uses everywhere else: correct, slower,
+    // and said out loud.
+    let gpu = args.gpu && !finishing.grain.is_some_and(|grain| grain.has_kernel());
+    if args.gpu && !gpu {
+        eprintln!(
+            "warning: the grain stencil is wider than a pixel and the shader draws none; \
+             rendering on the cpu"
+        );
+    }
     let backend = render_pixels(
         &mut image.pixels,
         &prepared,
         width as usize,
         height as usize,
         &finishing,
-        args.gpu,
+        gpu,
     )?;
 
     ensure_parent(&args.output)?;

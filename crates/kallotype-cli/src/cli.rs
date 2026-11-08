@@ -170,6 +170,15 @@ pub struct RenderArgs {
     #[arg(long, value_name = "MM", default_value_t = 36.0)]
     pub frame_mm: f64,
 
+    /// Correlation length of the grain in micrometres, overriding the stock's.
+    ///
+    /// The distance over which neighbouring pixels agree, as measured from a
+    /// flat scan by `scripts/grain_spectrum.py`. Until a stock's own is
+    /// measured, the model uses the mean spacing the granularity figure
+    /// implies, which is a lower bound.
+    #[arg(long, value_name = "MM")]
+    pub grain_um: Option<f64>,
+
     /// Grain seed. The same seed and the same image give the same grain.
     #[arg(long, value_name = "N", default_value_t = 0)]
     pub grain_seed: u64,
