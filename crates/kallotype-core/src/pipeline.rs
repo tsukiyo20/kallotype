@@ -98,6 +98,12 @@ impl RenderParams {
     /// the polynomial prior alone.
     #[must_use]
     pub fn prepare_with(&self, atoms: Option<&[kallotype_spectral::Spectrum]>) -> PreparedRender {
+        // A silver film has one record, so the three-channel scalar path cannot
+        // express it: it would develop each input channel separately and print a
+        // colour image from a film that has no colour. A monochrome stock is
+        // therefore always exposed through its spectrum, whatever was asked for.
+        let monochrome = self.film.process == crate::emulsion::FilmProcess::Monochrome;
+        let spectral = self.spectral || monochrome;
         let channels: [CharacteristicCurve; 3] =
             std::array::from_fn(|i| self.development.apply_to(self.film.channels[i]));
 
@@ -150,8 +156,7 @@ impl RenderParams {
                 .then(|| ScanContext::measured_with(self.paper.dyes)),
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
             reversal: self.film.process == crate::emulsion::FilmProcess::Reversal,
-            spectral: self
-                .spectral
+            spectral: spectral
                 .then(|| {
                     let context =
                         SpectralContext::for_stock(self.film).with_camera(self.camera.clone());
@@ -161,7 +166,7 @@ impl RenderParams {
                     }
                 })
                 .filter(|_| self.lut_size < 2),
-            lut: (self.spectral && self.lut_size >= 2).then(|| {
+            lut: (spectral && self.lut_size >= 2).then(|| {
                 let context =
                     SpectralContext::for_stock(self.film).with_camera(self.camera.clone());
                 let context = match atoms {
