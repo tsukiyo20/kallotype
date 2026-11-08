@@ -17,3 +17,11 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
+          # The action defaults to `--all-features`, which pulls in
+          # `kallotype-raw`: an optional crate that links `rawler`, LGPL-2.1.
+          # That boundary is deliberate — a binary built without the `raw`
+          # feature carries no copyleft — so the licence gate is run over the
+          # graph that ships, which is the default one. The LGPL crate is
+          # allowed to exist; it is not allowed to be reachable by default, and
+          # `cargo deny --all-features` failing is how that stayed honest.
+          arguments: ""

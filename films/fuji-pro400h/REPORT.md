@@ -175,7 +175,7 @@ the panel rather than the model.
 plotted in density above base. The two are the same quantity once the base is
 subtracted, and the near-coincidence is the fit reported in Table 1.
 
-![Figure 2](figures/03-residuals.png)
+![Figure 2](figures/02-residuals.png)
 
 **Figure 2.** Residuals, point minus curve, for the three layers. They are
 structureless at the scale of the points (no drift, no end-lump), which says the
@@ -207,7 +207,7 @@ p. 4): panel 21 draws the density of a mid-scale neutral, which is one equation
 in three unknown spectra and cannot be inverted. The file's `[measured]` section
 says so.
 
-![Figure 3](figures/02-spectra.png)
+![Figure 3](figures/03-spectra.png)
 
 **Figure 3.** What the file carries: three layer sensitivities (normalised to
 their joint peak, which is the scale the model uses), the borrowed dye shapes,

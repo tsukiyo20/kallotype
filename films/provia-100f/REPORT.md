@@ -129,14 +129,14 @@ departure from its points near the shoulder is the overprinted-plate cost of
 Table 1, not a fitting artefact: it is visible here because the figure is drawn
 at the resolution of the residual, not of the page.
 
-![Figure 2](figures/03-residuals.png)
+![Figure 2](figures/02-residuals.png)
 
 **Figure 2.** Residuals per layer. Green is flat to ±0.01 over the whole range;
 blue drifts in the shoulder, exactly where its plate is buried under red's. The
 figure is the evidence for the decomposition claim in §3.1 — a single residual
 number would hide it.
 
-![Figure 3](figures/02-spectra.png)
+![Figure 3](figures/03-spectra.png)
 
 **Figure 3.** The file's tables: three layer sensitivities (joint-peak
 normalised), three dye absorptions and — absent here by design — no mask, since
