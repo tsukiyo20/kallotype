@@ -336,8 +336,10 @@ pub fn print_report(
     }
     if let Some(grain) = rendering.grain {
         println!(
-            "  grain     {:.1}/µm²  ({:.2} µm pixel, seed {}, placeholder density)",
+            "  grain     {:.2}/{:.2}/{:.2} per µm²  ({:.2} µm pixel, seed {})",
             grain.grains_per_um2[0],
+            grain.grains_per_um2[1],
+            grain.grains_per_um2[2],
             grain.pixel_area_um2.sqrt(),
             grain.seed
         );

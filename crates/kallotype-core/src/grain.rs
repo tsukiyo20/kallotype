@@ -75,6 +75,13 @@ pub struct GrainField {
     pub grains_per_um2: [f64; 3],
     /// Seed: the grain is a fixture, not a different image every render.
     pub seed: u64,
+    /// Whether the three channels share one grain field.
+    ///
+    /// A colour film has three separate emulsions, so three independent draws
+    /// is the physical statement. A silver film has one record: its grain is
+    /// one field, and drawing it three times gives a monochrome negative a
+    /// colour cast made of noise.
+    pub monochrome: bool,
 }
 
 impl GrainField {
@@ -104,6 +111,7 @@ impl GrainField {
             pixel_area_um2: pixel_um * pixel_um,
             grains_per_um2: [Self::DEFAULT_GRAINS_PER_UM2; 3],
             seed,
+            monochrome: false,
         }
     }
 
@@ -118,6 +126,7 @@ impl GrainField {
     ) -> Self {
         Self {
             grains_per_um2: stock.grains_per_um2,
+            monochrome: stock.process == crate::emulsion::FilmProcess::Monochrome,
             ..Self::new(width, height, frame_mm, seed)
         }
     }
@@ -142,6 +151,8 @@ impl GrainField {
 
     /// A standard normal, deterministic in the pixel, the layer and the seed.
     fn normal(&self, x: usize, y: usize, channel: usize) -> f64 {
+        // One record, one field: every layer draws the same numbers.
+        let channel = if self.monochrome { 0 } else { channel };
         let u1 = self.uniform(x, y, channel, 0);
         let u2 = self.uniform(x, y, channel, 1);
         (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
@@ -195,8 +206,40 @@ fn splitmix64(state: &mut u64) -> u64 {
 mod tests {
     use super::*;
 
+    /// A silver film has one record, so its three layers must see one grain
+    /// field. Drawing per layer gives a monochrome negative coloured noise —
+    /// found by rendering one and looking at the channels.
+    #[test]
+    fn a_silver_film_draws_one_grain_field() {
+        let mut field = GrainField::new(8, 8, 36.0, 7);
+        field.monochrome = true;
+        for y in 0..8 {
+            for x in 0..8 {
+                let red = field.jitter(x, y, 1.0, 0);
+                assert_eq!(
+                    red,
+                    field.jitter(x, y, 1.0, 1),
+                    "layer 1 differs at {x},{y}"
+                );
+                assert_eq!(
+                    red,
+                    field.jitter(x, y, 1.0, 2),
+                    "layer 2 differs at {x},{y}"
+                );
+            }
+        }
+
+        field.monochrome = false;
+        assert_ne!(
+            field.jitter(3, 4, 1.0, 0),
+            field.jitter(3, 4, 1.0, 1),
+            "a colour film's layers are separate emulsions"
+        );
+    }
+
     fn field(pixel_area: f64) -> GrainField {
         GrainField {
+            monochrome: false,
             width: 4,
             height: 4,
             pixel_area_um2: pixel_area,

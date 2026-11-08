@@ -104,7 +104,12 @@ fn grain_uniform(x: u32, y: u32, layer: u32, lane: u32) -> f32 {
 }
 
 /// A standard normal by Box–Muller, deterministic in the pixel and the layer.
-fn grain_normal(x: u32, y: u32, layer: u32) -> f32 {
+///
+/// `flags2.z` says the film has one record: a silver emulsion is one grain
+/// field, and drawing it per layer would give a monochrome negative a colour
+/// cast made of noise.
+fn grain_normal(x: u32, y: u32, layer_in: u32) -> f32 {
+    let layer = select(layer_in, 0u, params.flags2.z > 0.5);
     let u1 = grain_uniform(x, y, layer, 0u);
     let u2 = grain_uniform(x, y, layer, 1u);
     return sqrt(-2.0 * log(u1)) * cos(6.283185307179586 * u2);

@@ -878,10 +878,13 @@ fn uniform(
     push_f32(
         &mut out,
         // Lane 1: the film is a reversal and skips the print and the scan.
+        // Lane 2: the film has one grain field, so every layer draws the same
+        // numbers. Without it a silver negative comes out with noise the colour
+        // of a colour film's, which it does not have.
         &[
             flag(scan.is_some_and(|model| model.clamped)),
             flag(scalar.reversal),
-            0.0,
+            flag(grain.is_some_and(|grain| grain.monochrome)),
             0.0,
         ],
     );
