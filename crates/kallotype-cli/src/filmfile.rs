@@ -399,6 +399,8 @@ mod tests {
             ("fuji_pro400h", "fuji-pro400h"),
             ("provia_100f", "provia-100f"),
             ("ektachrome_e100", "ektachrome-e100"),
+            ("velvia_50", "velvia-50"),
+            ("kodak_portra_400", "portra-400"),
         ] {
             let loaded = read(
                 films()

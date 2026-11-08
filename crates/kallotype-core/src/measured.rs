@@ -676,6 +676,19 @@ pub(crate) const KODAK_PORTRA400_LAYERS: [[f64; GRID_LEN]; 3] = [
     ],
 ];
 
+/// The spectral density of base, fog and the orange mask, from E-4050 page 4.
+/// Generated from kodak_portra_400.toml; edit the stock file, not this table.
+pub(crate) const KODAK_PORTRA400_MASK: [f64; GRID_LEN] = [
+    0.70650, 0.70650, 0.70650, 0.70650, 0.70510, 0.69420, 0.69140, 0.72170, 0.75340, 0.78110,
+    0.80630, 0.81810, 0.82820, 0.82740, 0.82550, 0.81800, 0.81000, 0.80120, 0.79230, 0.78370,
+    0.77480, 0.76430, 0.75610, 0.76250, 0.77090, 0.78560, 0.79500, 0.77390, 0.74880, 0.70800,
+    0.66940, 0.65110, 0.63430, 0.62320, 0.61220, 0.59950, 0.58490, 0.55710, 0.52750, 0.47970,
+    0.43120, 0.37810, 0.32670, 0.28660, 0.25030, 0.23110, 0.21400, 0.20840, 0.20300, 0.20060,
+    0.19870, 0.19830, 0.19860, 0.20130, 0.20440, 0.20740, 0.21040, 0.21460, 0.21870, 0.22180,
+    0.22470, 0.22730, 0.22960, 0.22970, 0.22970, 0.22970, 0.22970, 0.22970, 0.22970, 0.22970,
+    0.22970,
+];
+
 /// KODAK PROFESSIONAL PORTRA 800 layer sensitivities, R/G/B order, from E-4040 page 4.
 /// Generated from kodak_portra_800.toml; edit the stock file, not this table.
 #[allow(clippy::approx_constant)] // measurements: a sample may sit near pi/4

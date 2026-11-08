@@ -42,16 +42,15 @@ lint-raw:
 #
 # Local only: the stock files live in `private/`, which is not published, so CI
 # cannot run this. It fails when a stock file and `emulsion.rs` disagree.
+#
+# Every film stock must be listed, and the list is a glob on purpose: written
+# out by hand it had drifted three files short (E100, VELVIA 50 and PRO 400H),
+# so a check that looked comprehensive skipped a fifth of the table.
+# `portra_endura.toml` is a paper, not a film, and has no `FilmStock` block.
 stocks:
     PYTHONPATH=private/.pylib313 /opt/homebrew/bin/python3.13 \
-        private/scripts/compile_stocks.py --check private/stocks/kodak_portra_400.toml \
-        private/stocks/kodak_portra_160.toml private/stocks/kodak_portra_800.toml \
-        private/stocks/kodak_ektar_100.toml private/stocks/kodak_gold200.toml \
-        private/stocks/fuji_nph400.toml private/stocks/fuji_c200.toml \
-        private/stocks/fuji200.toml private/stocks/fuji400.toml \
-        private/stocks/vision3_250d.toml private/stocks/vision3_50d.toml \
-        private/stocks/vision3_200t.toml private/stocks/provia_100f.toml \
-        private/stocks/ilford_delta400.toml private/stocks/kodak_tmax400.toml
+        private/scripts/compile_stocks.py --check \
+        $(ls private/stocks/*.toml | grep -v portra_endura)
 
 # Run the whole test suite.
 test:
