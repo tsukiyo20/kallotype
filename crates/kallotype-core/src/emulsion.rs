@@ -977,4 +977,14 @@ mod tests {
         assert!(paper_stock("c41_paper").is_some());
         assert!(film_stock("nope").is_none());
     }
+
+    /// ADR 0017 step 1 is inert, and this is what makes that a fact rather
+    /// than a comment: no stock in the tree declares a second cyan emulsion
+    /// yet, so the model's output cannot have moved.
+    #[test]
+    fn no_stock_has_a_second_cyan_emulsion_yet() {
+        for stock in FILM_STOCKS {
+            assert!(stock.extra_cyan.is_none(), "{} declares one", stock.id);
+        }
+    }
 }
