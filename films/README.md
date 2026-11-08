@@ -27,9 +27,10 @@ provia-100f/
 
 The points are published so the fit can be **recomputed rather than believed**:
 the report's residual is against those files. The figures are plots of the same
-numbers, drawn by `tools/plot.py` — no image of a data sheet is reproduced
-anywhere here, because the sheets are their publishers' and the numbers are what
-this project actually produced.
+numbers; `tools/kalofilm.py --csv` exports the spectra in the form any plotting
+tool reads, so every figure can be redrawn from the data. No image of a data
+sheet is reproduced anywhere here — the sheets stay with their publishers, and
+the numbers are what this project produced.
 
 ## Loading one
 

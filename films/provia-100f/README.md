@@ -8,7 +8,8 @@ granularity are all from its own sheet.
 - **The film:** `provia-100f.kalofilm` (5,444 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 768, 183 and 320 digitised points.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`.
+- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+  from `curves/` and the file's tables.
 
 Headline numbers: γ 2.08 on all three layers; sensitivities read from the
 Bézier paths at 455, 543 and 642 nm; dyes at 443, 543 and 658 nm; σ 4.68 µm;

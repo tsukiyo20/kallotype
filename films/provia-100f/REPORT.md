@@ -191,10 +191,15 @@ Table 3. Dominant error per quantity.
 and the file with
 
 ```bash
-python3 ../tools/plot.py curves    .
-python3 ../tools/plot.py residuals .
-python3 ../tools/plot.py spectra   .
+python3 ../tools/kalofilm.py --check provia-100f.kalofilm      # magic, digest, sizes
+python3 ../tools/kalofilm.py --csv /tmp/film provia-100f.kalofilm
 ```
+
+`--csv` writes one CSV per table with a wavelength column, which is the form
+any plotting or numerical tool reads; the figures in this report plot exactly
+those columns (Figure 1: `curves/` against the file's curves; Figure 2: their
+difference; Figure 3: the file's tables), so they can be redrawn, checked or
+disagreed with in whatever tool the reader already uses.
 
 No image of the data sheet is reproduced in this directory.
 
