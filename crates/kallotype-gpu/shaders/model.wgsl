@@ -237,6 +237,20 @@ fn model_exposure(linear: vec3<f32>) -> vec3<f32> {
 }
 
 fn model_positive(status: vec3<f32>) -> vec3<f32> {
+    // A reversal film is its own picture: there is no print, no paper and no
+    // enlarger between the development and the eye, so the density *is* the
+    // image and what leaves is the light it transmits.
+    if (params.flags2.y > 0.5) {
+        // White is the film's clearest point: the projector's lamp, not a
+        // correction. See `Positive` in `pipeline.rs`.
+        let white = vec3<f32>(params.curve[0].y, params.curve[1].y, params.curve[2].y);
+        return clamp(
+            exp2(-(status + params.film_base.xyz - white) * LOG2_10),
+            vec3<f32>(0.0),
+            vec3<f32>(1.0),
+        );
+    }
+
     // What the enlarger sees: the channel's own light loss, with the film's base
     // density riding in the exponent, or the light the negative's dyes transmit.
     // The spectral print puts the measured mask into its integral instead, so the

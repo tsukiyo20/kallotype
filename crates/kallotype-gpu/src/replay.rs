@@ -107,6 +107,12 @@ fn scalar(
             index,
             layer,
         );
+        if model.reversal {
+            let white = model.curve[layer][1];
+            return (-(negative + model.base_density[layer] - white) * LOG2_10)
+                .exp2()
+                .clamp(0.0, 1.0);
+        }
         let printed = curve_density(
             model.paper,
             model.transition[3],
@@ -153,6 +159,16 @@ fn spectral(
         )
     });
 
+    if model.scalar.reversal {
+        // The film is the picture: its clearest point is the white, and the
+        // print and the scan never happen. Mirrors `model_positive`.
+        return std::array::from_fn(|layer| {
+            let white = model.scalar.curve[layer][1];
+            (-(density[layer] + model.scalar.base_density[layer] - white) * LOG2_10)
+                .exp2()
+                .clamp(0.0, 1.0)
+        });
+    }
     match &model.scan {
         Some(scan) => scan_colour(scan, model.step_nm, printed).map(|value| value.clamp(0.0, 1.0)),
         None => printed.map(|value| (-value * LOG2_10).exp2().clamp(0.0, 1.0)),

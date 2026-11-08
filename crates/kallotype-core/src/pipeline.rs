@@ -202,6 +202,9 @@ pub struct ScalarModel {
     pub print_shift: [f64; 3],
     /// Exposure offset applied before the curve, in decades.
     pub exposure_shift: f64,
+    /// Whether the film is its own picture. A reversal keeps its density and
+    /// stops: there is no paper between the development and the eye.
+    pub reversal: bool,
 }
 
 /// A [`RenderParams`] with the curves already developed and the print balanced.
@@ -251,6 +254,7 @@ impl PreparedRender {
             base_density: self.base_density,
             print_shift: self.print_shift,
             exposure_shift: self.exposure_shift,
+            reversal: self.reversal,
         }
     }
 
@@ -378,9 +382,17 @@ impl PreparedRender {
         // enlarger between the development and the eye. What leaves is what the
         // film transmits, and the density *is* the image.
         if self.reversal {
+            // The film's clearest point is the projector's white: a slide's
+            // density is absolute — 0.08 for clean film, 3.3 for unexposed —
+            // and displaying it as a fraction of *clear film* rather than of
+            // nothing is what a lamp behind it does. Without that the whole
+            // image sits between two and eighty per cent and reads as a murk;
+            // a projector's white level is not a correction, it is the other
+            // half of the observation.
             return std::array::from_fn(|channel| {
+                let white = self.channels[channel].d_max;
                 10.0_f64
-                    .powf(-(density_cmy[channel] + self.base_density[channel]))
+                    .powf(-(density_cmy[channel] + self.base_density[channel] - white))
                     .clamp(0.0, 1.0)
             });
         }
@@ -604,16 +616,35 @@ mod tests {
     fn a_reversal_film_is_not_printed() {
         // The only stage that separates a reversal from a negative is the print:
         // the film's own density is the picture, so what leaves is its
-        // transmittance and not a paper's response to it.
-        let mut prepared = RenderParams::default().prepare();
-        let density = [0.2, 0.4, 0.6];
-        let printed = prepared.positive(density);
-        prepared.reversal = true;
-        let direct = prepared.positive(density);
+        // transmittance and not a paper's response to it. The white point is the
+        // film's clearest density — a projector's lamp, not the absence of film.
+        let stock = crate::emulsion::film_stock("provia_100f").expect("the reversal stock");
+        let prepared = RenderParams {
+            film: stock,
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(prepared.reversal);
+
+        let density = [1.0, 1.5, 2.0];
+        let out = prepared.positive(density);
         for channel in 0..3 {
-            let expected = 10.0_f64.powf(-(density[channel] + prepared.base_density[channel]));
-            assert!((direct[channel] - expected).abs() < 1e-12, "{channel}");
-            assert_ne!(printed[channel], direct[channel], "{channel}");
+            let white = prepared.channels()[channel].d_max;
+            let expected =
+                10.0_f64.powf(-(density[channel] + prepared.base_density[channel] - white));
+            assert!(
+                (out[channel] - expected).abs() < 1e-12,
+                "channel {channel}: {} against {expected}",
+                out[channel]
+            );
+        }
+
+        // And the ends behave: unexposed film is black, clear film is white.
+        let black = prepared.render_pixel([0.0; 3]);
+        let clear = prepared.render_pixel([4.0; 3]);
+        for channel in 0..3 {
+            assert!(black[channel] < 0.01, "unexposed at {}", black[channel]);
+            assert!(clear[channel] > 0.9, "fully exposed at {}", clear[channel]);
         }
     }
 

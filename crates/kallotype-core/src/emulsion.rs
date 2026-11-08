@@ -230,6 +230,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "fuji_nph400",
         process: FilmProcess::Negative,
@@ -249,6 +258,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -276,6 +294,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "kodak_ektar_100",
         process: FilmProcess::Negative,
@@ -295,6 +322,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -322,6 +358,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "kodak_portra_160",
         process: FilmProcess::Negative,
@@ -341,6 +386,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -368,6 +422,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "fuji_c200",
         process: FilmProcess::Negative,
@@ -387,6 +450,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -414,6 +486,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "fuji400",
         process: FilmProcess::Negative,
@@ -433,6 +514,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -460,6 +550,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "vision3_50d",
         process: FilmProcess::Negative,
@@ -483,6 +582,15 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     FilmStock {
         id: "vision3_200t",
         process: FilmProcess::Negative,
@@ -499,6 +607,32 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.2500, 3.4900, 3.1400]),
+    },
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "provia_100f",
+        process: FilmProcess::Reversal,
+        label: "FUJICHROME PROVIA 100F (RDP III), E-6",
+        note: "Measured: the characteristic curves, the three dyes, the layer sensitivities and the modulation transfer. The sensitivity panel is the only one in the archive drawn as vector paths rather than a raster, and was read from its Bezier segments. The three characteristic curves are separated ink plates, so red is complete and the green and blue layers carry its shape with their own measured offsets — residuals 0.009 and 0.051. The MTF panel publishes one curve for the film and all three layers carry it. The grain is derived from the sheet's diffuse rms granularity value of 8 through the same inversion the C200 stock used, not from a curve.",
+        channels: [
+            curve(3.3124, 0.0787, 2.0838, -1.2296),
+            curve(3.3474, 0.1137, 2.0838, -1.1796),
+            curve(3.4624, 0.2287, 2.0838, -1.2596),
+        ],
+        base_density: [0.0000, 0.0000, 0.0000],
+        grains_per_um2: [6.1700, 6.1700, 6.1700],
+        layers: &crate::measured::PROVIA_100F_LAYERS,
+        dyes: &crate::measured::PROVIA_100F_DYES,
+        mask: &crate::measured::NO_MASK,
+        sigma_um: Some([4.6800, 4.6800, 4.6800]),
     },
 ];
 

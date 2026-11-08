@@ -877,7 +877,13 @@ fn uniform(
     );
     push_f32(
         &mut out,
-        &[flag(scan.is_some_and(|model| model.clamped)), 0.0, 0.0, 0.0],
+        // Lane 1: the film is a reversal and skips the print and the scan.
+        &[
+            flag(scan.is_some_and(|model| model.clamped)),
+            flag(scalar.reversal),
+            0.0,
+            0.0,
+        ],
     );
 
     let seed = grain.map_or(0, |grain| grain.seed);
