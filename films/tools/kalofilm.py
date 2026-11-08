@@ -51,9 +51,9 @@ def main() -> int:
     print("  measured:")
     for key, value in header["measured"].items():
         print(f"    {key:11s} {value}")
-    expected = sum(table["rows"] * header["grid"]["len"] * 8 for table in header["tables"])
-    print(f"  tables: {[table['name'] for table in header['tables']]} "
-          f"({len(tables)} bytes, expected {expected})")
+    rows = {"layers": 3, "dyes": 3, "mask": 1, "cl_sensitivity": 1}
+    expected = sum(rows[name] * header["grid"]["len"] * 8 for name in header["tables"])
+    print(f"  tables: {header['tables']} ({len(tables)} bytes, expected {expected})")
     if len(tables) != expected:
         raise SystemExit("table blob does not match the directory")
     return 0

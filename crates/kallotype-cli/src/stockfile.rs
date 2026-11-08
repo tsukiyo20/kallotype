@@ -744,13 +744,13 @@ impl std::error::Error for StockError {
 
 /// A value in a stock file.
 #[derive(Debug, Clone, PartialEq)]
-enum Value {
+pub(crate) enum Value {
     String(String),
     Number(f64),
     List(Vec<Value>),
 }
 
-fn parse(text: &str, path: &Path) -> Result<BTreeMap<String, Value>, StockError> {
+pub(crate) fn parse(text: &str, path: &Path) -> Result<BTreeMap<String, Value>, StockError> {
     let mut table = BTreeMap::new();
     let mut section = String::new();
     let lines: Vec<&str> = text.lines().collect();

@@ -44,6 +44,13 @@ pub enum CliError {
         /// The underlying decoder error.
         source: IoError,
     },
+    /// A `.kalofilm` file could not be read or verified.
+    Film {
+        /// The file that failed.
+        path: PathBuf,
+        /// What the loader said.
+        message: String,
+    },
     /// A stock file could not be read, parsed or checked.
     Stock {
         /// The file that failed.
@@ -108,6 +115,9 @@ impl std::fmt::Display for CliError {
             Self::Read { path, source } => {
                 write!(f, "could not read {}: {source}", path.display())
             }
+            Self::Film { path, message } => {
+                write!(f, "could not load film {}: {message}", path.display())
+            }
             Self::Dictionary { path, message } => {
                 write!(f, "could not read dictionary {}: {message}", path.display())
             }
@@ -135,6 +145,7 @@ impl std::error::Error for CliError {
             Self::Read { source, .. } | Self::Write { source, .. } => Some(source),
             Self::UnknownStock { .. }
             | Self::InvalidNumber { .. }
+            | Self::Film { .. }
             | Self::Raw { .. }
             | Self::Dictionary { .. }
             | Self::Camera { .. }

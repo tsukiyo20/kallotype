@@ -12,6 +12,17 @@ A `.kalofilm` file is the film: a header that says where every number came from,
 the spectra as binary tables, and a SHA-256 over the lot. It is 5 kB. The format
 is specified in [FORMAT.md](FORMAT.md).
 
+## Loading one
+
+```bash
+kalo render frame.tif -o print.png --film-file films/fuji-pro400h/fuji-pro400h.kalofilm
+```
+
+A file and the stock of the same name compiled into the binary render
+**byte-identical** images; a test holds them to it. `films/tools/kalofilm.py`
+checks a file's digest and prints its `[measured]` section without needing the
+renderer at all.
+
 ## The honesty section
 
 Every file carries a `[measured]` table that says, field by field, whether the

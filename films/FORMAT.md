@@ -13,24 +13,26 @@ offset 16+n+m  32   SHA-256 of every byte before it
 
 ## Header
 
-TOML, because it is metadata a person reads. The keys that matter:
+TOML, in the same subset the stock files use: `[section]` headers, `key =
+value`, numbers, double-quoted strings, single-line arrays. Root keys come
+before the first section.
 
 | key | meaning |
 |---|---|
 | `schema` | `"film/v1"` |
 | `id`, `label`, `process` | `process` is `negative`, `reversal` or `monochrome` |
-| `[provenance]` | the publication, its page, the date, a checksum of the data sheet, and a note |
+| `tables` | the table names, in file order: `["layers", "dyes", "mask"]` |
+| `[provenance]` | `publication`, `page`, `retrieved`, `checksum` (of the data sheet), `note` |
 | `[character]` | what the film is, without rendering: `d_min`, `d_max`, `gamma`, `base_density`, `grains_per_um2`, `sigma_um` |
-| `[development]` | the reference time and temperature the curves were drawn at |
-| `[measured]` | one line per field: measured, borrowed, none, or placeholder |
-| `[curves]` | the characteristic curve of each layer, in the model's units |
+| `[development]` | `reference_time_min`, `reference_temp_c` — the conditions the curves were drawn at |
+| `[measured]` | one line per field: measured, borrowed, none, or a placeholder, with where |
+| `[curve.red]`, `[curve.green]`, `[curve.blue]` | `d_min`, `d_max`, `gamma`, `log_e0`, `transition` |
 | `[grid]` | `start_nm`, `step_nm`, `len` — 380, 5, 71 for version 1 |
-| `[[tables]]` | directory: `name`, `rows`, `offset` (from the start of the tables), `bytes`, `dtype` |
 
-### Table names and order
+### Tables
 
-A reader that knows version 1 may ignore the directory, because the order is
-part of the format:
+`tables` lists the tables that follow, in order. Each name fixes its row count,
+so the list alone is enough to walk the blob:
 
 | name | rows | what it is |
 |---|---|---|
@@ -39,17 +41,9 @@ part of the format:
 | `mask` | 1 | spectral density of base, fog and the orange mask |
 | `cl_sensitivity` | 1 | a cyan-sensitive inhibitor layer, when the film has one |
 
-Tables that are absent are absent because the film has none — a reversal has no
-orange mask — not because a writer forgot them. A reader must treat a missing
-table as zero, not as an error.
-
-### Curves
-
-`d_min` and `d_max` are densities. For a negative they are the dye's floor and
-shoulder above base (`d_min` is typically 0, and `base_density` carries the
-mask). For a **reversal** they are the other way round: `d_min` is the density
-of the unexposed slide (about 3.3) and `d_max` is the clear film, because a
-slide starts dark and clears as it is exposed.
+`layers` and `dyes` are required: a film without primaries cannot be printed.
+`mask` may be absent — a reversal has no orange mask — and an absent table is
+how the format says "none", not "forgotten". `cl_sensitivity` is optional.
 
 ## Reading it
 

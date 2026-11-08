@@ -168,11 +168,24 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             (metered.ev, Some(metered))
         }
     };
+    // A film can arrive as a file. It is loaded before anything is prepared,
+    // because the film is an input to the model rather than a pass over its
+    // output, and the loaded stock is leaked so it can live as long as the
+    // render that borrows it.
+    let from_file = match &args.stock.film_file {
+        Some(path) => Some(crate::filmfile::read(path).map_err(|error| CliError::Film {
+            path: path.clone(),
+            message: error.to_string(),
+        })?),
+        None => None,
+    };
+    let film = from_file.unwrap_or(selection.film);
+
     // The flag is asked for before anything is prepared: the fourth integral is
     // part of the model, not a pass over a finished density.
-    let interimage = args.interimage && selection.film.cl_layer.is_some();
-    let params = selection.render_params(exposure_ev, interimage);
-    let prepared = selection.prepare(exposure_ev, interimage)?;
+    let interimage = args.interimage && film.cl_layer.is_some();
+    let params = selection.render_params(exposure_ev, interimage, film);
+    let prepared = selection.prepare_with_film(exposure_ev, interimage, film)?;
 
     let pixel_um = args.frame_mm * 1000.0 / width.max(1) as f64;
     // The field takes its grain density from the stock: the measured one differs

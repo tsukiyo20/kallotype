@@ -16,6 +16,7 @@
 pub mod cli;
 pub mod commands;
 pub mod error;
+pub mod filmfile;
 pub mod stockfile;
 
 use cli::{Cli, Command};

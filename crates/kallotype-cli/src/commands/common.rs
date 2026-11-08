@@ -36,9 +36,14 @@ pub struct Selection {
 impl Selection {
     /// Bundle the selection into the core's render parameters.
     #[must_use]
-    pub fn render_params(&self, exposure_ev: f64, interimage: bool) -> RenderParams {
+    pub fn render_params(
+        &self,
+        exposure_ev: f64,
+        interimage: bool,
+        film: &'static kallotype_core::emulsion::FilmStock,
+    ) -> RenderParams {
         RenderParams {
-            film: self.film,
+            film,
             paper: self.paper,
             development: self.development,
             exposure_ev,
@@ -61,7 +66,18 @@ impl Selection {
         exposure_ev: f64,
         interimage: bool,
     ) -> Result<kallotype_core::PreparedRender, CliError> {
-        let params = self.render_params(exposure_ev, interimage);
+        self.prepare_with_film(exposure_ev, interimage, self.film)
+    }
+
+    /// Prepare a render whose film came from somewhere other than the compiled
+    /// table — a `.kalofilm` file, in practice.
+    pub fn prepare_with_film(
+        &self,
+        exposure_ev: f64,
+        interimage: bool,
+        film: &'static kallotype_core::emulsion::FilmStock,
+    ) -> Result<kallotype_core::PreparedRender, CliError> {
+        let params = self.render_params(exposure_ev, interimage, film);
 
         if let Some(path) = &self.lut {
             let table = kallotype_core::ExposureLut::read(path).map_err(|error| CliError::Lut {
@@ -69,7 +85,7 @@ impl Selection {
                 message: error.to_string(),
             })?;
 
-            let expected = kallotype_core::SpectralContext::for_stock(self.film).identity();
+            let expected = kallotype_core::SpectralContext::for_stock(film).identity();
             if let Err(message) = check_model(table.identity(), &expected) {
                 if !self.allow_model_mismatch {
                     return Err(CliError::Lut {
