@@ -407,6 +407,7 @@ mod tests {
             ("kodak_ektar_100", "ektar-100"),
             ("kodak_gold200", "gold-200"),
             ("kodak_portra_160", "portra-160"),
+            ("kodak_tmax400", "tmax-400"),
         ] {
             let loaded = read(
                 films()
