@@ -403,6 +403,7 @@ mod tests {
             ("kodak_portra_400", "portra-400"),
             ("kodak_portra_800", "portra-800"),
             ("kodak_trix400", "trix-400"),
+            ("ilford_hp5plus", "hp5-plus"),
         ] {
             let loaded = read(
                 films()

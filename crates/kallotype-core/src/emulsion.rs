@@ -727,6 +727,30 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         reference_time_min: 6.0000,
         reference_temp_c: 20.0000,
     },
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "ilford_hp5plus",
+        process: FilmProcess::Monochrome,
+        extra_cyan: None,
+        cl_layer: None,
+        label: "ILFORD HP5 PLUS, ILFOTEC HC (1+31) 6.5 min 20 °C",
+        note: "Measured: the characteristic curve from printed page 5 (ILFOTEC HC 1+31, 6 1/2 minutes at 20 C) and its toe as the base density. The sheet publishes no spectral-sensitivity chart, so the layer response is flat across the visible and the file says so; it publishes no MTF, so there is no blur; and it publishes no granularity figure, so the grain is the compiled placeholder averaged across the three channels to keep a silver image neutral. One of the five measured fields is this film's own.",
+        channels: [
+            curve(0.0, 1.9772, 0.6504, -0.4914).with_corners(5.0, 16.0),
+            curve(0.0, 1.9772, 0.6504, -0.4914).with_corners(5.0, 16.0),
+            curve(0.0, 1.9772, 0.6504, -0.4914).with_corners(5.0, 16.0),
+        ],
+        base_density: [0.1771, 0.1771, 0.1771],
+        grains_per_um2: [0.4000, 0.4000, 0.4000],
+        layers: &crate::measured::ILFORD_HP5PLUS_LAYERS,
+        dyes: &crate::measured::NO_DYES,
+        mask: &crate::measured::NO_MASK,
+        sigma_um: None,
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
+    },
 ];
 
 /// Every paper stock compiled into the binary.
