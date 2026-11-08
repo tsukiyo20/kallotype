@@ -33,6 +33,7 @@ pub mod dye;
 pub mod emulsion;
 pub mod grain;
 pub mod halation;
+pub mod interimage;
 pub mod lut;
 mod measured;
 pub mod meter;
@@ -54,6 +55,7 @@ pub use emulsion::{
 };
 pub use grain::GrainField;
 pub use halation::{Halation, Halo};
+pub use interimage::InterImage;
 pub use lut::ExposureLut;
 pub use meter::Metering;
 pub use model::{ExposureModel, PrintModel, ScanModel, SpectralModel};

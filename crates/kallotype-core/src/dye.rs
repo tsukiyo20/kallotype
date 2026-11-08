@@ -85,6 +85,26 @@ pub fn log_exposure(sensitivity: &[f64], radiance: &[f64], step_nm: f64) -> f64 
     }
 }
 
+/// A cyan-sensitive layer that releases development inhibitor instead of dye.
+///
+/// Fuji's fourth layer was introduced with REALA and described in 1989 as
+/// sensitive to cyan light around 470–540 nm, releasing development inhibitors
+/// in proportion to exposure so that the red-sensitive layer is pulled back —
+/// an inter-image effect approximating the negative lobe of the colour matching
+/// functions. That is a different object from a second emulsion feeding a dye
+/// (ADR 0017): it forms no density of its own, and its effect on a
+/// characteristic curve is invisible, because a neutral wedge exposes it
+/// uniformly and the inhibition is absorbed into the curve that was measured.
+///
+/// The table is on the model's own grid rather than the sheet's, because the
+/// digitisation already produces that grid and a fourth resampling step would
+/// be a place for the two to disagree.
+#[derive(Debug, Clone, Copy)]
+pub struct InhibitorLayer {
+    /// Relative sensitivity against wavelength, 380–730 nm at 5 nm.
+    pub sensitivity: &'static [f64; crate::spectral::GRID_LEN],
+}
+
 /// A dye, and the emulsions that form it.
 ///
 /// Two is the bound the sheets need: four-layer films add a second cyan

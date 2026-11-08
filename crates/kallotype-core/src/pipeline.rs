@@ -50,6 +50,13 @@ pub struct RenderParams {
     pub spectral_print: bool,
     /// Scan through spectral reflectance, illuminant and observer.
     pub spectral_scan: bool,
+    /// Run the cyan-sensitive layer's inhibitor (ADR 0018).
+    ///
+    /// Off by default, and only meaningful for a stock that declares such a
+    /// layer: its strength and diffusion length are placeholders, so turning it
+    /// on is asking for a demonstration of the mechanism, not for a prediction
+    /// about the film.
+    pub interimage: bool,
 }
 
 impl Default for RenderParams {
@@ -64,6 +71,7 @@ impl Default for RenderParams {
             lut_size: 0,
             spectral_print: false,
             spectral_scan: false,
+            interimage: false,
         }
     }
 }
@@ -111,7 +119,10 @@ impl RenderParams {
             .film
             .extra_cyan
             .map(|emulsion| self.development.apply_to(emulsion.characteristic()));
-        let spectral = self.spectral || monochrome || extra.is_some();
+        // A CL layer is a fourth integral too, and the scalar path has three
+        // channels: it cannot even say that the layer exists.
+        let cl_layer = self.interimage && self.film.cl_layer.is_some();
+        let spectral = self.spectral || monochrome || extra.is_some() || cl_layer;
         let channels: [CharacteristicCurve; 3] =
             std::array::from_fn(|i| self.development.apply_to(self.film.channels[i]));
 
@@ -170,6 +181,7 @@ impl RenderParams {
                 .spectral_scan
                 .then(|| ScanContext::measured_with(self.paper.dyes)),
             extra,
+            cl_layer,
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
             reversal: self.film.process == crate::emulsion::FilmProcess::Reversal,
             spectral: spectral
@@ -262,6 +274,9 @@ pub struct PreparedRender {
     /// the context says how much light the layer saw, this says how much dye
     /// that made, and the cyan dye sums the two emulsions' densities.
     extra: Option<CharacteristicCurve>,
+    /// Whether the fourth integral belongs to a cyan-sensitive inhibitor layer
+    /// rather than to a dye-forming emulsion (ADR 0018).
+    cl_layer: bool,
 }
 
 impl PreparedRender {
@@ -330,7 +345,7 @@ impl PreparedRender {
         // the cyan dye. No field of the model carries it, and a backend that
         // replayed the three layers would render a different film without
         // saying so — so it declines, and the caller renders on the CPU.
-        if self.extra.is_some() {
+        if self.extra.is_some() || self.cl_layer {
             return None;
         }
         if self.lut.is_some() {
@@ -544,10 +559,16 @@ impl PreparedRender {
         self.positive(self.negative_density_with(exposure.layers, exposure.extra))
     }
 
-    /// Whether the stock's cyan dye has a second emulsion.
+    /// Whether the render carries a fourth layer of either kind.
     #[must_use]
     pub fn has_extra_layer(&self) -> bool {
-        self.extra.is_some()
+        self.extra.is_some() || self.cl_layer
+    }
+
+    /// Whether the fourth layer releases inhibitor rather than forming dye.
+    #[must_use]
+    pub fn has_inhibitor_layer(&self) -> bool {
+        self.cl_layer
     }
 }
 
@@ -564,6 +585,8 @@ pub struct Finishing<'a> {
     pub grain: Option<&'a crate::grain::GrainField>,
     /// DIR couplers, acting on the developed densities.
     pub couplers: Option<&'a crate::couplers::Couplers>,
+    /// The cyan-sensitive layer's inhibitor, acting on the cyan dye — ADR 0018.
+    pub interimage: Option<&'a crate::interimage::InterImage>,
 }
 
 /// Run `f` over every pixel, in parallel when the `parallel` feature is on.
@@ -636,7 +659,10 @@ pub fn render_pixels_finished(
     let width = width.max(1);
 
     // Without a spatial effect there is nothing to keep a frame for.
-    if finishing.emulsion.is_none() && finishing.halation.is_none() && finishing.couplers.is_none()
+    if finishing.emulsion.is_none()
+        && finishing.halation.is_none()
+        && finishing.couplers.is_none()
+        && finishing.interimage.is_none()
     {
         each_pixel(pixels, width, |x, y, pixel| {
             *pixel = prepared.finish(*pixel, x, y, finishing.grain);
@@ -689,6 +715,14 @@ pub fn render_pixels_finished(
         };
     });
 
+    // The cyan-sensitive layer's inhibitor, before the couplers: its release is
+    // the light the layer absorbed, not the density it developed, so it is the
+    // earlier of the two development effects.
+    if let (Some(stage), Some(plane)) = (finishing.interimage, extra.as_ref()) {
+        let light: Vec<f64> = plane.iter().map(|value| 10f64.powf(*value)).collect();
+        stage.apply(&mut density, &light, width, height);
+    }
+
     // Then the chemistry: the inhibitors act on what has already developed.
     if let Some(couplers) = finishing.couplers {
         couplers.apply(&mut density, width, height);
@@ -727,6 +761,7 @@ pub fn render_pixels_with_grain(
             halation: None,
             grain: Some(grain),
             couplers: None,
+            interimage: None,
         },
     );
 }
@@ -801,6 +836,7 @@ mod tests {
                 halation: Some(&halation),
                 grain: None,
                 couplers: None,
+                interimage: None,
             },
         );
         assert!(
@@ -827,6 +863,7 @@ mod tests {
                 halation: None,
                 grain: None,
                 couplers: None,
+                interimage: None,
             },
         );
         for (halated, plain) in pixels.iter().zip(&plain) {
@@ -849,16 +886,109 @@ mod tests {
             }
             .prepare();
             let exposure = prepared.expose([0.18, 0.18, 0.18]);
-            let printed = prepared.positive(prepared.negative_density_with(
-                exposure.layers,
-                exposure.extra,
-            ));
+            let printed =
+                prepared.positive(prepared.negative_density_with(exposure.layers, exposure.extra));
             for value in printed {
                 assert!(
                     (value - 0.18).abs() < 0.02,
                     "curve {curve:?} printed {printed:?}"
                 );
             }
+        }
+    }
+
+    /// A stock with a cyan-sensitive inhibitor layer and no dye-forming fourth
+    /// emulsion: the arrangement ADR 0018 exists for.
+    fn inhibitor_stock() -> &'static FilmStock {
+        static SENSITIVITY: [f64; crate::spectral::GRID_LEN] = [1.0; crate::spectral::GRID_LEN];
+        let mut stock = *crate::emulsion::film_stock("vision3_500t").expect("built-in stock");
+        stock.id = "test_inhibitor_layer";
+        stock.cl_layer = Some(crate::dye::InhibitorLayer {
+            sensitivity: &SENSITIVITY,
+        });
+        Box::leak(Box::new(stock))
+    }
+
+    /// ADR 0018: the layer shows where the frame has structure, and only in the
+    /// cyan channel. A stock with such a layer renders identically until the
+    /// stage is asked for, which is what keeps PRO 400H a three-layer stock on
+    /// the GPU by default.
+    #[test]
+    fn the_inhibitor_layer_shows_only_where_the_frame_has_structure() {
+        let off = RenderParams {
+            film: inhibitor_stock(),
+            ..RenderParams::default()
+        }
+        .prepare();
+        let on = RenderParams {
+            film: inhibitor_stock(),
+            interimage: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(!off.has_inhibitor_layer());
+        assert!(on.has_inhibitor_layer());
+        // The fourth integral is a quantity the replayable model has no lane
+        // for, so a backend declines whenever the layer is in the render.
+        assert!(on.spectral_model().is_none());
+        assert!(off.scalar_model().is_some());
+
+        let stage = crate::interimage::InterImage::typical(6.0);
+        let finishing = |interimage| Finishing {
+            emulsion: None,
+            halation: None,
+            grain: None,
+            couplers: None,
+            interimage,
+        };
+        // Sixteen pixels: eight warm, eight cool. Both renders use the same
+        // prepared render — same exposure, same curve, same print — so the only
+        // thing that differs is whether the inhibitor acted.
+        let mut pixels = Vec::new();
+        for index in 0..16 {
+            pixels.push(if index < 8 {
+                [0.9, 0.2, 0.1]
+            } else {
+                [0.1, 0.2, 0.9]
+            });
+        }
+        let mut with = pixels.clone();
+        let mut without = pixels;
+        render_pixels_finished(&mut with, &on, 16, 1, &finishing(Some(&stage)));
+        render_pixels_finished(&mut without, &on, 16, 1, &finishing(None));
+
+        // Which half the layer sees more of is the exposure's answer, not the
+        // eye's: a flat sensitivity integrates the reconstructed spectrum, and
+        // a warm RGB triple is not the brighter one in it. So the expectation
+        // comes from the render's own fourth integral.
+        let warm = on
+            .expose([0.9, 0.2, 0.1])
+            .extra
+            .expect("the layer is in the render");
+        let cool = on
+            .expose([0.1, 0.2, 0.9])
+            .extra
+            .expect("the layer is in the render");
+        let (bright, dark) = if warm > cool { (0, 15) } else { (15, 0) };
+
+        // The sign of the *print* is not the sign of the *density*: the
+        // inhibitor takes cyan density off the negative, and a negative with
+        // less cyan passes more red light, which the paper then develops into
+        // more cyan. So the observable is that the two halves move in opposite
+        // directions, and that only the red channel moves at all.
+        assert!(
+            (with[bright][0] - without[bright][0]).signum()
+                == -(with[dark][0] - without[dark][0]).signum(),
+            "the halves moved together: {with:?} vs {without:?}"
+        );
+        assert!(
+            (with[bright][0] - without[bright][0]).abs() > 1e-4,
+            "the layer changed nothing: {with:?} vs {without:?}"
+        );
+        // The other two dyes are not this layer's business.
+        for (left, right) in with.iter().zip(&without) {
+            assert!((left[1] - right[1]).abs() < 1e-12);
+            assert!((left[2] - right[2]).abs() < 1e-12);
         }
     }
 

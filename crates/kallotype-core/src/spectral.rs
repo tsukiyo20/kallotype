@@ -142,9 +142,13 @@ impl SpectralContext {
             .iter()
             .flat_map(|table| table.iter())
             .fold(0.0_f64, |a, &b| a.max(b));
+        // Either kind of fourth layer integrates the same way; what differs is
+        // what the number is used for — a dye's density, or an inhibitor's
+        // release (ADR 0017 and ADR 0018).
         context.extra = stock
             .extra_cyan
-            .and_then(|emulsion| sensitivity_table(&context.grid, emulsion.sensitivity, peak));
+            .and_then(|emulsion| sensitivity_table(&context.grid, emulsion.sensitivity, peak))
+            .or_else(|| stock.cl_layer.map(|layer| *layer.sensitivity));
         context
     }
 

@@ -362,6 +362,19 @@ pub(crate) const FUJI_NPH400_LAYERS: [[f64; GRID_LEN]; 3] = [
     ],
 ];
 
+/// The cyan-sensitive layer's relative sensitivity, peak 1, from AF3-176E page 8.
+/// Generated from fuji_pro400h.toml; edit the stock file, not this table.
+pub(crate) const FUJI_PRO400H_CL: [f64; GRID_LEN] = [
+    0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000,
+    0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.02369,
+    0.02047, 0.03520, 0.05534, 0.05459, 0.06157, 0.07047, 0.07454, 0.07871, 0.07958, 0.07796,
+    0.07404, 0.06732, 0.05779, 0.04692, 0.03771, 0.02841, 0.02428, 0.00000, 0.00000, 0.00000,
+    0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000,
+    0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000,
+    0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, 0.00000,
+    0.00000,
+];
+
 /// FUJICOLOR PRO 400H PROFESSIONAL layer sensitivities, R/G/B order, from AF3-176E page 8.
 /// Generated from fuji_pro400h.toml; edit the stock file, not this table.
 #[allow(clippy::approx_constant)] // measurements: a sample may sit near pi/4

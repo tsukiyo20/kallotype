@@ -393,10 +393,11 @@ impl Gpu {
             (Some(scalar), _) => (scalar, None),
             (None, Some(spectral)) => (spectral.scalar, Some(spectral)),
             (None, None) if prepared.has_extra_layer() => {
-                // ADR 0017: the fourth layer is a fourth integral and a second
-                // curve on one dye. `SpectralModel` has no lane for it, and
-                // rendering the three layers anyway would be a different film.
-                return Err(GpuError::Unsupported("a dye fed by two emulsions"));
+                // ADR 0017 and 0018: a fourth layer is a fourth integral —
+                // either a second curve on the cyan dye or an inhibitor source.
+                // `SpectralModel` has no lane for it, and rendering the three
+                // layers anyway would be a different film.
+                return Err(GpuError::Unsupported("a fourth layer"));
             }
             (None, None) => {
                 return Err(GpuError::Unsupported(
@@ -1415,6 +1416,7 @@ mod tests {
             halation: Some(&halation),
             grain: Some(&grain),
             couplers: Some(&couplers),
+            interimage: None,
         };
         compare_finished(
             &RenderParams {
@@ -1575,6 +1577,7 @@ mod tests {
                     halation: Some(&halation),
                     grain: Some(&grain),
                     couplers: Some(&couplers),
+                    interimage: None,
                 },
             ),
         ] {
@@ -1742,6 +1745,7 @@ mod timing {
                     halation: Some(&halation),
                     grain: Some(&grain),
                     couplers: Some(&couplers),
+                    interimage: None,
                 },
             ),
         ] {

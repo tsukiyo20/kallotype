@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use kallotype_core::{
-    Couplers, EmulsionBlur, Finishing, GrainField, Halation, Metering, Scanner,
+    Couplers, EmulsionBlur, Finishing, GrainField, Halation, InterImage, Metering, Scanner,
     render_pixels_finished,
 };
 use kallotype_io::{InputEncoding, load, save};
@@ -168,8 +168,11 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             (metered.ev, Some(metered))
         }
     };
-    let params = selection.render_params(exposure_ev);
-    let prepared = selection.prepare(exposure_ev)?;
+    // The flag is asked for before anything is prepared: the fourth integral is
+    // part of the model, not a pass over a finished density.
+    let interimage = args.interimage && selection.film.cl_layer.is_some();
+    let params = selection.render_params(exposure_ev, interimage);
+    let prepared = selection.prepare(exposure_ev, interimage)?;
 
     let pixel_um = args.frame_mm * 1000.0 / width.max(1) as f64;
     // The field takes its grain density from the stock: the measured one differs
@@ -191,11 +194,16 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
     let emulsion = (!args.no_emulsion).then(|| EmulsionBlur::for_stock(selection.film, pixel_um));
     let halation = args.halation.then(|| Halation::typical(pixel_um));
     let couplers = args.couplers.then(|| Couplers::typical(pixel_um));
+    // ADR 0018: the cyan-sensitive layer's inhibitor. It needs a stock that
+    // declares such a layer, because its release comes from that layer's own
+    // exposure rather than from a density the model can invent.
+    let interimage = interimage.then(|| InterImage::typical(pixel_um));
     let finishing = Finishing {
         emulsion: emulsion.as_ref(),
         halation: halation.as_ref(),
         grain: grain.as_ref(),
         couplers: couplers.as_ref(),
+        interimage: interimage.as_ref(),
     };
     // The shader draws the clump's stencil from the same taps the CPU does, so
     // there is nothing left that only one backend can do.
@@ -240,6 +248,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             emulsion: emulsion.as_ref(),
             halation: halation.as_ref(),
             couplers: couplers.as_ref(),
+            interimage: interimage.as_ref(),
             scanner: scanner.as_ref(),
             metering,
             backend: backend.to_string(),

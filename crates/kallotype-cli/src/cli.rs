@@ -220,6 +220,19 @@ pub struct RenderArgs {
     #[arg(long)]
     pub halation: bool,
 
+    /// Add the cyan-sensitive layer's inhibitor (ADR 0018).
+    ///
+    /// Fuji's fourth layer releases development inhibitor against the
+    /// red-sensitive layer instead of forming cyan dye, which is why PRO 400H's
+    /// cyan curve shows no second emulsion. The effect is local: it takes cyan
+    /// away where that layer sees more cyan light than the frame's average and
+    /// lets it through where it sees less, so a uniform frame is unchanged and
+    /// an edge is not. Its strength and diffusion length are placeholders, so
+    /// this is a demonstration of the mechanism, not a prediction — and it is a
+    /// no-op for a stock whose sheet gives no such layer.
+    #[arg(long)]
+    pub interimage: bool,
+
     /// Scan the print: the scanner's measured texture, and its optics when
     /// asked for.
     ///

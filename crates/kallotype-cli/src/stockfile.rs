@@ -160,6 +160,7 @@ impl StockFile {
         findings.push(self.check_base());
         findings.push(self.check_emulsion());
         findings.extend(self.check_spectra());
+        findings.push(self.check_cl_layer());
         findings
     }
 
@@ -474,6 +475,28 @@ impl StockFile {
                 "emulsion",
                 "`emulsion.sigma_um` must be three positive finite numbers",
             )
+        }
+    }
+
+    /// The cyan-sensitive inhibitor layer, when the sheet gives one (ADR 0018).
+    ///
+    /// A stock without it is not incomplete: most sheets do not publish a
+    /// fourth layer at all. The check says which of the two it is rather than
+    /// leaving the reader to infer it from the absence of a section.
+    fn check_cl_layer(&self) -> Finding {
+        let Ok(path) = self.string("cl_layer.path") else {
+            return Finding::note("cl layer", "none declared; only some sheets give one");
+        };
+        let path = self.path.parent().unwrap_or(Path::new(".")).join(path);
+        match check_spectrum(&path) {
+            Ok(peak) => Finding::ok(
+                "cl layer",
+                format!(
+                    "{}: 71 samples on the grid, peak {peak:.3} — inhibitor, not a dye",
+                    path.display()
+                ),
+            ),
+            Err(message) => Finding::fail("cl layer", format!("{}: {message}", path.display())),
         }
     }
 

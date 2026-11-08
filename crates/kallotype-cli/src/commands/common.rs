@@ -36,7 +36,7 @@ pub struct Selection {
 impl Selection {
     /// Bundle the selection into the core's render parameters.
     #[must_use]
-    pub fn render_params(&self, exposure_ev: f64) -> RenderParams {
+    pub fn render_params(&self, exposure_ev: f64, interimage: bool) -> RenderParams {
         RenderParams {
             film: self.film,
             paper: self.paper,
@@ -47,14 +47,21 @@ impl Selection {
             lut_size: self.lut_size,
             spectral_print: self.spectral_print,
             spectral_scan: self.spectral_scan,
+            // The layer only exists on some sheets, so the flag that asks for
+            // it is the render command's, not the selection's.
+            interimage,
         }
     }
 }
 
 impl Selection {
     /// Load the table or dictionary, if requested, and prepare the render.
-    pub fn prepare(&self, exposure_ev: f64) -> Result<kallotype_core::PreparedRender, CliError> {
-        let params = self.render_params(exposure_ev);
+    pub fn prepare(
+        &self,
+        exposure_ev: f64,
+        interimage: bool,
+    ) -> Result<kallotype_core::PreparedRender, CliError> {
+        let params = self.render_params(exposure_ev, interimage);
 
         if let Some(path) = &self.lut {
             let table = kallotype_core::ExposureLut::read(path).map_err(|error| CliError::Lut {
@@ -216,6 +223,8 @@ pub struct Rendering<'a> {
     pub halation: Option<&'a kallotype_core::Halation>,
     /// DIR couplers, if they were on.
     pub couplers: Option<&'a kallotype_core::Couplers>,
+    /// The cyan-sensitive layer's inhibitor, if it was on — ADR 0018.
+    pub interimage: Option<&'a kallotype_core::InterImage>,
     /// The scan's texture and optics, if it was on.
     pub scanner: Option<&'a kallotype_core::Scanner>,
     /// What the meter read, if the exposure was metered rather than named.
@@ -231,6 +240,7 @@ impl Default for Rendering<'_> {
             emulsion: None,
             halation: None,
             couplers: None,
+            interimage: None,
             scanner: None,
             metering: None,
             backend: "cpu".to_owned(),
@@ -295,6 +305,13 @@ pub fn print_report(
     }
     if prepared.is_spectral() || prepared.lut().is_some() {
         println!("  camera    {}", params.camera.name());
+    }
+    if let Some(interimage) = rendering.interimage {
+        println!(
+            "  interimage cyan ← the CL layer, gain {:.0} %  σ {:.0} µm  (placeholder)",
+            100.0 * interimage.gain,
+            interimage.sigma_um
+        );
     }
     if let Some(couplers) = rendering.couplers {
         let [row0, row1, row2] = couplers.inhibition;
