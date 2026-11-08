@@ -1562,4 +1562,49 @@ mod enlarger_tests {
             .fold(0.0, f64::max);
         assert!(moved > 0.01, "200 CC of magenta moved the print by {moved}");
     }
+
+    /// One layer, one density, one dial: the statement the ADR now makes.
+    ///
+    /// A colour head is three exposure factors. Dialling magenta takes green out
+    /// of the light, so the green layer needs *more* exposure to reach the same
+    /// density — monotonic, because it is one integral against one spectrum and
+    /// not a ratio of two that both contain the filter. The gap between two
+    /// printed channels is not monotone and this test deliberately does not ask
+    /// it to be; see the roadmap's amendment.
+    #[test]
+    fn magenta_moves_the_green_exposure_one_way() {
+        let green_exposure = |cc: f64| {
+            let prepared = RenderParams {
+                spectral_print: true,
+                filters: FilterPack::new(0.0, cc, 0.0),
+                ..RenderParams::default()
+            }
+            .prepare();
+            // The light the green layer needs, in log units: the print's shift
+            // is `target - exposure`, so more shift is less light.
+            prepared.print_shift()[1]
+        };
+        // From 5 CC, not 0: an empty pack returns the context untouched — equal
+        // energy, no lamp — so the first step would measure the lamp arriving
+        // rather than the filter closing.
+        let mut previous: Option<f64> = None;
+        for step in 1..=12 {
+            let cc = 5.0 * f64::from(step);
+            let shift = green_exposure(cc);
+            if let Some(before) = previous {
+                assert!(
+                    shift > before + 1e-9,
+                    "at {cc} CC the green layer's exposure went {before} -> {shift}"
+                );
+            }
+            previous = Some(shift);
+        }
+        // And a step is a step: 5 CC is about 0.05 of density of green, which in
+        // the head's log units is a small but real move.
+        let step = green_exposure(10.0) - green_exposure(5.0);
+        assert!(
+            (0.005..0.08).contains(&step),
+            "5 CC moved the green exposure by {step}"
+        );
+    }
 }
