@@ -20,5 +20,5 @@ peaking at 470, 555, 610 and 520 nm; a measured orange mask; σ 3.79 µm from th
 MTF; grain 5.05 and 2.02 grains/µm² for the cyan and magenta layers, measured
 from NPH 400 scans.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

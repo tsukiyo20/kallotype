@@ -20,5 +20,5 @@ layer response. At 18 per cent grey the negative sits 0.88 of a density above
 its base, and its speed point lands on the ISO rating by construction — the
 anchor is the speed point itself, as it is for HP5 PLUS.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

@@ -22,5 +22,5 @@ the blur is **absent** because it publishes no MTF, and the grain is the
 **compiled placeholder** averaged across the channels. The file says all three
 things in its `[measured]` table.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

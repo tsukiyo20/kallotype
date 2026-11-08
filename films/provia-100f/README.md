@@ -16,5 +16,5 @@ Bézier paths at 455, 543 and 642 nm; dyes at 443, 543 and 658 nm; σ 4.68 µm;
 grain 3.95 grains/µm² inverted from the sheet's published rms granularity of 8,
 at the density that granularity was measured at.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

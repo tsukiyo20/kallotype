@@ -24,5 +24,5 @@ not claimed — the sheet publishes a Print Grain Index that cannot be compared 
 rms granularity — and neither is blur: the sheet has no modulation transfer
 function at all. The dye shapes are borrowed from the VISION3 500T digitisation.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

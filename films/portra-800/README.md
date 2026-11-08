@@ -21,5 +21,5 @@ rises to 0.63–0.73 and 0.69–0.79. Grain is not claimed — the sheet publish
 Print Grain Index and says it cannot be compared to rms granularity. The dye
 shapes are borrowed from the VISION3 500T digitisation.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

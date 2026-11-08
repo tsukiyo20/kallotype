@@ -67,10 +67,15 @@ A film file that hides its borrowings is one that lies about them.
 
 ## Licence
 
-The `.kalofilm` files and the prose in this directory are licensed
-**CC BY 4.0**. Code that reads them lives in the repository and is
-Apache-2.0. See [NOTICE.md](NOTICE.md) for trademarks and what is not
-redistributed.
+The `.kalofilm` files, the digitised curves, the figures and the prose in this
+directory are licensed **CC BY-SA 4.0** — share them, adapt them, sell them, but
+keep them open. The full text is in [LICENSE](LICENSE), which also records that
+the three films published before 2026-11-09 went out under CC BY 4.0 and that
+those copies keep that grant.
+
+Code that reads them lives in the repository and is Apache-2.0: the licence on
+the data does not reach the renderer. See [NOTICE.md](NOTICE.md) for trademarks
+and what is not redistributed.
 
 ## Citing
 

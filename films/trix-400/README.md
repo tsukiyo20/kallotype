@@ -23,5 +23,5 @@ granularity of 17 at a net density of 1.0 — the coarsest in the tree. MTF σ
 The MTF and the spectral sensitivity are the **old 5063 emulsion's** data, which
 the sheet states in a note; the file says so in its `[measured]` table too.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

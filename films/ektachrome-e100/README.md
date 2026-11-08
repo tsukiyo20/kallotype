@@ -26,5 +26,5 @@ either way: the sheet stops drawing while the curve is still falling, which is
 also why its anchor lands 0.118 decade from PROVIA's rather than the 0.035 the
 first fit suggested.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

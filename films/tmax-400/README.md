@@ -20,5 +20,5 @@ sensitivity peaks at 570 nm and ends at 645. At the reference exposure the
 printed axis puts the film 0.18 of a stop from its ISO 400 rating, which is what
 lets the axis be trusted.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

@@ -18,5 +18,5 @@ sensitivities read at 451, 549 and 651 nm; dyes at 445, 540 and 660 nm;
 σ 4.28 µm; grain 2.26 grains/µm² inverted from the sheet's published rms
 granularity of 9, at the density that granularity was measured at.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

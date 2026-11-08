@@ -20,5 +20,5 @@ decade; residuals 0.0065, 0.0042 and 0.0053; layer sensitivities peak at 650,
 to 0.70 of a density above base. Grain, dyes and the mask are borrowed from the
 500T digitisation, and the file says why.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).

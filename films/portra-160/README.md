@@ -25,5 +25,5 @@ slower negative should read. Grain is not claimed: the sheet publishes a Print
 Grain Index and says it cannot be compared to rms granularity. The dye shapes are
 borrowed from the VISION3 500T digitisation.
 
-Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
+Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and
 [../NOTICE.md](../NOTICE.md).
