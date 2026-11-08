@@ -28,3 +28,7 @@ __pycache__/
 
 # Rust backup files left by some editors
 *.rs.bk
+
+# A python environment for reading the data sheets (private work only)
+/.venv-pdf/
+/.uv-cache/

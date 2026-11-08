@@ -1,12 +1,13 @@
 # Kalofilm — film stocks as data
 
-Two films, each measured from its manufacturer's data sheet and from real film,
-packed into one file per film.
+Three films, each measured from its manufacturer's data sheet and from real
+film, packed into one file per film.
 
 | film | process | paper it is printed on | what is measured |
 |---|---|---|---|
 | [FUJICHROME PROVIA 100F](provia-100f/) | E-6 reversal | none — the film is the picture | curves, three dyes, layer sensitivities, MTF, granularity |
 | [FUJICOLOR PRO 400H](fuji-pro400h/) | C-41 negative | RA-4 paper | curves, four layer sensitivities, orange mask, MTF, two of three grain values |
+| [KODAK EKTACHROME E100](ektachrome-e100/) | E-6 reversal | none — the film is the picture | curves, three dyes, layer sensitivities, per-layer MTF, granularity |
 
 A `.kalofilm` file is the film: a header that says where every number came from,
 the spectra as binary tables, and a SHA-256 over the lot. It is 5 kB. The format

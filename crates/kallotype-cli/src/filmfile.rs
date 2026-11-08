@@ -393,6 +393,7 @@ mod tests {
         for (id, directory) in [
             ("fuji_pro400h", "fuji-pro400h"),
             ("provia_100f", "provia-100f"),
+            ("ektachrome_e100", "ektachrome-e100"),
         ] {
             let loaded = read(
                 films()

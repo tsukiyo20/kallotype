@@ -640,7 +640,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
             sensitivity: &crate::measured::FUJI_PRO400H_CL,
         }),
         label: "FUJICOLOR PRO 400H PROFESSIONAL",
-        note: "Measured, except for the dyes and the grain. Curves and the four layer sensitivities from data sheet AF3-176E page 8, digitised 2026-11-08. The fourth, cyan-sensitive layer is digitised but not modelled: panel 19 publishes its sensitivity and panel 18 publishes only the summed cyan curve, so the layer's share of the cyan density is not identifiable from this sheet, and the split fit runs to its boundary instead of finding a value. Fuji's 1989 paper on REALA, which introduced this fourth layer, describes it as releasing development inhibitors rather than forming cyan dye; if that is what this layer does, the density split is the wrong model and the couplers stage is its home. The cyan channel therefore carries the summed curve and the red-sensitive sensitivity. The mask is panel 21's minimum-density curve, so the spectral print now reads this film's own base, and the blur is panel 20's MTF (one curve for the film, so one sigma). Grain is measured from real NPH 400 scans for the cyan and magenta layers (5.05 and 2.02 grains/µm²) and not for the yellow one, which no frame in hand could reach; the dye shapes are borrowed from the VISION3 digitisation; the sheet's mid-scale curve is kept alongside as the check on them.",
+        note: "Measured, except for the dye shapes and one of the three grain values. Curves and the four layer sensitivities from data sheet AF3-176E page 8, digitised 2026-11-08. The fourth, cyan-sensitive layer is modelled as what Fuji's 1989 REALA paper describes it to be — a layer that releases development inhibitors against the red-sensitive layer, not a second cyan-forming emulsion — so panel 19's dashed curve drives the inter-image stage (ADR 0018) and forms no density of its own. The cyan channel therefore carries the summed curve and the red-sensitive sensitivity. The mask is panel 21's minimum-density curve, so the spectral print now reads this film's own base, and the blur is panel 20's MTF (one curve for the film, so one sigma). Grain is measured from real NPH 400 scans for the cyan and magenta layers (5.05 and 2.02 grains/µm²) and not for the yellow one, which no frame in hand could reach; the dye shapes are borrowed from the VISION3 digitisation; the sheet's mid-scale curve is kept alongside as the check on them.",
         channels: [
             curve(0.0, 1.7932, 0.9559, -0.9190).with_transition(2.0),
             curve(0.0, 1.7188, 0.8611, -0.9790).with_transition(2.0),
@@ -652,6 +652,30 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FUJI_PRO400H_MASK,
         sigma_um: Some([3.7900, 3.7900, 3.7900]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
+    },
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "ektachrome_e100",
+        process: FilmProcess::Reversal,
+        extra_cyan: None,
+        cl_layer: None,
+        label: "KODAK PROFESSIONAL EKTACHROME E100, E-6",
+        note: "Measured: the characteristic curves, the three dyes, the layer sensitivities and a modulation transfer for each of the three layers. Curves and MTF from page 3, sensitivity and dyes from page 4, all read from the vector paths rather than from a rendering of them. The three curves are complete polylines, so each layer is fitted on its own ink; residuals 0.037, 0.042 and 0.045 against a calibration that itself carries 0.017, the difference being a ripple in the artwork at a tenth of a decade. The MTF is per layer — 5.40, 4.31 and 3.81 um — unlike PROVIA's single curve for the film. The dye panel draws four curves: three dyes normalised to a visual neutral of 1.0 at 5000 K, and the neutral itself, which is kept as the check on them and not carried. The grain comes from the sheet's diffuse rms granularity of 8 through the same inversion C200 and PROVIA used; it is one number for the film, so all three layers carry it.",
+        channels: [
+            curve(3.3476, 0.1816, 2.2233, -1.1944),
+            curve(3.7288, 0.1941, 2.4822, -1.2424),
+            curve(3.9087, 0.1931, 2.5520, -1.3184),
+        ],
+        base_density: [0.0000, 0.0000, 0.0000],
+        grains_per_um2: [8.3200, 8.3200, 8.3200],
+        layers: &crate::measured::EKTACHROME_E100_LAYERS,
+        dyes: &crate::measured::EKTACHROME_E100_DYES,
+        mask: &crate::measured::NO_MASK,
+        sigma_um: Some([5.4000, 4.3100, 3.8100]),
         reference_time_min: 6.5000,
         reference_temp_c: 20.0000,
     },
