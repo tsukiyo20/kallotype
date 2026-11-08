@@ -71,8 +71,11 @@ pub struct FilmStock {
     ///
     /// ADR 0017: a dye may be formed by more than one emulsion, and the
     /// four-layer negatives are the reason. `None` — every stock before those —
-    /// is exactly the three-layer model. The pipeline does not read this yet;
-    /// wiring it into the two exposure paths is the next commit.
+    /// is exactly the three-layer model.
+    ///
+    /// `Some` is not a scalar rendering: it forces the spectral path, because a
+    /// fourth layer is a fourth integral, and it makes the GPU decline rather
+    /// than replay three layers of a four-layer film.
     pub extra_cyan: Option<crate::dye::Emulsion>,
     /// Human-readable name.
     pub label: &'static str,
@@ -978,9 +981,9 @@ mod tests {
         assert!(film_stock("nope").is_none());
     }
 
-    /// ADR 0017 step 1 is inert, and this is what makes that a fact rather
-    /// than a comment: no stock in the tree declares a second cyan emulsion
-    /// yet, so the model's output cannot have moved.
+    /// ADR 0017 is wired, and this is what keeps its blast radius visible: no
+    /// stock in the tree declares a second cyan emulsion yet, so every stock
+    /// renders through the three-layer path exactly as it did before.
     #[test]
     fn no_stock_has_a_second_cyan_emulsion_yet() {
         for stock in FILM_STOCKS {

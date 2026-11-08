@@ -15,6 +15,15 @@
 //! This module is the arithmetic only; wiring it into `FilmStock` and the two
 //! exposure paths is the next commit.
 
+/// First wavelength of [`Emulsion::sensitivity`], in nanometres.
+///
+/// The table and the step travel with the type rather than with a stock,
+/// because two stocks pasted from two sheets must still mean the same grid.
+pub const SENSITIVITY_START_NM: f64 = 380.0;
+
+/// Spacing of [`Emulsion::sensitivity`], in nanometres.
+pub const SENSITIVITY_STEP_NM: f64 = 10.0;
+
 /// One sensitising emulsion feeding a dye.
 #[derive(Debug, Clone, Copy)]
 pub struct Emulsion {
@@ -28,17 +37,22 @@ pub struct Emulsion {
 }
 
 impl Emulsion {
-    /// The density this emulsion develops at one log exposure.
+    /// The curve those four numbers describe.
     #[must_use]
-    pub fn density(&self, log_exposure: f64) -> f64 {
-        crate::curve::density_from(
+    pub fn characteristic(&self) -> crate::curve::CharacteristicCurve {
+        crate::curve::CharacteristicCurve::new(
             self.curve[0],
             self.curve[1],
             self.curve[2],
             self.curve[3],
-            self.transition,
-            log_exposure,
         )
+        .with_transition(self.transition)
+    }
+
+    /// The density this emulsion develops at one log exposure.
+    #[must_use]
+    pub fn density(&self, log_exposure: f64) -> f64 {
+        self.characteristic().density(log_exposure)
     }
 }
 

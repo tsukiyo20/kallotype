@@ -103,7 +103,15 @@ impl RenderParams {
         // colour image from a film that has no colour. A monochrome stock is
         // therefore always exposed through its spectrum, whatever was asked for.
         let monochrome = self.film.process == crate::emulsion::FilmProcess::Monochrome;
-        let spectral = self.spectral || monochrome;
+        // ADR 0017: a dye fed by two emulsions is two integrals and two curves.
+        // The scalar path has three numbers and one curve per channel, so it
+        // cannot say a fourth layer exists; such a stock is always exposed
+        // through its spectrum, exactly as a monochrome film is.
+        let extra = self
+            .film
+            .extra_cyan
+            .map(|emulsion| self.development.apply_to(emulsion.characteristic()));
+        let spectral = self.spectral || monochrome || extra.is_some();
         let channels: [CharacteristicCurve; 3] =
             std::array::from_fn(|i| self.development.apply_to(self.film.channels[i]));
 
@@ -154,6 +162,7 @@ impl RenderParams {
             scan: self
                 .spectral_scan
                 .then(|| ScanContext::measured_with(self.paper.dyes)),
+            extra,
             exposure_shift: self.exposure_ev * 2.0_f64.log10(),
             reversal: self.film.process == crate::emulsion::FilmProcess::Reversal,
             spectral: spectral
@@ -166,7 +175,7 @@ impl RenderParams {
                     }
                 })
                 .filter(|_| self.lut_size < 2),
-            lut: (spectral && self.lut_size >= 2).then(|| {
+            lut: (spectral && self.lut_size >= 2 && extra.is_none()).then(|| {
                 let context =
                     SpectralContext::for_stock(self.film).with_camera(self.camera.clone());
                 let context = match atoms {
@@ -212,6 +221,15 @@ pub struct ScalarModel {
     pub reversal: bool,
 }
 
+/// The exposure, as the curve stage receives it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Exposure {
+    /// Log exposure of the three layers, in the order the film records them.
+    pub layers: [f64; 3],
+    /// Log exposure of the cyan dye's second emulsion, when the stock has one.
+    pub extra: Option<f64>,
+}
+
 /// A [`RenderParams`] with the curves already developed and the print balanced.
 #[derive(Debug, Clone)]
 pub struct PreparedRender {
@@ -230,6 +248,13 @@ pub struct PreparedRender {
     print: Option<PrintContext>,
     /// The spectral scan model, when requested.
     scan: Option<ScanContext>,
+    /// The cyan dye's second emulsion, when the stock has one — ADR 0017.
+    ///
+    /// Only its curve lives here. The sensitivity is a table the spectral
+    /// context integrates, and the two meet in [`Self::negative_density_with`]:
+    /// the context says how much light the layer saw, this says how much dye
+    /// that made, and the cyan dye sums the two emulsions' densities.
+    extra: Option<CharacteristicCurve>,
 }
 
 impl PreparedRender {
@@ -294,6 +319,13 @@ impl PreparedRender {
     /// than substitute the closed form.
     #[must_use]
     pub fn spectral_model(&self) -> Option<SpectralModel> {
+        // ADR 0017: the fourth layer is a fourth integral and a second curve on
+        // the cyan dye. No field of the model carries it, and a backend that
+        // replayed the three layers would render a different film without
+        // saying so — so it declines, and the caller renders on the CPU.
+        if self.extra.is_some() {
+            return None;
+        }
         if self.lut.is_some() {
             return None;
         }
@@ -355,29 +387,75 @@ impl PreparedRender {
         self.lut.as_ref()
     }
 
+    /// Everything the curve stage needs from a pixel.
+    ///
+    /// The fourth layer rides beside the three rather than inside them: its
+    /// density lands on the cyan dye, which already has a layer, so folding it
+    /// into the blue channel's log exposure would combine the emulsions before
+    /// their curves and lose exactly what ADR 0017 added.
+    ///
+    /// `None` for the fourth layer is the ordinary case — every stock before
+    /// PRO 400H — and makes the rest of the chain the model it always was.
+    pub fn expose(&self, linear: [f64; 3]) -> Exposure {
+        let scalar = || std::array::from_fn(|channel| linear[channel].max(1e-10).log10());
+        if let Some(lut) = &self.lut {
+            // Baked: three trilinear lookups. A table cannot carry a fourth
+            // axis, which is why `prepare_with` refuses one for such a stock.
+            return Exposure {
+                layers: lut.sample(linear),
+                extra: None,
+            };
+        }
+        if let Some(context) = &self.spectral {
+            // Live: reconstruct once and integrate four times. The fallback
+            // keeps the function total; it cannot trigger with a context this
+            // module built.
+            return match context.expose_with_extra(linear) {
+                Some((layers, extra)) => Exposure { layers, extra },
+                None => Exposure {
+                    layers: scalar(),
+                    extra: None,
+                },
+            };
+        }
+        Exposure {
+            layers: scalar(),
+            extra: None,
+        }
+    }
+
     /// The three log exposures: scalar per channel, or the film's layers
     /// integrating a reconstructed spectrum.
     #[must_use]
     pub fn log_exposure(&self, linear: [f64; 3]) -> [f64; 3] {
-        let scalar = || std::array::from_fn(|channel| linear[channel].max(1e-10).log10());
-        if let Some(lut) = &self.lut {
-            // Baked: three trilinear lookups.
-            lut.sample(linear)
-        } else if let Some(context) = &self.spectral {
-            // Live: reconstruct and integrate. The fallback keeps the function
-            // total; it cannot trigger with a context this module built.
-            context.expose(linear).unwrap_or_else(scalar)
-        } else {
-            scalar()
-        }
+        self.expose(linear).layers
     }
 
     /// The negative's density, from log exposure.
+    ///
+    /// This is the three-layer model: one emulsion per dye. A stock with a
+    /// fourth layer wants [`Self::negative_density_with`], which is this plus
+    /// the second cyan emulsion.
     #[must_use]
     pub fn negative_density(&self, log_e: [f64; 3]) -> [f64; 3] {
-        std::array::from_fn(|channel| {
+        self.negative_density_with(log_e, None)
+    }
+
+    /// The negative's density, with the cyan dye's second emulsion when there
+    /// is one.
+    ///
+    /// The sum is over densities: both emulsions make the same dye, and the
+    /// densitometer sees one number, so two emulsions at half a stop each are
+    /// not one at a stop. Ignoring `extra` is bit-for-bit the old model.
+    #[must_use]
+    pub fn negative_density_with(&self, log_e: [f64; 3], extra: Option<f64>) -> [f64; 3] {
+        let mut density: [f64; 3] = std::array::from_fn(|channel| {
             self.channels[channel].density(log_e[channel] + self.exposure_shift)
-        })
+        });
+        if let (Some(curve), Some(log_e)) = (self.extra, extra) {
+            density[0] += curve.density(log_e + self.exposure_shift);
+        }
+        density
     }
 
     /// The print and the scan, from the negative's density.
@@ -436,25 +514,33 @@ impl PreparedRender {
     /// Curve, print and scan for one pixel, with optional grain on the exposure.
     fn finish(
         &self,
-        log_e: [f64; 3],
+        linear: [f64; 3],
         x: usize,
         y: usize,
         grain: Option<&crate::grain::GrainField>,
     ) -> [f64; 3] {
-        let density = self.negative_density(log_e);
+        let exposure = self.expose(linear);
+        let density = self.negative_density_with(exposure.layers, exposure.extra);
         let jittered: [f64; 3] = match grain {
             Some(grain) => std::array::from_fn(|channel| {
-                log_e[channel] + grain.jitter(x, y, density[channel], channel)
+                exposure.layers[channel] + grain.jitter(x, y, density[channel], channel)
             }),
-            None => log_e,
+            None => exposure.layers,
         };
-        self.positive(self.negative_density(jittered))
+        self.positive(self.negative_density_with(jittered, exposure.extra))
     }
 
     /// Render one linear-light pixel.
     #[must_use]
     pub fn render_pixel(&self, linear: [f64; 3]) -> [f64; 3] {
-        self.positive(self.negative_density(self.log_exposure(linear)))
+        let exposure = self.expose(linear);
+        self.positive(self.negative_density_with(exposure.layers, exposure.extra))
+    }
+
+    /// Whether the stock's cyan dye has a second emulsion.
+    #[must_use]
+    pub fn has_extra_layer(&self) -> bool {
+        self.extra.is_some()
     }
 }
 
@@ -497,6 +583,36 @@ fn each_pixel<T: Send>(data: &mut [T], width: usize, f: impl Fn(usize, usize, &m
     }
 }
 
+/// [`each_pixel`], for two planes that describe the same pixel.
+///
+/// The fourth layer needs a plane of its own — it is a layer, not a fourth
+/// number in a three-channel pixel — and its exposure comes from the same
+/// reconstructed spectrum as the other three. Filling the two in separate
+/// passes would reconstruct every spectrum twice.
+#[inline]
+fn each_pixel_pair<A: Send, B: Send>(
+    first: &mut [A],
+    second: &mut [B],
+    width: usize,
+    f: impl Fn(usize, usize, &mut A, &mut B) + Sync,
+) {
+    #[cfg(feature = "parallel")]
+    {
+        use rayon::prelude::*;
+        first
+            .par_iter_mut()
+            .zip(second.par_iter_mut())
+            .enumerate()
+            .for_each(|(index, (left, right))| f(index % width, index / width, left, right));
+    }
+    #[cfg(not(feature = "parallel"))]
+    {
+        for (index, (left, right)) in first.iter_mut().zip(second.iter_mut()).enumerate() {
+            f(index % width, index / width, left, right);
+        }
+    }
+}
+
 /// Render a whole image with the finishing effects.
 ///
 /// Halation runs first and needs the whole frame, because it moves light
@@ -516,8 +632,7 @@ pub fn render_pixels_finished(
     if finishing.emulsion.is_none() && finishing.halation.is_none() && finishing.couplers.is_none()
     {
         each_pixel(pixels, width, |x, y, pixel| {
-            let log_e = prepared.log_exposure(*pixel);
-            *pixel = prepared.finish(log_e, x, y, finishing.grain);
+            *pixel = prepared.finish(*pixel, x, y, finishing.grain);
         });
         return;
     }
@@ -525,9 +640,22 @@ pub fn render_pixels_finished(
     // Exposure first: halation moves light between pixels, before anything is
     // developed.
     let mut log_e: Vec<[f64; 3]> = pixels.to_vec();
-    each_pixel(&mut log_e, width, |_, _, pixel| {
-        *pixel = prepared.log_exposure(*pixel);
-    });
+    // The fourth layer is a fourth plane, allocated only when the stock has
+    // one: a stock without it renders through exactly the vectors it used to.
+    let mut extra: Option<Vec<f64>> =
+        prepared.has_extra_layer().then(|| vec![0.0; log_e.len()]);
+    match extra.as_mut() {
+        Some(plane) => each_pixel_pair(&mut log_e, plane, width, |_, _, pixel, slot| {
+            let exposure = prepared.expose(*pixel);
+            *pixel = exposure.layers;
+            // No integral means no exposure: the emulsion stays at its
+            // minimum density rather than at a plausible-looking zero.
+            *slot = exposure.extra.unwrap_or(f64::NEG_INFINITY);
+        }),
+        None => each_pixel(&mut log_e, width, |_, _, pixel| {
+            *pixel = prepared.log_exposure(*pixel);
+        }),
+    }
     // The emulsion's own blur comes first: it is the lens's image being
     // softened by the film, and the halo is light that entered the film and
     // came back, so it is distributed by the same blur afterwards.
@@ -542,11 +670,15 @@ pub fn render_pixels_finished(
     let mut density: Vec<[f64; 3]> = log_e.clone();
     each_pixel(&mut density, width, |x, y, slot| {
         let log_e = log_e[y * width + x];
-        let mean = prepared.negative_density(log_e);
+        let extra = extra.as_ref().map(|plane| plane[y * width + x]);
+        let mean = prepared.negative_density_with(log_e, extra);
         *slot = match finishing.grain {
-            Some(grain) => prepared.negative_density(std::array::from_fn(|channel| {
-                log_e[channel] + grain.jitter(x, y, mean[channel], channel)
-            })),
+            Some(grain) => prepared.negative_density_with(
+                std::array::from_fn(|channel| {
+                    log_e[channel] + grain.jitter(x, y, mean[channel], channel)
+                }),
+                extra,
+            ),
             None => mean,
         };
     });
@@ -596,6 +728,145 @@ pub fn render_pixels_with_grain(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The fourth layer's sensitivity: a straight line at 5 nm, sampled every
+    /// 10 nm. Interpolating it back onto the model grid returns the same
+    /// function, so it sees *exactly* what the blue layer sees and only the
+    /// anchor can differ.
+    const STRAIGHT: [f32; 36] = {
+        let mut table = [0.0_f32; 36];
+        let mut index = 0;
+        while index < 36 {
+            table[index] = 1.0 + 0.02 * (index as f32);
+            index += 1;
+        }
+        table
+    };
+
+    /// A four-layer stock: three identical straight-line layers and a cyan dye
+    /// fed by a second emulsion. `Box::leak` because [`RenderParams`] borrows
+    /// the stock and the test is its only owner.
+    fn four_layer(curve: [f64; 4]) -> &'static FilmStock {
+        let mut straight = [0.0; crate::spectral::GRID_LEN];
+        for (index, value) in straight.iter_mut().enumerate() {
+            *value = 1.0 + 0.01 * index as f64;
+        }
+        let layers: &'static [[f64; crate::spectral::GRID_LEN]; 3] =
+            Box::leak(Box::new([straight, straight, straight]));
+        let mut stock = *crate::emulsion::film_stock("vision3_500t").expect("built-in stock");
+        stock.id = "test_four_layer";
+        stock.layers = layers;
+        stock.extra_cyan = Some(crate::dye::Emulsion {
+            curve,
+            transition: crate::curve::TRANSITION,
+            sensitivity: &STRAIGHT,
+        });
+        Box::leak(Box::new(stock))
+    }
+
+    /// ADR 0017's compatibility promise: the eighteen stocks that were here
+    /// before the fourth layer exist are still the three-layer model, bit for
+    /// bit, and a backend can still replay every one of them.
+    #[test]
+    fn a_stock_without_a_fourth_layer_is_still_the_three_layer_model() {
+        for stock in crate::emulsion::FILM_STOCKS {
+            let prepared = RenderParams {
+                film: stock,
+                ..RenderParams::default()
+            }
+            .prepare();
+            assert!(!prepared.has_extra_layer(), "{}", stock.id);
+
+            let pixel = [0.4, 0.3, 0.2];
+            let exposure = prepared.expose(pixel);
+            assert_eq!(exposure.extra, None, "{}", stock.id);
+            let expected: [f64; 3] = std::array::from_fn(|channel| {
+                prepared.channels()[channel].density(exposure.layers[channel])
+            });
+            assert_eq!(
+                prepared.negative_density(exposure.layers),
+                expected,
+                "{}",
+                stock.id
+            );
+            // Still exactly one of the two replayable models: nothing about a
+            // three-layer stock newly declines the GPU.
+            assert!(
+                prepared.scalar_model().is_some() || prepared.spectral_model().is_some(),
+                "{}",
+                stock.id
+            );
+        }
+    }
+
+    /// The fourth layer is a density on the cyan dye, not a fourth exposure.
+    #[test]
+    fn a_second_emulsion_adds_density_on_the_cyan_dye() {
+        let curve = [0.05, 1.2, 0.7, -1.0];
+        let prepared = RenderParams {
+            film: four_layer(curve),
+            ..RenderParams::default()
+        }
+        .prepare();
+
+        assert!(prepared.has_extra_layer());
+        // A second emulsion is a fourth integral and a second curve: the
+        // scalar path cannot say it, and the spectral model has no lane for
+        // it, so a backend has to decline rather than replay three layers.
+        assert!(prepared.is_spectral());
+        assert!(prepared.scalar_model().is_none());
+        assert!(prepared.spectral_model().is_none());
+
+        let exposure = prepared.expose([0.4, 0.3, 0.2]);
+        let extra = exposure.extra.expect("the stock has a second emulsion");
+        let added = crate::curve::density_from(
+            curve[0],
+            curve[1],
+            curve[2],
+            curve[3],
+            crate::curve::TRANSITION,
+            extra,
+        );
+
+        let without = prepared.negative_density_with(exposure.layers, None);
+        let with = prepared.negative_density_with(exposure.layers, Some(extra));
+        assert!(
+            (with[0] - without[0] - added).abs() < 1e-12,
+            "cyan: {} + {added} vs {}",
+            without[0],
+            with[0]
+        );
+        // The other two dyes are untouched: the layer shares a dye, not a
+        // channel.
+        assert_eq!([with[1], with[2]], [without[1], without[2]]);
+    }
+
+    /// The fourth layer is normalised on the **blue** layer's grey response,
+    /// not on its own. The data sheet plots all four emulsions on one log H
+    /// axis, and the distance between the blue-sensitive curve and the
+    /// cyan-sensitive one is a speed difference that self-anchoring would
+    /// divide out.
+    ///
+    /// With a sensitivity that is the blue layer's own function, the two
+    /// integrals must agree to the last digit at every colour — including the
+    /// ones where mid grey's exposure, −0.744, is nowhere near.
+    #[test]
+    fn the_fourth_layer_is_anchored_on_the_blue_layer() {
+        let prepared = RenderParams {
+            film: four_layer([0.0, 1.0, 1.0, 0.0]),
+            ..RenderParams::default()
+        }
+        .prepare();
+        for pixel in [[0.18, 0.18, 0.18], [0.9, 0.1, 0.05], [0.05, 0.2, 0.8]] {
+            let exposure = prepared.expose(pixel);
+            let extra = exposure.extra.expect("the stock has a second emulsion");
+            let blue = exposure.layers[2];
+            assert!(
+                (extra - blue).abs() < 1e-6,
+                "{pixel:?}: fourth layer {extra} vs blue layer {blue}"
+            );
+        }
+    }
 
     fn chain(development: DevelopmentParams) -> PreparedRender {
         RenderParams {

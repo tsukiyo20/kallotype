@@ -87,6 +87,12 @@ pub struct SpectralContext {
     /// keeps the spectral path anchored to the same grey as the scalar path, so
     /// that turning spectra on changes colour separation, not overall exposure.
     reference: [f64; 3],
+    /// The cyan dye's second emulsion, resampled onto the model grid — ADR 0017.
+    ///
+    /// It is a fourth integral rather than a fourth number in `film`: the
+    /// sensitivity is a table, and the layer it belongs to shares its dye with
+    /// the blue-sensitive one instead of owning a channel.
+    extra: Option<[f64; GRID_LEN]>,
 }
 
 impl Default for SpectralContext {
@@ -124,7 +130,22 @@ impl SpectralContext {
     /// scene separates into dyes, and no curve can stand in for it.
     #[must_use]
     pub fn for_stock(stock: &crate::emulsion::FilmStock) -> Self {
-        Self::for_layers(stock.id, stock.layers)
+        let mut context = Self::for_layers(stock.id, stock.layers);
+        // The three layers are divided by their joint peak when the sensor is
+        // built, so a fourth table has to be divided by the same number or it
+        // would be on a scale of its own and every exposure it reported would
+        // be off by that factor. Normalising it on its *own* peak would be the
+        // other mistake: it would assert that the cyan-sensitive emulsion is
+        // exactly as fast as the blue-sensitive one.
+        let peak = stock
+            .layers
+            .iter()
+            .flat_map(|table| table.iter())
+            .fold(0.0_f64, |a, &b| a.max(b));
+        context.extra = stock
+            .extra_cyan
+            .and_then(|emulsion| sensitivity_table(&context.grid, emulsion.sensitivity, peak));
+        context
     }
 
     /// # Panics
@@ -146,6 +167,7 @@ impl SpectralContext {
             dictionary: None,
             threshold: 0.02,
             reference: [1.0; 3],
+            extra: None,
         };
         context.refresh_reference();
         context
@@ -276,13 +298,65 @@ impl SpectralContext {
     /// grid mismatch that [`Self::new`] rules out.
     #[must_use]
     pub fn expose(&self, linear: [f64; 3]) -> Option<[f64; 3]> {
+        self.expose_with_extra(linear).map(|(layers, _)| layers)
+    }
+
+    /// The same exposure, plus the fourth layer when the film has one.
+    ///
+    /// One reconstruction feeds all four integrals: the second cyan emulsion
+    /// sits in the same stack and sees the same light, so rebuilding the
+    /// spectrum for it would be the same arithmetic twice.
+    ///
+    /// The fourth layer is normalised on the **blue** layer's grey response,
+    /// not on its own. The data sheet plots every emulsion on one log H axis,
+    /// so the distance between the blue-sensitive curve and the cyan-sensitive
+    /// one is a speed difference; anchoring each on its own grey would divide
+    /// that difference out and make the fourth layer a copy of the third.
+    #[must_use]
+    pub fn expose_with_extra(&self, linear: [f64; 3]) -> Option<([f64; 3], Option<f64>)> {
         let spectrum = self.reconstruct(linear)?;
+        let radiance = spectrum.values();
         let response = self.film.respond(&spectrum);
-        Some(std::array::from_fn(|channel| {
+        let layers = std::array::from_fn(|channel| {
             let normalised = response[channel] * 0.18 / self.reference[channel].max(1e-12);
             normalised.max(1e-10).log10()
-        }))
+        });
+        let extra = self.extra.map(|sensitivity| {
+            let total = sensitivity
+                .iter()
+                .zip(radiance)
+                .map(|(sensitivity, radiance)| sensitivity * radiance)
+                .sum::<f64>()
+                * self.grid.step_nm();
+            let normalised = total * 0.18 / self.reference[2].max(1e-12);
+            normalised.max(1e-10).log10()
+        });
+        Some((layers, extra))
     }
+}
+
+/// A sensitivity table on its own grid, resampled onto the model's.
+///
+/// `peak` is the divisor that puts it on the same relative scale as the film's
+/// three layers — see [`SpectralContext::for_stock`].
+///
+/// `None` for an empty table, which is an emulsion that records nothing — a
+/// layer with no sensitivity would develop only base, and pretending it does is
+/// worse than saying the stock has no fourth emulsion.
+fn sensitivity_table(grid: &Spectrum, sensitivity: &[f32], peak: f64) -> Option<[f64; GRID_LEN]> {
+    if sensitivity.is_empty() || peak <= 0.0 {
+        return None;
+    }
+    let mut table = Spectrum::uniform(
+        crate::dye::SENSITIVITY_START_NM,
+        crate::dye::SENSITIVITY_STEP_NM,
+        sensitivity.len(),
+    )
+    .ok()?;
+    for (slot, value) in table.values_mut().iter_mut().zip(sensitivity) {
+        *slot = f64::from(*value) / peak;
+    }
+    crate::model::table(&table.resampled(grid))
 }
 
 impl SpectralContext {
