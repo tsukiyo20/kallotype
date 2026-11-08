@@ -42,6 +42,35 @@ impl Emulsion {
     }
 }
 
+/// The log exposure one emulsion receives from a spectral radiance.
+///
+/// The sensitivity table and the radiance share a grid; the product is summed
+/// and the result is the relative exposure, normalised so a sensitivity of one
+/// everywhere under a radiance of one gives an exposure of one. This is the
+/// same integral the three-layer spectral path already does — it lives here
+/// because a fourth layer needs a fourth integral and the code that owns the
+/// layer should own its arithmetic.
+///
+/// `step_nm` multiplies the sum so two grids of different pitch agree, which is
+/// the one thing a table alone cannot say.
+#[must_use]
+pub fn log_exposure(sensitivity: &[f64], radiance: &[f64], step_nm: f64) -> f64 {
+    if sensitivity.is_empty() || radiance.is_empty() || step_nm <= 0.0 {
+        return f64::NEG_INFINITY;
+    }
+    let total: f64 = sensitivity
+        .iter()
+        .zip(radiance)
+        .map(|(s, r)| s * r)
+        .sum::<f64>()
+        * step_nm;
+    if total > 0.0 {
+        total.ln()
+    } else {
+        f64::NEG_INFINITY
+    }
+}
+
 /// A dye, and the emulsions that form it.
 ///
 /// Two is the bound the sheets need: four-layer films add a second cyan
@@ -128,5 +157,25 @@ mod tests {
             (pair - combined).abs() > 0.05,
             "adding exposures would give {combined:.3}, adding densities gives {pair:.3}"
         );
+    }
+
+    /// The fourth layer's integral: flat radiance through a flat sensitivity
+    /// gives the sum times the step, and a layer that sees nothing stays in
+    /// the dark rather than dividing by zero.
+    #[test]
+    fn an_emulsions_exposure_is_the_sensitivity_against_the_light() {
+        let sensitivity = [0.5; 8];
+        let radiance = [2.0; 8];
+        let exposure = log_exposure(&sensitivity, &radiance, 5.0);
+        assert!((exposure - (0.5 * 2.0 * 8.0 * 5.0f64).ln()).abs() < 1e-12);
+        assert_eq!(
+            log_exposure(&sensitivity, &[0.0; 8], 5.0),
+            f64::NEG_INFINITY
+        );
+        assert_eq!(log_exposure(&[], &radiance, 5.0), f64::NEG_INFINITY);
+        // A finer grid with the same integral agrees, which is what `step_nm`
+        // is for.
+        let fine = log_exposure(&[0.5; 16], &[2.0; 16], 2.5);
+        assert!((fine - exposure).abs() < 1e-12);
     }
 }
