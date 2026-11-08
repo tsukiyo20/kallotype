@@ -31,6 +31,8 @@ pub mod curve;
 pub mod development;
 pub mod dye;
 pub mod emulsion;
+pub mod filters;
+mod filters_measured;
 pub mod grain;
 pub mod halation;
 pub mod interimage;
