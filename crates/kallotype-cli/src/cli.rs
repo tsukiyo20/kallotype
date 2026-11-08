@@ -79,6 +79,19 @@ pub struct StockArgs {
     #[arg(long, default_value = "portra_endura")]
     pub paper: String,
 
+    /// The enlarger's colour pack, in Kodak CC units: `30M`, `20Y+10M`.
+    ///
+    /// Empty is the model without a filter pack. The dial settings are the
+    /// film's own convention — 1 CC is 0.01 of density — and the spectra behind
+    /// them are KODAK's tables, so a pack moves the print the way the filter it
+    /// names would.
+    #[arg(long, value_name = "Y/M/C", default_value = "")]
+    pub filters: String,
+
+    /// A heat-absorbing glass in the light path, e.g. `kg3`.
+    #[arg(long, value_name = "GLASS")]
+    pub heat_glass: Option<String>,
+
     /// Development time in minutes. Defaults to the time the stock's data
     /// sheet drew its curves at, which is not the same for every film.
     #[arg(long = "dev", value_name = "MINUTES")]

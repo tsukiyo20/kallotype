@@ -29,6 +29,10 @@ pub struct Selection {
     pub allow_model_mismatch: bool,
     /// Whether to print through the spectral model.
     pub spectral_print: bool,
+    /// The enlarger's colour pack, in Kodak CC units.
+    pub filters: kallotype_core::filters::FilterPack,
+    /// A heat-absorbing glass in the light path.
+    pub heat_glass: Option<kallotype_core::filters::HeatGlass>,
     /// Whether to scan through the spectral model.
     pub spectral_scan: bool,
 }
@@ -55,6 +59,8 @@ impl Selection {
             // The layer only exists on some sheets, so the flag that asks for
             // it is the render command's, not the selection's.
             interimage,
+            filters: self.filters,
+            heat_glass: self.heat_glass,
         }
     }
 }
@@ -181,7 +187,66 @@ pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
         allow_model_mismatch: stock.allow_model_mismatch,
         spectral_print: stock.spectral_print,
         spectral_scan: stock.spectral_scan,
+        filters: parse_filters(&stock.filters)?,
+        heat_glass: parse_heat_glass(stock.heat_glass.as_deref())?,
     })
+}
+
+/// `30M`, `20Y+10M`, `5C` — the pack an operator would dial.
+///
+/// One letter per colour, the number in CC units; a bare number is magenta,
+/// because that is the dial a colour head actually uses.
+fn parse_filters(text: &str) -> Result<kallotype_core::filters::FilterPack, CliError> {
+    let mut pack = kallotype_core::filters::FilterPack::none();
+    for part in text
+        .split('+')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+    {
+        let split = part
+            .find(|c: char| c.is_ascii_alphabetic())
+            .unwrap_or(part.len());
+        let (number, colour) = part.split_at(split);
+        let value: f64 = number.trim().parse().map_err(|_| CliError::InvalidNumber {
+            flag: "--filters",
+            value: f64::NAN,
+            expected: "a CC setting such as 30M",
+        })?;
+        match colour.trim().to_ascii_uppercase().as_str() {
+            "Y" => pack.yellow = value,
+            "M" | "" => pack.magenta = value,
+            "C" => pack.cyan = value,
+            _ => {
+                return Err(CliError::InvalidNumber {
+                    flag: "--filters",
+                    value: f64::NAN,
+                    expected: "one of Y, M or C",
+                });
+            }
+        }
+    }
+    Ok(pack)
+}
+
+/// The heat glass by name.
+fn parse_heat_glass(
+    text: Option<&str>,
+) -> Result<Option<kallotype_core::filters::HeatGlass>, CliError> {
+    use kallotype_core::filters::HeatGlass;
+    let Some(text) = text else {
+        return Ok(None);
+    };
+    match text.trim().to_ascii_lowercase().as_str() {
+        "kg1" => Ok(Some(HeatGlass::Kg1)),
+        "kg2" => Ok(Some(HeatGlass::Kg2)),
+        "kg3" => Ok(Some(HeatGlass::Kg3)),
+        "kg5" => Ok(Some(HeatGlass::Kg5)),
+        _ => Err(CliError::InvalidNumber {
+            flag: "--heat-glass",
+            value: f64::NAN,
+            expected: "one of kg1, kg2, kg3, kg5",
+        }),
+    }
 }
 
 /// Resolve `--camera` into a profile.

@@ -220,6 +220,47 @@ impl PrintContext {
         std::array::from_fn(|layer| target / response[layer].max(1e-12))
     }
 
+    /// The enlarger, from measured spectra instead of the placeholder bands.
+    ///
+    /// The three Gaussian `filter_bands` and the equal-energy `illuminant` are
+    /// the model from before the data existed. This replaces the illuminant with
+    /// lamp × heat glass × pack, in that order, normalised to its own peak — the
+    /// print's exposure is solved, so a common factor is an exposure time and not
+    /// a measurement.
+    ///
+    /// The reference is recomputed afterwards, and that ordering is the whole
+    /// point: the grey balance divides by the response to the reference neutral,
+    /// so an enlarger applied *after* the reference would cancel out of
+    /// `expose()` and make the filter invisible.
+    #[must_use]
+    pub fn with_enlarger(
+        mut self,
+        pack: crate::filters::FilterPack,
+        glass: Option<crate::filters::HeatGlass>,
+    ) -> Self {
+        let lamp = crate::filters::lamp(3200.0);
+        let pack_transmission = pack.transmittance();
+        let glass_transmission = glass.map(|heat| heat.transmittance(2.0));
+        let mut transmission = [0.0_f64; GRID_LEN];
+        for (index, value) in transmission.iter_mut().enumerate() {
+            let heat = glass_transmission.map_or(1.0, |values| values[index]);
+            *value = lamp[index] * pack_transmission[index] * heat;
+        }
+        let peak = transmission
+            .iter()
+            .copied()
+            .fold(0.0_f64, f64::max)
+            .max(1e-12);
+        for (value, sample) in self.illuminant.values_mut().iter_mut().zip(transmission) {
+            *value = sample / peak;
+        }
+        // The bands were a placeholder for absorption that is now in the
+        // spectrum; leaving them on would charge the light twice.
+        self.filters = [0.0, 0.0, 0.0];
+        self.reference = self.balanced(self.reference_density);
+        self
+    }
+
     /// Set the enlarger filter pack, in Kodak colour-correction units.
     #[must_use]
     pub fn with_filters(mut self, filters: [f64; 3]) -> Self {

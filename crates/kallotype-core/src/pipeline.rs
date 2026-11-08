@@ -57,6 +57,11 @@ pub struct RenderParams {
     /// on is asking for a demonstration of the mechanism, not for a prediction
     /// about the film.
     pub interimage: bool,
+    /// The enlarger's colour pack in Kodak CC units, and an optional heat glass.
+    /// Empty and `None` are the model without this stage.
+    pub filters: crate::filters::FilterPack,
+    /// The heat-absorbing glass in the light path, at its 2 mm reference.
+    pub heat_glass: Option<crate::filters::HeatGlass>,
 }
 
 impl Default for RenderParams {
@@ -72,6 +77,8 @@ impl Default for RenderParams {
             spectral_print: false,
             spectral_scan: false,
             interimage: false,
+            filters: crate::filters::FilterPack::none(),
+            heat_glass: None,
         }
     }
 }
@@ -156,6 +163,7 @@ impl RenderParams {
                 self.film.mask,
                 self.paper.layers,
             )
+            .with_enlarger(self.filters, self.heat_glass)
         });
         let print_shift: [f64; 3] = match &print {
             // The spectral model is anchored on neutral grey, so the actual
@@ -1504,6 +1512,71 @@ mod tests {
                     "  neutral[0]={:?} neutral[32]={:?}",
                     s.neutral[0], s.neutral[32]
                 );
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod enlarger_tests {
+    use super::*;
+    use crate::filters::{FilterPack, HeatGlass};
+
+    fn print_with(pack: FilterPack, glass: Option<HeatGlass>) -> [f64; 3] {
+        RenderParams {
+            spectral_print: true,
+            filters: pack,
+            heat_glass: glass,
+            ..RenderParams::default()
+        }
+        .prepare()
+        .render_pixel([0.45, 0.28, 0.14])
+    }
+
+    /// A pack has to change the print at all before any dial can be said to
+    /// move it — the first thing the two failed attempts got wrong.
+    #[test]
+    fn a_pack_changes_the_print() {
+        let clear = print_with(FilterPack::none(), None);
+        let heavy = print_with(FilterPack::new(0.0, 200.0, 0.0), None);
+        let moved = (0..3)
+            .map(|i| (clear[i] - heavy[i]).abs())
+            .fold(0.0, f64::max);
+        assert!(moved > 0.01, "200 CC of magenta moved the print by {moved}");
+    }
+
+    /// And it moves it the way the filter implies, a step at a time.
+    #[test]
+    fn a_magenta_step_moves_the_print_balance() {
+        let mut previous = f64::INFINITY;
+        for cc in [0.0, 5.0, 20.0, 50.0] {
+            let out = print_with(FilterPack::new(0.0, cc, 0.0), None);
+            let green_over_blue = out[1] - out[2];
+            assert!(
+                green_over_blue < previous - 1e-6,
+                "at {cc} CC the green-over-blue gap went {previous} -> {green_over_blue}"
+            );
+            previous = green_over_blue;
+        }
+    }
+
+    /// The balance still lands mid grey on mid grey, and the glass is a neutral.
+    #[test]
+    fn mid_grey_holds_and_the_glass_is_a_neutral() {
+        for (pack, glass) in [
+            (FilterPack::none(), None),
+            (FilterPack::new(0.0, 30.0, 0.0), None),
+            (FilterPack::none(), Some(HeatGlass::Kg3)),
+        ] {
+            let prepared = RenderParams {
+                spectral_print: true,
+                filters: pack,
+                heat_glass: glass,
+                ..RenderParams::default()
+            }
+            .prepare();
+            for channel in prepared.render_pixel([0.18, 0.18, 0.18]) {
+                assert!((channel - 0.18).abs() < 0.03, "mid grey at {channel}");
             }
         }
     }
