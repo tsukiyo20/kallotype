@@ -941,12 +941,12 @@ mod tests {
             couplers: None,
             interimage,
         };
-        // Sixteen pixels: eight warm, eight cool. Both renders use the same
-        // prepared render — same exposure, same curve, same print — so the only
-        // thing that differs is whether the inhibitor acted.
+        // Sixty-four pixels: thirty-two warm, thirty-two cool. Both renders use
+        // the same prepared render — same exposure, same curve, same print — so
+        // the only thing that differs is whether the inhibitor acted.
         let mut pixels = Vec::new();
-        for index in 0..16 {
-            pixels.push(if index < 8 {
+        for index in 0..64 {
+            pixels.push(if index < 32 {
                 [0.9, 0.2, 0.1]
             } else {
                 [0.1, 0.2, 0.9]
@@ -954,8 +954,8 @@ mod tests {
         }
         let mut with = pixels.clone();
         let mut without = pixels;
-        render_pixels_finished(&mut with, &on, 16, 1, &finishing(Some(&stage)));
-        render_pixels_finished(&mut without, &on, 16, 1, &finishing(None));
+        render_pixels_finished(&mut with, &on, 64, 1, &finishing(Some(&stage)));
+        render_pixels_finished(&mut without, &on, 64, 1, &finishing(None));
 
         // Which half the layer sees more of is the exposure's answer, not the
         // eye's: a flat sensitivity integrates the reconstructed spectrum, and
@@ -969,21 +969,27 @@ mod tests {
             .expose([0.1, 0.2, 0.9])
             .extra
             .expect("the layer is in the render");
-        let (bright, dark) = if warm > cool { (0, 15) } else { (15, 0) };
+        // The two pixels either side of the boundary: the brighter one is the
+        // side whose inhibitor diffuses away, the shadow is the side that
+        // receives it.
+        let (bright, shadow) = if warm > cool { (31, 32) } else { (32, 31) };
 
         // The sign of the *print* is not the sign of the *density*: the
         // inhibitor takes cyan density off the negative, and a negative with
         // less cyan passes more red light, which the paper then develops into
-        // more cyan. So the observable is that the two halves move in opposite
-        // directions, and that only the red channel moves at all.
+        // more cyan. So the shadow keeps less red than it would have, and the
+        // bright side keeps more.
         assert!(
-            (with[bright][0] - without[bright][0]).signum()
-                == -(with[dark][0] - without[dark][0]).signum(),
-            "the halves moved together: {with:?} vs {without:?}"
+            with[shadow][0] < without[shadow][0],
+            "the shadow did not lose cyan: {:?} vs {:?}",
+            with[shadow],
+            without[shadow]
         );
         assert!(
-            (with[bright][0] - without[bright][0]).abs() > 1e-4,
-            "the layer changed nothing: {with:?} vs {without:?}"
+            with[bright][0] > without[bright][0],
+            "the bright side did not gain: {:?} vs {:?}",
+            with[bright],
+            without[bright]
         );
         // The other two dyes are not this layer's business.
         for (left, right) in with.iter().zip(&without) {

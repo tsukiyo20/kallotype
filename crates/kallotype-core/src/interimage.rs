@@ -10,22 +10,21 @@
 //!
 //! ## What is modelled
 //!
-//! The layer's inhibitor release is taken to be proportional to the light it
-//! absorbed, and it is compared against the **frame's own mean**. That
-//! subtraction is the whole model rather than a convenience:
+//! The release is proportional to the light the layer absorbed, and it is
+//! compared against **the light that same pixel absorbed**: where the
+//! neighbourhood released more than this pixel did, this pixel's cyan is
+//! suppressed; where the inhibitor diffused away to brighter neighbours, it is
+//! let through.
 //!
-//! - the characteristic curve on the data sheet was measured with a neutral
-//!   wedge, which exposes this layer uniformly, so whatever the uniform
-//!   inhibition does is already inside the curve;
-//! - a model that added it again would darken every frame by a number nobody
-//!   measured;
-//! - and a uniform frame therefore has to come out unchanged, which is the
-//!   invariant the tests hold it to.
-//!
-//! What is left is the local part: where the layer sees more cyan light than
-//! the frame average, the cyan dye is suppressed; where it sees less, it is let
-//! through. The inhibitor diffuses a short way, which is what makes the effect
-//! an edge effect and not a per-pixel gain.
+//! That baseline is the whole model, and it is a stronger statement than "the
+//! effect is local". The characteristic curve on the data sheet was measured
+//! with a neutral wedge, which exposes every patch uniformly, so a patch's
+//! uniform inhibition is *already inside the curve* — at every level, not just
+//! at the frame's average. Comparing against the frame mean instead would make
+//! a patch's colour depend on what else is in the frame, which is not an
+//! inter-image effect; comparing against the pixel's own light makes a flat
+//! region come out unchanged however bright it is, and leaves only the
+//! structure: edges, fine detail, the transition across a boundary.
 //!
 //! ## What is not measured
 //!
@@ -82,22 +81,32 @@ impl InterImage {
             return;
         }
 
+        // A scale for the floor below, and the answer to "is there any light".
         let mean = light[..pixels].iter().sum::<f64>() / pixels as f64;
-        // A frame with no light in the layer has no average to deviate from,
-        // and a non-finite one is a bug upstream rather than a dark frame.
         if !mean.is_finite() || mean <= 0.0 {
             return;
         }
-
         // The inhibitor diffuses before it acts, so a single bright pixel
         // suppresses its neighbours and not only itself.
         let sigma_px = self.sigma_um / self.pixel_um.max(1e-9);
         let diffused = gaussian_blur(&light[..pixels], width, height, sigma_px);
 
         for (index, pixel) in density[..pixels].iter_mut().enumerate() {
-            // Deviations from the frame's mean, in units of it: -1 where the
-            // layer saw no light at all, +k where it saw k times the average.
-            let deviation = diffused[index] / mean - 1.0;
+            // How much more (or less) inhibitor this pixel's neighbourhood made
+            // than the uniform case the curve was measured with. Zero on a flat
+            // region at any brightness; bounded, because a layer cannot be
+            // inhibited by more than "all of it". A pixel that saw nothing next
+            // to one that saw a great deal is the limit case, and it is written
+            // out rather than approached with a floor so that a flat shadow is
+            // exactly unchanged.
+            let local = light[index];
+            let deviation = if local > 0.0 {
+                (diffused[index] / local - 1.0).clamp(-1.0, 1.0)
+            } else if diffused[index] > 0.0 {
+                1.0
+            } else {
+                0.0
+            };
             // Only the cyan dye: this inhibitor's target is the red-sensitive
             // layer, which is the one that forms cyan.
             pixel[0] = (pixel[0] * (1.0 - self.gain * deviation)).max(0.0);
@@ -126,30 +135,39 @@ mod tests {
         }
     }
 
-    /// A step: cyan is taken away where the layer saw more light than the frame
-    /// average, and given back where it saw less. The two halves balance, which
-    /// is what makes this an inter-image effect rather than a gain.
+    /// A step. The bright side's inhibitor diffuses into the dark side, so the
+    /// shadow loses cyan; the bright side keeps less of its own inhibitor than a
+    /// flat patch would, so it gains. Both are bounded by the gain, and both
+    /// fall back to nothing within a few diffusion lengths.
     #[test]
-    fn a_step_takes_cyan_from_the_bright_side() {
+    fn a_step_takes_cyan_off_the_shadow_side() {
         let stage = InterImage {
             gain: 0.12,
-            sigma_um: 0.01,
+            sigma_um: 3.0,
             pixel_um: 1.0,
         };
-        let mut density = vec![[1.0, 1.0, 1.0]; 16];
-        let light = light_from(|index| if index % 16 < 8 { 0.0 } else { 4.0 }, 16);
-        stage.apply(&mut density, &light, 16, 1);
-        let dark = density[0][0];
-        let bright = density[15][0];
+        let mut density = vec![[1.0, 1.0, 1.0]; 64];
+        let light = light_from(|index| if index < 32 { 0.0 } else { 4.0 }, 64);
+        stage.apply(&mut density, &light, 64, 1);
+
+        let shadow = density[31][0];
+        let bright = density[32][0];
+        assert!(shadow < 0.93, "the shadow kept the inhibitor: {shadow:.4}");
         assert!(
-            bright < dark,
-            "bright {bright:.4} should be below dark {dark:.4}"
+            bright > 1.01,
+            "the bright side lost instead of gaining: {bright:.4}"
         );
-        assert!((dark - 1.0).abs() > 0.05 && (1.0 - bright).abs() > 0.05);
+        // Bounded by the gain, in both directions.
+        assert!(
+            density
+                .iter()
+                .all(|pixel| (0.88..=1.12).contains(&pixel[0]))
+        );
+        // Far from the boundary both sides are the flat case again.
+        assert!((density[0][0] - 1.0).abs() < 1e-9, "{:?}", density[0]);
+        assert!((density[63][0] - 1.0).abs() < 1e-9, "{:?}", density[63]);
         // The other two dyes are not this layer's business.
-        assert_eq!([density[0][1], density[0][2]], [1.0, 1.0]);
-        let mean: f64 = density.iter().map(|pixel| pixel[0]).sum::<f64>() / 16.0;
-        assert!((mean - 1.0).abs() < 1e-12, "mean {mean}");
+        assert_eq!([density[31][1], density[31][2]], [1.0, 1.0]);
     }
 
     /// A frame with no light anywhere is the uniform case, not a division by
