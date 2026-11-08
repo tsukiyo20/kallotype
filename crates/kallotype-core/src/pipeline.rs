@@ -292,6 +292,17 @@ pub struct PreparedRender {
 }
 
 impl PreparedRender {
+    /// The enlarger's exposure, per layer, in decades.
+    ///
+    /// This is what an operator dials: a colour head moves three exposure
+    /// factors against each other until a neutral negative prints neutral. A
+    /// filter pack therefore shows up *here*, not in the per-pixel exponent —
+    /// see `with_enlarger` in `print.rs` for why.
+    #[must_use]
+    pub fn print_shift(&self) -> [f64; 3] {
+        self.print_shift
+    }
+
     /// The curve, the paper and the enlarger as plain numbers.
     ///
     /// Always available, because a spectral render runs the same three stages:
