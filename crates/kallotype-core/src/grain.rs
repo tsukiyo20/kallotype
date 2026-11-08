@@ -230,7 +230,7 @@ impl GrainField {
     /// while the granularity a densitometer reads does not move.
     ///
     /// `P` is computed from the taps that are actually drawn, so a stencil
-    /// truncated by [`Self::STENCIL`] is corrected for what it is, not for the
+    /// truncated by `Self::STENCIL` is corrected for what it is, not for the
     /// Gaussian it was meant to be.
     #[must_use]
     pub fn with_grain_sizes(mut self, grain_um: [f64; 3]) -> Self {
