@@ -70,6 +70,13 @@ struct Params {
     blur_offsets: vec4<u32>,
     // How long each layer's blur kernel is; zero means the layer is not blurred.
     blur_lengths: vec4<u32>,
+    // The grain clump's stencil per layer: (centre, ±1, ±2, radius in pixels).
+    //
+    // The taps are symmetric by construction and already carry the aperture
+    // correction, so the shader only has to convolve with them. A radius of
+    // zero is a delta: the centre tap is the whole kernel and the draw is the
+    // per-pixel one.
+    grain_stencil: array<vec4<f32>, 3>,
 };
 
 // The spectral model's constants, in the order `kallotype_core::model` writes

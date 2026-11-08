@@ -126,8 +126,56 @@ fn grain_sigma(density: f32, layer: u32) -> f32 {
     return 1.0 / (2.302585092994046 * sqrt(grains + 1.0));
 }
 
+/// One symmetric tap of the stencil: the centre, then the first and second
+/// neighbours. `params.grain_stencil` carries them already normalised and
+/// already scaled by the aperture correction.
+fn grain_tap(stencil: vec4<f32>, offset: u32) -> f32 {
+    if (offset == 0u) {
+        return stencil.x;
+    }
+    if (offset == 1u) {
+        return stencil.y;
+    }
+    return stencil.z;
+}
+
+/// A coordinate held inside the image, the way `GrainField::clamp` holds it.
+fn grain_clamp(value: i32, limit: u32) -> u32 {
+    return u32(clamp(value, 0, i32(limit) - 1));
+}
+
 /// The fluctuation in log exposure for one layer of one pixel.
+///
+/// The counting statistics give the variance through an aperture and nothing
+/// about its shape, so the shape is a stencil: a grain covers area, and its
+/// neighbours share its fluctuation. The taps are symmetric and already scaled
+/// so a wide aperture sees the counting statistics — see
+/// `GrainField::with_grain_sizes` — which leaves this function with only the
+/// convolution to do. A radius of zero is the delta the grain has been all
+/// along, and costs one tap.
 fn grain_jitter(index: u32, layer: u32, mean_density: f32) -> f32 {
     let width = max(params.grain.z, 1u);
-    return grain_sigma(mean_density, layer) * grain_normal(index % width, index / width, layer);
+    let height = max(params.grain.w, 1u);
+    let x = index % width;
+    let y = index / width;
+    // One record, one field, one size: a silver emulsion draws the central
+    // layer everywhere.
+    let record = select(layer, 0u, params.flags2.z > 0.5);
+    let stencil = params.grain_stencil[record];
+    let sigma = grain_sigma(mean_density, record);
+    let reach = i32(stencil.w);
+    if (reach == 0) {
+        return sigma * stencil.x * grain_normal(x, y, layer);
+    }
+
+    var sum = 0.0;
+    for (var dy = -reach; dy <= reach; dy = dy + 1) {
+        let row = grain_clamp(i32(y) + dy, height);
+        let down = grain_tap(stencil, u32(abs(dy)));
+        for (var dx = -reach; dx <= reach; dx = dx + 1) {
+            let column = grain_clamp(i32(x) + dx, width);
+            sum = sum + down * grain_tap(stencil, u32(abs(dx))) * grain_normal(column, row, layer);
+        }
+    }
+    return sigma * sum;
 }

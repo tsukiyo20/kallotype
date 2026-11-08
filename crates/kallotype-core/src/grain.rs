@@ -55,6 +55,13 @@
 //! the literature is clear about the direction and says little about the law —
 //! but a made-up exponent is worse than an honest gap, so the relation waits for
 //! a measurement.
+//!
+//! The one scan in the tree was measured for it and cannot answer. Its flat
+//! areas are all in the toe, where the film has developed almost nothing and
+//! the scanner's own noise is what varies; all three channels come out at the
+//! same correlation length, which three emulsions would not. That number is the
+//! scanner's, and it stays in the measurement note rather than being promoted
+//! into a stock: see `docs/measurements/2026-11-08-grain-vs-density.md`.
 
 use crate::emulsion::FilmStock;
 
@@ -94,16 +101,24 @@ pub struct GrainField {
     /// `scripts/grain_spectrum.py` measures. Until a stock's own is measured,
     /// the mean grain spacing `1/√n` stands in — the distance at which the
     /// measured density tiles the area, and a lower bound on the real one.
+    ///
+    /// Measure it on a *mid-density* flat, not on the thin sky of a night
+    /// frame. There the film has developed almost nothing, and what a scan
+    /// shows is the scanner: the same 3.2 µm in all three channels is the
+    /// giveaway, because three emulsions do not share a grain size. The
+    /// number is then a property of the scanner's optics, not of the film —
+    /// see `docs/measurements/2026-11-08-grain-vs-density.md`.
     pub grain_um: [f64; 3],
     /// Radius of the correlation stencil, in pixels, one per layer. Zero when
     /// the grain is smaller than a tenth of a pixel, where the kernel is a
     /// delta and drawing it would only cost time.
     pub radius: [usize; 3],
     /// Separable weights for the stencil, centre at [`Self::CENTRE`].
+    ///
+    /// Symmetric by construction — tap `CENTRE ± k` are the same number — and
+    /// already scaled by the aperture correction, so the field they draw is
+    /// the one [`Self::sigma`] describes *through an aperture*, not per pixel.
     pub weights: [[f64; Self::STENCIL]; 3],
-    /// Reciprocal of the stencil's L2 norm, so the filtered field keeps the
-    /// variance the counting statistics asked for.
-    pub normalise: [f64; 3],
 }
 
 impl GrainField {
@@ -151,7 +166,6 @@ impl GrainField {
             grain_um: [0.0; 3],
             radius: [0; 3],
             weights: [[0.0; Self::STENCIL]; 3],
-            normalise: [1.0; 3],
         }
         .with_grain_sizes(Self::spacing_of(&[Self::DEFAULT_GRAINS_PER_UM2; 3]))
     }
@@ -196,10 +210,28 @@ impl GrainField {
     /// stencil at radius zero — there the kernel is a delta and the per-pixel
     /// draw is already the answer.
     ///
-    /// The weights are normalised to unit L2 norm, so a separable filter built
-    /// from them leaves a white field's variance at one: the grain gets its
-    /// *shape* from this stencil and its *size* from the counting statistics,
-    /// and neither one is quietly changed by the other.
+    /// The taps are normalised to unit L2 norm — which keeps the *shape* of
+    /// the grain independent of the counting statistics — and then multiplied
+    /// by `P^-1/2`, where `P = Σ_d γ(d)` is the autocorrelation summed along
+    /// one axis and `P²` is the number of pixels one clump stands behind. That
+    /// second step is the aperture recalibration, and it is not optional.
+    ///
+    /// `n` was derived from an rms quoted through a 48 µm aperture, so `sigma`
+    /// is the fluctuation a *wide* aperture sees. A correlated field with `P²`
+    /// pixels per clump and the same per-pixel variance would put `P²` times
+    /// that variance behind a wide aperture — the data sheet would say one
+    /// thing and the print would show another, growing grainier as the clump
+    /// got bigger, which is not a film model but a volume knob. Scaling the
+    /// taps by `P^-1/2` collapses the two statements back into one: a wide
+    /// aperture sees exactly the counting statistics, and one pixel sees `1/P`
+    /// of them. That is the physical picture — the same fluctuation, spread
+    /// over a clump instead of shouted by one pixel — and it is why a 3.5 µm
+    /// clump at 4.8 µm per pixel draws pixels at 43 % of the counting noise
+    /// while the granularity a densitometer reads does not move.
+    ///
+    /// `P` is computed from the taps that are actually drawn, so a stencil
+    /// truncated by [`Self::STENCIL`] is corrected for what it is, not for the
+    /// Gaussian it was meant to be.
     #[must_use]
     pub fn with_grain_sizes(mut self, grain_um: [f64; 3]) -> Self {
         self.grain_um = grain_um;
@@ -227,6 +259,25 @@ impl GrainField {
                 let norm = norm.sqrt();
                 for weight in &mut weights {
                     *weight /= norm;
+                }
+                // Pixels per clump: the autocorrelation summed over the taps
+                // that survived, one factor per axis.
+                let mut per_axis = 0.0;
+                for lag in 0..=radius {
+                    let mut pair = 0.0;
+                    for tap in 0..(Self::STENCIL - lag) {
+                        pair += weights[tap] * weights[tap + lag];
+                    }
+                    per_axis += if lag == 0 { pair } else { 2.0 * pair };
+                }
+                // `P²` is the number of pixels the clump stands behind. A
+                // separable kernel scaled by `a` scales the 2-D variance by
+                // `a⁴`, so `a = P^-1/2` puts `1/P²` of it in each pixel — the
+                // aperture correction — and leaves the per-pixel sigma at `1/P`
+                // of the counting statistics.
+                let amplitude = 1.0 / per_axis.sqrt();
+                for weight in &mut weights {
+                    *weight *= amplitude;
                 }
             }
             self.weights[layer] = weights;
@@ -257,7 +308,11 @@ impl GrainField {
     /// The log-exposure fluctuation for one layer of one pixel.
     #[must_use]
     pub fn jitter(&self, x: usize, y: usize, mean_density: f64, channel: usize) -> f64 {
-        self.sigma(mean_density, channel) * self.correlated(x, y, channel)
+        // A silver film is one record: one draw *and* one size. Taking the
+        // amplitude from the layer would give the three channels three gains
+        // and put the colour back as brightness instead of as pattern.
+        let record = if self.monochrome { 0 } else { channel };
+        self.sigma(mean_density, record) * self.correlated(x, y, record)
     }
 
     /// One layer's grain at a pixel, with the grain's own spatial size.
@@ -266,9 +321,11 @@ impl GrainField {
     /// is shared with its neighbours. The counting statistics cannot say that
     /// — they give the variance through an aperture — so the correlation is
     /// imposed here, by filtering the field with the stencil the grain's
-    /// diameter implies. Coordinates outside the image repeat the edge, which
-    /// keeps the draw a pure function of the pixel and identical on any backend
-    /// that implements the same stencil.
+    /// diameter implies. The taps carry the aperture correction described on
+    /// [`Self::with_grain_sizes`], so this is the one place the shared variance
+    /// is spread back over the pixels it belongs to. Coordinates outside the
+    /// image repeat the edge, which keeps the draw a pure function of the pixel
+    /// and identical on any backend that implements the same stencil.
     fn correlated(&self, x: usize, y: usize, channel: usize) -> f64 {
         let radius = self.radius[channel];
         if radius == 0 {
@@ -357,7 +414,7 @@ mod tests {
     /// changes the grain's shape, not its size. And a grain wider than a pixel
     /// has to make neighbouring pixels agree, which is the whole point.
     #[test]
-    fn a_wide_grain_correlates_its_neighbours_without_changing_its_size() {
+    fn a_wide_grain_correlates_its_neighbours() {
         // 36 mm across 7040 pixels is 5.11 µm per pixel; a 10 µm grain is
         // nearly two pixels across.
         let field = GrainField::new(7040, 100, 36.0, 3).with_grain_sizes([10.0; 3]);
@@ -365,24 +422,18 @@ mod tests {
             field.has_kernel(),
             "a 10 µm grain must be wider than a pixel"
         );
-        let sigma = field.sigma(1.0, 0);
 
-        let (mut sum_sq, mut sum_lag, mut count) = (0.0, 0.0, 0.0);
+        let (mut sum_lag, mut sum_sq, mut count) = (0.0, 0.0, 0.0);
         for y in 10..90 {
             for x in 10..4000 {
-                let here = field.jitter(x, y, 1.0, 0) / sigma;
-                let right = field.jitter(x + 1, y, 1.0, 0) / sigma;
-                sum_sq += here * here;
+                let here = field.jitter(x, y, 1.0, 0);
+                let right = field.jitter(x + 1, y, 1.0, 0);
                 sum_lag += here * right;
+                sum_sq += here * here;
                 count += 1.0;
             }
         }
-        let variance = sum_sq / count;
-        let lag_one = sum_lag / count;
-        assert!(
-            (variance - 1.0).abs() < 0.1,
-            "the stencil changed the grain's size: variance {variance}"
-        );
+        let lag_one = (sum_lag / count) / (sum_sq / count);
         assert!(
             lag_one > 0.2,
             "neighbouring pixels should agree, lag-1 correlation {lag_one}"
@@ -395,6 +446,88 @@ mod tests {
             !narrow.has_kernel(),
             "a third of a micrometre is a delta here"
         );
+    }
+
+    /// The stencil carries the aperture correction. Through a 48 µm aperture a
+    /// wide grain has to show the counting statistics — the published
+    /// granularity — and not `√S` times them. Getting this wrong is invisible
+    /// in a crop and obvious in a print: the film gets grainier as its clump
+    /// grows, which is a volume knob, not a model.
+    #[test]
+    fn a_wide_aperture_sees_the_counting_statistics_with_or_without_a_stencil() {
+        // 4.8 µm per pixel makes a 48 µm aperture exactly ten pixels square.
+        let frame_mm = 400.0 * 4.8 / 1000.0;
+        let flat = GrainField::new(400, 400, frame_mm, 11).with_grain_sizes([0.02; 3]);
+        let clumped = GrainField::new(400, 400, frame_mm, 11).with_grain_sizes([3.5; 3]);
+        assert!(clumped.has_kernel(), "3.5 µm is wider than a pixel here");
+
+        // A 48 µm aperture sees one tenth of the per-pixel fluctuation.
+        let expected = clumped.sigma(1.0, 0) * 4.8 / 48.0;
+        for field in [&flat, &clumped] {
+            let measured = aperture_rms(field, 10);
+            assert!(
+                (measured / expected - 1.0).abs() < 0.1,
+                "48 µm granularity {measured:.4e}, expected {expected:.4e}"
+            );
+        }
+
+        // And one pixel of the clumped field is quieter than the counting
+        // statistics by exactly the share the stencil spends: the same
+        // fluctuation, spread over the clump.
+        let share: f64 = clumped.weights[0].iter().map(|w| w * w).sum();
+        let per_pixel = aperture_rms(&clumped, 1) / clumped.sigma(1.0, 0);
+        assert!(
+            (share - per_pixel).abs() < 0.01,
+            "the taps say {share:.3} per pixel, the field draws {per_pixel:.3}"
+        );
+    }
+
+    /// The share a pixel keeps is the number the aperture table is made of:
+    /// at 5.11 µm per pixel a 3.5 µm clump stands behind about five pixels, so
+    /// one pixel keeps 0.445 of the counting statistics — and the 48 µm
+    /// aperture keeps all of them.
+    #[test]
+    fn the_stencil_says_how_much_of_the_counting_statistics_one_pixel_keeps() {
+        let field = GrainField::new(7040, 8, 36.0, 3).with_grain_sizes([3.5; 3]);
+        let share: f64 = field.weights[0].iter().map(|w| w * w).sum();
+        assert!(
+            (share - 0.445).abs() < 0.01,
+            "a 3.5 µm clump at 5.11 µm per pixel keeps {share:.3}, not 0.445"
+        );
+        // At half the pixel pitch the clump stands behind four times as many
+        // pixels and each keeps less of it.
+        let finer = GrainField::new(7040, 8, 12.0, 3).with_grain_sizes([3.5; 3]);
+        let finer_share: f64 = finer.weights[0].iter().map(|w| w * w).sum();
+        assert!(
+            finer_share < share,
+            "finer pixels keep less: {finer_share:.3} vs {share:.3}"
+        );
+    }
+
+    /// Root mean square of the pixel average over `block × block` apertures.
+    ///
+    /// Interior blocks only: the field repeats its edge, and a block that leans
+    /// on that duplication is not a sample of the grain.
+    fn aperture_rms(field: &GrainField, block: usize) -> f64 {
+        let mut sums = Vec::new();
+        let mut y = block;
+        while y + block < field.height {
+            let mut x = block;
+            while x + block < field.width {
+                let mut sum = 0.0;
+                for dy in 0..block {
+                    for dx in 0..block {
+                        sum += field.jitter(x + dx, y + dy, 1.0, 0);
+                    }
+                }
+                sums.push(sum / (block * block) as f64);
+                x += block;
+            }
+            y += block;
+        }
+        let mean = sums.iter().sum::<f64>() / sums.len() as f64;
+        let variance = sums.iter().map(|s| (s - mean).powi(2)).sum::<f64>() / sums.len() as f64;
+        variance.sqrt()
     }
 
     /// A silver film has one record, so its three layers must see one grain
@@ -439,7 +572,6 @@ mod tests {
             grain_um: [0.0; 3],
             radius: [0; 3],
             weights: [[0.0; GrainField::STENCIL]; 3],
-            normalise: [1.0; 3],
         }
     }
 

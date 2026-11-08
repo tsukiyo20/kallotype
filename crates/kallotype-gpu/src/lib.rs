@@ -956,6 +956,24 @@ fn uniform(
             0,
         ],
     );
+    // The clump's stencil, symmetric taps and its radius: (centre, ±1, ±2, r).
+    for layer in 0..3 {
+        match grain {
+            Some(grain) => {
+                let weights = &grain.weights[layer];
+                push_f32(
+                    &mut out,
+                    &[
+                        weights[GrainField::CENTRE] as f32,
+                        weights[GrainField::CENTRE + 1] as f32,
+                        weights[GrainField::CENTRE + 2] as f32,
+                        grain.radius[layer] as f32,
+                    ],
+                );
+            }
+            None => push_f32(&mut out, &[0.0; 4]),
+        }
+    }
     out
 }
 
@@ -1234,6 +1252,28 @@ mod tests {
     #[test]
     fn grain_matches_the_cpu_on_the_scalar_path() {
         let grain = GrainField::new(WIDTH, HEIGHT, 36.0, 7);
+        let finishing = Finishing {
+            emulsion: None,
+            grain: Some(&grain),
+            ..Finishing::default()
+        };
+        compare_finished(
+            &RenderParams::default().prepare(),
+            &frame(),
+            WIDTH,
+            HEIGHT,
+            &finishing,
+        );
+    }
+
+    /// The stencil is part of the model now, so the shader has to convolve as
+    /// the CPU does: same taps, same edge repeat, same aperture correction.
+    #[test]
+    fn a_grain_with_a_size_matches_the_cpu() {
+        // 0.2 mm across 64 pixels is 3.1 µm per pixel, so a 3.5 µm clump is
+        // wider than a pixel and the stencil is running.
+        let grain = GrainField::new(WIDTH, HEIGHT, 0.2, 7).with_grain_sizes([3.5; 3]);
+        assert!(grain.has_kernel(), "the test needs a stencil");
         let finishing = Finishing {
             emulsion: None,
             grain: Some(&grain),
@@ -1542,7 +1582,7 @@ mod tests {
                 finishing.couplers.copied(),
                 &kernels,
             );
-            assert_eq!(bytes.len(), 28 * 16, "twenty-eight lanes");
+            assert_eq!(bytes.len(), 31 * 16, "thirty-one lanes");
         }
     }
 

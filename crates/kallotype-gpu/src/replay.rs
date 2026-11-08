@@ -443,8 +443,41 @@ fn grain_sigma(grain: &GrainField, density: f64, layer: usize) -> f64 {
 }
 
 fn grain_jitter(grain: &GrainField, x: usize, y: usize, layer: usize, density: f64) -> f64 {
-    grain_sigma(grain, density, layer)
-        * grain_normal(grain_seed(grain.seed), x as u32, y as u32, layer as u32)
+    // One record, one draw, one size: mirrors the `select` in `grain.wgsl`.
+    let record = if grain.monochrome { 0 } else { layer };
+    let sigma = grain_sigma(grain, density, record);
+    let radius = grain.radius[record];
+    let weights = &grain.weights[record];
+    if radius == 0 {
+        return sigma
+            * weights[GrainField::CENTRE]
+            * grain_normal(grain_seed(grain.seed), x as u32, y as u32, layer as u32);
+    }
+
+    // The stencil, tap for tap, with the edge repeated as the CPU repeats it.
+    let reach = radius as isize;
+    let mut sum = 0.0;
+    for dy in -reach..=reach {
+        let row = hold(y, dy, grain.height);
+        for dx in -reach..=reach {
+            let column = hold(x, dx, grain.width);
+            sum += weights[(dy + GrainField::CENTRE as isize) as usize]
+                * weights[(dx + GrainField::CENTRE as isize) as usize]
+                * grain_normal(
+                    grain_seed(grain.seed),
+                    column as u32,
+                    row as u32,
+                    layer as u32,
+                );
+        }
+    }
+    sigma * sum
+}
+
+/// A coordinate shifted by an offset, held inside the image.
+fn hold(value: usize, offset: isize, limit: usize) -> usize {
+    let shifted = value as isize + offset;
+    shifted.clamp(0, limit.saturating_sub(1) as isize) as usize
 }
 
 #[cfg(test)]
@@ -480,5 +513,28 @@ mod tests {
         let mut wrong = grain;
         wrong.seed = 2;
         assert_ne!(right, grain_jitter(&wrong, 1, 2, 0, 1.0));
+    }
+
+    /// The stencil is part of the draw, not a post-process: the replay has to
+    /// convolve with the same taps, clamp at the same edges and scale by the
+    /// same aperture correction, or the two backends draw two films.
+    #[test]
+    fn the_replay_convolves_where_the_cpu_convolves() {
+        // 0.2 mm across 37 pixels is 5.4 µm per pixel, so a 3.5 µm clump has a
+        // stencil wider than a pixel and the edges are in play.
+        let grain = GrainField::new(37, 23, 0.2, 0xC0FF_EE12_3456_789A).with_grain_sizes([3.5; 3]);
+        assert!(grain.has_kernel(), "the test needs a stencil");
+        let mut worst = 0.0_f64;
+        for index in 0..(37 * 23) {
+            let (x, y) = (index % 37, index / 37);
+            for layer in 0..3 {
+                for density in [0.1, 0.6, 1.5, 2.8] {
+                    let expected = grain.jitter(x, y, density, layer);
+                    let replayed = grain_jitter(&grain, x, y, layer, density);
+                    worst = worst.max((expected - replayed).abs());
+                }
+            }
+        }
+        assert!(worst < 1e-12, "the convolved draw differs by {worst:.3e}");
     }
 }

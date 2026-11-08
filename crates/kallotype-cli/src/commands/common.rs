@@ -335,13 +335,28 @@ pub fn print_report(
         );
     }
     if let Some(grain) = rendering.grain {
+        // The clump is worth saying out loud: it is the difference between
+        // grain and coloured noise, and it is the one number here that a scan
+        // had to measure rather than a data sheet print.
+        let clump = if grain.has_kernel() {
+            format!(
+                ", clump {:.2}/{:.2}/{:.2} µm r{}",
+                grain.grain_um[0],
+                grain.grain_um[1],
+                grain.grain_um[2],
+                grain.radius.iter().copied().max().unwrap_or(0)
+            )
+        } else {
+            String::new()
+        };
         println!(
-            "  grain     {:.2}/{:.2}/{:.2} per µm²  ({:.2} µm pixel, seed {})",
+            "  grain     {:.2}/{:.2}/{:.2} per µm²  ({:.2} µm pixel, seed {}{})",
             grain.grains_per_um2[0],
             grain.grains_per_um2[1],
             grain.grains_per_um2[2],
             grain.pixel_area_um2.sqrt(),
-            grain.seed
+            grain.seed,
+            clump
         );
     }
     println!(

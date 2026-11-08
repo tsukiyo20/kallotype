@@ -196,17 +196,9 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         grain: grain.as_ref(),
         couplers: couplers.as_ref(),
     };
-    // The shader draws its grain from the pixel's own hash and has no stencil,
-    // so a film whose grain is wider than a pixel renders on the CPU. That is
-    // the loud fallback this project uses everywhere else: correct, slower,
-    // and said out loud.
-    let gpu = args.gpu && !finishing.grain.is_some_and(|grain| grain.has_kernel());
-    if args.gpu && !gpu {
-        eprintln!(
-            "warning: the grain stencil is wider than a pixel and the shader draws none; \
-             rendering on the cpu"
-        );
-    }
+    // The shader draws the clump's stencil from the same taps the CPU does, so
+    // there is nothing left that only one backend can do.
+    let gpu = args.gpu;
     let backend = render_pixels(
         &mut image.pixels,
         &prepared,

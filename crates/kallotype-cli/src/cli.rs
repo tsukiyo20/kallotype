@@ -173,9 +173,14 @@ pub struct RenderArgs {
     /// Correlation length of the grain in micrometres, overriding the stock's.
     ///
     /// The distance over which neighbouring pixels agree, as measured from a
-    /// flat scan by `scripts/grain_spectrum.py`. Until a stock's own is
+    /// flat scan by `scripts/grain_spectrum.py` — on a mid-density flat, where
+    /// the developed silver is what the scanner sees. Until a stock's own is
     /// measured, the model uses the mean spacing the granularity figure
     /// implies, which is a lower bound.
+    ///
+    /// Note the stencil: five taps, so a clump much wider than a pixel is
+    /// drawn narrower than asked. Below about 3 µm per pixel the render is a
+    /// close-up of the film and the kernel is the limit.
     #[arg(long, value_name = "MM")]
     pub grain_um: Option<f64>,
 
