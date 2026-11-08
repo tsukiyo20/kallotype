@@ -3,7 +3,8 @@
 use std::path::Path;
 
 use kallotype_core::{
-    Couplers, EmulsionBlur, Finishing, GrainField, Halation, Metering, render_pixels_finished,
+    Couplers, EmulsionBlur, Finishing, GrainField, Halation, Metering, Scanner,
+    render_pixels_finished,
 };
 use kallotype_io::{InputEncoding, load, save};
 
@@ -208,6 +209,20 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
         gpu,
     )?;
 
+    // The scan stage is a post-pass on the finished print, so it is the same
+    // arithmetic whichever backend drew the pixels: the scanner is not part of
+    // the film, and it is not part of either renderer either.
+    let scanner = args.scanner.then(|| {
+        let mut scanner = Scanner::measured();
+        if let Some(optics) = args.scan_optics_um {
+            scanner.optics_um = optics;
+        }
+        scanner
+    });
+    if let Some(scanner) = scanner {
+        scanner.apply(&mut image.pixels, width as usize, height as usize, pixel_um);
+    }
+
     ensure_parent(&args.output)?;
 
     save(&args.output, &image).map_err(|source| CliError::Write {
@@ -225,6 +240,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
             emulsion: emulsion.as_ref(),
             halation: halation.as_ref(),
             couplers: couplers.as_ref(),
+            scanner: scanner.as_ref(),
             metering,
             backend: backend.to_string(),
         },

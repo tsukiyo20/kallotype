@@ -219,6 +219,26 @@ pub struct RenderArgs {
     /// expressed in micrometres of film, not in pixels.
     #[arg(long)]
     pub halation: bool,
+
+    /// Scan the print: the scanner's measured texture, and its optics when
+    /// asked for.
+    ///
+    /// The texture is the one a negative scan showed: 0.60 % of density
+    /// through a 48 µm aperture, correlated over 3.2 µm, and mostly common to
+    /// the three channels — which is how it was shown to be the scan and not
+    /// the film. Until this stage the render is the print's reflectance; this
+    /// is what turns it into a scan of the print, noise and all.
+    #[arg(long)]
+    pub scanner: bool,
+
+    /// Gaussian optics of the scan, in micrometres, on the print.
+    ///
+    /// Unmeasured, which is why it defaults to off: the scan that measured the
+    /// texture cannot separate the optics from the texture that rides on it,
+    /// and a point-spread function invented from that measurement would be a
+    /// second number pretending to be the first. Enabling it enables --scanner.
+    #[arg(long, value_name = "MM", requires = "scanner")]
+    pub scan_optics_um: Option<f64>,
 }
 
 /// `kalo bake`

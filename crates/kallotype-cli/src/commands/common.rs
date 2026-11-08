@@ -216,6 +216,8 @@ pub struct Rendering<'a> {
     pub halation: Option<&'a kallotype_core::Halation>,
     /// DIR couplers, if they were on.
     pub couplers: Option<&'a kallotype_core::Couplers>,
+    /// The scan's texture and optics, if it was on.
+    pub scanner: Option<&'a kallotype_core::Scanner>,
     /// What the meter read, if the exposure was metered rather than named.
     pub metering: Option<kallotype_core::Metering>,
     /// Which backend did the work, already formatted.
@@ -229,6 +231,7 @@ impl Default for Rendering<'_> {
             emulsion: None,
             halation: None,
             couplers: None,
+            scanner: None,
             metering: None,
             backend: "cpu".to_owned(),
         }
@@ -357,6 +360,15 @@ pub fn print_report(
             grain.pixel_area_um2.sqrt(),
             grain.seed,
             clump
+        );
+    }
+    if let Some(scanner) = rendering.scanner {
+        println!(
+            "  scanner   {:.2} µm texture, {:.2} % at 48 µm, {:.0} % common, optics {:.2} µm",
+            scanner.texture_um,
+            100.0 * scanner.texture_density,
+            100.0 * scanner.shared,
+            scanner.optics_um
         );
     }
     println!(

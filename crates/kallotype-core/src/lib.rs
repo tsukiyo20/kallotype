@@ -41,6 +41,7 @@ pub mod pipeline;
 pub mod print;
 pub mod psf;
 pub mod scan;
+pub mod scanner;
 pub mod spectral;
 
 pub use color::{linear_to_srgb, srgb_to_linear};
@@ -62,4 +63,5 @@ pub use pipeline::{
 };
 pub use print::{Masking, PrintContext};
 pub use scan::ScanContext;
+pub use scanner::Scanner;
 pub use spectral::{CameraProfile, SpectralContext};
