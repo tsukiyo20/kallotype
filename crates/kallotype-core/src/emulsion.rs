@@ -679,6 +679,30 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         reference_time_min: 6.5000,
         reference_temp_c: 20.0000,
     },
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "velvia_50",
+        process: FilmProcess::Reversal,
+        extra_cyan: None,
+        cl_layer: None,
+        label: "FUJICHROME VELVIA 50 (RVP), E-6",
+        note: "Measured: the characteristic curves, the three dyes, the layer sensitivities and the modulation transfer, all from page 7 of AF3-960E. The three curves are drawn on top of one another and never cross, so they are read by the order of the ink above density 2.4; below that the sheet does not separate them and the three layers share one centreline, which is a decision and costs 0.023-0.027 of density. Each layer is fitted with its own pair of corner rates (16/3 red, 8/3 green and blue), because the drawing's top corners differ; red is the stock that took the fitter's rate grid past 10. The clear density is bounded to within 0.02 of the lowest drawn density rather than extrapolated. Anchored like the other reversals: 18 % grey is a density of d_max + 0.745, a shift of -0.1364 decade. The sensitivities peak at 451, 549 and 651 nm, the dyes at 445, 540 and 660 nm. The MTF is one curve for the film (4.28 um), fitted where it falls because the sheet's rises above 100 % below 20 cycles/mm. Grain is the sheet's diffuse rms granularity of 9, inverted at a net density of 1.0 where the curve's local slope is 1.26 per decade.",
+        channels: [
+            curve(3.3177, 0.1115, 2.3926, -1.2699).with_corners(16.0, 3.0),
+            curve(3.7732, 0.1192, 2.6478, -1.3499).with_corners(8.0, 3.0),
+            curve(3.6752, 0.1149, 2.4725, -1.3399).with_corners(8.0, 3.0),
+        ],
+        base_density: [0.0000, 0.0000, 0.0000],
+        grains_per_um2: [2.2600, 2.2600, 2.2600],
+        layers: &crate::measured::VELVIA_50_LAYERS,
+        dyes: &crate::measured::VELVIA_50_DYES,
+        mask: &crate::measured::NO_MASK,
+        sigma_um: Some([4.2800, 4.2800, 4.2800]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
+    },
 ];
 
 /// Every paper stock compiled into the binary.

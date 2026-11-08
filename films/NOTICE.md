@@ -1,7 +1,8 @@
 # NOTICE
 
-Film and paper names — "FUJICHROME PROVIA 100F", "FUJICOLOR PRO 400H" — are
-the manufacturers' trademarks. They are used here in their ordinary sense, to
+Film and paper names — "FUJICHROME PROVIA 100F", "FUJICHROME VELVIA 50",
+"FUJICOLOR PRO 400H", "KODAK PROFESSIONAL EKTACHROME E100" — are the
+manufacturers' trademarks. They are used here in their ordinary sense, to
 say which product a file models. This project is not affiliated with, endorsed
 by or sponsored by Fujifilm or any other manufacturer.
 
