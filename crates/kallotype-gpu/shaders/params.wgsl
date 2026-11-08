@@ -20,8 +20,11 @@ const LN_10: f32 = 2.302585092994046;
 struct Params {
     // Per layer: (d_min, d_max, gamma, log_e0).
     curve: array<vec4<f32>, 3>,
-    // How sharply each curve turns: the three layers, then the paper.
-    transition: vec4<f32>,
+    // How sharply each curve's toe turns: the three layers, then the paper.
+    toe_transition: vec4<f32>,
+    // The same for the shoulder. Equal to the toe lane for every material whose
+    // two corners were measured as one number, which is all of them but one.
+    shoulder_transition: vec4<f32>,
     // (paper d_min, paper d_max, paper gamma, exposure shift).
     image: vec4<f32>,
     // The enlarger's exposure shift per layer, then the paper's log_e0.

@@ -781,8 +781,8 @@ mod tests {
     fn the_second_film_has_its_own_layers() {
         let fuji = film_stock("fuji_nph400").expect("built-in stock");
         let kodak = film_stock("vision3_500t").expect("built-in stock");
-        assert_eq!(fuji.channels[0].transition, 3.0);
-        assert_eq!(kodak.channels[0].transition, crate::curve::TRANSITION);
+        assert_eq!(fuji.channels[0].toe_transition, 3.0);
+        assert_eq!(kodak.channels[0].toe_transition, crate::curve::TRANSITION);
         let peak = |table: &[f64; GRID_LEN]| table.iter().copied().fold(0.0_f64, f64::max);
         let ratios: [f64; 3] =
             std::array::from_fn(|layer| peak(&fuji.layers[layer]) / peak(&kodak.layers[layer]));
@@ -965,9 +965,9 @@ mod tests {
                 paper.channel.d_min
             );
             assert!(
-                (paper.channel.transition - transition).abs() < 1e-9,
+                (paper.channel.toe_transition - transition).abs() < 1e-9,
                 "{id}: transition {}, not the {transition} its sheet fitted",
-                paper.channel.transition
+                paper.channel.toe_transition
             );
         }
 

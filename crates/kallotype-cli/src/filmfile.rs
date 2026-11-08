@@ -199,13 +199,18 @@ fn build(
 
     let channel = |name: &str| -> Result<CharacteristicCurve, FilmFileError> {
         let curve = |key: &str| number(table, &format!("curve.{name}.{key}"));
-        Ok(CharacteristicCurve::new(
+        let base = CharacteristicCurve::new(
             curve("d_min")?,
             curve("d_max")?,
             curve("gamma")?,
             curve("log_e0")?,
         )
-        .with_transition(curve("transition")?))
+        .with_transition(curve("transition")?);
+        // A file written before the two corners could differ has no second
+        // rate, and its one number is still the right answer for both.
+        let toe = curve("toe_transition").unwrap_or(base.toe_transition);
+        let shoulder = curve("shoulder_transition").unwrap_or(base.shoulder_transition);
+        Ok(base.with_corners(toe, shoulder))
     };
     let sigma = numbers(table, "character.sigma_um")?;
     Ok(Box::new(FilmStock {

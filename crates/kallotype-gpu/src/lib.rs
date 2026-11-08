@@ -787,8 +787,13 @@ fn uniform(
     for curve in &scalar.curve {
         push_f32(&mut out, &curve.map(|value| value as f32));
     }
-    // How sharply each curve turns: the three layers, then the paper.
-    push_f32(&mut out, &scalar.transition.map(|value| value as f32));
+    // How sharply each curve's two corners turn: the three layers, then the
+    // paper, for the toe and then for the shoulder.
+    push_f32(&mut out, &scalar.toe_transition.map(|value| value as f32));
+    push_f32(
+        &mut out,
+        &scalar.shoulder_transition.map(|value| value as f32),
+    );
     // (paper d_min, paper d_max, paper gamma, exposure shift)
     push_f32(
         &mut out,
@@ -1334,11 +1339,38 @@ mod tests {
         let prepared = params.prepare();
         let model = prepared.scalar_model().expect("a scalar render");
         assert!(
-            (model.transition[3] - model.transition[0]).abs() > 5.0,
+            (model.toe_transition[3] - model.toe_transition[0]).abs() > 5.0,
             "paper {} against film {} — the lanes are not distinguishable",
-            model.transition[3],
-            model.transition[0]
+            model.toe_transition[3],
+            model.toe_transition[0]
         );
+        assert_eq!(model.toe_transition[3], model.shoulder_transition[3]);
+        compare_finished(&prepared, &frame(), WIDTH, HEIGHT, &Finishing::default());
+    }
+
+    /// Two corner rates cross the interface intact.
+    ///
+    /// Every material compiled into the tree turns both of its corners alike, so
+    /// a swapped, dropped or duplicated shoulder lane would be invisible in all
+    /// of them. This builds a film that does not: the measured negative with its
+    /// toe at 5 and its shoulder at 2, leaked so a render can borrow it. If the
+    /// lanes were exchanged the frame would still be a plausible photograph and
+    /// would be the wrong one, which is the failure this interface exists to
+    /// rule out.
+    #[test]
+    fn two_corner_rates_cross_the_interface() {
+        let base = kallotype_core::emulsion::film_stock("vision3_500t").expect("a stock");
+        let mut split = *base;
+        split.channels = std::array::from_fn(|layer| base.channels[layer].with_corners(5.0, 2.0));
+        let film: &'static kallotype_core::emulsion::FilmStock = Box::leak(Box::new(split));
+        let prepared = RenderParams {
+            film,
+            ..RenderParams::default()
+        }
+        .prepare();
+        let model = prepared.scalar_model().expect("a scalar render");
+        assert_eq!(model.toe_transition[0], 5.0);
+        assert_eq!(model.shoulder_transition[0], 2.0);
         compare_finished(&prepared, &frame(), WIDTH, HEIGHT, &Finishing::default());
     }
 
@@ -1591,7 +1623,7 @@ mod tests {
                 finishing.couplers.copied(),
                 &kernels,
             );
-            assert_eq!(bytes.len(), 31 * 16, "thirty-one lanes");
+            assert_eq!(bytes.len(), 32 * 16, "thirty-two lanes");
         }
     }
 

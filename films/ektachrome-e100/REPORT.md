@@ -17,10 +17,14 @@ reversal in the archive, it tests the one decision that a reversal stock cannot
 make up: **where 18 % grey sits**. The two sheets answer that question
 independently, and they agree to 0.035 decade — one twenty-fifth of a stop
 across two manufacturers. The fit residual is the other finding: 0.037, 0.042
-and 0.045 of density, in two lobes the model cannot remove because its curve
-has one transition for two corners. Splitting the transition drops the same red
-curve to 0.012, which is the axis calibration's own floor, and that is a model
-change this film proposes rather than performs.
+and 0.045 of density, in two lobes, which is not noise. Splitting the corner
+rates — the change this film asked for, and which the model now has — takes the
+same red curve to 0.012 *if the clear density is allowed to move with it*, and
+that is the part that does not hold up: this sheet stops drawing before its
+curve flattens, so the clear density is an extrapolation, and the residual
+improves by buying a lower one rather than by turning the corners better. The
+stock ships with one rate and a corrected account of what the two-rate
+experiment showed.
 
 ## 1. Introduction
 
@@ -175,12 +179,24 @@ them on, and the three dyes. Both are columns of the shipped file.](figures/03-s
 
 - **The residual is not noise.** It is ±0.06 of density in two lobes, twice the
   0.017 the axis calibration carries, and it survives every single-transition
-  choice (0.035 at t = 3, 0.036 at t = 4, 0.039 at t = 5). Fitting the same red
-  curve with independent toe and shoulder transitions gives 0.012 at t = 5 and
-  4 — the calibration floor. That is the shape the model cannot express: a
-  reversal's toe and shoulder do not turn at the same rate, and one number
-  cannot say so. The stock is shipped at t = 4 with the residual reported; the
-  two-transition curve is a model change, not a data change.
+  choice (0.035 at t = 3, 0.036 at t = 4, 0.039 at t = 5). What it is *not* is
+  evidence that the corners turn at different rates — a claim this report made
+  in its first version and has to withdraw.
+- **The two-rate experiment, and the control that overturned it.** The model
+  now carries a rate per corner. Fitting this film's red curve with 5 at the toe
+  and 2.5 at the shoulder takes the residual to 0.012, a third of what one rate
+  achieves — *with the clear density free*, and free is what it is: the sheet
+  ends at `log E` 0.23 with a density of 0.14 still falling at 0.4 per decade,
+  so the asymptote is not on the page. Held at the 0.18 the single-rate fit
+  found, the same two rates give **0.041, worse than the 0.037 they replace**.
+  The gain was the asymptote moving from 0.18 to 0.05, not the corners turning
+  better. Which of those two clear densities is right is a question this sheet
+  does not answer, and until something measures it, the stock keeps the shape
+  whose unmeasured parameter is pinned by the ink rather than freed.
+- **The clear density is the film's least-measured number.** Everything the
+  anchor does depends on it (section 3.3), so the 0.035-decade agreement in
+  section 6 is an agreement between two quantities that are each part fit:
+  PROVIA's curve flattens inside its frame, this one does not.
 - **The high-density plateau is extrapolated.** The curves leave the frame at
   `log E` −2.8 still falling, and the ink's own density there is 3.26 to 3.78
   against an asymptote the fit places at 3.35 to 3.91. That is the same order of
@@ -211,10 +227,18 @@ produce a wedge whose ends are 2 and 236 rather than 0 and 255. That agreement
 is the strongest evidence in the archive that the anchor rule is about the
 medium and not about a sheet.
 
+It rests on one number that neither sheet measures. The anchor asks where the
+curve reaches `d_max + 0.745`, and `d_max` — the clear film's density — is read
+from a curve that flattens inside PROVIA's frame and does not flatten inside
+this one (section 5). The agreement to 0.035 decade is therefore an agreement
+between two fits, not two measurements, and it would move if this film's clear
+density were measured to be somewhere else in the 0.03–0.14 the data allows.
+
 ## 7. What is not done
 
-- **Two transitions per curve.** Section 5 says what it would buy; the model
-  has one, and the stock does not pretend otherwise.
+- **A measured clear density.** It would settle the two-rate question in
+  section 5 in one number. No sheet in the archive prints it, and a fit cannot
+  supply it.
 - **No push or pull ladder.** Page 3 recommends a one-stop push at 8 minutes in
   the first developer, but publishes no second curve family, so the development
   model is exercised on this stock only at its reference time.

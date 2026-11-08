@@ -168,7 +168,7 @@ mod tests {
         let dye = Dye::single(emulsion(0.0, 2.0));
         assert_eq!(dye.count(), 1);
         let one = dye.density(&[0.5]);
-        let expected = crate::curve::density_from(0.0, 2.0, 1.0, 0.0, 4.0, 0.5);
+        let expected = crate::curve::density_from(0.0, 2.0, 1.0, 0.0, 4.0, 4.0, 0.5);
         assert!((one - expected).abs() < 1e-12);
         // A second exposure in the slice is ignored: one emulsion sees one.
         assert!((dye.density(&[0.5, 3.0]) - one).abs() < 1e-12);

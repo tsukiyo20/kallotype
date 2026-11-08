@@ -265,7 +265,7 @@ fn model_positive(status: vec3<f32>) -> vec3<f32> {
     let paper = vec4<f32>(params.image.x, params.image.y, params.image.z, params.anchor.w);
     var printed = vec3<f32>(0.0);
     for (var layer = 0u; layer < 3u; layer = layer + 1u) {
-        printed[layer] = curve_density(paper, params.transition.w, log_transmittance[layer] + params.anchor[layer]);
+        printed[layer] = curve_density(paper, params.toe_transition.w, params.shoulder_transition.w, log_transmittance[layer] + params.anchor[layer]);
     }
 
     if (params.flags.z > 0.5) {

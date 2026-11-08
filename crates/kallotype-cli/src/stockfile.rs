@@ -610,7 +610,7 @@ impl StockFile {
             self.float(&format!("{prefix}.gamma"))?,
             self.float(&format!("{prefix}.log_e0"))?,
         );
-        Ok(match self.float(&format!("{prefix}.transition")) {
+        let base = match self.float(&format!("{prefix}.transition")) {
             Ok(transition) if transition > 0.0 => base.with_transition(transition),
             Ok(transition) => {
                 return Err(self.fail(format!(
@@ -618,7 +618,30 @@ impl StockFile {
                 )));
             }
             Err(_) => base,
-        })
+        };
+        // The two corners can turn at different rates; a stock that only says
+        // `transition` has said both. Either can be given alone, and the one
+        // not given keeps the shared value — which is what a sheet that fitted
+        // one corner and read the other off the shared shape means.
+        let mut curve = base;
+        for (key, is_toe) in [("toe_transition", true), ("shoulder_transition", false)] {
+            match self.float(&format!("{prefix}.{key}")) {
+                Ok(rate) if rate > 0.0 => {
+                    curve = if is_toe {
+                        curve.with_corners(rate, curve.shoulder_transition)
+                    } else {
+                        curve.with_corners(curve.toe_transition, rate)
+                    };
+                }
+                Ok(rate) => {
+                    return Err(self.fail(format!(
+                        "{prefix}.{key} is {rate}, which is not a transition"
+                    )));
+                }
+                Err(_) => {}
+            }
+        }
+        Ok(curve)
     }
 }
 
@@ -955,9 +978,10 @@ target_mid_reflectance = 0.18
         assert_eq!(file.float("curve.red.gamma").unwrap(), 3.5);
         // A missing transition falls back to the negative's default.
         let curve = file.curve("curve.green").expect("green");
-        assert_eq!(curve.transition, kallotype_core::curve::TRANSITION);
+        assert_eq!(curve.toe_transition, kallotype_core::curve::TRANSITION);
         // And one that is given is kept.
-        assert_eq!(file.curve("curve.red").unwrap().transition, 7.0);
+        assert_eq!(file.curve("curve.red").unwrap().toe_transition, 7.0);
+        assert_eq!(file.curve("curve.red").unwrap().shoulder_transition, 7.0);
     }
 
     #[test]

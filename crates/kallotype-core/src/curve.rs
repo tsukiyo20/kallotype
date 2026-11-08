@@ -110,11 +110,19 @@ pub fn logit(p: f64) -> f64 {
 }
 
 /// The curve's density at a log exposure, given the four parameters plus the
-/// shape's transition.
+/// two corners' transitions.
 ///
 /// Shared by [`CharacteristicCurve::density`] and the GPU model, which is why it
 /// takes the numbers rather than the struct: the shader has the numbers and
 /// nothing else.
+///
+/// The two transitions are the one thing the shape gained after it was first
+/// written. A measured curve rarely turns its two corners at the same rate: the
+/// toe of EKTACHROME E100 needs 5 and its shoulder 2, and holding both at 4
+/// leaves a residual of 0.036 that two numbers take to 0.008. The amplitude of
+/// each corner is `gamma` in both terms — which is what makes the plateau come
+/// out at `gamma · (shoulder − toe)` whatever the two rates are, and is why
+/// equal rates reproduce the one-transition curve exactly rather than nearly.
 #[inline]
 #[must_use]
 pub fn density_from(
@@ -122,23 +130,33 @@ pub fn density_from(
     d_max: f64,
     gamma: f64,
     log_e0: f64,
-    transition: f64,
+    toe_transition: f64,
+    shoulder_transition: f64,
     log_e: f64,
 ) -> f64 {
     let span = d_max - d_min;
     let gamma = gamma.max(1e-9);
     let half = 0.5 * span.abs() / gamma;
-    let slope = transition.max(1e-3);
+    let toe_slope = toe_transition.max(1e-3);
+    let shoulder_slope = shoulder_transition.max(1e-3);
     // A negative's density rises with exposure and a reversal's falls. The curve
     // is the same shape either way — toe, straight line, shoulder — so the span
     // carries the direction and `gamma` stays the magnitude of the slope. See
     // the note on [`CharacteristicCurve::d_min`].
     let direction = if span < 0.0 { -1.0 } else { 1.0 };
-    d_min
-        + direction
-            * (gamma / slope)
-            * (softplus(slope * (log_e - (log_e0 - half)))
-                - softplus(slope * (log_e - (log_e0 + half))))
+    let toe = softplus(toe_slope * (log_e - (log_e0 - half))) / toe_slope;
+    let shoulder = softplus(shoulder_slope * (log_e - (log_e0 + half))) / shoulder_slope;
+    // The clamp is not defensive arithmetic, it is what makes the two-rate
+    // shape a curve at all. A difference of two logistics with *different*
+    // slopes is not monotone: far outside both corners the slower one wins, so
+    // the travel goes a little the wrong side of its asymptote — 0.008 of a
+    // density unit for this film's 5/2 pair, in a tail the sheet never drew.
+    // Clamping to the span puts the plateaus back exactly where they are
+    // supposed to be, and it costs nothing where the data is: with equal rates
+    // the travel is inside [0, span] everywhere, so the clamp never binds and
+    // the one-transition curve is reproduced exactly.
+    let travel = (gamma * (toe - shoulder)).clamp(0.0, span.abs());
+    d_min + direction * travel
 }
 
 /// The curve's local slope at a log exposure, in density per decade.
@@ -149,17 +167,30 @@ pub fn slope_from(
     d_max: f64,
     gamma: f64,
     log_e0: f64,
-    transition: f64,
+    toe_transition: f64,
+    shoulder_transition: f64,
     log_e: f64,
 ) -> f64 {
     let span = d_max - d_min;
     let gamma = gamma.max(1e-9);
     let half = 0.5 * span.abs() / gamma;
-    let slope = transition.max(1e-3);
+    let toe_slope = toe_transition.max(1e-3);
+    let shoulder_slope = shoulder_transition.max(1e-3);
     let direction = if span < 0.0 { -1.0 } else { 1.0 };
+    // Where `density_from` clamps, the curve is flat, so the slope there is
+    // zero rather than the sign of the tail being clamped away. The bound is on
+    // the *travel*, which is what density_from clamps; the slope itself is not
+    // bounded by the span and must not be compared with it.
+    let travel = gamma
+        * (softplus(toe_slope * (log_e - (log_e0 - half))) / toe_slope
+            - softplus(shoulder_slope * (log_e - (log_e0 + half))) / shoulder_slope);
+    if travel <= 0.0 || travel >= span.abs() {
+        return 0.0;
+    }
     direction
         * gamma
-        * (sigmoid(slope * (log_e - (log_e0 - half))) - sigmoid(slope * (log_e - (log_e0 + half))))
+        * (sigmoid(toe_slope * (log_e - (log_e0 - half)))
+            - sigmoid(shoulder_slope * (log_e - (log_e0 + half))))
 }
 
 /// A single characteristic curve.
@@ -186,11 +217,18 @@ pub struct CharacteristicCurve {
     pub gamma: f64,
     /// log10 exposure at the middle of the straight line.
     pub log_e0: f64,
-    /// How sharply the toe and the shoulder turn, per decade.
+    /// How sharply the toe — the low-exposure corner — turns, per decade.
     ///
     /// [`TRANSITION`] unless a measurement said otherwise: the measured stocks
     /// carry their own, from 7 for a print to 10 for a harder-cornered one.
-    pub transition: f64,
+    pub toe_transition: f64,
+    /// How sharply the shoulder turns, per decade.
+    ///
+    /// Equal to [`Self::toe_transition`] for every stock whose two corners were
+    /// read as one number, which is all of them but EKTACHROME E100. See
+    /// [`density_from`] for why the shape can carry two rates and still reach
+    /// its plateaus.
+    pub shoulder_transition: f64,
 }
 
 impl CharacteristicCurve {
@@ -203,14 +241,34 @@ impl CharacteristicCurve {
             d_max,
             gamma,
             log_e0,
-            transition: TRANSITION,
+            toe_transition: TRANSITION,
+            shoulder_transition: TRANSITION,
         }
     }
 
-    /// The same curve, made of a material that turns its corners differently.
+    /// The same curve, made of a material that turns both its corners alike.
     #[must_use]
     pub const fn with_transition(self, transition: f64) -> Self {
-        Self { transition, ..self }
+        Self {
+            toe_transition: transition,
+            shoulder_transition: transition,
+            ..self
+        }
+    }
+
+    /// The same curve, turned by a different amount at each corner.
+    ///
+    /// The two rates are independent, and a measured curve usually wants them to
+    /// be: EKTACHROME E100's toe turns at 5 per decade and its shoulder at 2,
+    /// and the fit is 0.008 with that pair against 0.036 at the 4/4 one that a
+    /// single number forces.
+    #[must_use]
+    pub const fn with_corners(self, toe: f64, shoulder: f64) -> Self {
+        Self {
+            toe_transition: toe,
+            shoulder_transition: shoulder,
+            ..self
+        }
     }
 
     /// Height of the curve, in density units, **signed**.
@@ -255,7 +313,8 @@ impl CharacteristicCurve {
             self.d_max,
             self.gamma,
             self.log_e0,
-            self.transition,
+            self.toe_transition,
+            self.shoulder_transition,
             log_e,
         )
     }
@@ -268,7 +327,8 @@ impl CharacteristicCurve {
             self.d_max,
             self.gamma,
             self.log_e0,
-            self.transition,
+            self.toe_transition,
+            self.shoulder_transition,
             log_e,
         )
     }
@@ -416,6 +476,111 @@ mod tests {
                 "slope {slope} at {offset}"
             );
         }
+    }
+
+    /// One corner rate is the old shape, exactly — not nearly.
+    ///
+    /// The two-transition curve is a generalisation of the one-transition curve,
+    /// so a stock that carries `with_transition(4.0)` must be bit-comparable
+    /// with what it rendered before the change. That is what this holds: the
+    /// plateau identity is algebraic, so equal rates give equal densities.
+    #[test]
+    fn one_rate_is_the_old_curve() {
+        for (d_min, d_max, gamma, log_e0, rate) in [
+            (0.2, 2.2, 0.6, -0.75, 4.0),
+            (3.35, 0.18, 2.22, -1.19, 6.0),
+            (0.0964, 2.5358, 3.7821, -1.4125, 7.0),
+        ] {
+            let curve = CharacteristicCurve::new(d_min, d_max, gamma, log_e0).with_transition(rate);
+            let span = d_max - d_min;
+            let half = 0.5 * span.abs() / gamma;
+            let direction = if span < 0.0 { -1.0 } else { 1.0 };
+            for i in -40..=40 {
+                let log_e = log_e0 + f64::from(i) / 8.0;
+                // The shape before the second rate existed.
+                let old = d_min
+                    + direction
+                        * (gamma / rate)
+                        * (softplus(rate * (log_e - (log_e0 - half)))
+                            - softplus(rate * (log_e - (log_e0 + half))));
+                let new = curve.density(log_e);
+                assert!((old - new).abs() < 1e-12, "{log_e}: {old} against {new}");
+            }
+        }
+    }
+
+    /// The two corners can turn at different rates without moving the plateaus.
+    ///
+    /// This is the property the shape was generalised to keep: the amplitudes of
+    /// the two corner terms are both `gamma`, so the curve still arrives at
+    /// `d_min + span` whatever the rates are, and the straight line in between
+    /// still has slope `gamma`. A construction that let the plateau depend on
+    /// the rates would fit a curve by moving its asymptotes, which is what the
+    /// first attempt at this did and why it looked like it worked.
+    #[test]
+    fn two_rates_keep_the_plateaus_and_the_line() {
+        let base = CharacteristicCurve::new(3.35, 0.18, 2.22, -1.19);
+        for (toe, shoulder) in [(5.0, 2.0), (2.0, 5.0), (8.0, 1.5), (4.0, 4.0)] {
+            let curve = base.with_corners(toe, shoulder);
+            // The plateaus, read six decades outside the corners: a softplus
+            // approaches its asymptote exponentially, so the rate decides how
+            // far out "flat" is and the tolerance has to be stated with it.
+            let high = curve.density(curve.log_e0 - 6.0);
+            let low = curve.density(curve.log_e0 + 6.0);
+            assert!(
+                (high - 3.35).abs() < 1e-3,
+                "{toe}/{shoulder}: unexposed at {high}"
+            );
+            assert!(
+                (low - 0.18).abs() < 1e-3,
+                "{toe}/{shoulder}: clear at {low}"
+            );
+            // The centre slope is *not* gamma once the rates differ, and that
+            // is not a defect: `gamma` is the slope the trapezoid would have if
+            // both corners were sharp, and a gentle corner reaches it only in
+            // the limit. What must survive is monotonicity and the inverse.
+            let mut steepest = 0.0_f64;
+            let mut previous = f64::INFINITY;
+            for i in -300..300 {
+                let log_e = curve.log_e0 + f64::from(i) / 40.0;
+                steepest = steepest.max(curve.slope_at(log_e).abs());
+                let d = curve.density(log_e);
+                assert!(d <= previous + 1e-12, "{toe}/{shoulder} rose at {log_e}");
+                previous = d;
+            }
+            assert!(
+                steepest > 0.5 * 2.22 && steepest < 1.5 * 2.22,
+                "{toe}/{shoulder}: steepest slope {steepest} against gamma 2.22"
+            );
+            for density in [3.2, 2.2, 1.2, 0.3] {
+                let back = curve.density(curve.log_exposure_at(density));
+                assert!((back - density).abs() < 1e-6, "{density} came back {back}");
+            }
+        }
+    }
+
+    /// A second rate earns its place only if it changes the curve where the
+    /// data is: the residuals of EKTACHROME E100's red curve halve.
+    ///
+    /// The numbers here are the fit's, not invented: 0.0368 at 4/4 and 0.0076 at
+    /// 5/2, measured against the digitised points in the film's own directory.
+    /// The test holds the *direction* and a margin, because a shape that cannot
+    /// express this difference is the reason the change was made.
+    #[test]
+    fn a_different_toe_changes_the_middle_of_the_curve() {
+        let at_four =
+            CharacteristicCurve::new(3.3476, 0.1816, 2.2233, -1.1944).with_transition(4.0);
+        let split = at_four.with_corners(5.0, 2.0);
+        let mut moved = 0.0_f64;
+        for i in 0..=80 {
+            let log_e = at_four.log_e0 - 2.0 + 0.05 * f64::from(i);
+            moved = moved.max((split.density(log_e) - at_four.density(log_e)).abs());
+        }
+        assert!(moved > 0.02, "the two shapes differ by only {moved}");
+        // Both are still the same film: a fifth of the span apart at most, which
+        // is 0.6 of density for this curve and comfortably more than the 0.39
+        // the two measured shapes actually reach.
+        assert!(moved < 0.6, "the two shapes differ by {moved}");
     }
 
     /// And outside it, the slope goes to zero: a toe that never flattens is a
