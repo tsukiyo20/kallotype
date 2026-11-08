@@ -636,7 +636,9 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         id: "fuji_pro400h",
         process: FilmProcess::Negative,
         extra_cyan: None,
-        cl_layer: Some(crate::dye::InhibitorLayer { sensitivity: &crate::measured::FUJI_PRO400H_CL }),
+        cl_layer: Some(crate::dye::InhibitorLayer {
+            sensitivity: &crate::measured::FUJI_PRO400H_CL,
+        }),
         label: "FUJICOLOR PRO 400H PROFESSIONAL",
         note: "Measured, except for the dyes and the grain. Curves and the four layer sensitivities from data sheet AF3-176E page 8, digitised 2026-11-08. The fourth, cyan-sensitive layer is digitised but not modelled: panel 19 publishes its sensitivity and panel 18 publishes only the summed cyan curve, so the layer's share of the cyan density is not identifiable from this sheet, and the split fit runs to its boundary instead of finding a value. Fuji's 1989 paper on REALA, which introduced this fourth layer, describes it as releasing development inhibitors rather than forming cyan dye; if that is what this layer does, the density split is the wrong model and the couplers stage is its home. The cyan channel therefore carries the summed curve and the red-sensitive sensitivity. The mask is panel 21's minimum-density curve, so the spectral print now reads this film's own base, and the blur is panel 20's MTF (one curve for the film, so one sigma). Grain is measured from real NPH 400 scans for the cyan and magenta layers (5.05 and 2.02 grains/µm²) and not for the yellow one, which no frame in hand could reach; the dye shapes are borrowed from the VISION3 digitisation; the sheet's mid-scale curve is kept alongside as the check on them.",
         channels: [

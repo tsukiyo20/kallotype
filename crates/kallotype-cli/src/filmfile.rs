@@ -105,22 +105,27 @@ pub fn read_owned(path: impl AsRef<Path>) -> Result<Box<FilmStock>, FilmFileErro
 
     let text = std::str::from_utf8(&bytes[16..header_end])
         .map_err(|_| FilmFileError::Format("the header is not UTF-8".to_owned()))?;
-    let table = parse(text, Path::new("<film>")).map_err(|error| {
-        FilmFileError::Header(format!("the header does not parse: {error}"))
-    })?;
+    let table = parse(text, Path::new("<film>"))
+        .map_err(|error| FilmFileError::Header(format!("the header does not parse: {error}")))?;
     let tables = &bytes[header_end..bytes.len() - 32];
 
     build(&table, tables)
 }
 
-fn string(table: &std::collections::BTreeMap<String, Value>, key: &str) -> Result<String, FilmFileError> {
+fn string(
+    table: &std::collections::BTreeMap<String, Value>,
+    key: &str,
+) -> Result<String, FilmFileError> {
     match table.get(key) {
         Some(Value::String(value)) => Ok(value.clone()),
         _ => Err(FilmFileError::Header(format!("`{key}` is missing"))),
     }
 }
 
-fn number(table: &std::collections::BTreeMap<String, Value>, key: &str) -> Result<f64, FilmFileError> {
+fn number(
+    table: &std::collections::BTreeMap<String, Value>,
+    key: &str,
+) -> Result<f64, FilmFileError> {
     match table.get(key) {
         Some(Value::Number(value)) => Ok(*value),
         _ => Err(FilmFileError::Header(format!("`{key}` is missing"))),
@@ -194,10 +199,13 @@ fn build(
 
     let channel = |name: &str| -> Result<CharacteristicCurve, FilmFileError> {
         let curve = |key: &str| number(table, &format!("curve.{name}.{key}"));
-        Ok(
-            CharacteristicCurve::new(curve("d_min")?, curve("d_max")?, curve("gamma")?, curve("log_e0")?)
-                .with_transition(curve("transition")?),
+        Ok(CharacteristicCurve::new(
+            curve("d_min")?,
+            curve("d_max")?,
+            curve("gamma")?,
+            curve("log_e0")?,
         )
+        .with_transition(curve("transition")?))
     };
     let sigma = numbers(table, "character.sigma_um")?;
     Ok(Box::new(FilmStock {
@@ -213,7 +221,9 @@ fn build(
             .map_err(|_| FilmFileError::Header("`base_density` needs three numbers".to_owned()))?,
         grains_per_um2: numbers(table, "character.grains_per_um2")?
             .try_into()
-            .map_err(|_| FilmFileError::Header("`grains_per_um2` needs three numbers".to_owned()))?,
+            .map_err(|_| {
+                FilmFileError::Header("`grains_per_um2` needs three numbers".to_owned())
+            })?,
         layers: layers.ok_or_else(|| FilmFileError::Header("no `layers` table".to_owned()))?,
         // A v1 file must carry the dyes: a renderer cannot print a film whose
         // primaries are zeros, and borrowing another film's would be a fact
@@ -254,9 +264,9 @@ fn read_table(
     rows: usize,
 ) -> Result<Vec<[f64; GRID_LEN]>, FilmFileError> {
     let bytes = rows * GRID_LEN * 8;
-    let slice = tables
-        .get(*at..*at + bytes)
-        .ok_or_else(|| FilmFileError::Format(format!("a table of {rows} rows runs past the file")))?;
+    let slice = tables.get(*at..*at + bytes).ok_or_else(|| {
+        FilmFileError::Format(format!("a table of {rows} rows runs past the file"))
+    })?;
     *at += bytes;
     slice
         .chunks_exact(GRID_LEN * 8)
@@ -384,8 +394,12 @@ mod tests {
             ("fuji_pro400h", "fuji-pro400h"),
             ("provia_100f", "provia-100f"),
         ] {
-            let loaded = read(films().join(directory).join(format!("{directory}.kalofilm")))
-                .unwrap_or_else(|error| panic!("{id}: {error}"));
+            let loaded = read(
+                films()
+                    .join(directory)
+                    .join(format!("{directory}.kalofilm")),
+            )
+            .unwrap_or_else(|error| panic!("{id}: {error}"));
             let compiled = kallotype_core::emulsion::film_stock(id).expect("a compiled stock");
             assert_eq!(loaded.id, compiled.id);
             assert_eq!(loaded.process, compiled.process);
@@ -431,7 +445,9 @@ mod tests {
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
         assert_eq!(
-            hex(&sha256(b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")),
+            hex(&sha256(
+                b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
+            )),
             "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
         );
     }
