@@ -1,0 +1,30 @@
+[package]
+name = "kallotype-raw"
+description = "Camera raw decoding for kalo, kept outside the main workspace"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+# This crate links `rawler`, which is LGPL-2.1, and so it is LGPL-2.1 itself.
+# Everything outside this directory is Apache-2.0. The crate is deliberately
+# not a member of the workspace: `cargo build`, `cargo test --workspace` and
+# `cargo deny` never see it, and neither does anyone who builds `kalo` without
+# `--features raw`.
+license = "LGPL-2.1-only"
+authors = ["Kallotype contributors"]
+repository = "https://github.com/tsukiyo20/kallotype"
+publish = false
+
+# Its own workspace, so that it is not swept into the root one.
+[workspace]
+
+[dependencies]
+kallotype-io = { path = "../kallotype-io", version = "0.1.0" }
+rawler = { version = "0.8", default-features = false }
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+unused_must_use = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

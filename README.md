@@ -102,6 +102,33 @@ The library is on crates.io too — [`kallotype-core`](https://crates.io/crates/
 > linker refuses to run until the licence is accepted, and `git` fails the same
 > way.
 
+### Reading camera raw files
+
+A camera JPEG is display-referred: its tone curve, white balance and sharpening
+are baked in before Kallotype ever sees it. A raw file is scene-referred linear
+light — the same kind of data a film camera exposes — and reading it is one
+command:
+
+```bash
+cargo build --release --bin kalo --features raw
+kalo render DSC03315.ARW -o out/shot.png --film kodak_tmax400
+```
+
+The decoder handles what `rawler` handles — Sony ARW, Nikon NEF, Canon CR2/CR3,
+Fujifilm RAF (X-Trans), Olympus ORF, Panasonic RW2, Pentax PEF, DNG and about
+twenty more — and applies black level, demosaic, the as-shot white balance and
+the camera's own colour matrix to produce linear sRGB. `--input-encoding` does
+not apply to a raw file: it is linear by construction.
+
+**The feature is off by default, and that is a licensing decision.**
+`rawler` is LGPL-2.1, and `kallotype-raw` — the crate that wraps it — is
+deliberately outside this workspace, so a default build, `cargo test
+--workspace` and `cargo deny` are Apache-2.0 all the way down. Build with
+`--features raw` and the resulting binary is a combined work that carries
+LGPL-2.1 obligations for that part. If you would rather not, decode elsewhere
+(a `dcraw`, `dnglab` or RawTherapee export) and pass the result with
+`--input-encoding linear`.
+
 ## What is published, and what is not
 
 This repository is the **code**. The datasets it was developed against and the
@@ -346,6 +373,16 @@ stages and seven of the eight cores here. Measured on an 8.2 MP frame,
 ## Licence
 
 Code is **Apache-2.0**. See [LICENSE](LICENSE).
+
+One exception, and it is fenced off on purpose: `crates/kallotype-raw` is
+**LGPL-2.1**, because camera raw decoding is built on `rawler`. That crate is
+excluded from the workspace and reachable only through `--features raw`, so
+nothing in a default build links it.
+
+`Cargo.lock` does list the raw decoder's dependencies, because an optional path
+dependency has to be resolved whether or not it is selected. Listing is not
+linking: `cargo tree` with default features does not contain them, and neither
+does the binary.
 
 The measured curves that ship compiled into the crate are our own digitisation
 of published manufacturer data sheets; the data sheets themselves are not

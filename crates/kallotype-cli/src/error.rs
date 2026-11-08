@@ -30,6 +30,13 @@ pub enum CliError {
         /// The underlying OS error.
         source: std::io::Error,
     },
+    /// A camera raw file could not be decoded.
+    Raw {
+        /// The file that failed.
+        path: PathBuf,
+        /// What the decoder said.
+        message: String,
+    },
     /// The input could not be decoded.
     Read {
         /// The file that failed.
@@ -95,6 +102,9 @@ impl std::fmt::Display for CliError {
             Self::CreateDir { path, source } => {
                 write!(f, "could not create {}: {source}", path.display())
             }
+            Self::Raw { path, message } => {
+                write!(f, "could not decode raw file {}: {message}", path.display())
+            }
             Self::Read { path, source } => {
                 write!(f, "could not read {}: {source}", path.display())
             }
@@ -125,6 +135,7 @@ impl std::error::Error for CliError {
             Self::Read { source, .. } | Self::Write { source, .. } => Some(source),
             Self::UnknownStock { .. }
             | Self::InvalidNumber { .. }
+            | Self::Raw { .. }
             | Self::Dictionary { .. }
             | Self::Camera { .. }
             | Self::Gpu { .. }

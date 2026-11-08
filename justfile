@@ -6,17 +6,37 @@ set shell := ["bash", "-c"]
 default:
     @just --list
 
+# Build `kalo` with camera raw decoding.
+#
+# This pulls in `kallotype-raw`, which is LGPL-2.1 through `rawler`, so the
+# binary is a combined work. It lives outside the workspace so that the default
+# build, `just lint` and `just deny` are Apache-2.0 all the way down.
+raw:
+    cargo build --release --bin kalo --features raw
+
 # Format the tree.
 fmt:
     cargo fmt --all
 
 # Fail if anything is unformatted.
+#
+# `kallotype-raw` is outside the workspace and so is not reached by
+# `cargo fmt --all`; it is formatted directly.
 fmt-check:
     cargo fmt --all --check
+    rustfmt --edition 2024 --check crates/kallotype-raw/src/lib.rs
 
 # Lint everything, warnings are errors.
+#
+# Default features on purpose: `--all-features` would enable `raw` and drag the
+# LGPL decoder into the graph this recipe is meant to keep Apache-2.0. The raw
+# crate has its own recipe below.
 lint:
-    cargo clippy --workspace --all-targets --all-features -- -D warnings
+    cargo clippy --workspace --all-targets -- -D warnings
+
+# Lint the camera raw crate, which is outside the workspace.
+lint-raw:
+    cd crates/kallotype-raw && cargo clippy --all-targets -- -D warnings
 
 # Regenerate-and-compare the compiled stock table against the stock files.
 #

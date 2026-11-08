@@ -124,7 +124,8 @@ pub struct StockArgs {
 #[derive(Debug, Args)]
 pub struct RenderArgs {
     /// Input image. 8/16-bit sRGB by default; pass --input-encoding linear for
-    /// a linear-light TIFF.
+    /// a linear-light TIFF. A camera raw (ARW, NEF, CR3, RAF, DNG, ...) is
+    /// decoded to linear light directly, if this build has the `raw` feature.
     pub input: PathBuf,
 
     /// Output image. The extension picks the format (png, tiff, ...).

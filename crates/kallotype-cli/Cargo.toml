@@ -27,11 +27,16 @@ default = ["gpu"]
 # largest single speed-up on the table. It drags wgpu and about two hundred
 # crates into the build, which is the price of that.
 gpu = ["dep:kallotype-gpu"]
+# Camera raw decoding. Off by default because it links `kallotype-raw`, which
+# is LGPL-2.1 through `rawler`; a binary built without this feature carries no
+# copyleft code. `cargo deny` runs on the default graph and never sees it.
+raw = ["dep:kallotype-raw"]
 
 [dependencies]
 kallotype-core = { path = "../kallotype-core", version = "0.1.0" }
 kallotype-gpu = { path = "../kallotype-gpu", version = "0.1.0", optional = true }
 kallotype-io = { path = "../kallotype-io", version = "0.1.0" }
+kallotype-raw = { path = "../kallotype-raw", version = "0.1.0", optional = true }
 kallotype-spectral = { path = "../kallotype-spectral", version = "0.1.0" }
 clap.workspace = true
 
