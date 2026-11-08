@@ -104,9 +104,21 @@ the adjacency effect and below 20 % the tail a single Gaussian cannot follow.
 
 The sheet prints a diffuse rms granularity of 8 at a 48 µm aperture. With
 `c = 1 − 10^(−D)`, `N = n·A·c` and `σ_D = slope/(ln 10 √N)`, the number
-inverts to `n = 6.17` grains/µm². This is the weakest quantity in the file: it
-assumes the grains are Poisson and that the published figure is a density noise
-rather than a visual grade. It is reported as an inversion, not a measurement.
+inverts to `n = 3.95` grains/µm².
+
+**`slope` is the local one, at the density the sheet measured**, and the first
+release of this file got that wrong: it used `gamma`, 2.08 per decade, and
+reported 6.17. On a negative density 1.0 sits in the straight line, so the
+shortcut is right there. On a reversal it is 71 % of the way from the unexposed
+top to the clear bottom — on the shoulder — where this film's slope is 1.71,
+1.69 and 1.60 per decade per layer, mean 1.67. Gamma overstated the density
+change per decade at that point by a quarter, and since `n` goes as the square,
+the count came out half again too low. EKTACHROME E100 found this; the same
+correction is here.
+
+What remains weak is the assumption: Poisson grains, and a published figure that
+is a density noise rather than a visual grade. It is reported as an inversion,
+not a measurement.
 
 ## 4. Results
 
@@ -172,7 +184,7 @@ Table 3. Dominant error per quantity.
 | sensitivity height | 1.09/0.82/1.00 decade | path endpoint extrapolation | ±0.03 decade | a sheet that draws the floor |
 | dye peak | 443/543/658 nm | vector path, no raster involved | ±1 nm | — |
 | MTF σ | 4.68 µm | one curve for three layers | ±0.2 µm | per-layer MTF |
-| grain | 6.17 /µm² | Poisson assumption and published rounding of 8 | ±25 % | measure a scan of film |
+| grain | 3.95 /µm² | Poisson assumption and published rounding of 8 | ±25 % | measure a scan of film |
 
 ## 7. Limitations
 

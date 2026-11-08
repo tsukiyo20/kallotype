@@ -323,8 +323,58 @@ impl StockFile {
             sum += (model - density) * (model - density);
         }
         let rms = (sum / rows.len() as f64).sqrt();
+        // The curve has to be able to *reach* the ink it was fitted to. Its
+        // lower asymptote is where it bottoms out — `d_min` on a negative,
+        // `d_max` on a reversal — and a curve whose asymptote sits past the
+        // lowest density it was fitted to cannot produce that part of the sheet
+        // at any exposure. That is not a tolerance question: it is a shape
+        // asked to stand on ground it cannot touch.
+        //
+        // It has been true twice. T-MAX 400's toe fitted to 0.2554 against a
+        // sheet whose lowest measured density was 0.2266, and EKTACHROME E100's
+        // clear density to 0.1816 against a curve that ended at 0.1418 still
+        // falling. Both were found by reading a residual plot, and both shipped
+        // before they were.
+        //
+        // A film's points are total density, so the base rides in the same sum
+        // and the two can disagree for a reason that is not the shape's. When
+        // the base is itself above the sheet's lowest point, that is the number
+        // to look at first, and it is reported as such rather than as a broken
+        // curve — the fit cannot be blamed for a floor it was handed.
+        let lowest = rows
+            .iter()
+            .map(|(_, density)| *density)
+            .fold(f64::INFINITY, f64::min);
+        // Two thousandths of density per point of ink: a line is 0.24 pt wide
+        // and a dense curve crosses four hundred points, so a hundredth is
+        // drawing and digitising, not shape.
+        const REACH: f64 = 1e-2;
+        let mut base_note = None;
+        if let Some(base) = base {
+            if base > lowest + REACH {
+                base_note = Some(format!(
+                    "{lowest:.4} is the sheet's lowest density and the declared base is \
+                     {base:.4}, so the curve bottoms out at the base and cannot reach the \
+                     ink — the base is the number to look at"
+                ));
+            }
+        }
+        // With the base itself in question the shape cannot be blamed, so the
+        // reach only fails when the floor the model was handed is fine.
+        let bottom = curve.d_min.min(curve.d_max) + offset;
+        if base_note.is_none() && bottom > lowest + REACH {
+            return Err(StockError::Check {
+                path: self.path.clone(),
+                stage: prefix.to_owned(),
+                message: format!(
+                    "the curve bottoms out at {bottom:.4}, above the lowest density it was \
+                     fitted to ({lowest:.4}) — it cannot reach that part of the sheet at any \
+                     exposure, which usually means one corner rate is doing two corners' work"
+                ),
+            });
+        }
         let declared = self.float(&format!("{prefix}.rms")).ok();
-        match declared {
+        let verdict = match declared {
             Some(declared) if declared > 0.1 => Err(StockError::Check {
                 path: self.path.clone(),
                 stage: prefix.to_owned(),
@@ -356,6 +406,10 @@ impl StockFile {
                      checked against anything"
                 ),
             }),
+        };
+        match (verdict, base_note) {
+            (Ok(message), Some(note)) => Ok(format!("{message}; {note}")),
+            (other, _) => other,
         }
     }
 
@@ -1159,6 +1213,67 @@ target_mid_reflectance = 0.18
             findings
                 .iter()
                 .any(|f| f.verdict == Verdict::Fail && f.message.contains("rms")),
+            "{findings:?}"
+        );
+        std::fs::remove_dir_all(&root).expect("clean up");
+    }
+
+    /// A curve that bottoms out above the sheet's own lowest density cannot be
+    /// that curve at any exposure, and the check has to fail rather than report
+    /// a residual.
+    ///
+    /// The numbers are EKTACHROME E100's first release: one corner rate, a clear
+    /// density of 0.1816 fitted against a curve that ended at 0.1418 still
+    /// falling. That stock shipped because nothing compared the asymptote with
+    /// the ink; the two-lobe residual was the only symptom and it looked like
+    /// noise. T-MAX 400's toe had the same defect a day earlier, at 0.2554
+    /// against 0.2266.
+    #[test]
+    fn a_curve_may_not_bottom_out_above_its_own_ink() {
+        let root = std::env::temp_dir().join(format!("kallotype-reach-{}", std::process::id()));
+        std::fs::create_dir_all(&root).expect("a temporary directory");
+        // A reversal: density falls from 3.28 to wherever the curve is going,
+        // and the sheet stops drawing at 0.14 while it is still falling.
+        let said = CharacteristicCurve::new(3.2820, 0.0481, 2.5666, -1.3485).with_corners(5.0, 2.5);
+        let mut csv = String::from("log_exposure,density\n");
+        let mut x = -2.6;
+        while x <= 0.2 {
+            if said.density(x) >= 0.1418 {
+                csv.push_str(&format!("{x:.3},{:.4}\n", said.density(x)));
+            }
+            x += 0.02;
+        }
+        std::fs::write(root.join("red.csv"), &csv).expect("a points file");
+        let text = |d_max: f64, toe: f64, shoulder: f64| {
+            format!(
+                "[stock]\nid = \"test_reversal\"\nlabel = \"A reversal\"\nkind = \"film\"\n\
+                 claim = \"placeholder\"\nprocess = \"reversal\"\n\
+                 \n[curve.red]\nd_min = 3.2820\nd_max = {d_max:.4}\ngamma = 2.5666\n\
+                 log_e0 = -1.3485\ntoe_transition = {toe:.1}\n\
+                 shoulder_transition = {shoulder:.1}\npoints = \"red.csv\"\nrms = 0.020\n\
+                 \n[base]\ndensity = [0.0, 0.0, 0.0]\ngrains_per_um2 = [3.6, 3.6, 3.6]\n"
+            )
+        };
+        // The stock as it ships: the asymptote is below everything drawn.
+        let good = root.join("good.toml");
+        std::fs::write(&good, text(0.0481, 5.0, 2.5)).expect("a stock file");
+        let findings = StockFile::read(&good).expect("reads").check_curves();
+        assert!(
+            findings
+                .iter()
+                .filter(|f| f.stage == "red")
+                .all(|f| f.verdict == Verdict::Ok),
+            "{findings:?}"
+        );
+
+        // The first release: one rate, and an asymptote above the ink.
+        let bad = root.join("bad.toml");
+        std::fs::write(&bad, text(0.1816, 4.0, 4.0)).expect("a stock file");
+        let findings = StockFile::read(&bad).expect("reads").check_curves();
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.verdict == Verdict::Fail && f.message.contains("bottoms out")),
             "{findings:?}"
         );
         std::fs::remove_dir_all(&root).expect("clean up");

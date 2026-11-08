@@ -573,7 +573,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
             curve(3.4624, 0.2287, 2.0838, -1.2596),
         ],
         base_density: [0.0000, 0.0000, 0.0000],
-        grains_per_um2: [6.1700, 6.1700, 6.1700],
+        grains_per_um2: [3.9500, 3.9500, 3.9500],
         layers: &crate::measured::PROVIA_100F_LAYERS,
         dyes: &crate::measured::PROVIA_100F_DYES,
         mask: &crate::measured::NO_MASK,
