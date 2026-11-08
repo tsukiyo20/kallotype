@@ -29,6 +29,7 @@ pub mod color;
 pub mod couplers;
 pub mod curve;
 pub mod development;
+pub mod dye;
 pub mod emulsion;
 pub mod grain;
 pub mod halation;
