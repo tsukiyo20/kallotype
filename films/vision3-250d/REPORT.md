@@ -95,11 +95,12 @@ shoulder must do.
 
 The sheet prints no reference exposure. The panel's lower axis is camera stops,
 and the model's mid grey sits at log10(0.18) = −0.7447. The curves are anchored
-by the fitted corner midpoint at mid grey — the tree's older convention, kept
-here so the three VISION3 films sit in one frame — and the resulting check is
-stated rather than used: at mid grey the records sit **0.851 / 0.986 / 0.948** of
-a density above base, inside the family's 0.12 spread and denser than the still
-films' 0.55–0.75. §6 records what the convention costs and what would change it.
+on the printing aim — green at 0.70 of a density above base at mid grey, shift
+**+0.5097** — which is the rule PRO 400H uses and the only invariant this sheet
+supports. The checks follow: at mid grey the records sit **0.607 / 0.702 / 0.675**
+above base, and the speed point lands **0.61 of a stop** slow, at the fast end of
+the Kodak colour sheets' 0.60–0.80. Version 1 anchored the corner midpoint
+instead, putting mid grey at 0.95; §6 says what that cost.
 
 ### 3.4 MTF: the curve that merges with its own 100 % rule
 
@@ -170,7 +171,7 @@ Measured: the three curve shapes, the layer sensitivities, the MTF, the base.
 Decided:
 
 1. **The 0.02 asymptote window**, because the shoulder is outside the frame.
-2. **The corner-midpoint anchor**, kept for family consistency.
+2. **The printing-aim anchor**, because the sheet prints no reference exposure.
 3. **The column-order pairing of the MTF curves**, where tracking is impossible.
 4. **The shared dye set**, after measuring this sheet's own.
 5. **The borrowed grain and mask**, both from charts this sheet does not give up.
@@ -180,11 +181,11 @@ Decided:
 The curve residuals, 0.0050–0.0055, are at the raster's quantisation; the MTF
 fit's own error is larger than the axis calibration (0.3 of a pixel).
 
-The anchor is a convention and the report says so. The mid-grey density it
-produces — 0.95±0.05 above base — is the one number a reader could use to argue
-with it, and it is 0.2 denser than any still film's. The three VISION3 films are
-consistent with each other, which is the property a family needs, and a later
-pass that fixes the anchor convention should move all three together.
+The anchor is a decision and the report says so: the sheet prints no reference,
+so the film sits where the printing aim puts it. The mid-grey density that
+follows (0.61–0.70 above base) is the number a reader could argue with, and it
+now agrees with the still films' band. The three VISION3 films were moved
+together, so their relative positions are unchanged.
 
 ## 7. Availability and reproduction
 

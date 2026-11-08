@@ -371,6 +371,12 @@ On the spectral path the film now carries its own base. The scalar path still
 uses the three Status M densities, and those are the fit's asymptotes under each
 toe — 0.217 / 0.651 / 0.865 — not independent measurements.
 
+The MTF and sensitivity panels were re-read on 2026-11-09 with the reader that
+samples cubic Béziers rather than their end points. The MTF moved by at most
+**1.8 per cent of response** (1.1 rms) and the sensitivities by **1.4 per cent of
+peak** (rms), both below those panels' own fit residuals (2.4 to 4.9 per cent)
+and at the calibration's order; the tables stand unchanged.
+
 ## 7. Availability and reproduction
 
 `portra-400.kalofilm` carries the header, the tables and a SHA-256;

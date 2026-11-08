@@ -89,11 +89,12 @@ rise.
 ### 3.4 The anchor and the borrowings
 
 **The anchor.** The panel's lower axis is camera stops; the sheet prints no
-reference exposure. The curves are anchored by the fitted corner midpoint at
-mid grey, the tree's older convention, and the resulting check is stated rather
-than used: at mid grey the records sit **0.837 / 0.964 / 0.927** of a density
-above base, inside the three VISION3 films' 0.12 spread and denser than the
-still films'.
+reference exposure. The curves are anchored on the printing aim — green at 0.70
+of a density above base at 18 per cent grey, shift **+0.4797** — which is the
+rule PRO 400H uses and the only one this sheet supports. The checks follow: at
+mid grey the records sit **0.609 / 0.702 / 0.671** above base, and the speed
+point lands **0.85 of a stop** slow, the same direction and order as the Kodak
+colour sheets' 0.60–0.80.
 
 **Dyes.** This sheet's dye panel was digitised and compared with the compiled
 500T set; the model carries one dye set for the family and this sheet's agrees
@@ -145,7 +146,7 @@ Measured: the three curve shapes, the layer sensitivities, the MTF, the base.
 Decided:
 
 1. **The 0.02 asymptote window**, because the shoulder is outside the frame.
-2. **The corner-midpoint anchor**, the family's oldest convention.
+2. **The printing-aim anchor**, because the sheet prints no reference exposure.
 3. **The clamped cyan tail**, because the curve begins at a dip.
 4. **The shared dye set**, after measuring this sheet's own.
 5. **The borrowed grain and mask**, both from charts this sheet does not give up.
@@ -156,10 +157,10 @@ The curves are raster reads, one pixel of density per sample, and the residuals
 (0.0037–0.0040) are below the 0.005 that a raster digitisation of a clean plot
 usually costs — the strokes here are long and well separated.
 
-The anchor is a convention, not a measurement; §3.4 states the mid-grey reading
-that could disagree with it. The borrowed dye set is the only quantity in the
-file whose *numbers* are not this sheet's, and the comparison that justifies it
-is recorded in the stock file.
+The anchor is a decision, not a reading; §3.4 states the mid-grey readings that
+follow from it. The borrowed dye set is the only quantity in the file whose
+*numbers* are not this sheet's, and the comparison that justifies it is recorded
+in the stock file.
 
 ## 7. Availability and reproduction
 

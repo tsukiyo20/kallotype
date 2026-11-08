@@ -277,6 +277,12 @@ PORTRA 400; the window table there shows the sensitivity.
 The speed check is a third of a stop out, as on PORTRA 400, and is left out for
 the same reason.
 
+The MTF and sensitivity panels were re-read on 2026-11-09 with the reader that
+samples cubic Béziers rather than their end points. The MTF moved by at most
+**0.5 per cent of response** and the sensitivities by **0.3 per cent of peak** —
+the closest agreement of the four sheets re-read, because this page draws its
+curves with the densest knots. The tables stand unchanged.
+
 ## 7. Availability and reproduction
 
 `portra-800.kalofilm` carries the header, the tables and a SHA-256;

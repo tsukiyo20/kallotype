@@ -8,6 +8,9 @@ panel, read from its 8-bit raster, 538 points each.
   `[base] density` is what separates the two. The log exposure is the sheet's
   *camera-stops* axis converted to decades; the sheet also prints a log-exposure
   axis that disagrees with it by about 0.15 decade across the frame.
+- **The frame.** The sheet prints camera stops and no reference exposure, so
+  the points are shifted by **+0.5097 decade** to put the printing aim — green at
+  0.70 of a density above base at mid grey — on the model's log10(0.18).
 - **Which curve is which.** The panel labels its curves B, G and R: the top curve
   is blue, the middle green, the bottom red.
 - **The ends are the plate's.** The ink runs from −3.43 to +1.35 on the sheet's

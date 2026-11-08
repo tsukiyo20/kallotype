@@ -16,8 +16,8 @@ the softest MTF of the three VISION3 films.
 Headline numbers: the curves climb to 1.72 (red), 2.06 (green) and 1.99 (blue)
 above their bases; base 0.176, 0.580 and 0.848; γ 0.494, 0.582 and 0.566 per
 decade; residuals 0.0065, 0.0042 and 0.0053; layer sensitivities peak at 650,
-550 and 465 nm; MTF σ 4.53, 4.41 and 4.26 µm. At mid grey the negative sits 0.88
-to 1.00 of a density above base. Grain, dyes and the mask are borrowed from the
+550 and 465 nm; MTF σ 4.53, 4.41 and 4.26 µm. At mid grey the negative sits 0.61
+to 0.70 of a density above base. Grain, dyes and the mask are borrowed from the
 500T digitisation, and the file says why.
 
 Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and

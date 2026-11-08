@@ -302,6 +302,13 @@ straight-segment polylines and are unaffected; PORTRA 800's and PRO 400H's have
 not been re-checked, and re-reading them is outstanding work recorded in the
 research log.
 
+The MTF and sensitivity panels were re-read on 2026-11-09 with the reader that
+samples cubic Béziers rather than their end points. The MTF moved by at most
+**4.1 per cent of response** at its steep ends (1.7 rms) and the sensitivities by
+**2.3 per cent of peak** (rms). The MTF figure is the largest any panel moved in
+the survey, and it is the size of that fit's own residual (2.0 to 2.9 per cent);
+the tables stand unchanged.
+
 ## 7. Availability and reproduction
 
 `ektar-100.kalofilm` carries the header, the tables and a SHA-256;

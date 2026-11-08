@@ -9,6 +9,9 @@ panel, read from its 8-bit raster.
   *camera-stops* axis converted to decades; the sheet's separate log-exposure
   axis disagrees with it by about 0.15 decade across the frame, which is what a
   rounded illustration does.
+- **The frame.** The sheet prints camera stops and no reference exposure, so
+  the points are shifted by **+0.5141 decade** to put the printing aim — green at
+  0.70 of a density above base at mid grey — on the model's log10(0.18).
 - **Which curve is which.** The panel labels its curves B, G and R at their
   high-exposure ends; the top curve is blue, the middle green, the bottom red.
 - **The red curve is dotted.** The sheet draws red as a dotted stroke while green

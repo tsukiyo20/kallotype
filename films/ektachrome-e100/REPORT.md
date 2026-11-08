@@ -262,6 +262,12 @@ density were measured to be somewhere else in the 0.03–0.14 the data allows.
 - **The paper it is not printed on.** A slide has no print stage; the render
   shows the film's transmittance and nothing else.
 
+The MTF, sensitivity and dye panels were re-read on 2026-11-09 with the reader
+that samples cubic Béziers rather than their end points. The MTF moved by at most
+**0.6 per cent of response**, the sensitivities by **2.8 per cent of peak** and
+the three dyes by **1.8 per cent of their normalised density** — each below the
+calibration of its own panel or at its order. The tables stand unchanged.
+
 ## 8. Availability and reproduction
 
 `ektachrome-e100.kalofilm` carries the header, the tables and a SHA-256;

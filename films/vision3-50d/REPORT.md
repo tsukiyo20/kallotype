@@ -95,14 +95,19 @@ calibrates from it because it carries seventeen evenly-spaced ticks. The log
 exposure axis printed above it disagrees by about 0.15 decade across the frame,
 which is what a rounded illustration does; the stops axis is the consistent one.
 
-The model exposes mid grey at log10(0.18) = −0.7447 and the sheet prints no
-reference exposure, so the curves are anchored the way the tree's older negatives
-are: the fitted corner midpoint sits at mid grey. That is a convention and not a
-measurement, and the resulting check is stated rather than used to adjust: at
-mid grey the three records sit **0.876 / 1.000 / 0.968** of a density above base,
-denser than the still films' 0.55–0.75, which is what a cinema negative's print
-aim looks like. The three VISION3 films agree with each other to 0.12, which is
-the property that matters for a family.
+The model exposes mid grey at log10(0.18) = −0.7447, and the only invariant the
+sheets in this series share is the printing aim: a correctly exposed negative
+puts its green record about 0.70 of a density above D-min at 18 per cent grey.
+The curves are anchored there — shift **+0.5141** — which is the rule PRO 400H
+uses and the only one this sheet supports.
+
+The checks follow: at mid grey the three records sit **0.612 / 0.702 / 0.678**
+above base (green 0.70 by construction; red and blue inside the still films'
+0.55–0.75 band), and the film's speed point lands **0.99 of a stop** slow — the
+same direction and order as the Kodak colour sheets' 0.60–0.80. Version 1 of
+this report anchored the fitted corner midpoint at mid grey instead, which put
+mid grey at 0.88–1.00; that is a convention, and the 0.51-decade difference is
+why the family was re-anchored together.
 
 ### 3.4 MTF, sensitivity, and the shared dyes
 
@@ -167,6 +172,7 @@ Decided:
 1. **The 0.02 asymptote window**, because the shoulder is outside the frame.
 2. **The camera-stops axis** over the log-exposure axis, which disagrees with it.
 3. **The ticks over the printed sensitivity labels.**
+4. **The printing-aim anchor**, because the sheet prints no reference exposure.
 4. **The shared dye set**, after measuring this sheet's own and finding it agrees.
 5. **The borrowed grain and mask.**
 
@@ -176,11 +182,11 @@ The curves are raster reads: 538 columns for the solid strokes, 349 for the
 dotted one, one-pixel quantisation in density. The asymptote is an extrapolation
 of hundredths.
 
-The anchor is the family's oldest convention, and §3.3 says what it costs: the
-mid-grey density is 0.88–1.00 above base, denser than any still film in the
-series, consistent across the three VISION3 sheets and not measured against
-anything the page prints. A later pass that fixes the convention should move all
-three films together.
+The anchor is a decision rather than a reading: the sheet prints camera stops
+and no reference exposure, so the curves sit where the printing aim puts them.
+§3.3 states the checks that follow — mid grey 0.61–0.70 above base and a speed
+point 0.99 of a stop slow — and the three VISION3 films were moved together, so
+their relative positions are unchanged.
 
 ## 7. Availability and reproduction
 

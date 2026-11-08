@@ -16,8 +16,8 @@ what a raster sheet with no shoulder and a merged MTF curve does to a tracker.
 Headline numbers: the curves climb to 1.67 (red), 1.99 (green) and 1.90 (blue)
 above their bases; base 0.175, 0.574 and 0.844; γ 0.475, 0.557 and 0.537 per
 decade; residuals 0.0050, 0.0052 and 0.0055; layer sensitivities peak at 655,
-550 and 465 nm; MTF σ 4.25, 3.34 and 3.09 µm. At mid grey the negative sits 0.85
-to 0.99 of a density above base. Grain, dyes and the mask are borrowed from the
+550 and 465 nm; MTF σ 4.25, 3.34 and 3.09 µm. At mid grey the negative sits 0.61
+to 0.70 of a density above base. Grain, dyes and the mask are borrowed from the
 500T digitisation, and the file says why.
 
 Data and prose: CC BY 4.0. See [../LICENSE](../LICENSE) and
