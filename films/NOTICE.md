@@ -1,0 +1,22 @@
+# NOTICE
+
+Film and paper names — "FUJICHROME PROVIA 100F", "FUJICOLOR PRO 400H" — are
+the manufacturers' trademarks. They are used here in their ordinary sense, to
+say which product a file models. This project is not affiliated with, endorsed
+by or sponsored by Fujifilm or any other manufacturer.
+
+## What is not redistributed
+
+The data sheets. Each file names the publication its numbers were read from,
+gives the page and a SHA-256 of the document, and nothing more: the PDFs stay
+with their publishers. What is here is a digitisation — the conversion of a
+published curve into numbers — and every field is traceable to the sheet named
+in its file.
+
+## Third-party data
+
+The grain values for the cyan and magenta layers of PRO 400H were measured from
+scans in the **BlueNeg** 35 mm negative archive (Liu et al., ICCV 2025,
+<https://huggingface.co/datasets/ttgroup/blueneg-release>), whose licence the
+dataset card describes as CC-BY derivative. The scans themselves are not
+redistributed here; the numbers derived from them are, with attribution.

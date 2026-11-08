@@ -1,0 +1,12 @@
+The `.kalofilm` files in this directory and the documentation around them are
+licensed under the Creative Commons Attribution 4.0 International licence:
+
+    https://creativecommons.org/licenses/by/4.0/legalcode
+
+You are free to share and adapt them for any purpose, provided you give
+appropriate credit, link to the licence, and indicate whether changes were
+made. A convenient form of credit is the film's own README, whose `[provenance]`
+section names the data sheet and its checksum.
+
+The source code of the reader and renderer is licensed separately under the
+Apache License 2.0; see the repository root.

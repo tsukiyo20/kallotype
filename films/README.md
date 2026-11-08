@@ -1,0 +1,36 @@
+# Kalofilm — film stocks as data
+
+Two films, each measured from its manufacturer's data sheet and from real film,
+packed into one file per film.
+
+| film | process | paper it is printed on | what is measured |
+|---|---|---|---|
+| [FUJICHROME PROVIA 100F](provia-100f/) | E-6 reversal | none — the film is the picture | curves, three dyes, layer sensitivities, MTF, granularity |
+| [FUJICOLOR PRO 400H](fuji-pro400h/) | C-41 negative | RA-4 paper | curves, four layer sensitivities, orange mask, MTF, two of three grain values |
+
+A `.kalofilm` file is the film: a header that says where every number came from,
+the spectra as binary tables, and a SHA-256 over the lot. It is 5 kB. The format
+is specified in [FORMAT.md](FORMAT.md).
+
+## The honesty section
+
+Every file carries a `[measured]` table that says, field by field, whether the
+number was measured or borrowed — and from where. PRO 400H's file says, in so
+many words, that its dye shapes are borrowed from the VISION3 500T
+digitisation and that the fourth layer's inhibitor strength is a placeholder.
+A film file that hides its borrowings is one that lies about them.
+
+## Licence
+
+The `.kalofilm` files and the prose in this directory are licensed
+**CC BY 4.0**. Code that reads them lives in the repository and is
+Apache-2.0. See [NOTICE.md](NOTICE.md) for trademarks and what is not
+redistributed.
+
+## Citing
+
+If a published result uses these files, cite the data sheet each film names in
+its own README and the file itself, e.g.
+
+> Kallotype `fuji-pro400h.kalofilm`, digitised from FUJIFILM product information
+> bulletin AF3-176E (2026).
