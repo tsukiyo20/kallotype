@@ -2,11 +2,10 @@
 
 Film and paper names — "FUJICHROME PROVIA 100F", "FUJICHROME VELVIA 50",
 "FUJICOLOR PRO 400H", "KODAK PROFESSIONAL EKTACHROME E100", "KODAK PROFESSIONAL
-PORTRA 400", "KODAK PROFESSIONAL PORTRA 800" — are the manufacturers'
-trademarks. They are used here in their
-ordinary sense, to say which product a file models. This project is not
-affiliated with, endorsed by or sponsored by Fujifilm, Kodak Alaris or any
-other manufacturer.
+PORTRA 400", "KODAK PROFESSIONAL PORTRA 800" and "KODAK TRI-X 400" — are the
+manufacturers' trademarks. They are used here in their ordinary sense, to say
+which product a file models. This project is not affiliated with, endorsed by or
+sponsored by Fujifilm, Kodak Alaris or any other manufacturer.
 
 ## What is not redistributed
 

@@ -402,6 +402,7 @@ mod tests {
             ("velvia_50", "velvia-50"),
             ("kodak_portra_400", "portra-400"),
             ("kodak_portra_800", "portra-800"),
+            ("kodak_trix400", "trix-400"),
         ] {
             let loaded = read(
                 films()

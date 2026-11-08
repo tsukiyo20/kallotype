@@ -703,6 +703,30 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         reference_time_min: 6.5000,
         reference_temp_c: 20.0000,
     },
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
+    FilmStock {
+        id: "kodak_trix400",
+        process: FilmProcess::Monochrome,
+        extra_cyan: None,
+        cl_layer: None,
+        label: "KODAK TRI-X 400 PROFESSIONAL (400TX), D-76 6 min 20 °C",
+        note: "Measured: the characteristic curve from printed page 12 (D-76 large tank, 20 C, 6 minutes), its toe as the base density, the MTF from printed page 10 fitted as one Gaussian of 4.06 um, the page-10 diffuse rms granularity of 17 turned into 0.1124 grains/um2, and the page-10 spectral sensitivity curve. The MTF and the sensitivity are the OLD 5063 emulsion's, which the sheet states in a note and asserts still applies. No dyes and no mask: a silver image has neither.",
+        channels: [
+            curve(0.0, 1.4862, 0.5464, -0.3957).with_corners(3.0, 8.0),
+            curve(0.0, 1.4862, 0.5464, -0.3957).with_corners(3.0, 8.0),
+            curve(0.0, 1.4862, 0.5464, -0.3957).with_corners(3.0, 8.0),
+        ],
+        base_density: [0.2618, 0.2618, 0.2618],
+        grains_per_um2: [0.1124, 0.1124, 0.1124],
+        layers: &crate::measured::KODAK_TRIX400_LAYERS,
+        dyes: &crate::measured::NO_DYES,
+        mask: &crate::measured::NO_MASK,
+        sigma_um: Some([4.0600, 4.0600, 4.0600]),
+        reference_time_min: 6.0000,
+        reference_temp_c: 20.0000,
+    },
 ];
 
 /// Every paper stock compiled into the binary.

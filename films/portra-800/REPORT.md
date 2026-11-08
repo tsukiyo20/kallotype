@@ -1,6 +1,6 @@
 # KODAK PROFESSIONAL PORTRA 800: an axis printed out of order
 
-*Kallotype film-data series, report 6 of 6. Version 1, 2026-11-08.
+*Kallotype film-data series, report 6 of 7. Version 1, 2026-11-08.
 Data: `portra-800.kalofilm` (6,358 bytes). Code: `films/tools/`.*
 
 ## Abstract
@@ -135,9 +135,9 @@ speeds landing on the same aim is the strongest evidence in the series that the
 
 **The check that still does not close.** At the nominal speed point
 (log H = −3.00, 1.26 decades below the reference exposure) the green record reads
-+0.056 where ISO 5800 asks for +0.10 — the same third of a stop PORTRA 400 showed,
-and for the same reason: the drawn curve reaches the speed point a little later
-than the rating says. It is the sheet's, it is consistent across the family, and
++0.056 where ISO 5800 asks for +0.10. The drawn curve reaches the speed point
+0.44 of a stop later than its rating, where PORTRA 400's sheet is 0.60 late, and
+for the same reason. It is the sheet's, it is consistent across the family, and
 it does not move the anchor, which is the reference exposure and not the speed
 point.
 

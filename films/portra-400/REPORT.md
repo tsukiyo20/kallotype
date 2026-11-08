@@ -1,6 +1,6 @@
 # KODAK PROFESSIONAL PORTRA 400: the negative that rises
 
-*Kallotype film-data series, report 5 of 6. Version 1, 2026-11-08.
+*Kallotype film-data series, report 5 of 7. Version 1, 2026-11-08.
 Data: `portra-400.kalofilm` (6,268 bytes). Code: `films/tools/`.*
 
 ## Abstract
@@ -195,7 +195,7 @@ not merely defensible; it lands on the photographic aim.
 **The check that does not close.** At the nominal ISO 400 speed point (log H =
 −2.70, 1.26 decades below the reference exposure) the green record reads +0.045
 where the standard asks for +0.10. The drawn curve therefore reaches the speed
-point about 0.13 decade later than its rating, roughly a third of a stop. This is
+point 0.18 decade — 0.60 of a stop — later than its rating. This is
 the sheet's and not the fit's — it is the same +0.044 the first pass through this
 page found. It does not move the anchor, because the anchor is the reference
 exposure and not the speed point; nor does it justify a speed correction, because
