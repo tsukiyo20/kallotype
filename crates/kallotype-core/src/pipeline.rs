@@ -642,8 +642,7 @@ pub fn render_pixels_finished(
     let mut log_e: Vec<[f64; 3]> = pixels.to_vec();
     // The fourth layer is a fourth plane, allocated only when the stock has
     // one: a stock without it renders through exactly the vectors it used to.
-    let mut extra: Option<Vec<f64>> =
-        prepared.has_extra_layer().then(|| vec![0.0; log_e.len()]);
+    let mut extra: Option<Vec<f64>> = prepared.has_extra_layer().then(|| vec![0.0; log_e.len()]);
     match extra.as_mut() {
         Some(plane) => each_pixel_pair(&mut log_e, plane, width, |_, _, pixel, slot| {
             let exposure = prepared.expose(*pixel);
@@ -762,6 +761,72 @@ mod tests {
             sensitivity: &STRAIGHT,
         });
         Box::leak(Box::new(stock))
+    }
+
+    /// The fourth layer's plane has to survive the effects path too: it is
+    /// filled beside the three-channel exposure, developed by the same curve
+    /// pass, and read back as the cyan dye's second density. A stock without a
+    /// fourth layer never allocates it, which is why this is the only test that
+    /// takes the pair path with a non-empty plane.
+    #[test]
+    fn a_four_layer_frame_renders_through_the_effects_path() {
+        let prepared = RenderParams {
+            film: four_layer([0.0, 1.0, 1.0, -0.5]),
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(prepared.has_extra_layer());
+
+        let mut pixels = vec![
+            [0.6, 0.3, 0.1],
+            [0.1, 0.2, 0.4],
+            [0.05, 0.05, 0.05],
+            [0.9, 0.9, 0.9],
+        ];
+        let halation = crate::halation::Halation::typical(6.0);
+        render_pixels_finished(
+            &mut pixels,
+            &prepared,
+            2,
+            2,
+            &Finishing {
+                emulsion: None,
+                halation: Some(&halation),
+                grain: None,
+                couplers: None,
+            },
+        );
+        assert!(
+            pixels
+                .iter()
+                .all(|pixel| pixel.iter().all(|value| value.is_finite() && *value >= 0.0))
+        );
+
+        // The same frame through the no-effects path: the two differ only by
+        // the halo, which is small but not nothing on a bright edge.
+        let mut plain = vec![
+            [0.6, 0.3, 0.1],
+            [0.1, 0.2, 0.4],
+            [0.05, 0.05, 0.05],
+            [0.9, 0.9, 0.9],
+        ];
+        render_pixels_finished(
+            &mut plain,
+            &prepared,
+            2,
+            2,
+            &Finishing {
+                emulsion: None,
+                halation: None,
+                grain: None,
+                couplers: None,
+            },
+        );
+        for (halated, plain) in pixels.iter().zip(&plain) {
+            for (left, right) in halated.iter().zip(plain) {
+                assert!((left - right).abs() < 0.5, "{halated:?} vs {plain:?}");
+            }
+        }
     }
 
     /// ADR 0017's compatibility promise: the eighteen stocks that were here
