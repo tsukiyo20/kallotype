@@ -110,33 +110,39 @@ pub fn check_model(table: &str, build: &str) -> Result<(), String> {
 
 /// Validate the numeric flags and look up both stocks.
 pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
-    if !(stock.dev_time.is_finite() && stock.dev_time > 0.0) {
-        return Err(CliError::InvalidNumber {
-            flag: "--dev",
-            value: stock.dev_time,
-            expected: "a positive number of minutes",
-        });
-    }
-    if !stock.temp.is_finite() {
-        return Err(CliError::InvalidNumber {
-            flag: "--temp",
-            value: stock.temp,
-            expected: "a finite temperature in degrees Celsius",
-        });
-    }
-
     let film = film_stock(&stock.film).ok_or_else(|| CliError::UnknownStock {
         kind: "film",
         id: stock.film.clone(),
     })?;
+    let dev_time = stock.dev_time.unwrap_or(film.reference_time_min);
+    let temp = stock.temp.unwrap_or(film.reference_temp_c);
+    if !(dev_time.is_finite() && dev_time > 0.0) {
+        return Err(CliError::InvalidNumber {
+            flag: "--dev",
+            value: dev_time,
+            expected: "a positive number of minutes",
+        });
+    }
+    if !temp.is_finite() {
+        return Err(CliError::InvalidNumber {
+            flag: "--temp",
+            value: temp,
+            expected: "a finite temperature in degrees Celsius",
+        });
+    }
+
     let paper = paper_stock(&stock.paper).ok_or_else(|| CliError::UnknownStock {
         kind: "paper",
         id: stock.paper.clone(),
     })?;
 
+    // The sheet's development is the reference and the default; `--dev` moves
+    // away from it rather than from a number this program invented.
     let development = DevelopmentParams {
-        time_min: stock.dev_time,
-        temp_c: stock.temp,
+        time_min: dev_time,
+        temp_c: temp,
+        reference_time_min: film.reference_time_min,
+        reference_temp_c: film.reference_temp_c,
         ..DevelopmentParams::default()
     };
 

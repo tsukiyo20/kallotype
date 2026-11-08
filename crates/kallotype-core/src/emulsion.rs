@@ -105,6 +105,17 @@ pub struct FilmStock {
     /// the render falls back to the compiled VISION3 fit — a borrow, and the
     /// stock's `note` says so.
     pub sigma_um: Option<[f64; 3]>,
+    /// The development the characteristic curve was measured at, in minutes.
+    ///
+    /// Every sheet draws its curves at a stated development, and the model's
+    /// default is not it: DELTA 400's curve is 8 minutes at 24 °C, most C-41
+    /// sheets are 3¼ at 38 °C, and the model's own default is 6.5 at 20 °C.
+    /// Rendering a stock at a development it was not measured at is a contrast
+    /// factor the user did not ask for, so the reference rides on the stock and
+    /// `--dev` is what moves away from it.
+    pub reference_time_min: f64,
+    /// The temperature the curve was measured at, in °C.
+    pub reference_temp_c: f64,
 }
 
 /// A paper stock: one curve, because paper only has to record what is on the
@@ -166,6 +177,8 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+        reference_time_min: 6.5,
+        reference_temp_c: 20.0,
     },
     FilmStock {
         id: "c41_standard",
@@ -187,6 +200,8 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+        reference_time_min: 6.5,
+        reference_temp_c: 20.0,
     },
     FilmStock {
         id: "c41_contrast",
@@ -204,6 +219,8 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+        reference_time_min: 6.5,
+        reference_temp_c: 20.0,
     },
     FilmStock {
         id: "bw_classic",
@@ -223,9 +240,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+        reference_time_min: 6.5,
+        reference_temp_c: 20.0,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -258,9 +280,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -293,9 +320,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.4500, 3.4100, 3.0800]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -328,9 +360,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.8700, 3.6700, 3.4900]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -363,9 +400,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -398,9 +440,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.8400, 3.0700, 3.4400]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -433,9 +480,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.7500, 3.7000, 3.0000]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -468,9 +520,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([3.3800, 3.3800, 3.3800]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -503,9 +560,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -538,9 +600,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: None,
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -573,9 +640,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.2500, 3.3400, 3.0900]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -608,9 +680,14 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.5300, 4.4100, 4.2600]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
     // A measurement may sit on a constant by chance — the 200T's blue layer
     // blurs to 3.14 µm — and the lint is about literals meant to be pi.
+    #[allow(clippy::approx_constant)]
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
@@ -643,7 +720,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::FILM_DYES,
         mask: &crate::measured::FILM_MASK,
         sigma_um: Some([4.2500, 3.4900, 3.1400]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
@@ -672,7 +754,12 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::PROVIA_100F_DYES,
         mask: &crate::measured::NO_MASK,
         sigma_um: Some([4.6800, 4.6800, 4.6800]),
+        reference_time_min: 6.5000,
+        reference_temp_c: 20.0000,
     },
+    // A measured value can land on a mathematical constant by coincidence; the
+    // lint is about literals that were meant to be that constant.
+    #[allow(clippy::approx_constant)]
     // A measured value can land on a mathematical constant by coincidence; the
     // lint is about literals that were meant to be that constant.
     #[allow(clippy::approx_constant)]
@@ -692,6 +779,8 @@ pub static FILM_STOCKS: &[FilmStock] = &[
         dyes: &crate::measured::NO_DYES,
         mask: &crate::measured::NO_MASK,
         sigma_um: None,
+        reference_time_min: 8.0000,
+        reference_temp_c: 24.0000,
     },
 ];
 
