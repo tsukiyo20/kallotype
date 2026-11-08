@@ -17,9 +17,12 @@ is specified in [FORMAT.md](FORMAT.md).
 ```
 provia-100f/
   provia-100f.kalofilm   the film: header, tables, digest
-  README.md              the report — how each number was read and fitted
+  README.md              landing page: what it is, headline numbers, links
+  REPORT.md              the research report: abstract, methods, results,
+                         uncertainty, references
   curves/                the digitised characteristic points, one CSV per layer
-  figures/               curves.png and spectra.png, regenerated from the above
+  figures/               01-curves, 02-residuals, 03-spectra — regenerated
+                         from the two above
 ```
 
 The points are published so the fit can be **recomputed rather than believed**:
