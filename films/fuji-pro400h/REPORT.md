@@ -1,14 +1,15 @@
 # FUJICOLOR PRO 400H: a four-layer colour negative, digitised and tested
 
-*Kallotype film-data series, report 2 of 11. Version 1, 2026-11-08.
-Data: `fuji-pro400h.kalofilm` (5,581 bytes). Code: `films/tools/`.*
+*Kallotype film-data series, report 2 of 11. Version 2, 2026-11-09.
+Data: `fuji-pro400h.kalofilm` (7,529 bytes). Code: `films/tools/`.*
 
 ## Abstract
 
 We digitise the photographic response of FUJICOLOR PRO 400H from the
 manufacturer's product information bulletin AF3-176E and release it as a single
-5.6 kB data file. The film's three characteristic curves are read at 294 points
-each and fitted with a four-parameter model at rms 0.022–0.025 density; its four
+7.5 kB data file. The film's three characteristic curves are read at 294 points
+each and fitted with the series' two-rate rising model at rms 0.0038–0.0045
+density; its four
 layer sensitivities, its orange mask and its modulation transfer function are
 digitised from the same page, and its grain is measured from scans of real film
 of the same emulsion. The report is as much about what failed as what worked: a
@@ -100,8 +101,32 @@ with `softplus(u) = ln(1 + e^u)`; the parameters are `d_min`, the mid-point
 fixed `t` and fixed corners the model is **linear in `d_min` and the
 amplitude**, so the fit is an exact least-squares solve over a grid of
 (toe, shoulder) pairs rather than a descent that may stop in a local minimum.
-`t` is chosen by residual and reported: for this film `t = 4.0` gives rms 0.030
-and `t = 2.0` gives 0.022, so the softer corner is the one published.
+`t` is chosen by residual and reported. Version 1 of this report published a
+single rate, `t = 2.0`, with rms 0.022–0.025; version 2 fits the two corners
+separately, as every other negative in the series now does.
+
+**The asymptote.** The version-1 fit also left the top of the curve unbounded,
+and it used that freedom to put the asymptote 0.10 of a density *above* the
+film's own highest drawn density — a film denser than anything the sheet drew.
+The series' `--rising` rule bounds it from below by the highest drawn point and
+`--asymptote-window 0.02` keeps it within 0.02 of it; the same rule bounds the
+base from the other end, and version 1's base densities sat 0.04 below the ink's
+floor. The refit puts the asymptotes at 1.827 / 2.274 / 2.500 against ink tops of
+1.814 / 2.258 / 2.484, and the bases at 0.179 / 0.688 / 0.956 against ink floors
+of 0.177 / 0.685 / 0.952.
+
+**The anchor, which version 1 got wrong twice.** The panel's axis is printed
+absolute — `Exposure [log H (lux-seconds)]`, −4.0 to +1.0 — and version 1 used it
+as though it were the model's relative frame, putting mid grey at the sheet's
+−0.745 instead of the −1.44 an 18 % grey card receives at ISO 400. But the sheet
+cannot be used for the shift either: its green record reaches D_min + 0.15, the
+ISO 5800 speed point, at −2.18, where a 400-speed film reaches it at −2.70. The
+page contradicts its own rating by 1.7 stops. Between two statements that
+disagree, version 2 anchors on the one the five Kodak sheets land on: mid grey
+where the green record sits 0.70 of a density above its base. The shift is
+**+0.2633**, and the resulting speed-point error is 0.87 of a stop — the same
+order as the Kodak sheets' 0.60–0.78. §6 states what the other two candidate
+shifts would imply.
 
 The sheet's densities are **absolute** — base and orange mask included — while
 the model's curve is the dye *above* base. Plotting the two together without an
@@ -157,17 +182,19 @@ plausible-looking alternative gives a different number.
 
 Table 1. Curve parameters and fit residuals, 294 points per layer.
 
-| layer | d_max | γ | log_e0 | t | rms | max residual | bias |
+| layer | d_max | γ | log_e0 | toe / shoulder | rms | max residual | bias |
 |---|---|---|---|---|---|---|---|
-| red / cyan | 1.7932 | 0.9559 | −0.9190 | 2.0 | 0.0224 | 0.0581 | −0.0000 |
-| green / magenta | 1.7188 | 0.8611 | −0.9790 | 2.0 | 0.0241 | 0.0590 | +0.0000 |
-| blue / yellow | 1.6615 | 0.8003 | −1.0190 | 2.0 | 0.0246 | 0.0659 | +0.0000 |
+| red / cyan | 1.6485 | 0.6106 | −0.7040 | 5 / 10 | 0.0038 | 0.0186 | −0.0000 |
+| green / magenta | 1.5854 | 0.5583 | −0.7540 | 8 / 10 | 0.0045 | 0.0182 | +0.0001 |
+| blue / yellow | 1.5446 | 0.5290 | −0.7740 | 8 / 16 | 0.0042 | 0.0097 | +0.0000 |
 
-Base densities (base + fog + mask) from the toe asymptotes: **0.1343 / 0.6358 /
-0.9020** for cyan / magenta / yellow. The three residuals are within 10 % of one
+Base densities (base + fog + mask) from the toe asymptotes: **0.1785 / 0.6882 /
+0.9556** for cyan / magenta / yellow. The three residuals are within 20 % of one
 another, which is what a single digitisation process reading three similar
 curves should give; a layer that fitted markedly better or worse would point at
-the panel rather than the model.
+the panel rather than the model. The maximum residuals sit at the left edge,
+where a 300 dpi raster's one-pixel noise is 0.002 and the curve's own toe is
+still being resolved.
 
 ![Figure 1](figures/01-curves.png)
 
@@ -179,9 +206,8 @@ subtracted, and the near-coincidence is the fit reported in Table 1.
 
 **Figure 2.** Residuals, point minus curve, for the three layers. They are
 structureless at the scale of the points (no drift, no end-lump), which says the
-four-parameter model is not missing a feature of the line work; a systematic
-bend here would mean the corner sharpness were wrong and would show as a
-correlated residual.
+model is not missing a feature of the line work; a systematic bend here would
+mean a corner rate were wrong and would show as a correlated residual.
 
 ### 4.2 Spectral sensitivities, mask and dyes
 
@@ -285,7 +311,7 @@ Table 4. Dominant error on each quantity, and what would reduce it.
 
 | quantity | value | dominant error | estimate | how to reduce |
 |---|---|---|---|---|
-| curve | per Table 1 | raster reading and fit residual | ±0.023 density | a densitometer on real film |
+| curve | per Table 1 | raster reading and fit residual | ±0.005 density | a densitometer on real film |
 | curve axis | log E | pixel pitch of the chart | ±0.014 decade | a higher-resolution sheet |
 | sensitivity peak | 470/555/610/520 nm | gridline calibration | ±2 nm | the same |
 | mask | per Table 2 | status filter bandwidth | ±0.05 density | a spectral densitometer |
@@ -293,6 +319,25 @@ Table 4. Dominant error on each quantity, and what would reduce it.
 | grain, cyan | 5.05 /µm² | patch-to-patch spread | ±30 % (IQR 3.9–6.8) | more frames, flatter subjects |
 | grain, yellow | placeholder | not measured | — | any frame that reaches it |
 | inhibitor gain and σ | placeholder | not measured | — | a non-uniform target on film |
+| anchor | +0.2633 decade | the sheet contradicts its own rating | ±0.25 decade | a printed reference exposure on the sheet |
+
+**The anchor is the open question.** Three shifts are defensible and they differ
+by half a decade:
+
+| shift | what it assumes | mid-grey green | speed-point error |
+|---|---|---|---|
+| +0.0000 | the sheet's absolute axis is the model's frame (version 1) | 0.95 | 0.57 stop slow |
+| **+0.2633** | mid grey where the green record sits 0.70 above base (**version 2**) | 0.70 | 0.87 stop slow |
+| +0.6953 | the sheet's absolute axis, with 18 % grey at log10(0.8/S)+1.26 | 0.55 | 1.7 stops fast |
+
+The third is the shift the Kodak sheets' own printed reference would imply, and
+the reason it is not used is the sheet's internal contradiction: at the exposure
+that formula puts mid grey at, this film's green record sits 0.55 above base,
+which is below every C-41 aim in the family, and its speed point would come out
+1.7 stops fast. The first is what version 1 did by not looking at the axis at
+all. The middle is the only one that reproduces the family's two measurements at
+once, and it is a convention rather than a reading — which is why it is stated
+here with its alternatives instead of being presented as a measurement.
 
 ## 7. Availability and reproduction
 

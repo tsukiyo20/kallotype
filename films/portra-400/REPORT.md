@@ -26,7 +26,7 @@ residual falls to **0.0072, 0.0029 and 0.0037** for red, green and blue.
 **The mask.** The sheet's dye panel prints two curves, a mid-scale neutral and
 D-min, and Kodak's still-film sheets never publish three dyes — which is why this
 film's dye shapes are borrowed. But D-min *is* the model's mask, so the stock now
-carries its own orange mask (**0.71** of a density at 380 nm, 0.20 at 650)
+carries its own orange mask (**0.70** of a density at 380 nm, 0.20 at 650)
 instead of the VISION3 spectrum that every other negative in the tree borrows —
 PRO 400H is the exception, and it got there first. Reading it exposed a
 disagreement between the two generators: the compiler gave a negative without a
@@ -224,16 +224,21 @@ that is the lower curve. It is read from 400 to 700 nm at 5 nm and put on the
 model's 380–730 nm grid by repeating the end values (the panel has no ink for the
 twenty nanometres at either end; the file says so).
 
+The curve was re-read on 2026-11-09, when the vector reader learned to sample
+cubic Béziers instead of their end points: the mask moved by at most 0.015 of a
+density (at 405 nm, where the drawn span begins) and by 0.003 rms, and the
+numbers below are the re-read ones.
+
 The result is a mask that differs from the borrowed VISION3 one by 0.059 of a
 density on average and by 0.121 at the largest:
 
 | nm | 400 | 450 | 500 | 550 | 600 | 650 | 700 |
 |---|---|---|---|---|---|---|---|
-| PORTRA 400 | 0.705 | 0.826 | 0.771 | 0.612 | 0.250 | 0.204 | 0.230 |
+| PORTRA 400 | 0.697 | 0.826 | 0.770 | 0.613 | 0.248 | 0.204 | 0.230 |
 | VISION3 500T | 0.800 | 0.857 | 0.717 | 0.524 | 0.295 | 0.187 | 0.134 |
 
 The film's own base is flatter through the green (0.826 against 0.857 at 450 nm,
-0.771 against 0.717 at 500) and higher at the red end (0.230 against 0.134 at
+0.770 against 0.717 at 500) and higher at the red end (0.230 against 0.134 at
 700). Which of the two is the better mask is not a question this report can
 answer: a mask is only right in combination with the dyes it was drawn for, and
 the model's dye set is VISION3's. What the measurement does say is that the two
@@ -306,7 +311,7 @@ sheet's own axis. Residuals are against the 128 points in `curves/`.
 |---|---|---|
 | sensitivity peaks | 410, 550, 650 nm | page 4, spectral sensitivity |
 | MTF | σ 4.45 / 3.42 / 3.11 µm | page 4, MTF, 5–60 cycles/mm |
-| mask | 0.705 at 400 nm → 0.204 at 650 → 0.230 at 700 | page 4, D-min |
+| mask | 0.697 at 400 nm → 0.204 at 650 → 0.230 at 700 | page 4, D-min |
 | dyes | borrowed | VISION3 500T digitisation |
 | grain | not claimed | page 3, Print Grain Index |
 

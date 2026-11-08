@@ -181,6 +181,11 @@ it agreed to the last stored digit.
 **Dye panel.** A mid-scale neutral and D-min, the family's usual pair, with
 "Minimum Density" beside the lower curve. D-min is the model's mask: read from
 400 to 700 nm at 5 nm and put on the 380–730 grid by repeating the end values.
+The curve was re-read on 2026-11-09, when the vector reader learned to sample
+cubic Béziers rather than their end points: the mask moved by at most **0.062**
+of a density at 430 nm — the yellow-mask bump, where the drawing's curvature is
+highest — and by 0.016 rms, and the numbers above are the re-read ones. This is
+the one place the old reading was materially wrong in the shipped films.
 The family's base densities now read 0.217/0.651/0.865 at ISO 400 and
 0.302/0.705/1.011 at ISO 800 — the mask thickens with speed, which is the one
 place the two sheets agree without being told to.
@@ -216,7 +221,7 @@ are against the 128 points in `curves/`.
 |---|---|---|
 | sensitivity peaks | 410, 545, 655 nm | page 4, spectral sensitivity |
 | MTF | σ 4.75 / 3.69 / 3.00 µm | page 5, 5–60 cycles/mm |
-| mask | 0.863 at 400 nm → 0.233 at 650 → 0.261 at 700 | page 5, D-min |
+| mask | 0.863 at 400 nm → 0.996 at 430 → 0.228 at 650 | page 5, D-min |
 | dyes | borrowed | VISION3 500T digitisation |
 | grain | not claimed | page 3, Print Grain Index |
 
