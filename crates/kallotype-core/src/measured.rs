@@ -398,6 +398,19 @@ pub(crate) const FUJI_PRO400H_LAYERS: [[f64; GRID_LEN]; 3] = [
     ],
 ];
 
+/// The spectral density of base, fog and the orange mask, from AF3-176E page 8.
+/// Generated from fuji_pro400h.toml; edit the stock file, not this table.
+pub(crate) const FUJI_PRO400H_MASK: [f64; GRID_LEN] = [
+    1.36300, 1.36300, 1.36300, 1.36300, 1.36300, 1.35470, 1.64780, 1.64450, 1.55840, 1.46560,
+    1.37280, 1.28000, 1.18720, 1.09440, 1.01560, 0.99930, 0.98480, 0.96780, 0.95090, 0.93090,
+    0.91240, 0.89390, 0.87390, 0.85390, 0.84000, 0.82540, 0.81460, 0.80150, 0.78950, 0.77840,
+    0.76540, 0.75230, 0.73920, 0.72430, 0.70870, 0.70000, 0.69060, 0.68200, 0.66870, 0.63500,
+    0.58170, 0.51750, 0.44640, 0.38010, 0.32470, 0.28160, 0.25240, 0.23640, 0.23110, 0.22810,
+    0.22810, 0.22810, 0.22810, 0.22810, 0.22810, 0.22690, 0.22300, 0.22190, 0.21830, 0.21440,
+    0.21270, 0.20970, 0.20590, 0.20350, 0.19930, 0.19740, 0.19430, 0.19290, 0.28480, 0.28480,
+    0.28480,
+];
+
 /// ILFORD DELTA 400 PROFESSIONAL, ID-11 8 min 24 °C layer sensitivities, R/G/B order, from d400_a page 6.
 /// Generated from ilford_delta400.toml; edit the stock file, not this table.
 #[allow(clippy::approx_constant)] // measurements: a sample may sit near pi/4
