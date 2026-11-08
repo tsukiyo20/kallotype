@@ -67,6 +67,13 @@ pub struct FilmStock {
     pub id: &'static str,
     /// The chemistry, and therefore which stages the render runs.
     pub process: FilmProcess,
+    /// A second emulsion feeding the cyan dye, if the film has one.
+    ///
+    /// ADR 0017: a dye may be formed by more than one emulsion, and the
+    /// four-layer negatives are the reason. `None` — every stock before those —
+    /// is exactly the three-layer model. The pipeline does not read this yet;
+    /// wiring it into the two exposure paths is the next commit.
+    pub extra_cyan: Option<crate::dye::Emulsion>,
     /// Human-readable name.
     pub label: &'static str,
     /// What this stock is, and what it is not.
@@ -151,6 +158,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "vision3_500t",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK VISION3 500T 5219/7219, ECN-2",
         note: "Measured. Curves digitised from data sheet H-1-5219 page 3, spectra \
                from page 4; see the notes in kallotype-private for each extraction.",
@@ -183,6 +191,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "c41_standard",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "Colour negative, standard development",
         note: "Placeholder C-41 curve: moderate contrast, even layer speeds.",
         channels: [
@@ -206,6 +215,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "c41_contrast",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "Colour negative, high-contrast",
         note: "Placeholder C-41 curve with a steeper shoulder and stronger layer separation.",
         channels: [
@@ -225,6 +235,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "bw_classic",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "Black and white, classic",
         note: "Placeholder B&W curve: identical layers, longer straight line.",
         channels: [
@@ -249,6 +260,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "fuji_nph400",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "FUJICOLOR NPH 400 PROFESSIONAL (NPH)",
         note: "Measured, except for the dyes and the mask. Curves from data sheet AF3-865E page 6, digitised 2026-11-07; layer sensitivities from figure 19 on the same page. Figure 21 publishes the density of a mid-scale neutral subject rather than the three dyes separately, so the dye shapes are borrowed from the VISION3 digitisation and the mask with them — which is why this stock is not yet as measured as it looks.",
         channels: [
@@ -271,6 +283,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "kodak_portra_400",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK PROFESSIONAL PORTRA 400",
         note: "Generated from kodak_portra_400.toml; borrowed: spectra.dyes; grain is the compiled placeholder, not a measurement",
         channels: [
@@ -293,6 +306,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "kodak_ektar_100",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK PROFESSIONAL EKTAR 100",
         note: "Generated from kodak_ektar_100.toml; borrowed: spectra.dyes; grain is the compiled placeholder, not a measurement",
         channels: [
@@ -315,6 +329,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "kodak_gold200",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK GOLD 200",
         note: "Generated from kodak_gold200.toml; borrowed: spectra.dyes, emulsion.sigma_um; grain is the compiled placeholder, not a measurement",
         channels: [
@@ -337,6 +352,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "kodak_portra_160",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK PROFESSIONAL PORTRA 160",
         note: "Generated from kodak_portra_160.toml; borrowed: spectra.dyes; grain is the compiled placeholder, not a measurement",
         channels: [
@@ -359,6 +375,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "kodak_portra_800",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK PROFESSIONAL PORTRA 800",
         note: "Generated from kodak_portra_800.toml; borrowed: spectra.dyes; grain is the compiled placeholder, not a measurement",
         channels: [
@@ -381,6 +398,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "fuji_c200",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "FUJICOLOR C200",
         note: "Measured, except for the dyes and the mask. Every chart is a 1-bit mask: characteristic curves, sensitivity, MTF and the dye panel are artwork rather than renders. Two traps on the page. The sensitivity chart is five images — two raster strips with the seam through the middle of the plot, and the decade line the curves stand on — and is reassembled from their page coordinates before it is read. And the characteristic curves name their layers in white lozenges painted over the curves, so the columns are paired by order rather than followed by continuity: a characteristic plot's three layers differ in speed, not shape. The MTF panel publishes one curve for the film, which is why all three layers carry the same blur.",
         channels: [
@@ -403,6 +421,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "fuji200",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "FUJIFILM 200 Color Negative Film",
         note: "Measured, except for the dyes, the mask and the blur. Curves and layer sensitivities are this sheet's; figure 16 prints a mid-scale neutral rather than three dyes, and the sheet carries no MTF panel and no granularity figure, so the dye shapes, the mask and the blur are the compiled ones.",
         channels: [
@@ -425,6 +444,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "fuji400",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "FUJIFILM 400 Color Negative Film",
         note: "Measured, except for the dyes, the mask and the blur. Curves and layer sensitivities are this sheet's; figure 16 prints a mid-scale neutral rather than three dyes, and the sheet carries no MTF panel and no granularity figure, so the dye shapes, the mask and the blur are the compiled ones.",
         channels: [
@@ -447,6 +467,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "vision3_250d",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK VISION3 250D 5207/7207, ECN-2",
         note: "Measured: curves, base density, modulation transfer and the three layer sensitivities, each from its own raster on H-1-5207. The dyes were digitised too and compared against the 500T's compiled tables — the model carries one dye set, and this sheet's agrees with it to 0.12 density and 5 nm, which is why the shared set is kept rather than duplicated. Borrowed: the grain density (this sheet's granularity chart defeats the dot tracker; see the header) and the mask, which is the 500T's minimum-density spectrum.",
         channels: [
@@ -469,6 +490,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "vision3_50d",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK VISION3 50D 5203/7203, ECN-2",
         note: "Measured: curves, base density, modulation transfer and the three layer sensitivities. The sheet's red characteristic curve is dotted and the tracker reads it as such. Its sensitivity chart prints its tick labels in the wrong place — the ticks and rules agree on a 0-4 axis, the printed numbers do not — and the axis is taken from the ticks (see the header). Borrowed: the grain density, which this sheet's granularity chart does not give up to the dot tracker, and the mask, which is the 500T's minimum-density spectrum.",
         channels: [
@@ -491,6 +513,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "vision3_200t",
         process: FilmProcess::Negative,
+        extra_cyan: None,
         label: "KODAK VISION3 200T 5213/7213, ECN-2",
         note: "Measured: curves, base density, modulation transfer and the three layer sensitivities. Two traps on the page: the dye panel's process note is printed inside the plot and has to be masked, and the sensitivity chart's cyan curve starts at a dip, so its tails are clamped rather than extrapolated. Borrowed: the grain density, which this sheet's granularity chart does not give up, and the mask, which is the 500T's minimum-density spectrum.",
         channels: [
@@ -513,6 +536,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "provia_100f",
         process: FilmProcess::Reversal,
+        extra_cyan: None,
         label: "FUJICHROME PROVIA 100F (RDP III), E-6",
         note: "Measured: the characteristic curves, the three dyes, the layer sensitivities and the modulation transfer. The sensitivity panel is the only one in the archive drawn as vector paths rather than a raster, and was read from its Bezier segments. The three characteristic curves are separated ink plates, so red is complete and the green and blue layers carry its shape with their own measured offsets — residuals 0.009 and 0.051. The MTF panel publishes one curve for the film and all three layers carry it. The grain is derived from the sheet's diffuse rms granularity value of 8 through the same inversion the C200 stock used, not from a curve.",
         channels: [
@@ -535,6 +559,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "ilford_delta400",
         process: FilmProcess::Monochrome,
+        extra_cyan: None,
         label: "ILFORD DELTA 400 PROFESSIONAL, ID-11 8 min 24 °C",
         note: "Measured: the characteristic curve from page 6 and its toe as the base density. The sheet publishes no spectral sensitivity chart, so the layer response is flat across the visible — the definition of panchromatic and the only claim the sheet supports, not a measurement. No MTF panel and no granularity figure: the blur is not modelled and the grain is the compiled placeholder, averaged across the three channels so a silver image stays neutral.",
         channels: [
@@ -557,6 +582,7 @@ pub static FILM_STOCKS: &[FilmStock] = &[
     FilmStock {
         id: "kodak_tmax400",
         process: FilmProcess::Monochrome,
+        extra_cyan: None,
         label: "KODAK PROFESSIONAL T-MAX 400, D-76 8 min 20 °C",
         note: "Measured: the characteristic curve from page 9 (D-76, eight minutes), its toe as the base density, the page-11 MTF as one Gaussian of 2.79 um shared by the three channels, the page-8 rms granularity of 10 turned into 0.61 grains/um2, and the page-11 spectral sensitivity curve. The shoulder of the curve is outside the frame the sheet draws; d_max is the fit's continuation and the only number here that is not ink. Transition 2.5 rather than the default 4.0: this toe is longer than the ILFORD one, and at 4.0 the fit put the asymptote above the lowest measured point, which the model cannot represent.",
         channels: [
