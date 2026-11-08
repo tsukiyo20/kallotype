@@ -38,19 +38,16 @@ lint:
 lint-raw:
     cd crates/kallotype-raw && cargo clippy --all-targets -- -D warnings
 
-# Regenerate-and-compare the compiled stock table against the stock files.
+# Repack every stock file in a scratch directory and compare it with the
+# `.kalofilm` the build reads. The crate no longer carries the film data: the
+# films are files, and a stock file that has moved since its film was packed is
+# a render that disagrees with the record.
 #
 # Local only: the stock files live in `private/`, which is not published, so CI
-# cannot run this. It fails when a stock file and `emulsion.rs` disagree.
-#
-# Every film stock must be listed, and the list is a glob on purpose: written
-# out by hand it had drifted three files short (E100, VELVIA 50 and PRO 400H),
-# so a check that looked comprehensive skipped a fifth of the table.
-# `portra_endura.toml` is a paper, not a film, and has no `FilmStock` block.
+# cannot run this.
 stocks:
     PYTHONPATH=private/.pylib313 /opt/homebrew/bin/python3.13 \
-        private/scripts/compile_stocks.py --check \
-        $(ls private/stocks/*.toml | grep -v portra_endura)
+        private/scripts/check_film_files.py
 
 # Run the whole test suite.
 test:
