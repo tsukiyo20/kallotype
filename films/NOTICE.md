@@ -1,15 +1,17 @@
 # NOTICE
 
 Film and paper names — "FUJICHROME PROVIA 100F", "FUJICHROME VELVIA 50",
-"FUJICOLOR PRO 400H", "KODAK PROFESSIONAL EKTACHROME E100", "KODAK PROFESSIONAL
+"FUJICOLOR PRO 400H", "FUJICOLOR NPH 400", "FUJICOLOR C200", "FUJIFILM 200",
+"FUJIFILM 400", "KODAK PROFESSIONAL EKTACHROME E100", "KODAK PROFESSIONAL
 EKTAR 100", "KODAK PROFESSIONAL PORTRA 160", "KODAK PROFESSIONAL PORTRA 400",
 "KODAK PROFESSIONAL PORTRA 800", "KODAK GOLD 200", "KODAK TRI-X 400", "KODAK
-PROFESSIONAL T-MAX 400", "KODAK VISION3 50D", "KODAK VISION3 200T", "KODAK
-VISION3 250D", "ILFORD HP5 PLUS" and "ILFORD DELTA 400" — are the
-manufacturers' trademarks. They are used here in their ordinary sense, to say
-which product a file models. This project is not affiliated with, endorsed by or
-sponsored by Fujifilm, Kodak Alaris, HARMAN technology or any other
-manufacturer.
+PROFESSIONAL T-MAX 400", "KODAK VISION3 500T", "KODAK VISION3 50D", "KODAK
+VISION3 200T", "KODAK VISION3 250D", "ILFORD HP5 PLUS", "ILFORD DELTA 400",
+"KODAK PROFESSIONAL PORTRA ENDURA", "KODAK PROFESSIONAL SUPRA ENDURA" and
+"KODAK PROFESSIONAL ENDURA Premier Metallic" — are the manufacturers'
+trademarks. They are used here in their ordinary sense, to say which product a
+file models. This project is not affiliated with, endorsed by or sponsored by
+Fujifilm, Kodak Alaris, HARMAN technology or any other manufacturer.
 
 ## What is not redistributed
 

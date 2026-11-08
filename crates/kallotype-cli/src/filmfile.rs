@@ -412,6 +412,11 @@ mod tests {
             ("vision3_50d", "vision3-50d"),
             ("vision3_200t", "vision3-200t"),
             ("vision3_250d", "vision3-250d"),
+            ("vision3_500t", "vision3-500t"),
+            ("fuji_nph400", "fuji-nph400"),
+            ("fuji_c200", "fuji-c200"),
+            ("fuji200", "fuji-200"),
+            ("fuji400", "fuji-400"),
         ] {
             let loaded = read(
                 films()

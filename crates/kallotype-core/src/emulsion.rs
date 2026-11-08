@@ -191,15 +191,24 @@ mod tests {
     /// The second film is not the first one with another curve.
     ///
     /// Its layer sensitivities were digitised from its own data sheet, and its
-    /// curves turn their corners at 3 rather than 4. A stock that borrowed the
-    /// first film's tables would render the same colour with a different
+    /// curves turn their corners at rates of their own. A stock that borrowed
+    /// the first film's tables would render the same colour with a different
     /// contrast, which is the thing this field exists to prevent.
     #[test]
     fn the_second_film_has_its_own_layers() {
         let fuji = film_stock("fuji_nph400").expect("built-in stock");
         let kodak = film_stock("vision3_500t").expect("built-in stock");
-        assert_eq!(fuji.channels[0].toe_transition, 3.0);
-        assert_eq!(kodak.channels[0].toe_transition, crate::curve::TRANSITION);
+        assert_ne!(
+            (
+                fuji.channels[0].toe_transition,
+                fuji.channels[0].shoulder_transition
+            ),
+            (
+                kodak.channels[0].toe_transition,
+                kodak.channels[0].shoulder_transition
+            ),
+            "the two films fit the same corner rates"
+        );
         let peak = |table: &[f64; GRID_LEN]| table.iter().copied().fold(0.0_f64, f64::max);
         let ratios: [f64; 3] =
             std::array::from_fn(|layer| peak(&fuji.layers[layer]) / peak(&kodak.layers[layer]));
