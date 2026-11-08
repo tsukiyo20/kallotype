@@ -1,6 +1,6 @@
 # Kalofilm — film stocks as data
 
-Eight films, each measured from its manufacturer's data sheet and from real
+Eleven films, each measured from its manufacturer's data sheet and from real
 film, packed into one file per film.
 
 | film | process | paper it is printed on | what is measured |
@@ -13,9 +13,12 @@ film, packed into one file per film.
 | [KODAK PROFESSIONAL PORTRA 800](portra-800/) | C-41 negative | RA-4 paper | curves, layer sensitivities, orange mask, MTF; dyes borrowed, grain not claimed |
 | [KODAK TRI-X 400](trix-400/) | B&W negative | RA-4 paper | curve, grain, MTF; the sensitivity and MTF are the old 5063 emulsion's, which the sheet states |
 | [ILFORD HP5 PLUS](hp5-plus/) | B&W negative | RA-4 paper | curve only — no sensitivity chart, no MTF, no granularity figure in the sheet |
+| [KODAK PROFESSIONAL EKTAR 100](ektar-100/) | C-41 negative | RA-4 paper | curves, layer sensitivities, orange mask, MTF; dyes borrowed, grain not claimed |
+| [KODAK PROFESSIONAL PORTRA 160](portra-160/) | C-41 negative | RA-4 paper | curves, layer sensitivities, orange mask, MTF; dyes borrowed, grain not claimed |
+| [KODAK GOLD 200](gold-200/) | C-41 negative | RA-4 paper | curves, layer sensitivities, orange mask; dyes and blur borrowed, grain not claimed |
 
 A `.kalofilm` file is the film: a header that says where every number came from,
-the spectra as binary tables, and a SHA-256 over the lot. It is 5–6 kB. The format
+the spectra as binary tables, and a SHA-256 over the lot. It is about 6 kB. The format
 is specified in [FORMAT.md](FORMAT.md).
 
 ## What a film directory holds
