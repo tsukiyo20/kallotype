@@ -59,17 +59,21 @@ chore(licence): the code goes dual MIT/Apache-2.0
 
 One idea per commit. The subject says what changed; the body says why.
 
+## Skills
+
+`.agents/skills/` holds 25 skills vendored from `flutter/agent-plugins` and
+`dart-lang/skills`, in the `<name>/SKILL.md` layout. Its `README.md` has the
+provenance and the licences. They are not written here and are not modified
+here; a fix belongs upstream.
+
 ## With a Dart MCP server connected
 
-`.mcp.json` points any MCP-capable client at `dart mcp-server`, which exposes
-the analyzer, the test runner, the widget inspector, hot reload and the running
-app's logs.
+`dart mcp-server` ships with the SDK and needs no installation. Point your
+client at it if you want the analyzer, the test runner, the widget inspector and
+hot reload as tools; the configuration is per machine and is not committed.
 
 After editing a `.dart` file under `app/lib/`, apply the official rule: call
 `hot_reload` for widget changes, `hot_restart` when `main()`, `initState` or
 global state changed, and skip both for edits outside `lib/` and for
 comment-only changes. Adapted from
 [`flutter/agent-plugins`](https://github.com/flutter/agent-plugins/blob/main/rules/flutter-hot-reload.md).
-
-Skills from `flutter/agent-plugins` and `dart-lang/skills` are **not** vendored
-here; install them with `npx skills add …` if your agent reads that format.
