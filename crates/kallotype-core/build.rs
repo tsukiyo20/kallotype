@@ -109,7 +109,6 @@ fn main() {
     for (index, film) in films.iter().enumerate() {
         film.emit_stock(&mut code, index);
     }
-    code.push_str(PLACEHOLDERS);
     code.push_str("];\n");
 
     for (index, paper) in papers.iter().enumerate() {
@@ -457,35 +456,6 @@ impl Film {
         writeln!(code, "    }},").unwrap();
     }
 }
-
-/// Three invented stocks, not measurements: they exist so a render has a
-/// neutral, a contrasty and a silver default to start from, and their numbers
-/// are constants a programmer chose. They are not data, so they live here
-/// rather than in a `.kalofilm`; their spectra are borrowed from the VISION3
-/// digitisation and their notes say so.
-const PLACEHOLDERS: &str = r#"
-    FilmStock {
-        id: "c41_contrast",
-        process: FilmProcess::Negative,
-        extra_cyan: None,
-        cl_layer: None,
-        label: "Colour negative, high-contrast",
-        note: "Placeholder C-41 curve with a steeper shoulder and stronger layer separation.",
-        channels: [
-            curve(0.0, 2.25, 0.70, -0.72),
-            curve(0.0, 2.28, 0.73, -0.73),
-            curve(0.0, 2.31, 0.76, -0.74),
-        ],
-        base_density: [0.20, 0.20, 0.20],
-        grains_per_um2: [3.6, 3.6, 3.6],
-        layers: &LAYERS_VISION3_500T,
-        dyes: &DYES_VISION3_500T,
-        mask: &MASK_VISION3_500T,
-        sigma_um: None,
-        reference_time_min: 6.5,
-        reference_temp_c: 20.0,
-    },
-"#;
 
 fn emit_matrix(code: &mut String, name: &str, rows: &[Vec<f64>]) {
     writeln!(code, "#[allow(clippy::approx_constant)]").unwrap();

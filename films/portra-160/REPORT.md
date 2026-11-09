@@ -1,6 +1,6 @@
 # KODAK PROFESSIONAL PORTRA 160: the anchor that does not follow the formula
 
-*Kallotype film-data series, report 10 of 23. Version 1, 2026-11-09.
+*Kallotype film-data series, report 10 of 24. Version 1, 2026-11-09.
 Data: `portra-160.kalofilm` (6,198 bytes). Code: `films/tools/`.*
 
 ## Abstract

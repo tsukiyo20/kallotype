@@ -1,6 +1,6 @@
 # FUJIFILM 200: the coarse chart
 
-*Kallotype film-data series, report 20 of 23. Version 1, 2026-11-09.
+*Kallotype film-data series, report 20 of 24. Version 1, 2026-11-09.
 Data: `fuji-200.kalofilm` (5,499 bytes). Code: `films/tools/`.*
 
 ## Abstract

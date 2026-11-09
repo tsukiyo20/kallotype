@@ -14,7 +14,7 @@ developed* as a first-class parameter, not as a separate preset.
 
 ## Status
 
-**Twenty-three films and six papers, every number traced to a data sheet.** A
+**Twenty-four films and six papers, every number traced to a data sheet.** A
 film is a `.kalofilm` file: the curves, the layer sensitivities, the dyes, the
 orange mask, the MTF and the grain its sheet publishes, plus a `[measured]`
 table that says field by field what is measured, borrowed or absent. A paper is
@@ -121,8 +121,8 @@ LGPL-2.1 obligations for that part. If you would rather not, decode elsewhere
 
 ## What is published, and what is not
 
-This repository is the **code**, plus the data it renders: twenty-three film
-stocks in [`films/`](films/) — three colour reversals, fifteen colour negatives
+This repository is the **code**, plus the data it renders: twenty-four film
+stocks in [`films/`](films/) — three colour reversals, sixteen colour negatives
 and five black-and-white negatives — each digitised from its manufacturer's data
 sheet and each carrying a field-by-field account of what was measured and what
 was borrowed, and six measured papers in [`data/papers/`](data/papers/).
