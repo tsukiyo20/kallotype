@@ -49,6 +49,16 @@ stocks:
     PYTHONPATH=private/.pylib313 /opt/homebrew/bin/python3.13 \
         private/scripts/check_film_files.py
 
+# Render a known chart through every stock and check the properties that must
+# hold whatever the film is: print balance, monotone ramp, contrast against
+# development, and the scalar/spectral print divergence.
+#
+# Needs the built binary; `just run` builds it. Exit status is 1 if a hard
+# check fails, so it works as a regression test.
+eval:
+    cargo build --release --quiet --bin kalo
+    PYTHONPATH=private/.pylib313 /opt/homebrew/bin/python3.13 tools/eval.py
+
 # Run the whole test suite.
 test:
     cargo test --workspace --all-features

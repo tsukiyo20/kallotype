@@ -221,6 +221,27 @@ A few things are worth calling out:
    and needs a single parameter — the developed grain density — instead of a
    curve of `σ` against density fitted by hand.
 
+## Checking the model
+
+Three layers, cheapest first.
+
+**The data.** `kalo stock check <file>` re-derives every curve from the points
+the file carries and refuses a mismatch; the film reports quote the residuals,
+and `films/tools/kalofilm.py --check` verifies a file's digest and tables
+without the renderer.
+
+**The pipeline, without reference photographs.** `tools/eval.py` renders a known
+grey ramp through every stock and measures what must hold whatever the film is:
+an 18 per cent grey patch coming back at 18 per cent and neutral to the byte,
+a monotone ramp, contrast rising with development, and how far the scalar and
+the spectral print paths drift apart. `just eval` runs it.
+
+**Against real film.** That needs paired exposures of the same scene — a
+ColorChecker and a grey card shot on the stock, scanned — and is not something
+the repository can do on its own. The numbers to compute are the ones the
+industry uses: density against exposure, ΔE2000 on the patches, the noise power
+spectrum, and an MTF from a slanted edge.
+
 ## What this is not
 
 - Not a LUT pack, and not a "film look" filter that happens to be called a

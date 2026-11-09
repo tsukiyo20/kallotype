@@ -156,7 +156,12 @@ impl RenderParams {
         // Two ways to describe what reaches the paper. The scalar one treats each
         // density as that channel's light loss; the spectral one integrates the
         // dyes' absorption bands against the paper's layer sensitivities.
-        let print = self.spectral_print.then(|| {
+        //
+        // A silver image has no dyes to integrate. Asking for the spectral print
+        // on a monochrome film would leave a constant — the image would vanish
+        // into a flat grey — so the scalar print is what those films get, and
+        // `is_spectral_print` says so.
+        let print = (self.spectral_print && !monochrome).then(|| {
             PrintContext::measured_with(
                 density_mid,
                 self.film.dyes,
@@ -1215,6 +1220,25 @@ mod tests {
             ..DevelopmentParams::default()
         }));
         assert!(pulled < normal, "normal {normal}, pulled {pulled}");
+    }
+
+    /// A silver image has no dyes. Asking for the spectral print on a
+    /// monochrome film would integrate nothing and print a flat grey, so the
+    /// scalar print is what the stock gets — and `is_spectral_print` agrees,
+    /// because the CLI's summary reads it.
+    #[test]
+    fn a_silver_film_does_not_print_spectrally() {
+        let prepared = RenderParams {
+            film: crate::emulsion::film_stock("kodak_trix400").expect("the silver stock"),
+            spectral: true,
+            spectral_print: true,
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(!prepared.is_spectral_print());
+        let out = prepared.render_pixel([0.18, 0.18, 0.18]);
+        assert!(out.iter().all(|channel| channel.is_finite()));
+        assert!(out[1] > 0.02 && out[1] < 0.6, "mid grey at {}", out[1]);
     }
 
     #[test]
