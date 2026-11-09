@@ -1,0 +1,25 @@
+[package]
+name = "kallotype-view"
+description = "The model, arranged into the shapes an interface draws"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords = ["film", "simulation", "interface", "rendering"]
+categories = ["graphics", "simulation"]
+
+[dependencies]
+kallotype-core = { path = "../kallotype-core", version = "0.1.0" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[[bin]]
+name = "kaloview"
+path = "src/main.rs"
+
+[lints]
+workspace = true

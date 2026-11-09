@@ -98,5 +98,13 @@ bench *args:
 deny:
     cargo deny check
 
+# Write the strip the app draws, from the model.
+#
+# The result is committed as an app asset so that building the interface needs
+# no Rust toolchain. Regenerate it; never edit it.
+# Example: just view vision3_500t app/assets/film_strip.json
+view *args:
+    cargo run --quiet -p kallotype-view --bin kaloview -- {{args}}
+
 clean:
     cargo clean
