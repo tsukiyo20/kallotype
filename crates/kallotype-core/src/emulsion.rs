@@ -480,7 +480,7 @@ mod tests {
     #[test]
     fn lookups_work() {
         assert!(film_stock("c41_standard").is_some());
-        assert!(paper_stock("c41_paper").is_some());
+        assert!(paper_stock("fuji_crystal_archive_pearl").is_some());
         assert!(film_stock("nope").is_none());
     }
 

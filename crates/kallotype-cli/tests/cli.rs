@@ -62,7 +62,7 @@ fn stocks_lists_every_builtin() {
         "portra_endura",
         "supra_endura",
         "endura_premier_metallic",
-        "c41_paper",
+        "fuji_crystal_archive_pearl",
         "bw_paper",
     ] {
         assert!(text.contains(id), "{id} missing from:\n{text}");

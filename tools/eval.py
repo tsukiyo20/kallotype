@@ -128,7 +128,7 @@ def main() -> int:
             # A reversal is its own picture: --paper does nothing, and the
             # print-balance invariant does not apply to it.
             other_paper = render(
-                options.kalo, chart, work / "e.png", "--film", film, "--paper", "c41_paper"
+                options.kalo, chart, work / "e.png", "--film", film, "--paper", "supra_endura"
             )
             reversal = np.array_equal(base, other_paper)
             mid = base[MID]

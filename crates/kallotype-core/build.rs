@@ -26,19 +26,10 @@ const GRID_LEN: usize = 71;
 const MAGIC: &[u8; 8] = b"KALOFILM";
 const PAPER_MAGIC: &[u8; 8] = b"KALOPAPR";
 
-/// Two invented papers. Like the placeholder films they are constants a
-/// programmer chose, not a digitisation; their spectra are the metallic
-/// paper's, which the notes say.
+/// The one invented paper left. Like the placeholder films it is a constant a
+/// programmer chose, not a digitisation; its spectra are the metallic paper's,
+/// which the note says.
 const PAPER_PLACEHOLDERS: &str = r#"
-    PaperStock {
-        id: "c41_paper",
-        label: "Colour paper, RA-4",
-        note: "Placeholder RA-4 paper: low d_min, short contrasty curve.",
-        channel: curve(0.06, 2.05, 2.40, 0.0),
-        target_mid_reflectance: 0.18,
-        dyes: &DYES_ENDURA_PREMIER_METALLIC,
-        layers: &LAYERS_ENDURA_PREMIER_METALLIC,
-    },
     PaperStock {
         id: "bw_paper",
         label: "Fibre-based B&W paper",

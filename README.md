@@ -125,7 +125,8 @@ This repository is the **code**, plus the data it renders: twenty-one film
 stocks in [`films/`](films/) — three colour reversals, fourteen colour negatives
 and four black-and-white negatives — each digitised from its manufacturer's data
 sheet and each carrying a field-by-field account of what was measured and what
-was borrowed, and five papers in [`data/papers/`](data/papers/).
+was borrowed, and four measured papers in [`data/papers/`](data/papers/), the
+fifth still a placeholder.
 
 The rest of the datasets the model was developed against, and the research notes
 that record the reasoning, stay local: they are the product of a separate
