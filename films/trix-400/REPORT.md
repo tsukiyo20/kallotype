@@ -1,6 +1,6 @@
 # KODAK TRI-X 400: one record, and two curves that are not its own
 
-*Kallotype film-data series, report 7 of 22. Version 1, 2026-11-08.
+*Kallotype film-data series, report 7 of 23. Version 1, 2026-11-08.
 Data: `trix-400.kalofilm` (5,527 bytes). Code: `films/tools/`.*
 
 ## Abstract
