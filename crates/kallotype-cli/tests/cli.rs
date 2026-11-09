@@ -57,7 +57,7 @@ fn stocks_lists_every_builtin() {
     let text = stdout(&output);
     for id in [
         "kodak_ultramax400",
-        "c41_contrast",
+        "fuji_superia_xtra400",
         "kodak_tmax100",
         "portra_endura",
         "supra_endura",

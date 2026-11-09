@@ -1,6 +1,6 @@
 # KODAK VISION3 50D: the dotted curve and the axis that disagrees with its labels
 
-*Kallotype film-data series, report 14 of 23. Version 1, 2026-11-09.
+*Kallotype film-data series, report 14 of 24. Version 1, 2026-11-09.
 Data: `vision3-50d.kalofilm` (5,737 bytes). Code: `films/tools/`.*
 
 ## Abstract

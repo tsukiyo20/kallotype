@@ -1,6 +1,6 @@
 # KODAK T-MAX 100: the slow panchromatic film
 
-*Kallotype film-data series, report 23 of 23. Version 1, 2026-11-10.
+*Kallotype film-data series, report 23 of 24. Version 1, 2026-11-10.
 Data: `kodak-tmax-100.kalofilm` (5,564 bytes). Code: `films/tools/`.*
 
 ## Abstract
