@@ -121,10 +121,10 @@ platform's own face. When one is chosen it goes there and nowhere else.
 
 ## What is deliberately not here
 
-- **The model.** `lib/film/film.dart` contains a small stand-in for the Rust
-  core 鈥?enough of the H&D curve to draw a wedge that proves the argument.
-  It is labelled, it is a placeholder, and it must not grow. The real numbers
-  come from `kallotype-view`.
+- **The model.** The wedge on the strip is not drawn here. It is read from
+  `assets/film_strip.json`, which `just view` writes from `kallotype-view`, so
+  the five frames are VISION3 500T developed for 3, 6, 9, 12 and 15 minutes and
+  not a shape invented to look like one. Regenerate it; never edit it.
 - **Colour management.** The screen is not tagged, nothing is P3, and the
   light table is therefore not yet truthful. This is the next hard thing.
 - **Text input.** `EditableText`, selection, IME and accessibility are the

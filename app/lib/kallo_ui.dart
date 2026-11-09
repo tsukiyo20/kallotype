@@ -6,4 +6,5 @@ library;
 export 'design/scope.dart';
 export 'design/tokens.dart';
 export 'film/film.dart';
+export 'film/strip_data.dart';
 export 'widgets/primitives.dart';

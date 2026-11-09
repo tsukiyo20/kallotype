@@ -22,3 +22,7 @@ dev_dependencies:
 flutter:
   # Material is not used anywhere in this app, and this is where that is said.
   uses-material-design: false
+  assets:
+    # Written by `just view` from `kallotype-view`. A rendering of the model at
+    # a commit, not a second model: regenerate it, never edit it.
+    - assets/film_strip.json

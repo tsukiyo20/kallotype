@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../design/scope.dart';
 import '../design/tokens.dart';
 import '../film/film.dart';
+import '../film/strip_data.dart';
 import '../widgets/primitives.dart';
 
 /// The screen this design language is judged by.
@@ -14,25 +15,20 @@ import '../widgets/primitives.dart';
 /// primitives, and a strip of film whose five frames differ only in how long
 /// they were developed.
 class GalleryScreen extends StatefulWidget {
-  const GalleryScreen({super.key});
+  const GalleryScreen({super.key, required this.strip});
+
+  /// What the model drew, loaded from the committed asset.
+  final StripData strip;
 
   @override
   State<GalleryScreen> createState() => _GalleryScreenState();
 }
 
+/// The frame numbers the strip is labelled with. The film does not carry them;
+/// the interface does.
+const List<String> _frameNumbers = <String>['12', '12A', '13', '13A', '14'];
+
 class _GalleryScreenState extends State<GalleryScreen> {
-  static const List<double> _minutes = <double>[3, 6, 9, 12, 15];
-  static const List<String> _numbers = <String>['12', '12A', '13', '13A', '14'];
-
-  static final List<FilmFrame> _frames = <FilmFrame>[
-    for (int i = 0; i < _minutes.length; i++)
-      FilmFrame(
-        gamma: gammaAt(_minutes[i]),
-        number: _numbers[i],
-        minutes: _minutes[i],
-      ),
-  ];
-
   KalloEnvironment _environment = KalloEnvironment.lightTable;
   int _selected = 2;
 
@@ -57,7 +53,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
           child: ColoredBox(
             color: colors.ground,
             child: _GalleryBody(
-              frames: _frames,
+              frames: widget.strip.frames,
+              baseDensity: widget.strip.baseDensity,
+              stockLabel: widget.strip.label,
               selected: _selected,
               onSelect: (int index) => setState(() => _selected = index),
               environment: _environment,
@@ -74,13 +72,17 @@ class _GalleryScreenState extends State<GalleryScreen> {
 class _GalleryBody extends StatelessWidget {
   const _GalleryBody({
     required this.frames,
+    required this.baseDensity,
+    required this.stockLabel,
     required this.selected,
     required this.onSelect,
     required this.environment,
     required this.onEnvironment,
   });
 
-  final List<FilmFrame> frames;
+  final List<StripFrame> frames;
+  final List<double> baseDensity;
+  final String stockLabel;
   final int selected;
   final ValueChanged<int> onSelect;
   final KalloEnvironment environment;
@@ -88,7 +90,7 @@ class _GalleryBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final FilmFrame frame = frames[selected];
+    final StripFrame frame = frames[selected];
     const EdgeInsets padding = EdgeInsets.fromLTRB(
       KalloSpace.step5,
       KalloSpace.step4,
@@ -123,6 +125,7 @@ class _GalleryBody extends StatelessWidget {
                       label: 'THE STRIP',
                       child: _StripBlock(
                         frames: frames,
+                        baseDensity: baseDensity,
                         selected: selected,
                         onSelect: onSelect,
                       ),
@@ -130,7 +133,10 @@ class _GalleryBody extends StatelessWidget {
                     const SizedBox(height: KalloSpace.step4),
                     _Readout(frame: frame),
                     const SizedBox(height: KalloSpace.step5),
-                    const _Section(label: 'TYPE', child: _Specimen()),
+                    _Section(
+                      label: 'TYPE',
+                      child: _Specimen(frame: frame, stockLabel: stockLabel),
+                    ),
                     const SizedBox(height: KalloSpace.step5),
                     const _Section(label: 'MATERIAL', child: _Swatches()),
                     const SizedBox(height: KalloSpace.step5),
@@ -264,11 +270,13 @@ class _SwitchItem extends StatelessWidget {
 class _StripBlock extends StatelessWidget {
   const _StripBlock({
     required this.frames,
+    required this.baseDensity,
     required this.selected,
     required this.onSelect,
   });
 
-  final List<FilmFrame> frames;
+  final List<StripFrame> frames;
+  final List<double> baseDensity;
   final int selected;
   final ValueChanged<int> onSelect;
 
@@ -301,7 +309,7 @@ class _StripBlock extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         KalloText(
-                          frames[i].number,
+                          _frameNumbers[i % _frameNumbers.length],
                           style: KalloType.data,
                           color: i == selected ? colors.ink : colors.inkFaint,
                         ),
@@ -322,6 +330,7 @@ class _StripBlock extends StatelessWidget {
             const SizedBox(height: KalloSpace.step2),
             FilmStrip(
               frames: frames,
+              baseDensity: baseDensity,
               height: height,
               selected: selected,
               onSelect: onSelect,
@@ -336,12 +345,10 @@ class _StripBlock extends StatelessWidget {
 class _Readout extends StatelessWidget {
   const _Readout({required this.frame});
 
-  final FilmFrame frame;
+  final StripFrame frame;
 
   @override
   Widget build(BuildContext context) {
-    final double dMax = negativeDensity(0.55, frame.gamma);
-
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -349,19 +356,19 @@ class _Readout extends StatelessWidget {
           _Cell(
             label: 'DEVELOPED',
             value: formatMinutes(frame.minutes),
-            note: '20 °C · C-41',
+            note: '${frame.tempC.toStringAsFixed(0)} °C',
           ),
           const SizedBox(width: KalloSpace.step3),
           _Cell(
             label: 'CONTRAST',
-            value: frame.gamma.toStringAsFixed(2),
-            note: 'γ at 18 % grey',
+            value: frame.gamma[1].toStringAsFixed(2),
+            note: 'γ, green record',
           ),
           const SizedBox(width: KalloSpace.step3),
           _Cell(
             label: 'D MAX',
-            value: dMax.toStringAsFixed(2),
-            note: 'status density',
+            value: frame.dMax[1].toStringAsFixed(2),
+            note: 'dye, green record',
           ),
         ],
       ),
@@ -426,19 +433,26 @@ class _Section extends StatelessWidget {
 }
 
 class _Specimen extends StatelessWidget {
-  const _Specimen();
+  const _Specimen({required this.frame, required this.stockLabel});
+
+  final StripFrame frame;
+  final String stockLabel;
 
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.of(context).colors;
+    final String gamma = frame.gamma
+        .map((double value) => value.toStringAsFixed(2))
+        .join(' · ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        KalloText('9:00', style: KalloType.display),
+        KalloText(formatMinutes(frame.minutes), style: KalloType.display),
         const SizedBox(height: KalloSpace.step1),
         KalloText(
-          'Developed nine minutes at twenty degrees',
+          'Developed ${frame.minutes.toStringAsFixed(0)} minutes '
+          'at ${frame.tempC.toStringAsFixed(0)} °C',
           style: KalloType.title,
         ),
         const SizedBox(height: KalloSpace.step2),
@@ -454,13 +468,13 @@ class _Specimen extends StatelessWidget {
         ),
         const SizedBox(height: KalloSpace.step3),
         KalloText(
-          'MEASURED · VISION3 500T',
+          stockLabel.toUpperCase(),
           style: KalloType.caption,
           color: colors.inkFaint,
         ),
         const SizedBox(height: KalloSpace.step2),
-        const KalloText(
-          'γ 1.342   Dmax 2.71   EV +0.30   C-41 20.0 °C',
+        KalloText(
+          'γ $gamma   Dmax ${frame.dMax[1].toStringAsFixed(2)}',
           style: KalloType.data,
         ),
       ],
@@ -486,9 +500,6 @@ class _Swatches extends StatelessWidget {
         _Swatch(label: 'ink muted', color: colors.inkMuted),
         _Swatch(label: 'ink faint', color: colors.inkFaint),
         _Swatch(label: 'accent', color: colors.accent),
-        _Swatch(label: 'film base', color: colors.filmBase),
-        _Swatch(label: 'film clear', color: colors.filmClear),
-        _Swatch(label: 'film dense', color: colors.filmDense),
       ],
     );
   }

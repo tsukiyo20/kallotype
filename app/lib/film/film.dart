@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../design/scope.dart';
 import '../design/tokens.dart';
+import 'strip_data.dart';
 
 // ---------------------------------------------------------------------------
 // Geometry — 35 mm film, in millimetres, scaled to whatever height you ask for.
@@ -54,58 +55,6 @@ class FilmMetrics {
   final double rebate;
 }
 
-// ---------------------------------------------------------------------------
-// A stand-in for kallotype-view.
-//
-// This is NOT the model. It is a shape close enough to draw a strip with, so
-// that the interface can be judged before the renderer exists. The real
-// numbers come from Rust; nothing here may grow into a second implementation.
-// ---------------------------------------------------------------------------
-
-/// Contrast as a function of development time, in the shape the core uses:
-/// `gamma(t) = gamma_inf - (gamma_inf - gamma_0) * exp(-t / tau)`.
-double gammaAt(double minutes) {
-  const double gammaInf = 1.85;
-  const double gamma0 = 0.30;
-  const double tau = 6.5;
-  return gammaInf - (gammaInf - gamma0) * math.exp(-minutes / tau);
-}
-
-/// The H&D curve: a toe, a straight line, a shoulder.
-double negativeDensity(double logE, double gamma) {
-  const double a = 4;
-  const double toe = -1.55;
-  const double shoulder = 1.05;
-  const double dMin = 0.17;
-
-  double softplus(double x) {
-    if (x > 18) return x;
-    if (x < -18) return 0;
-    return math.log(1 + math.exp(x));
-  }
-
-  return dMin +
-      (gamma / a) * (softplus(a * (logE - toe)) - softplus(a * (logE - shoulder)));
-}
-
-/// One frame, and how it was developed.
-@immutable
-class FilmFrame {
-  const FilmFrame({
-    required this.gamma,
-    required this.number,
-    required this.minutes,
-  });
-
-  final double gamma;
-
-  /// What is printed on the rebate: `12A`.
-  final String number;
-
-  /// How long it was in the developer.
-  final double minutes;
-}
-
 /// `09:00`, because a development time is a duration and not a number.
 String formatMinutes(double minutes) {
   final int total = (minutes * 60).round();
@@ -115,24 +64,62 @@ String formatMinutes(double minutes) {
 }
 
 // ---------------------------------------------------------------------------
+// What a density looks like.
+// ---------------------------------------------------------------------------
+
+/// What a status density transmits, lit or unlit.
+///
+/// The base, the fog and the orange mask are added to the dye because that is
+/// what a densitometer reads. The mask's coupling to the cyan dye is a
+/// print-stage effect and is not shown here: this is the film, not the print.
+Color _transmission(
+  List<double> base,
+  List<double> dye,
+  KalloColors colors,
+) {
+  final Color lit = Color.from(
+    alpha: 1,
+    red: _lift(base[0] + dye[0]),
+    green: _lift(base[1] + dye[1]),
+    blue: _lift(base[2] + dye[2]),
+  );
+  // Unlit, the film is an object in a dark room and not a source of light.
+  return Color.lerp(
+    Color.lerp(colors.ground, lit, 0.30)!,
+    lit,
+    colors.emissive,
+  )!;
+}
+
+/// Density to light, with the lift a light table's brightness gives it. A
+/// density of 1.0 transmits a tenth of the light; the exponent is the display
+/// transfer, and 0.70 is where the base stays the colour of the mask instead of
+/// washing out to pink.
+double _lift(double density) {
+  final double transmitted = math.pow(10, -density).toDouble();
+  return math.pow(transmitted, 0.70).toDouble().clamp(0.0, 1.0).toDouble();
+}
+
+// ---------------------------------------------------------------------------
 // The strip.
 // ---------------------------------------------------------------------------
 
 /// A strip of developed film, lit by the room it is in.
 ///
-/// In the darkroom it is an object, dim, lit by one safelight. On the light
-/// table it is a source: the base glows, the sprocket holes go bright, and the
-/// emulsion is the brightest thing on the screen.
+/// The frames and the base come from the model, through `just view`; nothing
+/// here decides what a density is.
 class FilmStrip extends StatelessWidget {
   const FilmStrip({
     super.key,
     required this.frames,
+    required this.baseDensity,
     required this.height,
     this.selected = 0,
     this.onSelect,
   });
 
-  final List<FilmFrame> frames;
+  final List<StripFrame> frames;
+  final List<double> baseDensity;
   final double height;
   final int selected;
   final ValueChanged<int>? onSelect;
@@ -171,6 +158,7 @@ class FilmStrip extends StatelessWidget {
           child: CustomPaint(
             painter: _FilmStripPainter(
               frames: frames,
+              baseDensity: baseDensity,
               colors: colors,
               selected: selected,
             ),
@@ -184,11 +172,13 @@ class FilmStrip extends StatelessWidget {
 class _FilmStripPainter extends CustomPainter {
   _FilmStripPainter({
     required this.frames,
+    required this.baseDensity,
     required this.colors,
     required this.selected,
   });
 
-  final List<FilmFrame> frames;
+  final List<StripFrame> frames;
+  final List<double> baseDensity;
   final KalloColors colors;
   final int selected;
 
@@ -201,10 +191,9 @@ class _FilmStripPainter extends CustomPainter {
     final FilmMetrics m = FilmMetrics.forHeight(size.height, frames.length);
     final Rect strip = Offset.zero & size;
 
-    // The rebate is clear film with the mask in it. On the light table it is
-    // the brightest thing on the screen, because nothing in the emulsion is
-    // holding any light back.
-    final Color base = colors.filmClear;
+    // The rebate is clear film: the base with no dye in it. On the light table
+    // it is the brightest thing on the screen.
+    final Color base = _transmission(baseDensity, const <double>[0, 0, 0], colors);
     final Color shade = Color.lerp(base, const Color(0xFF0A0704), 0.42)!;
 
     canvas.drawRect(
@@ -227,8 +216,6 @@ class _FilmStripPainter extends CustomPainter {
       colors.emissive,
     )!;
 
-    // Sprocket holes: dark when the film is an object, bright when it is a
-    // light source. Nothing else in the app changes this much between rooms.
     final double holeW = 2.8 * m.scale;
     final double holeH = 1.98 * m.scale;
     final double holePitch = 4.75 * m.scale;
@@ -254,12 +241,7 @@ class _FilmStripPainter extends CustomPainter {
     for (int i = 0; i < frames.length; i++) {
       _paintFrame(
         canvas,
-        Rect.fromLTWH(
-          i * m.pitch,
-          m.rebate,
-          m.frameWidth,
-          m.frameHeight,
-        ),
+        Rect.fromLTWH(i * m.pitch, m.rebate, m.frameWidth, m.frameHeight),
         frames[i],
         base,
         i == selected,
@@ -270,29 +252,22 @@ class _FilmStripPainter extends CustomPainter {
   void _paintFrame(
     Canvas canvas,
     Rect rect,
-    FilmFrame frame,
+    StripFrame frame,
     Color base,
     bool selected,
   ) {
-    // Transmission, drawn. Patches sit on the straight line, where development
-    // time is a slope rather than a shape, so five frames read as five
-    // different contrasts instead of five copies of the same brown.
-    const int patches = 9;
-    final double w = rect.width / patches;
+    final List<List<double>> patches = frame.patches;
+    if (patches.isEmpty) {
+      return;
+    }
+
+    final double w = rect.width / patches.length;
     final Paint paint = Paint();
 
     canvas.save();
     canvas.clipRect(rect);
-    for (int i = 0; i < patches; i++) {
-      // Two and a bit stops either side of the toe: wide enough that a longer
-      // development visibly blocks the ends up and steepens the middle, which
-      // is what the whole screen is here to show.
-      final double logE = -2.0 + (i / (patches - 1)) * 2.8;
-      final double density = negativeDensity(logE, frame.gamma);
-      final double transmission = math.pow(10, -density).toDouble();
-      final double value =
-          math.pow(transmission, 0.55).toDouble().clamp(0.0, 1.0).toDouble();
-      paint.color = Color.lerp(colors.filmDense, colors.filmClear, value)!;
+    for (int i = 0; i < patches.length; i++) {
+      paint.color = _transmission(baseDensity, patches[i], colors);
       canvas.drawRect(
         Rect.fromLTWH(rect.left + i * w, rect.top, w + 0.5, rect.height),
         paint,

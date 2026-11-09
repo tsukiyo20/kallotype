@@ -9,12 +9,10 @@ Two build units, one tree.
 
 ## The one law
 
-`app/lib/film/film.dart` holds a **stand-in** for the Rust model — enough of the
-H&D curve to draw a strip with. The file says so at the top. The real numbers
-come from `kallotype-view`, which does not exist yet.
-
-Nothing in that file may grow into a second implementation of the physics. If a
-change needs a curve, a density or a grain, it needs `kallotype-view` first.
+`app/assets/film_strip.json` is written by `just view` from `kallotype-view` and
+committed, so that building the interface needs no Rust toolchain. It is a
+rendering of the model at a commit, not a second model: regenerate it, never
+edit it, and never re-derive a curve, a density or a grain in Dart.
 
 ## The app has no Material
 
