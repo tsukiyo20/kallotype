@@ -21,7 +21,7 @@ table that says field by field what is measured, borrowed or absent. A paper is
 a `.kalopaper` file: one curve, a target reflectance and its own dyes and layer
 sensitivities. The crate contains none of those numbers — the stock tables are
 generated from the files at build time (`crates/kallotype-core/build.rs`) — so
-the program text is Apache-2.0, the data is CC BY-SA 4.0, and a build needs
+the program text is MIT or Apache-2.0, the data is CC BY-SA 4.0, and a build needs
 `films/`, `data/films/` and `data/papers/` present.
 
 The series covers Kodak's professional and consumer negatives (PORTRA 160, 400
@@ -113,7 +113,7 @@ not apply to a raw file: it is linear by construction.
 **The feature is off by default, and that is a licensing decision.**
 `rawler` is LGPL-2.1, and `kallotype-raw` — the crate that wraps it — is
 deliberately outside this workspace, so a default build, `cargo test
---workspace` and `cargo deny` are Apache-2.0 all the way down. Build with
+--workspace` and `cargo deny` are MIT/Apache-2.0 all the way down. Build with
 `--features raw` and the resulting binary is a combined work that carries
 LGPL-2.1 obligations for that part. If you would rather not, decode elsewhere
 (a `dcraw`, `dnglab` or RawTherapee export) and pass the result with
@@ -121,11 +121,11 @@ LGPL-2.1 obligations for that part. If you would rather not, decode elsewhere
 
 ## What is published, and what is not
 
-This repository is the **code**, plus a [`films/`](films/) directory holding
-eight film stocks as data files: three colour reversals, three colour negatives
-and two black-and-white negatives,
-each digitised from its manufacturer's data sheet and each carrying a
-field-by-field account of what was measured and what was borrowed.
+This repository is the **code**, plus the data it renders: twenty-one film
+stocks in [`films/`](films/) — three colour reversals, fourteen colour negatives
+and four black-and-white negatives — each digitised from its manufacturer's data
+sheet and each carrying a field-by-field account of what was measured and what
+was borrowed, and five papers in [`data/papers/`](data/papers/).
 
 The rest of the datasets the model was developed against, and the research notes
 that record the reasoning, stay local: they are the product of a separate
@@ -133,10 +133,11 @@ digitisation effort, and some of the sources they describe are not
 redistributable in any case. The data sheets themselves are not republished —
 only the numbers read from them.
 
-The consequence is deliberate: the model is self-contained — every measured
-constant it needs is compiled in, and eight of those stocks also exist as files —
-but the tests that re-read the raw datasets are `#[ignore]`d, and the benchmark
-needs a reflectance CSV passed to `--data`.
+The boundary is a file read: `crates/kallotype-core/build.rs` generates every
+stock table from those files when the crate is built, so the program text holds
+no measurements and a checkout without them does not compile. The tests that
+re-read the raw datasets are `#[ignore]`d, and the benchmark needs a reflectance
+CSV passed to `--data`.
 
 ## Development
 
@@ -391,7 +392,8 @@ stages and seven of the eight cores here. Measured on an 8.2 MP frame,
 
 ## Licence
 
-Code is **Apache-2.0**. See [LICENSE](LICENSE).
+Code is **MIT OR Apache-2.0**, at your option: see [LICENSE](LICENSE),
+[LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE).
 
 The **measurement data is CC BY-SA 4.0**: the `.kalofilm` files, the digitised
 curves and the reports in [films/](films/), and the model files in
@@ -404,8 +406,8 @@ under CC BY 4.0.
 The crate does not contain the digitisation. `crates/kallotype-core/build.rs`
 reads the `.kalofilm` and `.kalopaper` files in `films/`, `data/films/` and
 `data/papers/` when the crate is built and generates the stock tables from
-them, so the program text is Apache-2.0 and the measured data is CC BY-SA, with
-the boundary at a file read rather than at a comment. Building from source
+them, so the program text is MIT or Apache-2.0 and the measured data is
+CC BY-SA, with the boundary at a file read rather than at a comment. Building from source
 therefore needs those files present.
 
 One exception, and it is fenced off on purpose: `crates/kallotype-raw` is

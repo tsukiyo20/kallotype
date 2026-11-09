@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 # This crate links `rawler`, which is LGPL-2.1, and so it is LGPL-2.1 itself.
-# Everything outside this directory is Apache-2.0. The crate is deliberately
+# Everything outside this directory is MIT or Apache-2.0. The crate is deliberately
 # not a member of the workspace: `cargo build`, `cargo test --workspace` and
 # `cargo deny` never see it, and neither does anyone who builds `kalo` without
 # `--features raw`.

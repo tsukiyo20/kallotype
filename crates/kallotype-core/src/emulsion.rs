@@ -164,7 +164,7 @@ const fn curve(d_min: f64, d_max: f64, gamma: f64, log_e0: f64) -> Characteristi
 }
 
 // The film stocks are generated from the `.kalofilm` files at build time: the
-// data is CC BY-SA 4.0 and this program text is Apache-2.0, and `build.rs` is
+// data is CC BY-SA 4.0 and this program text is MIT or Apache-2.0, and `build.rs` is
 // where the two meet. Nothing in this file is a digitised number.
 include!(concat!(env!("OUT_DIR"), "/film_stocks.rs"));
 

@@ -5,7 +5,7 @@
 //! A camera raw file is not an image. It is a sensor mosaic plus a small pile
 //! of metadata — black level, white balance as shot, the camera's own colour
 //! matrix — and turning it into pixels means demosaicing and colour conversion.
-//! The rest of Kallotype is Apache-2.0; the only maintained Rust libraries that
+//! The rest of Kallotype is MIT or Apache-2.0; the only maintained Rust libraries that
 //! do that work (`rawler`, `rawloader`) are LGPL-2.1. Rather than relicense the
 //! whole project or hand-write thirty decoders, the decoder lives here, out of
 //! the workspace, and is linked only when someone asks for it:

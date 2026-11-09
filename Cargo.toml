@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*"]
 # `kallotype-raw` decodes camera raw files and links `rawler`, which is
 # LGPL-2.1. It is deliberately outside the workspace so that a default build,
-# `cargo test --workspace` and `cargo deny` are Apache-2.0 all the way down.
+# `cargo test --workspace` and `cargo deny` are MIT/Apache-2.0 all the way down.
 # The CLI reaches it through an optional path dependency behind `--features
 # kallotype-cli/raw`; see the crate's own doc comment.
 exclude = ["crates/kallotype-raw"]
@@ -12,7 +12,7 @@ exclude = ["crates/kallotype-raw"]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 authors = ["Kallotype contributors"]
 repository = "https://github.com/tsukiyo20/kallotype"
 homepage = "https://github.com/tsukiyo20/kallotype"

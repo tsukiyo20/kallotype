@@ -1,7 +1,7 @@
 //! Generates `FILM_STOCKS` from the `.kalofilm` files at build time.
 //!
 //! The film data used to be compiled into `emulsion.rs` and `measured.rs` as
-//! Rust literals, which put a CC BY-SA work inside Apache-2.0 program text and
+//! Rust literals, which put a CC BY-SA work inside MIT/Apache-2.0 program text and
 //! made the licence boundary a matter of reading intent. It is now data: the
 //! films are the same `.kalofilm` files the renderer can load, the build reads
 //! them, and the crate contains no digitised film numbers at all.
