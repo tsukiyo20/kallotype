@@ -58,7 +58,7 @@ fn stocks_lists_every_builtin() {
     for id in [
         "kodak_ultramax400",
         "c41_contrast",
-        "bw_classic",
+        "kodak_tmax100",
         "portra_endura",
         "supra_endura",
         "endura_premier_metallic",

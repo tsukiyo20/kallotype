@@ -1,6 +1,6 @@
 # ILFORD DELTA 400: the film the development times were fitted to
 
-*Kallotype film-data series, report 13 of 22. Version 1, 2026-11-09.
+*Kallotype film-data series, report 13 of 23. Version 1, 2026-11-09.
 Data: `delta-400.kalofilm` (5,568 bytes). Code: `films/tools/`.*
 
 ## Abstract

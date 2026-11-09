@@ -485,27 +485,6 @@ const PLACEHOLDERS: &str = r#"
         reference_time_min: 6.5,
         reference_temp_c: 20.0,
     },
-    FilmStock {
-        id: "bw_classic",
-        process: FilmProcess::Negative,
-        extra_cyan: None,
-        cl_layer: None,
-        label: "Black and white, classic",
-        note: "Placeholder B&W curve: identical layers, longer straight line.",
-        channels: [
-            curve(0.0, 2.50, 0.58, -0.80),
-            curve(0.0, 2.50, 0.58, -0.80),
-            curve(0.0, 2.50, 0.58, -0.80),
-        ],
-        base_density: [0.10, 0.10, 0.10],
-        grains_per_um2: [3.6, 3.6, 3.6],
-        layers: &LAYERS_VISION3_500T,
-        dyes: &DYES_VISION3_500T,
-        mask: &MASK_VISION3_500T,
-        sigma_um: None,
-        reference_time_min: 6.5,
-        reference_temp_c: 20.0,
-    },
 "#;
 
 fn emit_matrix(code: &mut String, name: &str, rows: &[Vec<f64>]) {
