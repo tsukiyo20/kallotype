@@ -1,11 +1,12 @@
 name: ci
 
+# No path filters, on purpose. A workflow that does not run leaves its required
+# status checks pending forever, and a pull request that never reports them can
+# never be merged. The minute saved is worth less than the trap it sets.
 on:
   push:
     branches: [main]
-    paths-ignore: ['app/**']
   pull_request:
-    paths-ignore: ['app/**']
   workflow_dispatch:
 
 concurrency:
