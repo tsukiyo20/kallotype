@@ -142,6 +142,11 @@ fn main() {
     fs::write(&out, code).expect("write the generated film table");
 
     println!("cargo:rerun-if-changed=build.rs");
+    // The per-file watches below catch edits; these catch a file appearing or
+    // disappearing, which is how a stock is added or retired.
+    for directory in ["films", "data/films", "data/papers"] {
+        println!("cargo:rerun-if-changed={directory}");
+    }
     for path in &paths {
         println!("cargo:rerun-if-changed={}", path.display());
     }
