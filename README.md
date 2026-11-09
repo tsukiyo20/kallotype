@@ -14,49 +14,39 @@ developed* as a first-class parameter, not as a separate preset.
 
 ## Status
 
-Phases 0–3 are in place: the characteristic curve and its dependence on
-development time and temperature, the spectral exposure path, the spectral print
-and the spectral scan. The curve is the **measured** one, digitised from the
-VISION3 500T data sheet, and so is everything the spectral path integrates — so
-`--film vision3_500t`, the default, is a film rather than an impression of one.
-A second measured film, FUJICOLOR NPH 400, sits beside it.
-The paper's curve is measured too, and the default paper is a measured one: the
-**PORTRA ENDURA** curves from E-4021, a print whose white is 0.096 status
-density. It turns out to be a different *shape* from a negative's — no straight
-line anywhere — so how sharply a curve turns is a property of the stock, fitted
-at 4 for the negative and 7, 8 or 10 for the three papers. The remaining stocks
-are placeholders, and their notes say so.
+**Twenty-one films and five papers, every number traced to a data sheet.** A
+film is a `.kalofilm` file: the curves, the layer sensitivities, the dyes, the
+orange mask, the MTF and the grain its sheet publishes, plus a `[measured]`
+table that says field by field what is measured, borrowed or absent. A paper is
+a `.kalopaper` file: one curve, a target reflectance and its own dyes and layer
+sensitivities. The crate contains none of those numbers — the stock tables are
+generated from the files at build time (`crates/kallotype-core/build.rs`) — so
+the program text is Apache-2.0, the data is CC BY-SA 4.0, and a build needs
+`films/`, `data/films/` and `data/papers/` present.
 
-A stock carries its **spectra** as well as its curve: the three layer
-sensitivities that decide which wavelengths each layer records, the three dyes
-the print sees the negative through, and the orange mask between them. `--film`
-therefore changes the colour and not only the contrast — for a stock that has
-its own. The placeholders borrow the measured VISION3 spectra and say so in
-their notes, because an invented curve on somebody else's colour is half a
-stock.
+The series covers Kodak's professional and consumer negatives (PORTRA 160, 400
+and 800, EKTAR 100, GOLD 200, TRI-X 400, T-MAX 400), the VISION3 cinema family
+(50D, 200T, 250D and 500T), Fuji's colour range (PRO 400H, NPH 400, C200,
+FUJIFILM 200 and 400), the three E-6 reversals (PROVIA 100F, VELVIA 50 and
+ECHTHROME E100) and three ILFORD silver films (DELTA 400, HP5 PLUS and the
+T-MAX above). Three invented stocks and two invented papers remain as
+placeholders, and their notes say so.
 
-Two films have their own now: **VISION3 500T** and **FUJICOLOR NPH 400**, the
-latter digitised from AF3-865E. NPH 400 is honest about one gap in its note —
-its sheet publishes the density of a mid-scale neutral subject rather than the
-three dyes, so the dye shapes and the mask are still VISION3's. Its curves, its
-base, its grain and its layer sensitivities are its own, and `--film fuji_nph400`
-renders a visibly warmer print than the stock the project started with. Phase 5 is in: **grain** (`--grain`), modelled as a
-particle process on the film's own scale, and **halation** (`--halation`), the
-light that scatters in the emulsion and reflects off the base. Phase 6 has
-started with **DIR couplers** (`--couplers`): development inhibition between
-layers, with diffusion, and **masking couplers**: the orange mask is consumed as
-the cyan dye forms, so the mask and the dye's unwanted absorption cancel.
+Development is a dimension, not a preset. The kinetics were fitted to DELTA
+400's contrast-against-time chart and then checked against TRI-X 400's four
+exposure rungs; fog, ceiling, speed and toe all move with time, and the check
+lands within a tenth of a stop. `kalo curve --dev` prints what a development
+does to a stock before anything is rendered.
 
-The film's own **blur** is measured too, from the MTF curve on the same datasheet,
-and it is on by default — though it is a no-op below about twelve megapixels,
-because a 35 mm frame sampled every 30 µm cannot show a 3 µm blur. Render at
-12000 pixels across and it starts to bite. `--no-emulsion` turns it off.
+The spectral exposure, print and scan are in place (`--spectral`,
+`--spectral-print`, `--spectral-scan`), as are grain (`--grain`), halation
+(`--halation`) and the inter-image stage (`--couplers`, where the orange mask
+is consumed as the cyan dye forms). Blur is measured from each film's MTF and is
+on by default — a no-op below about twelve megapixels, because a 35 mm frame
+sampled every 30 µm cannot show a 3 µm blur.
 
-The spectral path is reached with `--spectral` (and `--spectral-print`,
-`--spectral-scan`); without those flags the renderer uses the per-channel scalar
-model, which is exact for neutrals and cheap everywhere. The spectral path runs
-on the film's and the paper's **measured** dye curves, compiled in — including
-the orange mask, which is coupled rather than constant.
+For a reversal the film is the picture: there is no print, so `--paper` has no
+effect on those three stocks.
 
 What works today:
 
