@@ -1,6 +1,6 @@
 # Kalofilm — film stocks as data
 
-Twenty-one films, each measured from its manufacturer's data sheet and from real
+Twenty-two films, each measured from its manufacturer's data sheet and from real
 film, packed into one file per film.
 
 | film | process | paper it is printed on | what is measured |
@@ -22,6 +22,7 @@ film, packed into one file per film.
 | [FUJICOLOR C200](fuji-c200/) | C-41 negative | RA-4 paper | curves, layer sensitivities, MTF; dyes, mask and grain borrowed |
 | [FUJIFILM 200](fuji-200/) | C-41 negative | RA-4 paper | curves, layer sensitivities; dyes, mask, blur borrowed, grain placeholder |
 | [FUJIFILM 400](fuji-400/) | C-41 negative | RA-4 paper | curves, layer sensitivities; dyes, mask, blur borrowed, grain placeholder |
+| [KODAK ULTRA MAX 400](kodak-ultramax-400/) | C-41 negative | RA-4 paper | curves, layer sensitivities, mask; dyes and blur borrowed, grain not claimed |
 | [FUJICOLOR NPH 400](fuji-nph400/) | C-41 negative | RA-4 paper | curves, four layer sensitivities, grain; dyes and mask borrowed |
 | [KODAK VISION3 50D](vision3-50d/) | ECN-2 negative | RA-4 paper | curves, layer sensitivities, MTF; grain, dyes and mask borrowed |
 | [KODAK VISION3 200T](vision3-200t/) | ECN-2 negative | RA-4 paper | curves, layer sensitivities, MTF; grain, dyes and mask borrowed |

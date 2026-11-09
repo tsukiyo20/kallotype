@@ -56,7 +56,7 @@ fn stocks_lists_every_builtin() {
 
     let text = stdout(&output);
     for id in [
-        "c41_standard",
+        "kodak_ultramax400",
         "c41_contrast",
         "bw_classic",
         "portra_endura",
