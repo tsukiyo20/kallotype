@@ -1,0 +1,24 @@
+name: kallo_ui
+description: >-
+  The interface of Kallotype: a design language, a handful of primitives, and
+  the film strip. Not a widget library — this is the app's vocabulary.
+publish_to: none
+version: 0.1.0
+
+environment:
+  # `Color.withValues` and the wide-gamut `ColorSpace` API are needed.
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  # Material is not used anywhere in this app, and this is where that is said.
+  uses-material-design: false

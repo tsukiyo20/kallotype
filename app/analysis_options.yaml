@@ -1,0 +1,13 @@
+analyzer:
+  exclude:
+    - build/**
+    - windows/**
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # The design system is a set of immutable value objects; these carry most
+    # of the weight of that.
+    prefer_final_locals: true
+    prefer_final_fields: true
+    avoid_print: true
