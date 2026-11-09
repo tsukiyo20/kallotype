@@ -3,7 +3,11 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kallo_ui/design/tokens.dart';
+import 'package:kallo_ui/film/strip_data.dart';
 import 'package:kallo_ui/main.dart';
+
+/// The strip the model drew, read once for every test.
+late StripData _strip;
 
 /// The faces the tokens ask for, in the order each platform is likeliest to
 /// have them.
@@ -64,14 +68,17 @@ Future<void> _pumpGallery(WidgetTester tester) async {
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
-  await tester.pumpWidget(const KalloApp());
+  await tester.pumpWidget(KalloApp(strip: _strip));
   await tester.pumpAndSettle();
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(_loadPlatformFaces);
+  setUpAll(() async {
+    await _loadPlatformFaces();
+    _strip = await StripData.load();
+  });
 
   testWidgets(
     'the light table',

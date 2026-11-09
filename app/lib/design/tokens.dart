@@ -27,9 +27,6 @@ class KalloColors {
     required this.inkFaint,
     required this.accent,
     required this.accentDim,
-    required this.filmBase,
-    required this.filmClear,
-    required this.filmDense,
     required this.emissive,
   });
 
@@ -60,17 +57,6 @@ class KalloColors {
   /// The safelight, further away.
   final Color accentDim;
 
-  /// The orange of an unexposed colour negative: base, fog, and the mask.
-  final Color filmBase;
-
-  /// Clear film — no silver left, the base seen through. On the light table it
-  /// is the brightest thing on the screen, and it is the colour of the mask.
-  final Color filmClear;
-
-  /// Fully developed, at D-max. On a colour negative that is the cyan dye, so
-  /// it is dark and slightly cold. It is why a negative looks like a negative.
-  final Color filmDense;
-
   /// 0 in the darkroom, 1 on the light table.
   ///
   /// Everything that appears to give off light is multiplied by this, and it is
@@ -88,9 +74,6 @@ class KalloColors {
     inkFaint: Color(0xFF4B433A),
     accent: Color(0xFFD0672A),
     accentDim: Color(0xFF7E3A15),
-    filmBase: Color(0xFF32200F),
-    filmClear: Color(0xFF2A1A0D),
-    filmDense: Color(0xFF050403),
     emissive: 0.0,
   );
 
@@ -104,9 +87,6 @@ class KalloColors {
     inkFaint: Color(0xFFA29B90),
     accent: Color(0xFF9B3A12),
     accentDim: Color(0xFFC9805C),
-    filmBase: Color(0xFF4A2E16),
-    filmClear: Color(0xFFC87C39),
-    filmDense: Color(0xFF14211F),
     emissive: 1.0,
   );
 
@@ -123,9 +103,6 @@ class KalloColors {
         inkFaint: Color.lerp(a.inkFaint, b.inkFaint, t)!,
         accent: Color.lerp(a.accent, b.accent, t)!,
         accentDim: Color.lerp(a.accentDim, b.accentDim, t)!,
-        filmBase: Color.lerp(a.filmBase, b.filmBase, t)!,
-        filmClear: Color.lerp(a.filmClear, b.filmClear, t)!,
-        filmDense: Color.lerp(a.filmDense, b.filmDense, t)!,
         emissive: _mix(a.emissive, b.emissive, t),
       );
 }

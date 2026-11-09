@@ -1,9 +1,17 @@
 import 'package:flutter/widgets.dart';
 
 import 'design/tokens.dart';
+import 'film/strip_data.dart';
 import 'screens/gallery.dart';
 
-void main() => runApp(const KalloApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // The strip is a rendering of the model, committed as an asset by `just
+  // view`. Loading it here keeps the painter synchronous and keeps the app
+  // buildable without a Rust toolchain.
+  final StripData strip = await StripData.load();
+  runApp(KalloApp(strip: strip));
+}
 
 /// The whole point of this file: there is no `MaterialApp`.
 ///
@@ -11,7 +19,10 @@ void main() => runApp(const KalloApp());
 /// and gives nothing else. No ripple, no elevation, no Roboto, no type scale,
 /// no colour roles. Everything you see on the other side of this is ours.
 class KalloApp extends StatelessWidget {
-  const KalloApp({super.key});
+  const KalloApp({super.key, required this.strip});
+
+  /// What the model drew.
+  final StripData strip;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +42,7 @@ class KalloApp extends StatelessWidget {
               builder(context),
         );
       },
-      home: const GalleryScreen(),
+      home: GalleryScreen(strip: strip),
     );
   }
 }
