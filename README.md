@@ -14,7 +14,7 @@ developed* as a first-class parameter, not as a separate preset.
 
 ## Status
 
-**Twenty-one films and six papers, every number traced to a data sheet.** A
+**Twenty-two films and six papers, every number traced to a data sheet.** A
 film is a `.kalofilm` file: the curves, the layer sensitivities, the dyes, the
 orange mask, the MTF and the grain its sheet publishes, plus a `[measured]`
 table that says field by field what is measured, borrowed or absent. A paper is
@@ -29,7 +29,7 @@ and 800, EKTAR 100, GOLD 200, TRI-X 400, T-MAX 400), the VISION3 cinema family
 (50D, 200T, 250D and 500T), Fuji's colour range (PRO 400H, NPH 400, C200,
 FUJIFILM 200 and 400), the three E-6 reversals (PROVIA 100F, VELVIA 50 and
 ECHTHROME E100) and three ILFORD silver films (DELTA 400, HP5 PLUS and the
-T-MAX above). Three invented *films* remain as placeholders and their notes say
+T-MAX above). Two invented *films* remain as placeholders and their notes say
 so; the papers are all measured now.
 
 Development is a dimension, not a preset. The kinetics were fitted to DELTA
@@ -121,8 +121,8 @@ LGPL-2.1 obligations for that part. If you would rather not, decode elsewhere
 
 ## What is published, and what is not
 
-This repository is the **code**, plus the data it renders: twenty-one film
-stocks in [`films/`](films/) — three colour reversals, fourteen colour negatives
+This repository is the **code**, plus the data it renders: twenty-two film
+stocks in [`films/`](films/) — three colour reversals, fifteen colour negatives
 and four black-and-white negatives — each digitised from its manufacturer's data
 sheet and each carrying a field-by-field account of what was measured and what
 was borrowed, and six measured papers in [`data/papers/`](data/papers/).

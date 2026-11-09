@@ -465,27 +465,6 @@ impl Film {
 /// digitisation and their notes say so.
 const PLACEHOLDERS: &str = r#"
     FilmStock {
-        id: "c41_standard",
-        process: FilmProcess::Negative,
-        extra_cyan: None,
-        cl_layer: None,
-        label: "Colour negative, standard development",
-        note: "Placeholder C-41 curve: moderate contrast, even layer speeds.",
-        channels: [
-            curve(0.0, 2.08, 0.60, -0.75),
-            curve(0.0, 2.11, 0.63, -0.75),
-            curve(0.0, 2.14, 0.66, -0.76),
-        ],
-        base_density: [0.22, 0.22, 0.22],
-        grains_per_um2: [3.6, 3.6, 3.6],
-        layers: &LAYERS_VISION3_500T,
-        dyes: &DYES_VISION3_500T,
-        mask: &MASK_VISION3_500T,
-        sigma_um: None,
-        reference_time_min: 6.5,
-        reference_temp_c: 20.0,
-    },
-    FilmStock {
         id: "c41_contrast",
         process: FilmProcess::Negative,
         extra_cyan: None,
