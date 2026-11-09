@@ -34,6 +34,14 @@ fmt-check:
 lint:
     cargo clippy --workspace --all-targets -- -D warnings
 
+# The lint CI runs, which is not the one above.
+#
+# CI lints with `--all-features`, so a warning that only appears in that graph
+# passes here and fails there. Run this before pushing; the cost is that the
+# LGPL decoder is compiled locally for the lint.
+lint-ci:
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
+
 # Lint the camera raw crate, which is outside the workspace.
 lint-raw:
     cd crates/kallotype-raw && cargo clippy --all-targets -- -D warnings

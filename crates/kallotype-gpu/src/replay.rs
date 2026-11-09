@@ -48,6 +48,12 @@ pub(crate) fn render(
 /// The fluctuation is sized by the *mean* density and applied to the exposure,
 /// so the curve runs twice — which is what keeps grain out of a blank frame and
 /// out of the shoulder without either case being special-cased.
+///
+/// Eight arguments because it mirrors the shader's call site one for one: the
+/// curve, its two corner rates, the exposure, the shift, the grain, the pixel
+/// and the layer. A struct would be a Rust-shaped name for the same eight
+/// numbers and would make the correspondence to `common.wgsl` harder to check.
+#[allow(clippy::too_many_arguments)]
 fn developed(
     curve: &[f64; 4],
     toe: f64,
