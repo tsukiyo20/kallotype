@@ -1,6 +1,6 @@
 # KODAK GOLD 200: the negative base density
 
-*Kallotype film-data series, report 11 of 21. Version 1, 2026-11-09.
+*Kallotype film-data series, report 11 of 22. Version 1, 2026-11-09.
 Data: `gold-200.kalofilm` (6,237 bytes). Code: `films/tools/`.*
 
 ## Abstract
@@ -255,6 +255,30 @@ The film borrows two of the five measured quantities the format asks for — blu
 and dyes — and does not claim a third. It is still worth a file: a model that
 only accepted films whose sheets publish every chart would accept four of the
 twenty-six stocks in the catalogue.
+
+### 6.3 What the borrowed dyes cost
+
+A public corpus — 1,002 digital photographs and 1,002 real GOLD 200 photographs,
+unpaired — lets the model's colour be compared with the film's at the level of
+distributions, which is what an unpaired corpus allows. On 120 images each, the
+render is closer to the film corpus than the digital originals are in tone
+spread (Wasserstein-1 0.8 against 2.5), mean chroma (1.8 against 2.0), a\* (1.4)
+and warmth b\* (2.7 against 5.0), with the mid-tone warmth moving furthest
+(b\* 2.1 in the originals, 7.2 rendered, 9.5 in the film).
+
+The one unambiguous overshoot is **mid-tone chroma**: 24.4 in the render against
+19.7 in the film corpus and 19.3 in the digital originals. The likely cause is
+the borrowed dyes — figure 16 prints a mid-scale neutral rather than three dye
+curves, so this film carries the VISION3 500T dye set, and a cinema negative's
+dyes are more saturated than a consumer print film's. That is a property of the
+borrowing, not of the curve, and the model's own report on the borrowing says
+the same thing: what the sheet did not print, the file does not claim.
+
+Two limits on the number. The corpora are different scenes, and the film images
+carry their own scan processing; mean lightness is therefore not comparable
+across them and is not used as evidence. And a distributional difference is not
+a per-scene error — it says the render sits nearer the film's colour on average,
+not that a given frame is right.
 
 ## 7. Availability and reproduction
 
