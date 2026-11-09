@@ -1,11 +1,10 @@
 name: app
 
+# No path filters, on purpose: see the note in `ci.yml`.
 on:
   push:
     branches: [main]
-    paths: ['app/**', '.github/workflows/app.yml']
   pull_request:
-    paths: ['app/**', '.github/workflows/app.yml']
   workflow_dispatch:
 
 concurrency:
