@@ -58,12 +58,13 @@ fn main() -> ExitCode {
     };
 
     let path = PathBuf::from(output);
-    if let Some(parent) = path.parent()
-        && !parent.as_os_str().is_empty()
-        && let Err(error) = fs::create_dir_all(parent)
-    {
-        eprintln!("kaloview: {}: {error}", parent.display());
-        return ExitCode::from(1);
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            if let Err(error) = fs::create_dir_all(parent) {
+                eprintln!("kaloview: {}: {error}", parent.display());
+                return ExitCode::from(1);
+            }
+        }
     }
     if let Err(error) = fs::write(&path, format!("{json}\n")) {
         eprintln!("kaloview: {}: {error}", path.display());
