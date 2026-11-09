@@ -29,8 +29,8 @@ and 800, EKTAR 100, GOLD 200, TRI-X 400, T-MAX 400), the VISION3 cinema family
 (50D, 200T, 250D and 500T), Fuji's colour range (PRO 400H, NPH 400, C200,
 FUJIFILM 200 and 400), the three E-6 reversals (PROVIA 100F, VELVIA 50 and
 ECHTHROME E100) and three ILFORD silver films (DELTA 400, HP5 PLUS and the
-T-MAX above). Three invented stocks and two invented papers remain as
-placeholders, and their notes say so.
+T-MAX above). Three invented *films* remain as placeholders and their notes say
+so; the papers are all measured now.
 
 Development is a dimension, not a preset. The kinetics were fitted to DELTA
 400's contrast-against-time chart and then checked against TRI-X 400's four
@@ -125,8 +125,7 @@ This repository is the **code**, plus the data it renders: twenty-one film
 stocks in [`films/`](films/) — three colour reversals, fourteen colour negatives
 and four black-and-white negatives — each digitised from its manufacturer's data
 sheet and each carrying a field-by-field account of what was measured and what
-was borrowed, and five measured papers in [`data/papers/`](data/papers/), the
-sixth still a placeholder.
+was borrowed, and six measured papers in [`data/papers/`](data/papers/).
 
 The rest of the datasets the model was developed against, and the research notes
 that record the reasoning, stay local: they are the product of a separate

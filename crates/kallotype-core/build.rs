@@ -26,21 +26,6 @@ const GRID_LEN: usize = 71;
 const MAGIC: &[u8; 8] = b"KALOFILM";
 const PAPER_MAGIC: &[u8; 8] = b"KALOPAPR";
 
-/// The one invented paper left. Like the placeholder films it is a constant a
-/// programmer chose, not a digitisation; its spectra are the metallic paper's,
-/// which the note says.
-const PAPER_PLACEHOLDERS: &str = r#"
-    PaperStock {
-        id: "bw_paper",
-        label: "Fibre-based B&W paper",
-        note: "Placeholder B&W paper: deeper blacks, steeper curve.",
-        channel: curve(0.05, 2.10, 2.80, 0.0),
-        target_mid_reflectance: 0.18,
-        dyes: &DYES_ENDURA_PREMIER_METALLIC,
-        layers: &LAYERS_ENDURA_PREMIER_METALLIC,
-    },
-"#;
-
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
     let root = manifest.join("..").join("..");
@@ -135,7 +120,6 @@ fn main() {
     for (index, paper) in papers.iter().enumerate() {
         paper.emit_paper(&mut code, index);
     }
-    code.push_str(PAPER_PLACEHOLDERS);
     code.push_str("];\n");
 
     let out = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR")).join("film_stocks.rs");

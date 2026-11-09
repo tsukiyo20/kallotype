@@ -9,16 +9,22 @@
 | `endura_premier_metallic.kalopaper` | KODAK PROFESSIONAL ENDURA Premier Metallic — its own sheet and spectra |
 | `fuji_crystal_archive_pearl.kalopaper` | FUJICOLOR CRYSTAL ARCHIVE DIGITAL PEARL — the first Fuji paper, and the first on a relative exposure axis |
 | `endura_premier.kalopaper` | KODAK PROFESSIONAL ENDURA Premier — the non-metallic sister of the metallic paper, and the contrastiest so far |
+| `polymax_ii_rc.kalopaper` | KODAK PROFESSIONAL POLYMAX II RC — black-and-white, and the only paper whose spectra are flat by necessity rather than measured |
 
 A paper is a different file from a film on purpose: one characteristic curve
 instead of three, a target reflectance instead of a base density, no mask, no
 grain and no blur. The format is specified in
 [`films/FORMAT.md`](../films/FORMAT.md#paper-files-kalopaper).
 
-One placeholder remains — `bw_paper`, a fibre-based black-and-white paper — and
-it lives in `crates/kallotype-core/build.rs` with the placeholder films, because
-it is an invented curve, not a digitisation. The other placeholder, `c41_paper`,
-was replaced by the Fuji paper.
+Both former placeholders are gone: `c41_paper` became the Fuji paper, and
+`bw_paper` became POLYMAX II RC. There are no invented papers left in the tree.
+
+A note on the black-and-white paper: the model's paper is trichrome by
+construction — three dye curves and three layer sensitivities feeding three
+density channels — and a silver paper is one neutral record. Its file therefore
+carries flat grey absorption and flat layer rows, with the reasoning in the
+stock's note. Graded printing (the eight PolyMax filter curves) is not modelled;
+the file carries the White Light curve, the softest of the nine.
 
 ## Sheets that were read and did not become papers
 
