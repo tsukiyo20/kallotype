@@ -10,7 +10,7 @@ is a measured spectrum rather than a borrowed one.
 - **The film:** `portra-400.kalofilm` (6,268 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 points per layer.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: the curves climb to 1.82 (red), 1.83 (green) and 2.19 (blue)

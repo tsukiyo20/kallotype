@@ -8,7 +8,7 @@ other films borrow. The only negative in the series with nothing borrowed.
 - **The film:** `vision3-500t.kalofilm` (5,297 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 563 points per layer.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`.
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png).
 
 Headline numbers: γ 0.475 / 0.557 / 0.541 per decade; measured fields: curves, layer sensitivities, dyes, mask, grain.
 Data and prose: CC BY-SA 4.0. See [../LICENSE](../LICENSE) and

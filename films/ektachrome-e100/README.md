@@ -9,7 +9,7 @@ per-layer MTF and granularity all come from its own sheet.
 - **The film:** `ektachrome-e100.kalofilm` (5,667 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 digitised points per layer.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's tables.
 
 Headline numbers: γ 2.57, 2.90 and 2.98 with the corners turning at 5 per decade

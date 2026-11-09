@@ -10,7 +10,7 @@ curve that starts at a dip rather than a tail.
 - **The film:** `vision3-200t.kalofilm` (5,651 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 563 points per layer.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: the curves climb to 1.65 (red), 1.96 (green) and 1.87 (blue)

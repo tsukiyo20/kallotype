@@ -11,7 +11,7 @@ declared rather than invented.
 - **The film:** `delta-400.kalofilm` (5,568 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 367 points, the same record in all three files.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: the curve climbs to 2.03 above its base; base 0.280; γ 0.694

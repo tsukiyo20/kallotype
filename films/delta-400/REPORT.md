@@ -143,11 +143,13 @@ the largest is 0.030.
 
 ### Figures
 
-- `figures/01-curves.png` — the fit and the 367 digitised points.
-- `figures/02-residuals.png` — point minus fit: no drift, a one-pixel
-  quantisation staircase, and the largest excursions at the two ends.
-- `figures/03-spectra.png` — three flat lines, which is the file saying
-  "panchromatic and unmeasured" rather than a measured curve.
+![The fit and the 367 digitised points.](figures/01-curves.png)
+
+![Point minus fit: no drift, a one-pixel quantisation staircase, and the
+largest excursions at the two ends.](figures/02-residuals.png)
+
+![Three flat lines, which is the file saying "panchromatic and unmeasured"
+rather than a measured curve.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

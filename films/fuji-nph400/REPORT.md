@@ -82,10 +82,11 @@ from the aim.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points.
-- `figures/02-residuals.png` — the green curve's long toe is where the residual
-  lives.
-- `figures/03-spectra.png` — the measured layers, the borrowed dyes and mask.
+![The fits and the digitised points.](figures/01-curves.png)
+
+![The green curve's long toe is where the residual lives.](figures/02-residuals.png)
+
+![The measured layers, the borrowed dyes and mask.](figures/03-spectra.png)
 
 ## 4. What is measured and what is decided
 

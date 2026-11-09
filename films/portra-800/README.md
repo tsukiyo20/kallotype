@@ -9,7 +9,7 @@ that draws the same film at three exposure indices.
 - **The film:** `portra-800.kalofilm` (6,358 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 points per layer, at EI 800.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: the curves climb to 1.65 (red), 1.72 (green) and 1.96 (blue)

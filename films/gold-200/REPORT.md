@@ -214,12 +214,13 @@ against a drawn top of 2.751. Residuals are against the 128 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points.
-- `figures/02-residuals.png` — point minus fit, inside ±0.012 except at the ends,
-  where the sheet is still climbing and the bounded asymptote has begun to
-  flatten.
-- `figures/03-spectra.png` — the three layer sensitivities, the three borrowed
-  dyes and the film's own mask.
+![The fits and the digitised points.](figures/01-curves.png)
+
+![Point minus fit, inside ±0.012 except at the ends, where the sheet is still
+climbing and the bounded asymptote has begun to flatten.](figures/02-residuals.png)
+
+![The three layer sensitivities, the three borrowed dyes and the film's own
+mask.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

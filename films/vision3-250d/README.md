@@ -10,7 +10,7 @@ what a raster sheet with no shoulder and a merged MTF curve does to a tracker.
 - **The film:** `vision3-250d.kalofilm` (5,727 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 538 points per layer.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: the curves climb to 1.67 (red), 1.99 (green) and 1.90 (blue)

@@ -12,7 +12,7 @@ report shows the three candidate shifts.
   `kalo render --film-file`.
 - **The points:** `curves/` — 294 digitised points per layer, so the fit can be
   recomputed rather than believed.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`,
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png),
   drawn from `curves/` and the file's tables.
 
 Headline numbers: curve rms 0.0038–0.0045 at 294 points/layer; four sensitivities

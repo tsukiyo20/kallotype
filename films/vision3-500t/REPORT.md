@@ -120,10 +120,12 @@ are against the 563 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points.
-- `figures/02-residuals.png` — point minus fit, inside ±0.01.
-- `figures/03-spectra.png` — the three layer sensitivities, the three dyes and
-  the mask, as the file carries them.
+![The fits and the digitised points.](figures/01-curves.png)
+
+![Point minus fit, inside ±0.01.](figures/02-residuals.png)
+
+![The three layer sensitivities, the three dyes and the mask, as the file
+carries them.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

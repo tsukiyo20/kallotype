@@ -189,13 +189,14 @@ what the drawing shows and what the fits reproduce.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points, all three layers.
-- `figures/02-residuals.png` — point minus fit. The shoulder carries a
-  systematic swing of about 0.08 of a density: the sheet's curves are not the
-  trapezoid the model can express, and the two corner rates soften it but do not
-  remove it. That swing, not an outlier, is what the 0.023–0.027 rms is made of.
-- `figures/03-spectra.png` — the three sensitivities and three dyes as the file
-  carries them.
+![The fits and the digitised points, all three layers.](figures/01-curves.png)
+
+![Point minus fit. The shoulder carries a systematic swing of about 0.08 of a
+density: the sheet's curves are not the trapezoid the model can express, and
+the two corner rates soften it but do not remove it. That swing, not an
+outlier, is what the 0.023–0.027 rms is made of.](figures/02-residuals.png)
+
+![The three sensitivities and three dyes as the file carries them.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

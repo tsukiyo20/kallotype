@@ -10,7 +10,7 @@ the softest MTF of the three VISION3 films.
 - **The film:** `vision3-50d.kalofilm` (5,737 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 349 points for red, 538 for green and blue.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: the curves climb to 1.72 (red), 2.06 (green) and 1.99 (blue)

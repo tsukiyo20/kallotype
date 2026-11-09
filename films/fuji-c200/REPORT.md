@@ -83,11 +83,12 @@ for the film.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the 1,137 digitised points per layer.
-- `figures/02-residuals.png` — flat, with the column-pairing's occasional
-  one-column jump where the lozenges interrupt a curve.
-- `figures/03-spectra.png` — the reassembled sensitivities and the borrowed
-  dyes and mask.
+![The fits and the 1,137 digitised points per layer.](figures/01-curves.png)
+
+![Flat, with the column-pairing's occasional one-column jump where the
+lozenges interrupt a curve.](figures/02-residuals.png)
+
+![The reassembled sensitivities and the borrowed dyes and mask.](figures/03-spectra.png)
 
 ## 4. What is measured and what is decided
 

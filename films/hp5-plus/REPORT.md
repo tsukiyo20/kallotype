@@ -173,10 +173,12 @@ density the raster draws.
 
 ### Figures
 
-- `figures/01-curves.png` — the fit and the digitised points, one curve.
-- `figures/02-residuals.png` — point minus fit. Inside ±0.01 with a rise at the
-  far right, as on every negative in the series.
-- `figures/03-spectra.png` — the one flat sensitivity curve the file carries.
+![The fit and the digitised points, one curve.](figures/01-curves.png)
+
+![Point minus fit. Inside ±0.01 with a rise at the far right, as on every
+negative in the series.](figures/02-residuals.png)
+
+![The one flat sensitivity curve the file carries.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

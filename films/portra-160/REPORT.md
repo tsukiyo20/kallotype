@@ -218,14 +218,15 @@ against a drawn top of 2.895. Residuals are against the 128 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points, all three layers.
-  This is the tightest set of fits in the series and the figure shows it: the
-  lines and the dots are the same curve at the plot's resolution.
-- `figures/02-residuals.png` — point minus fit, inside ±0.01 except at the last
-  point of each curve, where the sheet is still climbing and the bounded
-  asymptote has begun to flatten.
-- `figures/03-spectra.png` — the three layer sensitivities, the three borrowed
-  dyes and the film's own mask, as the file carries them.
+![The fits and the digitised points, all three layers. This is the tightest
+set of fits in the series and the figure shows it: the lines and the dots
+are the same curve at the plot's resolution.](figures/01-curves.png)
+
+![Point minus fit, inside ±0.01 except at the last point of each curve, where
+the sheet is still climbing and the bounded asymptote has begun to flatten.](figures/02-residuals.png)
+
+![The three layer sensitivities, the three borrowed dyes and the film's own
+mask, as the file carries them.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

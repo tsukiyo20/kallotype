@@ -173,15 +173,17 @@ against a drawn top of 2.151. Residuals are against the 400 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fit and the 400 digitised points.
-- `figures/02-residuals.png` — point minus fit: a one-pixel quantisation
-  sawtooth through the whole curve, and two spikes down to −0.053 and −0.043 at
-  −2.1, where the panel's three line styles merge into one stroke and the reader
-  shares a single reading between them. Removing those fourteen points takes the
-  rms from 0.0110 to 0.0099, so the merge is 10 per cent of the residual in
-  3 per cent of the points.
-- `figures/03-spectra.png` — the panchromatic sensitivity, with the dye rows
-  absent because a silver film has none.
+![The fit and the 400 digitised points.](figures/01-curves.png)
+
+![Point minus fit: a one-pixel quantisation sawtooth through the whole curve,
+and two spikes down to −0.053 and −0.043 at −2.1, where the panel's three
+line styles merge into one stroke and the reader shares a single reading
+between them. Removing those fourteen points takes the rms from 0.0110 to
+0.0099, so the merge is 10 per cent of the residual in 3 per cent of the
+points.](figures/02-residuals.png)
+
+![The panchromatic sensitivity, with the dye rows absent because a silver film
+has none.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

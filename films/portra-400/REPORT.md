@@ -317,13 +317,15 @@ sheet's own axis. Residuals are against the 128 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points, all three layers.
-- `figures/02-residuals.png` — point minus fit. Mostly inside ±0.01, with a
-  systematic rise at the far right where the sheet's curves are still climbing
-  and the model's shoulder has already begun to flatten. The largest
-  deviations, 0.024 and 0.022, are the last points of the red and blue curves.
-- `figures/03-spectra.png` — the three layer sensitivities, the three borrowed
-  dyes and the film's own mask, as the file carries them.
+![The fits and the digitised points, all three layers.](figures/01-curves.png)
+
+![Point minus fit. Mostly inside ±0.01, with a systematic rise at the far
+right where the sheet's curves are still climbing and the model's shoulder
+has already begun to flatten. The largest deviations, 0.024 and 0.022, are
+the last points of the red and blue curves.](figures/02-residuals.png)
+
+![The three layer sensitivities, the three borrowed dyes and the film's own
+mask, as the file carries them.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

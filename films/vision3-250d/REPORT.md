@@ -159,10 +159,11 @@ are against the 538 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points.
-- `figures/02-residuals.png` — inside ±0.01, with the toe's one-pixel staircase.
-- `figures/03-spectra.png` — the three sensitivities, the shared dyes and the
-  borrowed mask.
+![The fits and the digitised points.](figures/01-curves.png)
+
+![Inside ±0.01, with the toe's one-pixel staircase.](figures/02-residuals.png)
+
+![The three sensitivities, the shared dyes and the borrowed mask.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

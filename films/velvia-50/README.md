@@ -9,7 +9,7 @@ granularity are all from its own sheet.
 - **The film:** `velvia-50.kalofilm` (6,006 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 672, 655 and 591 digitised points.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: unexposed slide 3.32 (red), 3.77 (green), 3.68 (blue); clear

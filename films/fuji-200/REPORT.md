@@ -69,9 +69,11 @@ stays neutral.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the 128 digitised points.
-- `figures/02-residuals.png` — the pixel quantisation dominates.
-- `figures/03-spectra.png` — the measured layers and the borrowed spectra.
+![The fits and the 128 digitised points.](figures/01-curves.png)
+
+![The pixel quantisation dominates.](figures/02-residuals.png)
+
+![The measured layers and the borrowed spectra.](figures/03-spectra.png)
 
 ## 4. What is measured and what is decided
 

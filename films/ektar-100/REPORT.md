@@ -255,14 +255,16 @@ points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points, all three layers.
-- `figures/02-residuals.png` — point minus fit. The middle is inside ±0.01 and
-  the ends are not: at the last point of each curve the fit reads 0.024 to 0.045
-  low, because the sheet draws the curve still climbing while the model's
-  bounded asymptote has begun to flatten, and at the first blue point it reads
-  0.020 high, which is the extrapolated base of §3.2 seen from the other end.
-- `figures/03-spectra.png` — the three layer sensitivities, the three borrowed
-  dyes and the film's own mask, as the file carries them.
+![The fits and the digitised points, all three layers.](figures/01-curves.png)
+
+![Point minus fit. The middle is inside ±0.01 and the ends are not: at the
+last point of each curve the fit reads 0.024 to 0.045 low, because the sheet
+draws the curve still climbing while the model's bounded asymptote has begun
+to flatten, and at the first blue point it reads 0.020 high, which is the
+extrapolated base of §3.2 seen from the other end.](figures/02-residuals.png)
+
+![The three layer sensitivities, the three borrowed dyes and the film's own
+mask, as the file carries them.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

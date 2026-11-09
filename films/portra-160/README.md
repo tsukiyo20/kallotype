@@ -11,7 +11,7 @@ predict.
 - **The film:** `portra-160.kalofilm` (6,198 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 points per layer.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: the curves climb to 1.59 (red), 1.76 (green) and 2.06 (blue)

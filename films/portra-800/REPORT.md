@@ -227,13 +227,15 @@ are against the 128 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points, all three layers.
-- `figures/02-residuals.png` — point minus fit. Inside ±0.01 over the drawn
-  range, with the family's usual rise at the far right where the sheet is still
-  climbing and the model has begun to flatten. That rise, at the last point of
-  each curve, is most of what the rms is made of.
-- `figures/03-spectra.png` — the three layer sensitivities, the three borrowed
-  dyes and the film's own mask, as the file carries them.
+![The fits and the digitised points, all three layers.](figures/01-curves.png)
+
+![Point minus fit. Inside ±0.01 over the drawn range, with the family's usual
+rise at the far right where the sheet is still climbing and the model has
+begun to flatten. That rise, at the last point of each curve, is most of
+what the rms is made of.](figures/02-residuals.png)
+
+![The three layer sensitivities, the three borrowed dyes and the film's own
+mask, as the file carries them.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

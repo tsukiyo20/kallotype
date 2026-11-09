@@ -11,7 +11,7 @@ record instead of three.
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 points, the same curve in all three files,
   because a silver image has one record.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`.
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png).
 
 Headline numbers: the curve climbs to 1.49 above a base of 0.262; γ 0.546 per
 decade; residual 0.0049; the toe is soft (rate 3) and the shoulder is not (8);

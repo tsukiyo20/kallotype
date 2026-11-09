@@ -196,11 +196,13 @@ same numbers serve all three channels, because the film has one.
 
 ### Figures
 
-- `figures/01-curves.png` — the fit and the digitised points, one curve.
-- `figures/02-residuals.png` — point minus fit: inside ±0.01 over the drawn range,
-  with the family's rise at the far right where the sheet is still climbing.
-- `figures/03-spectra.png` — the one sensitivity curve the file carries, normalised
-  to its own peak. There are no dye curves and no mask to draw.
+![The fit and the digitised points, one curve.](figures/01-curves.png)
+
+![Point minus fit: inside ±0.01 over the drawn range, with the family's rise
+at the far right where the sheet is still climbing.](figures/02-residuals.png)
+
+![The one sensitivity curve the file carries, normalised to its own peak.
+There are no dye curves and no mask to draw.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

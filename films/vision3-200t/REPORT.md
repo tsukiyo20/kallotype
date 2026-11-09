@@ -133,11 +133,12 @@ are against the 563 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points.
-- `figures/02-residuals.png` — flat inside ±0.008 with the raster's one-pixel
-  staircase at the toe.
-- `figures/03-spectra.png` — the three sensitivities, with the cyan dip visible
-  at 490–530 nm, and the shared dyes and mask.
+![The fits and the digitised points.](figures/01-curves.png)
+
+![Flat inside ±0.008 with the raster's one-pixel staircase at the toe.](figures/02-residuals.png)
+
+![The three sensitivities, with the cyan dip visible at 490–530 nm, and the
+shared dyes and mask.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 

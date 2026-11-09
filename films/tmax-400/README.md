@@ -10,7 +10,7 @@ sheet, and a silver image carries no dyes and no mask to borrow.
 - **The film:** `tmax-400.kalofilm` (5,769 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 400 points, the same record in all three files.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`, drawn
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
   from `curves/` and the file's own tables.
 
 Headline numbers: the curve climbs to 1.95 above its base; base 0.217; γ 0.728

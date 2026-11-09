@@ -10,7 +10,7 @@ anywhere in it.
 - **The film:** `hp5-plus.kalofilm` (5,552 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 164 points, the same curve in all three files.
-- **The figures:** `figures/` — `01-curves`, `02-residuals`, `03-spectra`.
+- **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png).
 
 Headline numbers: the curve climbs to 1.98 above a base of 0.177; γ 0.650 per
 decade; residual 0.0065 — about a pixel and a half of the raster; at 18 per cent

@@ -157,11 +157,12 @@ are against the 349 / 538 / 538 points in `curves/`.
 
 ### Figures
 
-- `figures/01-curves.png` — the fits and the digitised points.
-- `figures/02-residuals.png` — the red residual shows the dotted stroke's pitch;
-  green and blue are at the raster's one-pixel quantisation.
-- `figures/03-spectra.png` — the three sensitivities, the shared dyes and the
-  borrowed mask.
+![The fits and the digitised points.](figures/01-curves.png)
+
+![The red residual shows the dotted stroke's pitch; green and blue are at the
+raster's one-pixel quantisation.](figures/02-residuals.png)
+
+![The three sensitivities, the shared dyes and the borrowed mask.](figures/03-spectra.png)
 
 ## 5. What is measured and what is decided
 
