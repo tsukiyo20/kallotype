@@ -95,20 +95,75 @@ class KalloColors {
   static KalloColors of(Brightness brightness) =>
       brightness == Brightness.dark ? dark : light;
 
-  static KalloColors lerp(KalloColors a, KalloColors b, double t) => KalloColors(
-        brightness: t < 0.5 ? a.brightness : b.brightness,
-        ground: Color.lerp(a.ground, b.ground, t)!,
-        sidebar: Color.lerp(a.sidebar, b.sidebar, t)!,
-        content: Color.lerp(a.content, b.content, t)!,
-        surface: Color.lerp(a.surface, b.surface, t)!,
-        hairline: Color.lerp(a.hairline, b.hairline, t)!,
-        ink: Color.lerp(a.ink, b.ink, t)!,
-        inkMuted: Color.lerp(a.inkMuted, b.inkMuted, t)!,
-        inkFaint: Color.lerp(a.inkFaint, b.inkFaint, t)!,
-        accent: Color.lerp(a.accent, b.accent, t)!,
-        accentDim: Color.lerp(a.accentDim, b.accentDim, t)!,
-        print: Color.lerp(a.print, b.print, t)!,
-      );
+  /// The colour with this much light on it.
+  ///
+  /// Multiplied, not blended: a wall in a dark room is the same wall lit less,
+  /// and a paper that was white is grey without turning blue. Alpha survives,
+  /// because dimming a room is not the same as making it transparent.
+  static Color under(Color colour, double light) {
+    final double k = light.clamp(0.0, 1.0);
+    if (k >= 1) {
+      return colour;
+    }
+    return Color.from(
+      alpha: colour.a,
+      red: colour.r * k,
+      green: colour.g * k,
+      blue: colour.b * k,
+    );
+  }
+
+  /// Every plane, dimmed together. Returns itself at full light, so that a lit
+  /// window does not rebuild for nothing.
+  KalloColors scaled(double light) => light >= 1
+      ? this
+      : KalloColors(
+          brightness: brightness,
+          ground: under(ground, light),
+          sidebar: under(sidebar, light),
+          content: under(content, light),
+          surface: under(surface, light),
+          hairline: under(hairline, light),
+          ink: under(ink, light),
+          inkMuted: under(inkMuted, light),
+          inkFaint: under(inkFaint, light),
+          accent: under(accent, light),
+          accentDim: under(accentDim, light),
+          print: under(print, light),
+        );
+
+  /// The window with the lights off.
+  ///
+  /// The dark set a step darker still, so that a room that has gone dark looks
+  /// the same in either appearance. It should: it is the same room, and the
+  /// lamp does not care what the system prefers.
+  static final KalloColors night = dark.scaled(0.72);
+
+  /// Every plane moving toward another set.
+  ///
+  /// The appearance does not move with them: a room going dark is not the
+  /// system changing its theme, and everything that reports the brightness —
+  /// the drawer, the device line — has to keep telling the truth.
+  KalloColors toward(KalloColors other, double t) {
+    final double k = t.clamp(0.0, 1.0);
+    if (k <= 0) {
+      return this;
+    }
+    return KalloColors(
+      brightness: brightness,
+      ground: Color.lerp(ground, other.ground, k)!,
+      sidebar: Color.lerp(sidebar, other.sidebar, k)!,
+      content: Color.lerp(content, other.content, k)!,
+      surface: Color.lerp(surface, other.surface, k)!,
+      hairline: Color.lerp(hairline, other.hairline, k)!,
+      ink: Color.lerp(ink, other.ink, k)!,
+      inkMuted: Color.lerp(inkMuted, other.inkMuted, k)!,
+      inkFaint: Color.lerp(inkFaint, other.inkFaint, k)!,
+      accent: Color.lerp(accent, other.accent, k)!,
+      accentDim: Color.lerp(accentDim, other.accentDim, k)!,
+      print: Color.lerp(print, other.print, k)!,
+    );
+  }
 }
 
 /// The spacing ramp. Six steps, and the gaps are the point.

@@ -27,7 +27,17 @@ class KalloStrings {
         'shelf' => zh ? '架子' : 'Shelf',
         'table' => zh ? '台面' : 'Table',
         'binder' => zh ? '活页夹' : 'Binder',
-        _ => zh ? '晾片绳' : 'Line',
+        'line' => zh ? '晾片绳' : 'Line',
+        _ => zh ? '观景台' : 'Gallery',
+      };
+
+  /// What a place is for, in the room's own words.
+  String placeNote(String name) => switch (name) {
+        'shelf' => zh ? '胶片，和一卷新的' : 'stock, and a new roll',
+        'table' => zh ? '胶卷，卷起或铺开' : 'the roll, rolled or unrolled',
+        'binder' => zh ? '曲线和来历' : 'curves and provenance',
+        'line' => zh ? '印相，和队列' : 'prints, and the queue',
+        _ => zh ? '挂起来的作品' : 'the work, hung',
       };
 
   String get library => zh ? '资料库' : 'Library';
@@ -58,6 +68,11 @@ class KalloStrings {
   String get dMax => zh ? '最大密度' : 'D max';
   String get tone => zh ? '影调' : 'TONE';
   String get develop => zh ? '显影' : 'Develop';
+
+  // -- the gallery ----------------------------------------------------------
+
+  /// The switch on the wall. Not the appearance's light: the room's.
+  String get roomLight => zh ? '灯' : 'Light';
 
   // -- the drawer -----------------------------------------------------------
 

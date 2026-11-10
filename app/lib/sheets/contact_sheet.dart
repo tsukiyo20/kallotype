@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../design/scope.dart';
 import '../design/tokens.dart';
 import '../lab/roll.dart';
+import '../widgets/patch_print.dart';
 
 /// The roll, unrolled: a contact sheet on the table.
 ///
@@ -98,9 +99,7 @@ class _FrameTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(KalloRadius.film),
                   child: AspectRatio(
                     aspectRatio: 3 / 2,
-                    child: CustomPaint(
-                      painter: _PrintPainter(frame.printColours(colors.print)),
-                    ),
+                    child: PatchPrint(patches: frame.printColours(colors.print)),
                   ),
                 ),
               ),
@@ -131,22 +130,4 @@ class _FrameTile extends StatelessWidget {
   }
 }
 
-/// Nine patches of dye, laid on paper.
-class _PrintPainter extends CustomPainter {
-  const _PrintPainter(this.patches);
 
-  final List<Color> patches;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width / patches.length;
-    final Paint fill = Paint();
-    for (int i = 0; i < patches.length; i++) {
-      fill.color = patches[i];
-      canvas.drawRect(Rect.fromLTWH(i * w, 0, w + 0.5, size.height), fill);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_PrintPainter old) => old.patches != patches;
-}

@@ -1,35 +1,14 @@
 import 'package:flutter/widgets.dart';
 
-/// The four places you can be.
+/// The places you can be.
 ///
 /// Settings is not one of them: it is a drawer in the bench, opened from the
 /// toolbar, and it slides over wherever you already are.
-enum Place { shelf, table, binder, line }
-
-extension PlaceWords on Place {
-  /// The code printed on the rebate. It does not translate: it is the film's.
-  String get code => switch (this) {
-        Place.shelf => 'SH',
-        Place.table => 'TA',
-        Place.binder => 'BI',
-        Place.line => 'LI',
-      };
-
-  String get label => switch (this) {
-        Place.shelf => 'Shelf',
-        Place.table => 'Table',
-        Place.binder => 'Binder',
-        Place.line => 'Line',
-      };
-
-  /// What the place is for, in the room's own words.
-  String get note => switch (this) {
-        Place.shelf => 'stock, and a new roll',
-        Place.table => 'the roll, rolled or unrolled',
-        Place.binder => 'curves and provenance',
-        Place.line => 'prints, and the queue',
-      };
-}
+///
+/// The order is the work's order — what you have, what you look at it with,
+/// what you keep, what you print, and finally where it hangs. The workbench
+/// belongs between the table and the binder and is not built yet.
+enum Place { shelf, table, binder, line, gallery }
 
 /// A place's mark: geometric, one weight, drawn rather than imported.
 class PlaceIcon extends StatelessWidget {
@@ -83,6 +62,18 @@ class _IconPainter extends CustomPainter {
         for (final double x in <double>[4, 9, 13]) {
           canvas.drawLine(Offset(x, 6), Offset(x, 11), stroke);
         }
+      case Place.gallery:
+        // A picture on a wire: the lowest rectangle in the set, and the only
+        // one that hangs.
+        canvas.drawLine(const Offset(3.2, 5.5), const Offset(8, 2.6), stroke);
+        canvas.drawLine(const Offset(12.8, 5.5), const Offset(8, 2.6), stroke);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(2.8, 5.5, 10.4, 8),
+            const Radius.circular(1),
+          ),
+          stroke,
+        );
     }
   }
 

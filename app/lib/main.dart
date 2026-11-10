@@ -11,6 +11,7 @@ import 'design/tokens.dart';
 import 'film/strip_data.dart';
 import 'lab/fixture.dart';
 import 'lab/roll.dart';
+import 'views/places.dart';
 import 'views/room.dart';
 
 /// Whether the app opens the forty-frame layout fixture instead of the roll the
@@ -60,6 +61,7 @@ class KalloApp extends StatefulWidget {
     this.appearance,
     this.technicalTerms = false,
     this.drawerOpen = false,
+    this.initialPlace = Place.table,
     this.chrome = WindowChrome.plain,
     this.onDragWindow,
   });
@@ -85,6 +87,9 @@ class KalloApp extends StatefulWidget {
 
   /// Opens the drawer on the first frame, for the golden that shows it.
   final bool drawerOpen;
+
+  /// The place to open on. The app opens on the table; the goldens ask.
+  final Place initialPlace;
 
   @override
   State<KalloApp> createState() => _KalloAppState();
@@ -163,6 +168,7 @@ class _KalloAppState extends State<KalloApp> {
               onTechnicalTerms: (bool next) =>
                   setState(() => _technical = next),
               initiallyOpen: widget.drawerOpen,
+              initialPlace: widget.initialPlace,
               chrome: widget.chrome,
               onDragWindow: widget.onDragWindow,
             ),
