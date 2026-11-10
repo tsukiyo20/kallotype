@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kallo_ui/design/chrome.dart';
 import 'package:kallo_ui/film/strip_data.dart';
 import 'package:kallo_ui/lab/fixture.dart';
+import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/roll.dart';
 import 'package:kallo_ui/main.dart';
 import 'package:kallo_ui/views/places.dart';
@@ -37,6 +39,22 @@ Future<void> _loadFonts() async {
   }
 }
 
+/// The print the model made, read from the two files `just print` writes.
+///
+/// From disk rather than through `rootBundle`, for the same reason the fonts
+/// are: a test runs beside the package, and this is the honest source.
+Future<Print> _hangingPrint() async {
+  final ui.Codec codec = await ui.instantiateImageCodec(
+    File('assets/print.png').readAsBytesSync(),
+  );
+  final ui.FrameInfo frame = await codec.getNextFrame();
+  return Print.of(
+    jsonDecode(File('assets/print.json').readAsStringSync())
+        as Map<String, dynamic>,
+    frame.image,
+  );
+}
+
 /// The roll the model drew, five developments of one wedge.
 StripData _strip() => StripData.fromJson(
       jsonDecode(File('assets/film_strip.json').readAsStringSync())
@@ -50,7 +68,15 @@ void _window(WidgetTester tester) {
 }
 
 void main() {
-  setUpAll(_loadFonts);
+  // The print is decoded before any widget exists: `instantiateImageCodec` is a
+  // real engine call, and a widget test runs in a zone that would never
+  // complete it.
+  late Print hanging;
+
+  setUpAll(() async {
+    await _loadFonts();
+    hanging = await _hangingPrint();
+  });
 
   testWidgets('the contact sheet', (WidgetTester tester) async {
     _window(tester);
@@ -108,6 +134,7 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       roll: Roll.fromStrip(_strip()),
+      print: hanging,
       appearance: Brightness.dark,
       initialPlace: Place.gallery,
       chrome: WindowChrome.mac,
@@ -125,6 +152,7 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       roll: Roll.fromStrip(_strip()),
+      print: hanging,
       appearance: Brightness.light,
       initialPlace: Place.gallery,
       chrome: WindowChrome.mac,

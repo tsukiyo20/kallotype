@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../film/strip_data.dart';
+import 'clock.dart';
 
 /// A roll: the thing you are carrying.
 ///
@@ -92,11 +93,7 @@ class Frame {
       );
 
   /// `3:00`, `12:30` — the clock a darkroom timer would show.
-  String get clock {
-    final int whole = minutes.floor();
-    final int tenths = ((minutes - whole) * 60).round();
-    return '$whole:${tenths.toString().padLeft(2, '0')}';
-  }
+  String get clock => darkroomClock(minutes);
 
   /// The print: nine patches, each a colour.
   ///

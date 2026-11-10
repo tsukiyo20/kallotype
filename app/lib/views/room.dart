@@ -7,6 +7,7 @@ import '../design/chrome.dart';
 import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
+import '../lab/print.dart';
 import '../lab/roll.dart';
 import '../sheets/contact_sheet.dart';
 import '../widgets/inspector.dart';
@@ -26,6 +27,7 @@ class Room extends StatefulWidget {
   const Room({
     super.key,
     required this.roll,
+    this.print,
     required this.locale,
     required this.onLocale,
     required this.technicalTerms,
@@ -40,6 +42,11 @@ class Room extends StatefulWidget {
   final VoidCallback? onDragWindow;
 
   final Roll roll;
+
+  /// What hangs in the gallery. Null until something has been printed, which
+  /// is a state the room can show.
+  final Print? print;
+
   final Locale? locale;
   final ValueChanged<Locale?> onLocale;
   final bool technicalTerms;
@@ -141,7 +148,7 @@ class _RoomState extends State<Room> {
                   ),
                   Expanded(
                     child: _place == Place.gallery
-                        ? Gallery(frame: frame, onLight: _toggleLight)
+                        ? Gallery(print: widget.print, onLight: _toggleLight)
                         : _bench(frame, s),
                   ),
                 ],

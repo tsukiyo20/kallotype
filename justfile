@@ -88,6 +88,20 @@ bench *args:
 deny:
     cargo deny check
 
+# Write the print the gallery hangs, and the record of how it was made.
+#
+# The image is the model's: a photograph developed, printed on paper and saved
+# as sRGB. The record beside it is the same invocation written down, so that the
+# app can label the print without guessing — the model does not write one yet,
+# and when it does this second line goes.
+#
+# The source photograph is the author's own and is not in this repository; it
+# lives in the private tree, so it is passed in.
+# Example: just print private/raw/user/fuji_1200.jpg
+print src dev="9" temp="20":
+    cargo run --release --quiet --bin kalo -- render {{src}} -o app/assets/print.png --film vision3_500t --paper fuji_crystal_archive_pearl --dev {{dev}} --temp {{temp}} --ev auto --grain
+    printf '{\n  "film": "VISION3 500T",\n  "paper": "CRYSTAL ARCHIVE PEARL",\n  "minutes": %s,\n  "temp_c": %s\n}\n' "{{dev}}" "{{temp}}" > app/assets/print.json
+
 # Write the strip the app draws, from the model.
 #
 # The result is committed as an app asset so that building the interface needs

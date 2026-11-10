@@ -69,7 +69,7 @@ handle, a field, and — where the place has one — a record on the right.
 |---|---|
 | **Five places, one of each built** | Shelf, Table, Binder, Line, Gallery. The workbench belongs between the table and the binder and is not built yet. A place that has nothing in it says what it is for instead of showing another place's screen. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
-| **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
+| **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. What hangs there is a real print: a photograph through the model, written by `just print`, never through a camera's own rendering. |
 | **The chrome is light, the print is paper** | The window is a tool, so its planes are one neutral ramp in both appearances. The only warm and saturated surfaces in the product are the paper a print sits on and the gallery wall behind it. |
 | **Time is a dimension** | The frames on the table are the same frame developed for longer, and the inspector draws the whole roll as an envelope with the selected frame inside it. The point is the difference between them. |
 | **Nothing is a default** | No ripple, no elevation, no Roboto, no colour roles, no 4 dp grid. |
@@ -149,11 +149,12 @@ translates.
   `assets/film_strip.json`, written by `just view` from `kallotype-view`. The
   roll is VISION3 500T developed five times, not a shape invented to look like
   one. Regenerate it; never edit it.
-- **Pixels.** There is no photograph in this repository yet, so the print in the
-  gallery is the nine-step wedge — which is, truthfully, the first print in a
-  darkroom. Its first step is the paper, so it looks left-heavy against the
-  paper's margin: that is the film, not the layout. A loupe and full resolution
-  wait for the asset.
+- **Pixels on the roll.** The gallery hangs a photograph, but the contact sheet
+  still draws the nine-step wedge, because `assets/film_strip.json` carries
+  densities rather than pictures. The two places therefore disagree about their
+  subject until the roll has renders of its own — the next piece of pipeline,
+  not a design change. The gallery's loupe and its full resolution are waiting
+  for the same thing.
 - **Colour management.** The model writes sRGB and the system manages the
   display. Wide gamut is the screen's business; nothing here is tagged or
   converted.

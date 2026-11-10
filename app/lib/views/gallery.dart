@@ -5,8 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
-import '../lab/roll.dart';
-import '../widgets/patch_print.dart';
+import '../lab/print.dart';
 
 /// The gallery: the last place. One wall, one print, one light.
 ///
@@ -21,10 +20,11 @@ import '../widgets/patch_print.dart';
 /// adapting, and it is the one moment in this app where you are meant to see
 /// nothing and then see something.
 class Gallery extends StatelessWidget {
-  const Gallery({super.key, required this.frame, required this.onLight});
+  const Gallery({super.key, this.print, required this.onLight});
 
-  /// What is hanging. One print, because one frame has been printed.
-  final Frame frame;
+  /// What is hanging. Nothing, until something has been printed: an empty wall
+  /// and a switch is a true picture of a gallery with no work in it.
+  final Print? print;
 
   /// The switch belongs to the room, not to the wall.
   final VoidCallback onLight;
@@ -51,6 +51,7 @@ class Gallery extends StatelessWidget {
     // The paper holds its light better than the room does, for the same reason
     // everything else does not: the eye is the instrument here, not the lamp.
     final double printed = _darkAdaptation + (1 - _darkAdaptation) * light;
+    final Print? hanging = print;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints room) {
@@ -75,25 +76,27 @@ class Gallery extends StatelessWidget {
               ),
             ),
             Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  _Sheet(
-                    width: width,
-                    border: border,
-                    frame: frame,
-                    paper: KalloColors.under(_paper, printed),
-                  ),
-                  const SizedBox(height: KalloSpace.step4),
-                  Text(
-                    '${frame.number.toString().padLeft(2, '0')}   ·   ${frame.clock}',
-                    style: KalloType.small.copyWith(
-                      color: KalloColors.under(_label, light),
-                      letterSpacing: 0.2,
+              child: hanging == null
+                  ? const SizedBox.shrink()
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        _Sheet(
+                          width: width,
+                          border: border,
+                          print: hanging,
+                          light: printed,
+                        ),
+                        const SizedBox(height: KalloSpace.step4),
+                        Text(
+                          '${hanging.film}   ·   ${hanging.clock}   ·   ${hanging.paper}',
+                          style: KalloType.small.copyWith(
+                            color: KalloColors.under(_label, light),
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
             Positioned(
               left: 0,
@@ -114,7 +117,8 @@ class Gallery extends StatelessWidget {
   }
 }
 
-/// The print: the wedge, on paper, with the paper's margin showing.
+/// The print: the image the model printed, on paper, with the paper's margin
+/// showing.
 ///
 /// A fine print leaves more paper at the bottom than at the top. It costs one
 /// number and it is the difference between a print and a screenshot.
@@ -122,26 +126,48 @@ class _Sheet extends StatelessWidget {
   const _Sheet({
     required this.width,
     required this.border,
-    required this.frame,
-    required this.paper,
+    required this.print,
+    required this.light,
   });
 
   final double width;
   final double border;
-  final Frame frame;
-  final Color paper;
+  final Print print;
+
+  /// The light on the print, from a tenth to all of it.
+  final double light;
 
   @override
   Widget build(BuildContext context) {
     final double image = width - border * 2;
+    final Widget pixels = RawImage(
+      image: print.image,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+    );
     return DecoratedBox(
-      decoration: BoxDecoration(color: paper),
+      decoration: BoxDecoration(
+        color: KalloColors.under(Gallery._paper, light),
+      ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(border, border, border, border * 2.2),
         child: SizedBox(
           width: image,
           height: image / 1.5,
-          child: PatchPrint(patches: frame.printColours(paper)),
+          child: light >= 1
+              ? pixels
+              : ColorFiltered(
+                  // A print under less light is the same print with every
+                  // channel multiplied, which is what the matrix is and what
+                  // opacity would not be: fading to the wall is not dimming.
+                  colorFilter: ColorFilter.matrix(<double>[
+                    light, 0, 0, 0, 0, //
+                    0, light, 0, 0, 0, //
+                    0, 0, light, 0, 0, //
+                    0, 0, 0, 1, 0, //
+                  ]),
+                  child: pixels,
+                ),
         ),
       ),
     );

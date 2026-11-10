@@ -32,6 +32,11 @@ flutter:
     # Written by `just view` from `kallotype-view`. A rendering of the model at
     # a commit, not a second model: regenerate it, never edit it.
     - assets/film_strip.json
+    # Written by `just print` from the model: a photograph developed, printed
+    # and saved, and the record of the invocation beside it. Same law as the
+    # strip — regenerate, never edit.
+    - assets/print.png
+    - assets/print.json
 
   # Bundled, not borrowed from the platform: the product has to look the same
   # on six of them, and a golden test can only pin type it actually has.

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -10,6 +11,7 @@ import 'design/strings.dart';
 import 'design/tokens.dart';
 import 'film/strip_data.dart';
 import 'lab/fixture.dart';
+import 'lab/print.dart';
 import 'lab/roll.dart';
 import 'views/places.dart';
 import 'views/room.dart';
@@ -57,6 +59,7 @@ class KalloApp extends StatefulWidget {
   const KalloApp({
     super.key,
     this.roll,
+    this.print,
     this.locale,
     this.appearance,
     this.technicalTerms = false,
@@ -75,6 +78,10 @@ class KalloApp extends StatefulWidget {
   /// A roll to open directly. The tests pass one; the app loads the committed
   /// strip, which is the only roll there is until the model is behind an FFI.
   final Roll? roll;
+
+  /// A print to hang. The tests pass one; the app loads the committed print,
+  /// which is the only one there is until the model is behind an FFI.
+  final Print? print;
 
   /// Pins the human language. Null follows the device, which is also what the
   /// drawer's first option does.
@@ -100,6 +107,7 @@ class _KalloAppState extends State<KalloApp> {
   Brightness? _pinned;
   late bool _technical = widget.technicalTerms;
   Roll? _roll;
+  Print? _print;
 
   @override
   void initState() {
@@ -107,6 +115,19 @@ class _KalloAppState extends State<KalloApp> {
     _locale = widget.locale;
     _pinned = widget.appearance;
     _roll = widget.roll;
+    _print = widget.print;
+    if (_print == null) {
+      Print.load(rootBundle).then(
+        (Print print) {
+          if (mounted) {
+            setState(() => _print = print);
+          }
+        },
+        // A missing print is an empty wall, not a broken window: the gallery is
+        // a place you can be in with nothing hung in it.
+        onError: (Object error) => debugPrint('no print to hang: $error'),
+      );
+    }
     if (_roll == null) {
       StripData.load().then((StripData strip) {
         if (!mounted) {
@@ -162,6 +183,7 @@ class _KalloAppState extends State<KalloApp> {
           ? const ColoredBox(color: Color(0xFFF6F5F2))
           : Room(
               roll: _roll!,
+              print: _print,
               locale: _locale,
               onLocale: (Locale? next) => setState(() => _locale = next),
               technicalTerms: _technical,
