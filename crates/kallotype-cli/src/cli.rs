@@ -61,17 +61,17 @@ pub struct StockCheckArgs {
 pub struct StockArgs {
     /// Film stock id (see `kalo stocks`).
     ///
-    /// The default is the one measured stock: its curves are digitised from the
-    /// manufacturer's data sheet and its spectra are the ones compiled in. The
-    /// others are placeholders, and say so.
+    /// Every built-in stock is digitised from a manufacturer's data sheet; its
+    /// file says field by field what was measured and what was borrowed. The
+    /// default is the one stock with nothing borrowed at all.
     #[arg(long, default_value = "vision3_500t", conflicts_with = "film_file")]
     pub film: String,
 
     /// A `.kalofilm` file to render instead of a compiled stock.
     ///
     /// The file carries the film's curves, spectra and a field-by-field account
-    /// of what was measured; `data/films/` in the repository has two. Loading one
-    /// needs no recompile, which is the point of the format.
+    /// of what was measured; `data/films/` in the repository has twenty-four.
+    /// Loading one needs no recompile, which is the point of the format.
     #[arg(long, value_name = "PATH", conflicts_with = "film")]
     pub film_file: Option<std::path::PathBuf>,
 
