@@ -39,9 +39,11 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and one golden test pins the language:
+`fvm flutter analyze` is clean, and two goldens pin the language:
 
-![the contact sheet](test/goldens/sheet.png)
+| the table | the drawer, in Chinese |
+|---|---|
+| ![the contact sheet](test/goldens/sheet.png) | ![the drawer](test/goldens/drawer.png) |
 
 ```bash
 fvm flutter test                    # compares against the image

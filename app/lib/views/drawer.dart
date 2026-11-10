@@ -1,0 +1,423 @@
+import 'package:flutter/widgets.dart';
+
+import '../design/scope.dart';
+import '../design/strings.dart';
+import '../design/tokens.dart';
+
+/// Settings, as a drawer in the bench.
+///
+/// A place you open, not a page you go to. Six cards on one sheet of paper, and
+/// the film's own words are the ones that do not change when the language does.
+class SettingsDrawer extends StatefulWidget {
+  const SettingsDrawer({
+    super.key,
+    required this.locale,
+    required this.onLocale,
+    required this.technicalTerms,
+    required this.onTechnicalTerms,
+    required this.onClose,
+  });
+
+  /// What the user pinned, or null to follow the device.
+  final Locale? locale;
+  final ValueChanged<Locale?> onLocale;
+  final bool technicalTerms;
+  final ValueChanged<bool> onTechnicalTerms;
+  final VoidCallback onClose;
+
+  @override
+  State<SettingsDrawer> createState() => _SettingsDrawerState();
+}
+
+class _SettingsDrawerState extends State<SettingsDrawer> {
+  static const List<String> _tabs = <String>[
+    'LANGUAGE',
+    'APPEARANCE',
+    'COLOUR',
+    'PERFORMANCE',
+    'SOUND',
+    'ABOUT',
+  ];
+
+  int _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final KalloColors colors = KalloScope.colorsOf(context);
+    final KalloStrings s = KalloStrings.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.hairline)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          SizedBox(
+            height: 44,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
+              child: Row(
+                children: <Widget>[
+                  Text(
+                    s.drawer,
+                    style: KalloType.caption.copyWith(
+                      color: colors.inkFaint,
+                      letterSpacing: 2.2,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: widget.onClose,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.all(KalloSpace.step2),
+                      child: Text(
+                        s.close,
+                        style: KalloType.caption.copyWith(color: colors.inkMuted),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(height: 1, color: colors.hairline),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                SizedBox(width: 190, child: _rail(colors)),
+                Container(width: 1, color: colors.hairline),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      KalloSpace.step4 - 4,
+                      KalloSpace.step4 - 6,
+                      KalloSpace.step4,
+                      KalloSpace.step4,
+                    ),
+                    // A drawer opened on a 27-inch display should still read
+                    // as a page, not as two columns a metre apart.
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: _page(s, colors),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: colors.hairline),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KalloSpace.step3,
+              vertical: KalloSpace.step2 + 2,
+            ),
+            child: Row(
+              children: <Widget>[
+                Text(
+                  s.applyAtOnce,
+                  style: KalloType.data.copyWith(
+                    fontSize: 10,
+                    color: colors.inkFaint,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  'v0.2.0',
+                  style: KalloType.data.copyWith(
+                    fontSize: 10,
+                    color: colors.inkFaint,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rail(KalloColors colors) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: KalloSpace.step3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (int i = 0; i < _tabs.length; i++)
+            GestureDetector(
+              onTap: () => setState(() => _tab = i),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KalloSpace.step3 + 4,
+                  vertical: KalloSpace.step2 + 2,
+                ),
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: i == _tab ? colors.accent : const Color(0x00000000),
+                      width: 3,
+                    ),
+                  ),
+                ),
+                child: Text(
+                  _tabs[i],
+                  style: KalloType.caption.copyWith(
+                    color: i == _tab ? colors.ink : colors.inkFaint,
+                    letterSpacing: 1.6,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _page(KalloStrings s, KalloColors colors) {
+    switch (_tab) {
+      case 0:
+        return _language(s, colors);
+      case 1:
+        return _statement(s.appearance, s.appearanceNote, colors);
+      case 2:
+        return _statement(s.colour, s.colourNote, colors);
+      case 3:
+        return _statement(s.performance, s.performanceNote, colors);
+      case 4:
+        return _statement(s.sound, s.soundNote, colors);
+      default:
+        return _statement(s.about, s.aboutNote, colors);
+    }
+  }
+
+  Widget _statement(String title, String body, KalloColors colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(title, style: KalloType.title.copyWith(fontSize: 26, color: colors.ink)),
+        const SizedBox(height: KalloSpace.step3),
+        SizedBox(
+          width: 460,
+          child: Text(
+            body,
+            style: KalloType.body.copyWith(color: colors.inkMuted),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _language(KalloStrings s, KalloColors colors) {
+    final String device = WidgetsBinding.instance.platformDispatcher.locale
+        .toLanguageTag();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          s.language,
+          style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
+        ),
+        const SizedBox(height: KalloSpace.step2),
+        Text(s.followsDevice, style: KalloType.body.copyWith(color: colors.inkMuted)),
+        const SizedBox(height: KalloSpace.step4),
+        _Label(s.interfaceLanguage, colors),
+        const SizedBox(height: KalloSpace.step2),
+        _Segments(
+          options: <String>[s.system, '中文', 'English'],
+          selected: widget.locale == null
+              ? 0
+              : (widget.locale!.languageCode == 'zh' ? 1 : 2),
+          onSelect: (int i) => widget.onLocale(switch (i) {
+            1 => const Locale('zh'),
+            2 => const Locale('en'),
+            _ => null,
+          }),
+          colors: colors,
+        ),
+        const SizedBox(height: KalloSpace.step2 + 2),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            'device: $device',
+            style: KalloType.data.copyWith(fontSize: 10, color: colors.inkFaint),
+          ),
+        ),
+        const SizedBox(height: KalloSpace.step4 - 8),
+        Container(height: 1, color: colors.hairline),
+        const SizedBox(height: KalloSpace.step3 + 4),
+        _Label(s.technicalTerms, colors),
+        const SizedBox(height: KalloSpace.step2 + 2),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                s.keepEnglish,
+                style: KalloType.body.copyWith(color: colors.ink),
+              ),
+            ),
+            _Toggle(
+              on: widget.technicalTerms,
+              onChanged: widget.onTechnicalTerms,
+              colors: colors,
+            ),
+          ],
+        ),
+        const SizedBox(height: KalloSpace.step2),
+        Row(
+          children: <Widget>[
+            Text('显影', style: KalloType.body.copyWith(color: colors.inkMuted)),
+            const SizedBox(width: KalloSpace.step2),
+            Text(
+              widget.technicalTerms ? 'DEVELOP   ·   EI 200   ·   C-41' : 'EI 200   ·   C-41',
+              style: KalloType.data.copyWith(
+                fontSize: 11,
+                color: colors.inkFaint,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: KalloSpace.step4 - 8),
+        Container(height: 1, color: colors.hairline),
+        const SizedBox(height: KalloSpace.step3 + 4),
+        _Label(s.numbers, colors),
+        const SizedBox(height: KalloSpace.step2 + 2),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                s.decimalPoint,
+                style: KalloType.body.copyWith(color: colors.ink),
+              ),
+            ),
+            Text(
+              '1.24   ·   −0.05',
+              style: KalloType.data.copyWith(color: colors.inkMuted),
+            ),
+          ],
+        ),
+        const SizedBox(height: KalloSpace.step4 - 8),
+        Container(height: 1, color: colors.hairline),
+        const SizedBox(height: KalloSpace.step3 + 4),
+        SizedBox(
+          width: 460,
+          child: Text(
+            s.neverRounded,
+            style: KalloType.body.copyWith(color: colors.inkMuted),
+          ),
+        ),
+        const SizedBox(height: KalloSpace.step4),
+      ],
+    );
+  }
+}
+
+class _Label extends StatelessWidget {
+  const _Label(this.text, this.colors);
+
+  final String text;
+  final KalloColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text.toUpperCase(),
+      style: KalloType.caption.copyWith(color: colors.inkFaint),
+    );
+  }
+}
+
+/// Three choices, one of them a pair of characters wide.
+class _Segments extends StatelessWidget {
+  const _Segments({
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+    required this.colors,
+  });
+
+  final List<String> options;
+  final int selected;
+  final ValueChanged<int> onSelect;
+  final KalloColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(border: Border.all(color: colors.hairline)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (int i = 0; i < options.length; i++)
+            GestureDetector(
+              onTap: () => onSelect(i),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KalloSpace.step3 + 2,
+                  vertical: KalloSpace.step2 + 2,
+                ),
+                color: i == selected ? colors.ink : null,
+                child: Text(
+                  options[i],
+                  style: KalloType.body.copyWith(
+                    fontSize: 12.5,
+                    color: i == selected ? colors.surface : colors.inkMuted,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Toggle extends StatelessWidget {
+  const _Toggle({
+    required this.on,
+    required this.onChanged,
+    required this.colors,
+  });
+
+  final bool on;
+  final ValueChanged<bool> onChanged;
+  final KalloColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onChanged(!on),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: KalloMotion.quick,
+        curve: KalloMotion.enter,
+        width: 34,
+        height: 18,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: on ? colors.accent : colors.hairline,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: AnimatedAlign(
+          duration: KalloMotion.quick,
+          curve: KalloMotion.enter,
+          alignment: on ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              color: colors.surfaceRaised,
+              borderRadius: BorderRadius.circular(7),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

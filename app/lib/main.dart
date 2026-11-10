@@ -1,10 +1,11 @@
 import 'package:flutter/widgets.dart';
 
+import 'design/strings.dart';
 import 'design/scope.dart';
 import 'design/tokens.dart';
 import 'film/strip_data.dart';
 import 'lab/roll.dart';
-import 'sheets/contact_sheet.dart';
+import 'views/room.dart';
 
 void main() => runApp(const KalloApp());
 
@@ -13,12 +14,51 @@ void main() => runApp(const KalloApp());
 /// `WidgetsApp`, not `MaterialApp`: text direction, focus, overlay, semantics
 /// and routing come from it, and nothing else does. Everything visible is the
 /// product's own vocabulary.
-class KalloApp extends StatelessWidget {
-  const KalloApp({super.key, this.roll});
+class KalloApp extends StatefulWidget {
+  const KalloApp({
+    super.key,
+    this.roll,
+    this.locale,
+    this.technicalTerms = false,
+    this.drawerOpen = false,
+  });
 
   /// A roll to open directly. The tests pass one; the app loads the committed
   /// strip, which is the only roll there is until the model is behind an FFI.
   final Roll? roll;
+
+  /// Pins the human language. Null follows the device, which is also what the
+  /// drawer's first option does.
+  final Locale? locale;
+
+  final bool technicalTerms;
+
+  /// Opens the drawer on the first frame, for the golden that shows it.
+  final bool drawerOpen;
+
+  @override
+  State<KalloApp> createState() => _KalloAppState();
+}
+
+class _KalloAppState extends State<KalloApp> {
+  Locale? _locale;
+  late bool _technical = widget.technicalTerms;
+  Roll? _roll;
+
+  @override
+  void initState() {
+    super.initState();
+    _locale = widget.locale;
+    _roll = widget.roll;
+    if (_roll == null) {
+      StripData.load().then((StripData strip) {
+        if (!mounted) {
+          return;
+        }
+        setState(() => _roll = Roll.fromStrip(strip));
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,17 +67,15 @@ class KalloApp extends StatelessWidget {
       title: 'Kallotype',
       color: colors.ground,
       debugShowCheckedModeBanner: false,
-      builder: (BuildContext context, Widget? child) => KalloScope(
-        colors: colors,
-        environment: KalloEnvironment.lightTable,
-        child: DefaultTextStyle(
-          style: KalloType.body.copyWith(color: colors.ink),
-          child: child!,
-        ),
-      ),
-      // There are no page transitions in this product: you move between
-      // places by changing the light and moving the camera, never by pushing
-      // a route. The one route that exists comes and goes in no time.
+      locale: _locale,
+      supportedLocales: KalloStrings.supported,
+      localizationsDelegates: const <LocalizationsDelegate<Object>>[
+        KalloStrings.delegate,
+        DefaultWidgetsLocalizations.delegate,
+      ],
+      // There are no page transitions in this product: you move between places
+      // by changing the light and moving the camera, never by pushing a route.
+      // The one route that exists comes and goes in no time.
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
           PageRouteBuilder<T>(
         settings: settings,
@@ -47,47 +85,25 @@ class KalloApp extends StatelessWidget {
                 Animation<double> secondary) =>
             builder(context),
       ),
-      home: roll == null ? const _Opening() : SheetScreen(roll: roll!),
-    );
-  }
-}
-
-/// The table, before the roll is on it.
-class _Opening extends StatefulWidget {
-  const _Opening();
-
-  @override
-  State<_Opening> createState() => _OpeningState();
-}
-
-class _OpeningState extends State<_Opening> {
-  late final Future<Roll> _roll = StripData.load().then(
-    (StripData strip) => Roll.fromStrip(strip),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Roll>(
-      future: _roll,
-      builder: (BuildContext context, AsyncSnapshot<Roll> snapshot) {
-        if (snapshot.hasError) {
-          return ColoredBox(
-            color: KalloScope.colorsOf(context).ground,
-            child: Center(
-              child: Text(
-                'The strip did not load: ${snapshot.error}',
-                style: KalloType.body.copyWith(
-                  color: KalloScope.colorsOf(context).inkMuted,
-                ),
-              ),
+      builder: (BuildContext context, Widget? child) => KalloScope(
+        colors: colors,
+        environment: KalloEnvironment.lightTable,
+        child: DefaultTextStyle(
+          style: KalloType.body.copyWith(color: colors.ink),
+          child: child!,
+        ),
+      ),
+      home: _roll == null
+          ? const ColoredBox(color: Color(0xFFF5F1E9))
+          : Room(
+              roll: _roll!,
+              locale: _locale,
+              onLocale: (Locale? next) => setState(() => _locale = next),
+              technicalTerms: _technical,
+              onTechnicalTerms: (bool next) =>
+                  setState(() => _technical = next),
+              initiallyOpen: widget.drawerOpen,
             ),
-          );
-        }
-        if (!snapshot.hasData) {
-          return ColoredBox(color: KalloScope.colorsOf(context).ground);
-        }
-        return SheetScreen(roll: snapshot.data!);
-      },
     );
   }
 }

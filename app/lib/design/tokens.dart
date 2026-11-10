@@ -165,8 +165,8 @@ abstract final class KalloMotion {
 /// | [mono] | the instrument: anything measured |
 /// | [serif] | the paper: records, captions, prose |
 ///
-/// The Chinese is not bundled yet; it falls back to the platform's own face,
-/// which is the one place the six builds still differ.
+/// The Chinese cut is bundled too, one weight. It is 8.4 MB, and it is the
+/// difference between six builds that agree and six that each borrow a face.
 abstract final class KalloType {
   static const String sans = 'PlexSans';
   static const String condensed = 'PlexCondensed';
@@ -174,7 +174,10 @@ abstract final class KalloType {
   static const String serif = 'PlexSerif';
 
   /// Families the engine falls back to for everything Plex has no glyph for.
+  /// Bundled first, so Chinese is the same on all six platforms; the platform's
+  /// own face is only for the rare character the bundled cut does not carry.
   static const List<String> cjkFallback = <String>[
+    'PlexSansSC',
     'PingFang SC',
     'Hiragino Sans GB',
     'Microsoft YaHei',
@@ -183,6 +186,17 @@ abstract final class KalloType {
   ];
 
   static const String monoFallback = 'Menlo';
+
+  /// A number may sit next to a Chinese word — `显影 04` — so the mono cut has
+  /// to fall back to the same Chinese as everything else.
+  static const List<String> monoFallbackList = <String>[
+    monoFallback,
+    'PlexSansSC',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
+  ];
 
   static const List<FontFeature> _tabular = <FontFeature>[FontFeature('tnum')];
 
@@ -238,7 +252,7 @@ abstract final class KalloType {
   /// not move the things around it.
   static const TextStyle data = TextStyle(
     fontFamily: mono,
-    fontFamilyFallback: <String>[monoFallback],
+    fontFamilyFallback: monoFallbackList,
     fontSize: 12.5,
     height: 1.3,
     letterSpacing: 0.1,
@@ -249,7 +263,7 @@ abstract final class KalloType {
   /// A frame number, an edge code. Smaller than [data], still tabular.
   static const TextStyle folio = TextStyle(
     fontFamily: mono,
-    fontFamilyFallback: <String>[monoFallback],
+    fontFamilyFallback: monoFallbackList,
     fontSize: 10,
     height: 1.2,
     letterSpacing: 0.5,

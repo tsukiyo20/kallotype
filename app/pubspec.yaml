@@ -54,3 +54,8 @@ flutter:
     - family: PlexSerif
       fonts:
         - asset: fonts/plex-serif-400.ttf
+    # The Chinese cut. One weight, 8.4 MB: it is the difference between six
+    # builds that agree and six builds that each borrow their own face.
+    - family: PlexSansSC
+      fonts:
+        - asset: fonts/plex-sans-sc-400.ttf

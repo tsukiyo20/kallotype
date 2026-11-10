@@ -13,10 +13,18 @@ import '../widgets/edge_bar.dart';
 /// What it shows is positives, and what you do on it is choose. It is the
 /// default place in the product, because it is both the library and the bench.
 class SheetScreen extends StatelessWidget {
-  const SheetScreen({super.key, required this.roll, this.selected = 2});
+  const SheetScreen({
+    super.key,
+    required this.roll,
+    this.selected = 2,
+    this.onPlace,
+  });
 
   final Roll roll;
   final int selected;
+
+  /// Where the edge bar goes. The drawer is one of these.
+  final ValueChanged<Place>? onPlace;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +55,7 @@ class SheetScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: KalloSpace.step4 - 8),
-            const EdgeBar(current: Place.table),
+            EdgeBar(current: Place.table, onTap: onPlace),
           ],
         ),
       ),
