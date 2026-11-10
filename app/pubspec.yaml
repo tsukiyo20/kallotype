@@ -6,9 +6,13 @@ publish_to: none
 version: 0.1.0
 
 environment:
-  # `Color.withValues` and the wide-gamut `ColorSpace` API are needed.
-  sdk: ">=3.5.0 <4.0.0"
-  flutter: ">=3.27.0"
+  # Flutter 3.47 is the first version that puts Impeller on macOS, Windows and
+  # Linux, and the first that leaves wide gamut on by default on the Mac. Both
+  # are things this app is judged on, so the floor is that release, not an
+  # older one: `Color.withValues` and the wide-gamut `ColorSpace` API are the
+  # only other reasons this is not `>=3.27.0` any more.
+  sdk: ^3.13.0
+  flutter: ">=3.47.9"
 
 dependencies:
   flutter:
@@ -17,7 +21,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   # Material is not used anywhere in this app, and this is where that is said.
