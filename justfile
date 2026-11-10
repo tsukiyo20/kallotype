@@ -95,14 +95,16 @@ deny:
 # anything has an empty wall — which is the state it is built to show. Nothing
 # here is committed.
 #
-# The export lands in `Pictures/Kallotype` under $HOME, which is where the app
-# looks (`lib/lab/exports.dart` is the only place that knows the path).
+# The export lands in `Pictures/Kallotype` under $HOME unless a fourth argument
+# says otherwise — that is the app's default folder, not a promise that it is
+# the one you chose in the drawer.
 #
 # Example: just print ../file-test/DSCF0989.JPG
-print src dev="9" temp="20":
-    mkdir -p "$HOME/Pictures/Kallotype"
-    cargo run --release --quiet --bin kalo -- render {{src}} -o "$HOME/Pictures/Kallotype/print-{{dev}}min.png" --film vision3_500t --paper fuji_crystal_archive_pearl --dev {{dev}} --temp {{temp}} --ev auto --grain
-    printf '{\n  "film": "VISION3 500T",\n  "paper": "CRYSTAL ARCHIVE PEARL",\n  "minutes": %s,\n  "temp_c": %s\n}\n' "{{dev}}" "{{temp}}" > "$HOME/Pictures/Kallotype/print-{{dev}}min.json"
+#          just print ../file-test/DSCF0989.JPG 12 20 ~/Desktop/prints
+print src dev="9" temp="20" dest="$HOME/Pictures/Kallotype":
+    mkdir -p "{{dest}}"
+    cargo run --release --quiet --bin kalo -- render {{src}} -o "{{dest}}/print-{{dev}}min.png" --film vision3_500t --paper fuji_crystal_archive_pearl --dev {{dev}} --temp {{temp}} --ev auto --grain
+    printf '{\n  "film": "VISION3 500T",\n  "paper": "CRYSTAL ARCHIVE PEARL",\n  "minutes": %s,\n  "temp_c": %s\n}\n' "{{dev}}" "{{temp}}" > "{{dest}}/print-{{dev}}min.json"
 
 # Write the strip the app draws, from the model.
 #
