@@ -71,10 +71,8 @@ at all.
 ## The honesty section
 
 Every file carries a `[measured]` table that says, field by field, whether the
-number was measured or borrowed — and from where. PRO 400H's file says, in so
-many words, that its dye shapes are borrowed from the VISION3 500T
-digitisation and that the fourth layer's inhibitor strength is a placeholder.
-A film file that hides its borrowings is one that lies about them.
+number was measured or borrowed — and from where. A film file that hides its
+borrowings is one that lies about them.
 
 ## Licence
 
