@@ -198,6 +198,15 @@ pub struct RenderArgs {
     #[arg(long)]
     pub grain: bool,
 
+    /// Render at this width, in pixels, instead of at the input's own.
+    ///
+    /// The bench works at the size a screen can show, and a 26 megapixel camera
+    /// file is not that. It is a resize and not a crop — the whole frame — and
+    /// the grain is computed for the sampling that results, because a smaller
+    /// render is a coarser scan and should look like one.
+    #[arg(long, value_name = "PIXELS")]
+    pub size: Option<u32>,
+
     /// Width of the film frame the image represents, in millimetres.
     ///
     /// 36 is a 35 mm still frame; use 24 for half-frame, and the short side if

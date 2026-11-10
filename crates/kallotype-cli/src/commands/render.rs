@@ -157,6 +157,12 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
     let selection = resolve(&args.stock)?;
 
     let mut image = read_input(&args.input, args.input_encoding.into())?;
+    // Downsampled before anything else, because everything after this reads the
+    // frame at the size it is rendered at: the meter averages it, the grain is
+    // scaled by it, and the emulsions blur across it.
+    if let Some(size) = args.size {
+        image = kallotype_io::resize_to_width(&image, size);
+    }
     let (width, height) = (image.width, image.height);
 
     // The meter reads the frame, and the offset it solves is part of the
