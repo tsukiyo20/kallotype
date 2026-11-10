@@ -1,4 +1,4 @@
-//! Reading a `.kalofilm` file — the format in `films/FORMAT.md`.
+//! Reading a `.kalofilm` file — the format in `data/films/FORMAT.md`.
 //!
 //! A film is data: a header that says where every number came from, the spectra
 //! as a contiguous block of little-endian f64, and a SHA-256 over the lot. This
@@ -386,7 +386,7 @@ mod tests {
     use super::*;
 
     fn films() -> std::path::PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../films")
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/films")
     }
 
     /// The whole point of the format: the file and the compiled stock describe

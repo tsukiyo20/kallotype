@@ -8,8 +8,9 @@
 //!
 //! This runs at build time rather than at load time on purpose: the tables are
 //! still `const` arrays, so nothing about the renderer's performance or its API
-//! changes. A build needs the data files present — `films/` and `data/films/` —
-//! and `cargo:rerun-if-changed` makes a repack trigger a rebuild.
+//! changes. A build needs the data files present — `data/films/` and
+//! `data/papers/` — and `cargo:rerun-if-changed` makes a repack trigger a
+//! rebuild.
 //!
 //! The header parser is deliberately strict and small: the header is written by
 //! `pack_film.py`, the same generator that wrote these files, so it contains
@@ -31,10 +32,7 @@ fn main() {
     let root = manifest.join("..").join("..");
 
     let mut paths = Vec::new();
-    for directory in [root.join("films"), root.join("data").join("films")] {
-        let Ok(entries) = fs::read_dir(&directory) else {
-            continue;
-        };
+    if let Ok(entries) = fs::read_dir(root.join("data").join("films")) {
         for entry in entries.flatten() {
             let directory = entry.path();
             if !directory.is_dir() {
@@ -127,7 +125,7 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     // The per-file watches below catch edits; these catch a file appearing or
     // disappearing, which is how a stock is added or retired.
-    for directory in ["films", "data/films", "data/papers"] {
+    for directory in ["data/films", "data/papers"] {
         println!("cargo:rerun-if-changed={directory}");
     }
     for path in &paths {
