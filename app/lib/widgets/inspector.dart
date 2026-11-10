@@ -25,6 +25,11 @@ class Inspector extends StatelessWidget {
   Frame get frame => roll.frames[selected];
   int get total => roll.frames.length;
 
+  /// Whether the roll has a chart in it. A roll the app developed has prints
+  /// and no curves: the model's command line writes pixels, not densities, and
+  /// a chart with invented rows would be worse than no chart.
+  bool get charted => roll.frames.every((Frame frame) => frame.isMeasured);
+
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
@@ -66,12 +71,14 @@ class Inspector extends StatelessWidget {
               rows: <(String, String)>[
                 (s.time, frame.clock),
                 (s.temperature, '${frame.tempC.toStringAsFixed(1)} °C'),
-                (s.gamma, _triple(frame.gamma)),
-                (s.dMax, _triple(frame.dMax)),
+                if (frame.gamma != null) (s.gamma, _triple(frame.gamma!)),
+                if (frame.dMax != null) (s.dMax, _triple(frame.dMax!)),
               ],
               colors: colors,
             ),
-            const SizedBox(height: 20),
+            if (!charted) const Spacer(),
+            if (charted) ...<Widget>[
+              const SizedBox(height: 20),
             Row(
               children: <Widget>[
                 Text(
@@ -91,7 +98,7 @@ class Inspector extends StatelessWidget {
               child: CustomPaint(
                 painter: _CurvePainter(
                   <List<double>>[
-                    for (final Frame f in roll.frames) f.toneCurve,
+                    for (final Frame f in roll.frames) f.toneCurve!,
                   ],
                   selected,
                   colors.hairline,
@@ -100,6 +107,7 @@ class Inspector extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            ],
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(

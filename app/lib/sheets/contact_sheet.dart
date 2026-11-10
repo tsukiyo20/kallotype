@@ -99,7 +99,17 @@ class _FrameTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(KalloRadius.film),
                   child: AspectRatio(
                     aspectRatio: 3 / 2,
-                    child: PatchPrint(patches: frame.printColours(colors.print)),
+                    // A frame the app developed has a print; a frame the model
+                    // drew has a chart. The sheet draws whichever it was given.
+                    child: frame.image != null
+                        ? RawImage(
+                            image: frame.image,
+                            fit: BoxFit.cover,
+                            filterQuality: FilterQuality.medium,
+                          )
+                        : PatchPrint(
+                            patches: frame.printColours(colors.print)!,
+                          ),
                   ),
                 ),
               ),

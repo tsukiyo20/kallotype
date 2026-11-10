@@ -282,4 +282,23 @@ void main() {
     expect(image.width, closeTo(660 * (1 - 0.06), 1));
     expect(image.height, closeTo(image.width / 1.5, 1));
   });
+
+  testWidgets('the shelf', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      prints: const <Print>[],
+      export: _exports,
+      roll: Roll.fromStrip(_strip()),
+      appearance: Brightness.light,
+      initialPlace: Place.shelf,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/shelf.png'),
+    );
+  });
 }

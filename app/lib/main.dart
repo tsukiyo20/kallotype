@@ -14,6 +14,7 @@ import 'lab/settings.dart';
 import 'lab/fixture.dart';
 import 'lab/print.dart';
 import 'lab/roll.dart';
+import 'lab/roll_store.dart';
 import 'views/places.dart';
 import 'views/room.dart';
 
@@ -130,13 +131,42 @@ class _KalloAppState extends State<KalloApp> {
       unawaited(_openExports());
     }
     if (_roll == null) {
-      StripData.load().then((StripData strip) {
-        if (!mounted) {
-          return;
-        }
-        setState(() => _roll = _fixture ? interpolatedRoll(strip) : Roll.fromStrip(strip));
-      });
+      unawaited(_openRoll());
     }
+  }
+
+  /// The roll you were carrying, or the model's own chart when there is none.
+  ///
+  /// A roll that has been developed is on disk, and it is the one place the app
+  /// is allowed to be full on purpose: a darkroom holds the roll you left in it.
+  Future<void> _openRoll() async {
+    final Roll? stored = await RollStore.load();
+    if (stored != null) {
+      if (mounted) {
+        setState(() => _roll = stored);
+      }
+      return;
+    }
+    final StripData strip = await StripData.load();
+    if (!mounted) {
+      return;
+    }
+    setState(
+      () => _roll = _fixture ? interpolatedRoll(strip) : Roll.fromStrip(strip),
+    );
+  }
+
+  void _developed(Roll roll) {
+    final Roll? previous = _roll;
+    setState(() => _roll = roll);
+    if (previous == null || identical(previous, roll)) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final Frame frame in previous.frames) {
+        frame.image?.dispose();
+      }
+    });
   }
 
   /// Read the folder the person chose, and the prints in it.
@@ -264,6 +294,7 @@ class _KalloAppState extends State<KalloApp> {
           : Room(
               roll: _roll!,
               prints: _prints,
+              onDeveloped: _developed,
               onEnterGallery:
                   widget.prints == null ? () => unawaited(_reloadPrints()) : null,
               export: widget.export ?? _export,

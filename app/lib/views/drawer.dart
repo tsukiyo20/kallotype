@@ -4,6 +4,7 @@ import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/exports.dart';
+import '../widgets/button.dart';
 
 /// Settings, as a drawer in the bench.
 ///
@@ -318,11 +319,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                 ),
               ),
               if (export.canChoose)
-                _Button(
-                  label: s.choose,
-                  onTap: export.onChoose,
-                  colors: colors,
-                ),
+                KalloButton(label: s.choose, onTap: export.onChoose),
             ],
           ),
         ),
@@ -460,44 +457,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         ),
         const SizedBox(height: KalloSpace.step4),
       ],
-    );
-  }
-}
-
-/// A button on a field: small, bordered, and the same in both appearances.
-class _Button extends StatelessWidget {
-  const _Button({
-    required this.label,
-    required this.onTap,
-    required this.colors,
-  });
-
-  final String label;
-  final VoidCallback? onTap;
-  final KalloColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(KalloRadius.control - 1),
-            border: Border.all(color: colors.hairline),
-          ),
-          child: Text(
-            label,
-            style: KalloType.body.copyWith(fontSize: 12, color: colors.ink),
-          ),
-        ),
-      ),
     );
   }
 }

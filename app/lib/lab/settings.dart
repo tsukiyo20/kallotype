@@ -17,33 +17,38 @@ class Settings {
 
   static const String _name = 'settings.json';
 
-  /// Where the platform puts an app's own settings. Null where there is no
-  /// such place to name, and then nothing is remembered — which is better than
-  /// remembering it in whatever the working directory happens to be.
-  static File? get file {
+  /// The app's own folder: settings, and the roll being carried. Null where
+  /// there is no such place to name.
+  static Directory? get directory {
     final String separator = Platform.pathSeparator;
     final Map<String, String> environment = Platform.environment;
     final String? home = environment['HOME'];
     if (Platform.isMacOS && home != null) {
-      return File('$home/Library/Application Support/dev.kallotype.app'
-          '$separator$_name');
+      return Directory('$home/Library/Application Support/dev.kallotype.app');
     }
     if (Platform.isWindows) {
       final String? roaming = environment['APPDATA'];
       if (roaming != null) {
-        return File('$roaming${separator}Kallotype$separator$_name');
+        return Directory('$roaming${separator}Kallotype');
       }
     }
     final String? config = environment['XDG_CONFIG_HOME'];
     if (config != null && config.isNotEmpty) {
-      return File('$config/kallotype/$_name');
+      return Directory('$config/kallotype');
     }
     // A phone has no XDG and no APPDATA: the app's container is its home, and
     // the file lives quietly inside it.
     if (home != null) {
-      return File('$home/.config/kallotype/$_name');
+      return Directory('$home/.config/kallotype');
     }
     return null;
+  }
+
+  static File? get file {
+    final Directory? folder = directory;
+    return folder == null
+        ? null
+        : File('${folder.path}${Platform.pathSeparator}$_name');
   }
 
   static Future<Settings> read() async {

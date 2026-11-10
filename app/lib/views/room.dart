@@ -16,6 +16,7 @@ import '../widgets/sidebar.dart';
 import 'drawer.dart';
 import 'gallery.dart';
 import 'places.dart';
+import 'shelf.dart';
 
 /// The window.
 ///
@@ -30,6 +31,7 @@ class Room extends StatefulWidget {
     required this.roll,
     this.prints = const <Print>[],
     this.onEnterGallery,
+    required this.onDeveloped,
     required this.export,
     required this.locale,
     required this.onLocale,
@@ -54,6 +56,9 @@ class Room extends StatefulWidget {
   /// watched, and a room that shows yesterday's work is a room with the lights
   /// off.
   final VoidCallback? onEnterGallery;
+
+  /// A roll that has just come off the shelf: one photograph, developed.
+  final ValueChanged<Roll> onDeveloped;
 
   /// Where prints come from, and whether this platform lets a person say.
   final ExportSetting export;
@@ -163,9 +168,21 @@ class _RoomState extends State<Room> {
                     onSettings: () => setState(() => _open = true),
                   ),
                   Expanded(
-                    child: _place == Place.gallery
-                        ? Gallery(prints: widget.prints, onLight: _toggleLight)
-                        : _bench(frame, s),
+                    child: switch (_place) {
+                      // Two rooms and a bench: the shelf and the gallery are
+                      // whole fields, and the record on the right belongs to a
+                      // frame, which is a thing only the bench has.
+                      Place.shelf => Shelf(
+                          roll: widget.roll,
+                          onDeveloped: widget.onDeveloped,
+                          onOpen: () => setState(() => _place = Place.table),
+                        ),
+                      Place.gallery => Gallery(
+                          prints: widget.prints,
+                          onLight: _toggleLight,
+                        ),
+                      _ => _bench(frame, s),
+                    },
                   ),
                 ],
               ),

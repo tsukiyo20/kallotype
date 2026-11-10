@@ -1,5 +1,6 @@
 import 'dart:math' as math;
-import 'dart:ui';
+import 'dart:ui' as ui;
+import 'dart:ui' show Color;
 
 import '../film/strip_data.dart';
 import 'clock.dart';
@@ -14,8 +15,8 @@ class Roll {
     required this.number,
     required this.stockId,
     required this.stockLabel,
-    required this.baseDensity,
     required this.frames,
+    this.photo,
   });
 
   /// Which roll it is, from one. What it is called is the interface's business
@@ -28,8 +29,9 @@ class Roll {
   /// The stock's label, as it would be printed on the box.
   final String stockLabel;
 
-  /// Base, fog and the orange mask, in status density, per record.
-  final List<double> baseDensity;
+  /// The photograph this roll was developed from, when the app developed it.
+  /// A roll the model drew has none: it is a chart, not a picture.
+  final String? photo;
 
   final List<Frame> frames;
 
@@ -44,7 +46,6 @@ class Roll {
       number: number,
       stockId: strip.stockId,
       stockLabel: strip.label,
-      baseDensity: strip.baseDensity,
       frames: <Frame>[
         for (int i = 0; i < strip.frames.length; i++)
           Frame.fromStrip(i + 1, strip.frames[i]),
@@ -59,9 +60,10 @@ class Frame {
     required this.number,
     required this.minutes,
     required this.tempC,
-    required this.gamma,
-    required this.dMax,
-    required this.patches,
+    this.gamma,
+    this.dMax,
+    this.patches,
+    this.image,
   });
 
   /// The frame's number on the roll, from one.
@@ -74,14 +76,21 @@ class Frame {
   final double tempC;
 
   /// Contrast in the red, green and blue records.
-  final List<double> gamma;
+  final List<double>? gamma;
 
   /// The dye's density ceiling, in the red, green and blue records.
-  final List<double> dMax;
+  final List<double>? dMax;
 
   /// Dye density per patch, three numbers each — the nine-step wedge the model
   /// put through the curve.
-  final List<List<double>> patches;
+  ///
+  /// Null for a frame the app developed: `kalo render` writes pixels, and the
+  /// curves behind them are not a thing a command line prints. A chart with
+  /// four rows missing is better than a chart with four rows invented.
+  final List<List<double>>? patches;
+
+  /// The print the model made of this frame, at the size the bench shows.
+  final ui.Image? image;
 
   factory Frame.fromStrip(int number, StripFrame frame) => Frame(
         number: number,
@@ -95,7 +104,11 @@ class Frame {
   /// `3:00`, `12:30` — the clock a darkroom timer would show.
   String get clock => darkroomClock(minutes);
 
-  /// The print: nine patches, each a colour.
+  /// Whether this frame can be charted: a roll the model drew has the wedge's
+  /// densities, and a roll the app developed has pictures instead.
+  bool get isMeasured => patches != null;
+
+  /// The print: nine patches, each a colour. Null when there is no chart.
   ///
   /// Density is optical, so ten to the minus it is the light that got through.
   /// Each frame is printed for its own highlights, the way a printer exposes
@@ -106,7 +119,11 @@ class Frame {
   ///
   /// The real print solve — the enlarger, the paper, the reflectance — belongs
   /// to the model and is not guessed here.
-  List<Color> printColours(Color paper) {
+  List<Color>? printColours(Color paper) {
+    final List<List<double>>? patches = this.patches;
+    if (patches == null) {
+      return null;
+    }
     final List<double> low = <double>[
       for (int channel = 0; channel < 3; channel++)
         patches
@@ -119,15 +136,19 @@ class Frame {
   }
 
   /// Density at each patch, averaged over the records: what the card's curve
-  /// draws.
-  List<double> get toneCurve => <double>[
-        for (final List<double> dye in patches)
-          (dye[0] + dye[1] + dye[2]) / 3,
-      ];
+  /// draws. Null when there is no chart to draw.
+  List<double>? get toneCurve {
+    final List<List<double>>? patches = this.patches;
+    if (patches == null) {
+      return null;
+    }
+    return <double>[
+      for (final List<double> dye in patches) (dye[0] + dye[1] + dye[2]) / 3,
+    ];
+  }
 
   static Color _print(List<double> dye, List<double> low, Color paper) {
-    double through(int i) =>
-        math.pow(10, -(dye[i] - low[i]) * 1.05).toDouble();
+    double through(int i) => math.pow(10, -(dye[i] - low[i]) * 1.05).toDouble();
     return Color.from(
       alpha: 1.0,
       red: paper.r * through(0),

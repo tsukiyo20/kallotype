@@ -53,8 +53,10 @@ There is no `MaterialApp` anywhere, and that is the point.
 |---|---|---|
 | ![the table](test/goldens/sheet.png) | ![the table in Chinese](test/goldens/sheet-zh.png) | ![the drawer](test/goldens/drawer.png) |
 | **the table**, forty frames, light | **the same**, in Chinese | **the drawer**, in Chinese, dark |
-| ![the gallery](test/goldens/gallery.png) | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
-| **the gallery**, lit | **the same**, with the lamp off | **the drawer**, where the folder is set |
+| ![the shelf](test/goldens/shelf.png) | ![the gallery](test/goldens/gallery.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
+| **the shelf**, where a photograph enters | **the gallery**, lit | **the drawer**, where the folder is set |
+| ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | | |
+| **the same**, with the lamp off | | |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -79,6 +81,8 @@ handle, a field, and — where the place has one — a record on the right.
 
 | | |
 |---|---|
+| **The shelf is the way in** | One photograph, into the developer five times, and a roll comes out: the same frame at 3, 6, 9, 12 and 15 minutes. That ladder is the product's whole argument, so the first roll is a comparison rather than a collection. |
+| **The model is a process, for now** | `kalo` is asked for each frame and writes a PNG into the app's own folder; the app decodes them at the bench's width. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
 | **Five places, one of each built** | Shelf, Table, Binder, Line, Gallery. The workbench belongs between the table and the binder and is not built yet. A place that has nothing in it says what it is for instead of showing another place's screen. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
 | **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
@@ -162,12 +166,14 @@ translates.
   `assets/film_strip.json`, written by `just view` from `kallotype-view`. The
   roll is VISION3 500T developed five times, not a shape invented to look like
   one. Regenerate it; never edit it.
-- **Pixels on the roll.** The gallery now hangs a photograph the model
-  exported, but the contact sheet still draws the nine-step wedge, because
-  `assets/film_strip.json` carries densities rather than pictures. The two
-  places therefore disagree about their subject until the roll has renders of
-  its own — the next piece of pipeline, not a design change. The gallery's loupe
-  and its full resolution are waiting for the same thing.
+- **A developed roll has no chart.** `kalo render` writes pixels and not the
+  densities behind them, so the tone curve and the gamma rows only appear for
+  the roll the model drew — the committed strip — and not for a roll the app
+  developed. The chart comes back when the model is behind an FFI and can be
+  asked for the numbers directly.
+- **The workbench.** One frame, big, is the next place to build: the shelf
+  develops a roll, the table compares it, and the bench is where you would
+  watch a single frame change.
 - **A folder chooser on a phone.** iOS gives an app one folder and shows it in
   Files; Android has a per-app directory the system owns. A picker there is a
   desktop idiom, and neither platform is wired yet: iOS reads its Documents

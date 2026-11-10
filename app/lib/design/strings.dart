@@ -69,6 +69,30 @@ class KalloStrings {
   String get tone => zh ? '影调' : 'TONE';
   String get develop => zh ? '显影' : 'Develop';
 
+  // -- the shelf ------------------------------------------------------------
+
+  String get newRoll => zh ? '新的一卷' : 'A new roll';
+
+  String get newRollNote => zh
+      ? '一张照片进显影液五次，出来一卷。同一格、五个时间——这条胶片唯一要证明的就是这件事。'
+      : 'One photograph into the developer five times, and a roll comes out. The same frame at five times — which is the one thing a strip of film has to prove.';
+
+  String get photograph => zh ? '照片' : 'PHOTOGRAPH';
+  String get choosePhoto => zh ? '选择照片…' : 'Choose a photograph…';
+  String get noPhotograph => zh ? '还没选' : 'nothing chosen';
+  String get film => zh ? '胶片' : 'FILM';
+  String get developments => zh ? '显影时间' : 'DEVELOPMENTS';
+
+  String developingOf(int done, int total) =>
+      zh ? '显影 $done / $total' : 'developing $done of $total';
+
+  String get noModel => zh
+      ? '这台机器上找不到模型（kalo）。没有它，架上只能放着胶片，显不了影。'
+      : 'No model on this machine (kalo). Without it the shelf can hold film, but nothing can be developed.';
+
+  String get onTheTable => zh ? '在台面上' : 'on the table';
+  String get openRoll => zh ? '打开' : 'Open';
+
   // -- the gallery ----------------------------------------------------------
 
   /// The switch on the wall. Not the appearance's light: the room's.
