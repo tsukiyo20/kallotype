@@ -184,8 +184,8 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
     // The flag is asked for before anything is prepared: the fourth integral is
     // part of the model, not a pass over a finished density.
     let interimage = args.interimage && film.cl_layer.is_some();
-    let params = selection.render_params(exposure_ev, interimage, film);
-    let prepared = selection.prepare_with_film(exposure_ev, interimage, film)?;
+    let params = selection.render_params(exposure_ev, args.print_ev, interimage, film);
+    let prepared = selection.prepare_with_film(exposure_ev, args.print_ev, interimage, film)?;
 
     let pixel_um = args.frame_mm * 1000.0 / width.max(1) as f64;
     // The field takes its grain density from the stock: the measured one differs

@@ -43,6 +43,7 @@ impl Selection {
     pub fn render_params(
         &self,
         exposure_ev: f64,
+        print_ev: f64,
         interimage: bool,
         film: &'static kallotype_core::emulsion::FilmStock,
     ) -> RenderParams {
@@ -51,6 +52,7 @@ impl Selection {
             paper: self.paper,
             development: self.development,
             exposure_ev,
+            print_exposure_ev: print_ev,
             spectral: self.spectral || self.lut.is_some(),
             camera: self.camera.clone(),
             lut_size: self.lut_size,
@@ -72,7 +74,7 @@ impl Selection {
         exposure_ev: f64,
         interimage: bool,
     ) -> Result<kallotype_core::PreparedRender, CliError> {
-        self.prepare_with_film(exposure_ev, interimage, self.film)
+        self.prepare_with_film(exposure_ev, 0.0, interimage, self.film)
     }
 
     /// Prepare a render whose film came from somewhere other than the compiled
@@ -80,10 +82,11 @@ impl Selection {
     pub fn prepare_with_film(
         &self,
         exposure_ev: f64,
+        print_ev: f64,
         interimage: bool,
         film: &'static kallotype_core::emulsion::FilmStock,
     ) -> Result<kallotype_core::PreparedRender, CliError> {
-        let params = self.render_params(exposure_ev, interimage, film);
+        let params = self.render_params(exposure_ev, print_ev, interimage, film);
 
         if let Some(path) = &self.lut {
             let table = kallotype_core::ExposureLut::read(path).map_err(|error| CliError::Lut {

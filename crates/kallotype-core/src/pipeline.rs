@@ -57,6 +57,14 @@ pub struct RenderParams {
     /// on is asking for a demonstration of the mechanism, not for a prediction
     /// about the film.
     pub interimage: bool,
+    /// How much light the enlarger puts through, in stops, on top of the
+    /// exposure solved to print a mid grey as a mid grey.
+    ///
+    /// Zero is "the test strip that came out right". Positive is more light,
+    /// which is a darker print; negative is less. This is the number a printer
+    /// dials, and the one a dodge or a burn will vary per pixel once the bench
+    /// can ask for that.
+    pub print_exposure_ev: f64,
     /// The enlarger's colour pack in Kodak CC units, and an optional heat glass.
     /// Empty and `None` are the model without this stage.
     pub filters: crate::filters::FilterPack,
@@ -76,6 +84,7 @@ impl Default for RenderParams {
             lut_size: 0,
             spectral_print: false,
             spectral_scan: false,
+            print_exposure_ev: 0.0,
             interimage: false,
             filters: crate::filters::FilterPack::none(),
             heat_glass: None,
@@ -183,6 +192,15 @@ impl RenderParams {
                 std::array::from_fn(|i| target_log_e + density_mid[i] + self.film.base_density[i])
             }
         };
+
+        // The enlarger's timer, on top of the balance solved above: one number,
+        // the same on every layer, which is what an exposure is. Everything
+        // downstream — the CPU print, the scalar model handed to the GPU, the
+        // replay — reads `print_shift`, so the timer rides there rather than
+        // in a second field that three backends would have to learn about.
+        let print_exposure = self.print_exposure_ev * 2.0_f64.log10();
+        let print_shift: [f64; 3] =
+            std::array::from_fn(|layer| print_shift[layer] + print_exposure);
 
         PreparedRender {
             channels,
@@ -297,12 +315,13 @@ pub struct PreparedRender {
 }
 
 impl PreparedRender {
-    /// The enlarger's exposure, per layer, in decades.
+    /// The enlarger's exposure, per layer, in decades: the balance solved for
+    /// a mid grey, plus the timer.
     ///
     /// This is what an operator dials: a colour head moves three exposure
-    /// factors against each other until a neutral negative prints neutral. A
-    /// filter pack therefore shows up *here*, not in the per-pixel exponent —
-    /// see `with_enlarger` in `print.rs` for why.
+    /// factors against each other until a neutral negative prints neutral, and
+    /// a timer moves all three together. Both show up *here*, not in the
+    /// per-pixel exponent — see `with_enlarger` in `print.rs` for why.
     #[must_use]
     pub fn print_shift(&self) -> [f64; 3] {
         self.print_shift
@@ -567,25 +586,6 @@ impl PreparedRender {
         }
     }
 
-    /// Curve, print and scan for one pixel, with optional grain on the exposure.
-    fn finish(
-        &self,
-        linear: [f64; 3],
-        x: usize,
-        y: usize,
-        grain: Option<&crate::grain::GrainField>,
-    ) -> [f64; 3] {
-        let exposure = self.expose(linear);
-        let density = self.negative_density_with(exposure.layers, exposure.extra);
-        let jittered: [f64; 3] = match grain {
-            Some(grain) => std::array::from_fn(|channel| {
-                exposure.layers[channel] + grain.jitter(x, y, density[channel], channel)
-            }),
-            None => exposure.layers,
-        };
-        self.positive(self.negative_density_with(jittered, exposure.extra))
-    }
-
     /// Render one linear-light pixel.
     #[must_use]
     pub fn render_pixel(&self, linear: [f64; 3]) -> [f64; 3] {
@@ -683,6 +683,156 @@ fn each_pixel_pair<A: Send, B: Send>(
 /// between pixels; grain runs second and is per pixel. Both are applied to the
 /// exposure — one to where the light went, one to how many grains it developed —
 /// which is why they sit before the curve rather than after the print.
+/// A developed negative: densities, and the grid they came at.
+///
+/// Densities do not depend on a paper, so one of these can be printed as many
+/// times as wanted — on as many papers, at as many print exposures — without
+/// touching the film model again. That is what a darkroom does, and it is what
+/// the bench needs in order to stay responsive while a print exposure is being
+/// dialled.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Negative {
+    /// Pixels across.
+    pub width: usize,
+    /// Pixels down.
+    pub height: usize,
+    /// Per pixel, the cyan, magenta and yellow density the film developed.
+    pub densities: Vec<[f64; 3]>,
+}
+
+impl PreparedRender {
+    /// Expose and develop: everything the film and the development decide, and
+    /// nothing the paper does.
+    #[must_use]
+    pub fn develop(
+        &self,
+        pixels: &[[f64; 3]],
+        width: usize,
+        height: usize,
+        finishing: &Finishing,
+    ) -> Negative {
+        let width = width.max(1);
+        let height = height.max(1);
+
+        // Without a spatial effect there is nothing to keep a frame for, and
+        // grain is the only thing left that wants pixel coordinates.
+        if finishing.emulsion.is_none()
+            && finishing.halation.is_none()
+            && finishing.couplers.is_none()
+            && finishing.interimage.is_none()
+        {
+            let densities: Vec<[f64; 3]> = pixels
+                .iter()
+                .enumerate()
+                .map(|(index, pixel)| {
+                    let exposure = self.expose(*pixel);
+                    let mean = self.negative_density_with(exposure.layers, exposure.extra);
+                    match finishing.grain {
+                        Some(grain) => self.negative_density_with(
+                            std::array::from_fn(|channel| {
+                                exposure.layers[channel]
+                                    + grain.jitter(
+                                        index % width,
+                                        index / width,
+                                        mean[channel],
+                                        channel,
+                                    )
+                            }),
+                            exposure.extra,
+                        ),
+                        None => mean,
+                    }
+                })
+                .collect();
+            return Negative {
+                width,
+                height,
+                densities,
+            };
+        }
+
+        // Exposure first: halation moves light between pixels, before anything
+        // is developed.
+        let mut log_e: Vec<[f64; 3]> = pixels.to_vec();
+        // The fourth layer is a fourth plane, allocated only when the stock has
+        // one: a stock without it renders through exactly the vectors it used to.
+        let mut extra: Option<Vec<f64>> = self.has_extra_layer().then(|| vec![0.0; log_e.len()]);
+        match extra.as_mut() {
+            Some(plane) => each_pixel_pair(&mut log_e, plane, width, |_, _, pixel, slot| {
+                let exposure = self.expose(*pixel);
+                *pixel = exposure.layers;
+                // No integral means no exposure: the emulsion stays at its
+                // minimum density rather than at a plausible-looking zero.
+                *slot = exposure.extra.unwrap_or(f64::NEG_INFINITY);
+            }),
+            None => each_pixel(&mut log_e, width, |_, _, pixel| {
+                *pixel = self.log_exposure(*pixel);
+            }),
+        }
+        // The emulsion's own blur comes first: it is the lens's image being
+        // softened by the film, and the halo is light that entered the film and
+        // came back, so it is distributed by the same blur afterwards.
+        if let Some(emulsion) = finishing.emulsion {
+            emulsion.apply(&mut log_e, width, height);
+        }
+        if let Some(halation) = finishing.halation {
+            halation.apply(&mut log_e, width, height);
+        }
+
+        // Then the emulsion: grain on the exposure, the curve on the result.
+        let mut density: Vec<[f64; 3]> = log_e.clone();
+        each_pixel(&mut density, width, |x, y, slot| {
+            let log_e = log_e[y * width + x];
+            let extra = extra.as_ref().map(|plane| plane[y * width + x]);
+            let mean = self.negative_density_with(log_e, extra);
+            *slot = match finishing.grain {
+                Some(grain) => self.negative_density_with(
+                    std::array::from_fn(|channel| {
+                        log_e[channel] + grain.jitter(x, y, mean[channel], channel)
+                    }),
+                    extra,
+                ),
+                None => mean,
+            };
+        });
+
+        // The cyan-sensitive layer's inhibitor, before the couplers: its release
+        // is the light the layer absorbed, not the density it developed, so it
+        // is the earlier of the two development effects.
+        if let (Some(stage), Some(plane)) = (finishing.interimage, extra.as_ref()) {
+            let light: Vec<f64> = plane.iter().map(|value| 10f64.powf(*value)).collect();
+            stage.apply(&mut density, &light, width, height);
+        }
+
+        // Then the chemistry: the inhibitors act on what has already developed.
+        if let Some(couplers) = finishing.couplers {
+            couplers.apply(&mut density, width, height);
+        }
+
+        Negative {
+            width,
+            height,
+            densities: density,
+        }
+    }
+
+    /// Print a developed negative through this render's paper and enlarger.
+    #[must_use]
+    pub fn print(&self, negative: &Negative) -> Vec<[f64; 3]> {
+        negative
+            .densities
+            .iter()
+            .map(|density| self.positive(*density))
+            .collect()
+    }
+}
+
+/// Develop a whole image and print it, in place.
+///
+/// This is `develop` followed by `print`, and exists because most callers want
+/// a picture rather than a negative. A caller that wants the negative — to
+/// print it on a second paper, or at another print exposure — should take it
+/// apart the way this does.
 pub fn render_pixels_finished(
     pixels: &mut [[f64; 3]],
     prepared: &PreparedRender,
@@ -690,81 +840,10 @@ pub fn render_pixels_finished(
     height: usize,
     finishing: &Finishing,
 ) {
-    let width = width.max(1);
-
-    // Without a spatial effect there is nothing to keep a frame for.
-    if finishing.emulsion.is_none()
-        && finishing.halation.is_none()
-        && finishing.couplers.is_none()
-        && finishing.interimage.is_none()
-    {
-        each_pixel(pixels, width, |x, y, pixel| {
-            *pixel = prepared.finish(*pixel, x, y, finishing.grain);
-        });
-        return;
+    let negative = prepared.develop(pixels, width, height, finishing);
+    for (pixel, density) in pixels.iter_mut().zip(&negative.densities) {
+        *pixel = prepared.positive(*density);
     }
-
-    // Exposure first: halation moves light between pixels, before anything is
-    // developed.
-    let mut log_e: Vec<[f64; 3]> = pixels.to_vec();
-    // The fourth layer is a fourth plane, allocated only when the stock has
-    // one: a stock without it renders through exactly the vectors it used to.
-    let mut extra: Option<Vec<f64>> = prepared.has_extra_layer().then(|| vec![0.0; log_e.len()]);
-    match extra.as_mut() {
-        Some(plane) => each_pixel_pair(&mut log_e, plane, width, |_, _, pixel, slot| {
-            let exposure = prepared.expose(*pixel);
-            *pixel = exposure.layers;
-            // No integral means no exposure: the emulsion stays at its
-            // minimum density rather than at a plausible-looking zero.
-            *slot = exposure.extra.unwrap_or(f64::NEG_INFINITY);
-        }),
-        None => each_pixel(&mut log_e, width, |_, _, pixel| {
-            *pixel = prepared.log_exposure(*pixel);
-        }),
-    }
-    // The emulsion's own blur comes first: it is the lens's image being
-    // softened by the film, and the halo is light that entered the film and
-    // came back, so it is distributed by the same blur afterwards.
-    if let Some(emulsion) = finishing.emulsion {
-        emulsion.apply(&mut log_e, width, height);
-    }
-    if let Some(halation) = finishing.halation {
-        halation.apply(&mut log_e, width, height);
-    }
-
-    // Then the emulsion: grain on the exposure, the curve on the result.
-    let mut density: Vec<[f64; 3]> = log_e.clone();
-    each_pixel(&mut density, width, |x, y, slot| {
-        let log_e = log_e[y * width + x];
-        let extra = extra.as_ref().map(|plane| plane[y * width + x]);
-        let mean = prepared.negative_density_with(log_e, extra);
-        *slot = match finishing.grain {
-            Some(grain) => prepared.negative_density_with(
-                std::array::from_fn(|channel| {
-                    log_e[channel] + grain.jitter(x, y, mean[channel], channel)
-                }),
-                extra,
-            ),
-            None => mean,
-        };
-    });
-
-    // The cyan-sensitive layer's inhibitor, before the couplers: its release is
-    // the light the layer absorbed, not the density it developed, so it is the
-    // earlier of the two development effects.
-    if let (Some(stage), Some(plane)) = (finishing.interimage, extra.as_ref()) {
-        let light: Vec<f64> = plane.iter().map(|value| 10f64.powf(*value)).collect();
-        stage.apply(&mut density, &light, width, height);
-    }
-
-    // Then the chemistry: the inhibitors act on what has already developed.
-    if let Some(couplers) = finishing.couplers {
-        couplers.apply(&mut density, width, height);
-    }
-
-    each_pixel(pixels, width, |x, y, pixel| {
-        *pixel = prepared.positive(density[y * width + x]);
-    });
 }
 
 /// Render a whole image in place.
@@ -837,6 +916,65 @@ mod tests {
             sensitivity: &STRAIGHT,
         });
         Box::leak(Box::new(stock))
+    }
+
+    /// A mid grey, printed once at the solved exposure and once a stop over.
+    ///
+    /// The timer is a separate number from the balance: zero is the test strip
+    /// that came out right, and one stop is a darker print on every layer.
+    #[test]
+    fn print_exposure_darkens_the_print() {
+        let base = RenderParams::default();
+        let over = RenderParams {
+            print_exposure_ev: 1.0,
+            ..RenderParams::default()
+        };
+
+        let grey = [0.18, 0.18, 0.18];
+        let solved = base.prepare().render_pixel(grey);
+        let darker = over.prepare().render_pixel(grey);
+
+        for channel in 0..3 {
+            assert!(
+                darker[channel] < solved[channel],
+                "channel {channel}: {darker:?} should be darker than {solved:?}"
+            );
+        }
+        // A stop is a factor of two in exposure, not a factor of two in the
+        // print: the paper's curve stands between them, and it must not be
+        // bypassed.
+        assert!(darker[0] < solved[0] * 0.95);
+    }
+
+    /// One negative, two papers.
+    ///
+    /// The negative is developed once and holds no paper, so the bench can try
+    /// a second paper without re-developing the film — which is the whole point
+    /// of the split.
+    #[test]
+    fn a_negative_prints_on_any_paper() {
+        let first = RenderParams::default();
+        let second = RenderParams {
+            paper: crate::emulsion::paper_stock("endura_premier").expect("built-in paper"),
+            ..RenderParams::default()
+        };
+
+        let negative = first.prepare().develop(
+            &[[0.18, 0.18, 0.18], [0.4, 0.3, 0.2]],
+            2,
+            1,
+            &Finishing::default(),
+        );
+        assert_eq!(negative.densities.len(), 2);
+
+        let on_first = first.prepare().print(&negative);
+        let on_second = second.prepare().print(&negative);
+        assert_ne!(on_first, on_second);
+
+        // And the two-stage path is what the one-shot path does.
+        let mut pixels = vec![[0.18, 0.18, 0.18], [0.4, 0.3, 0.2]];
+        render_pixels_finished(&mut pixels, &first.prepare(), 2, 1, &Finishing::default());
+        assert_eq!(pixels, on_first);
     }
 
     /// The fourth layer's plane has to survive the effects path too: it is

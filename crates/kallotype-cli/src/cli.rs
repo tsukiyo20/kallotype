@@ -173,6 +173,20 @@ pub struct RenderArgs {
     )]
     pub ev: Exposure,
 
+    /// Print exposure in stops, on top of the exposure that prints a mid grey
+    /// as a mid grey.
+    ///
+    /// The print is solved so that an 18 % grey negative lands at the paper's
+    /// target: this is the timer, not the balance. Positive is more light and a
+    /// darker print, which is what a printer would call "one stop more".
+    #[arg(
+        long,
+        value_name = "EV",
+        default_value = "0",
+        allow_hyphen_values = true
+    )]
+    pub print_ev: f64,
+
     /// How to interpret the values stored in the input file.
     #[arg(long, value_enum, default_value_t = EncodingArg::Srgb)]
     pub input_encoding: EncodingArg,
