@@ -1,47 +1,44 @@
 import 'package:flutter/widgets.dart';
 
-/// Where the product is.
-///
-/// These are not themes. A darkroom is a dark room with one safelight in it; a
-/// light table is a lit surface with film lying on it. The app moves between
-/// two places, and the transition between them is a transition between
-/// *lighting*, not between colour schemes.
-enum KalloEnvironment { darkroom, lightTable }
-
-double _mix(double a, double b, double t) => a + (b - a) * t;
-
 /// Everything the interface is allowed to be coloured with.
 ///
-/// A window, a sidebar, a content area and a surface: the four planes an app is
-/// made of, each a step on one warm neutral ramp. The accent is the safelight,
-/// and it is the only colour that is not on that ramp.
+/// A window, a column of places, a content field and a surface: the four planes
+/// an app is made of. Two complete sets, one for each appearance, and the
+/// system decides which unless the user pins one.
+///
+/// The accent is the safelight, turned down: it appears on a selection and on
+/// the tone curve, and nowhere else. Everything else is a neutral, because the
+/// colour in this product belongs to the photographs.
 @immutable
 class KalloColors {
   const KalloColors({
+    required this.brightness,
     required this.ground,
     required this.sidebar,
+    required this.content,
     required this.surface,
-    required this.surfaceRaised,
     required this.hairline,
     required this.ink,
     required this.inkMuted,
     required this.inkFaint,
     required this.accent,
     required this.accentDim,
-    required this.emissive,
+    required this.print,
   });
+
+  final Brightness brightness;
 
   /// Behind everything, and the colour the window is.
   final Color ground;
 
-  /// The column of places. A step darker than the content, never a border.
+  /// The column of places: a step off the content, toward the chrome.
   final Color sidebar;
 
-  /// A panel, a card, the inspector.
-  final Color surface;
+  /// The field the work is on.
+  final Color content;
 
-  /// Something that sits on a panel.
-  final Color surfaceRaised;
+  /// The inspector, a card, a panel that sits on the content.
+  final Color surface;
 
   /// The one border in the app, and it is a device pixel.
   final Color hairline;
@@ -55,64 +52,62 @@ class KalloColors {
   /// Text that must be felt.
   final Color inkFaint;
 
-  /// The safelight in the dark, and the grease pencil in the light. The same
-  /// hue in two materials, and the only saturated colour in the chrome.
+  /// The safelight, turned down. Selection, and the curve. Nothing else.
   final Color accent;
 
-  /// The safelight, further away.
+  /// The accent at rest.
   final Color accentDim;
 
-  /// 0 in the darkroom, 1 on the light table.
-  ///
-  /// Everything that appears to give off light is multiplied by this, and it is
-  /// the quantity the environment transition animates. It is a property of the
-  /// colors rather than of the enum so that it can be interpolated.
-  final double emissive;
+  /// The paper a print sits on. Always warm, in both appearances: it is the one
+  /// surface in the product that is a material rather than a plane.
+  final Color print;
 
-  static const KalloColors darkroom = KalloColors(
-    ground: Color(0xFF060505),
-    sidebar: Color(0xFF0A0807),
-    surface: Color(0xFF0D0B0A),
-    surfaceRaised: Color(0xFF141110),
-    hairline: Color(0xFF231D18),
-    ink: Color(0xFFC8BCAC),
-    inkMuted: Color(0xFF7C7164),
-    inkFaint: Color(0xFF4B433A),
-    accent: Color(0xFFD0672A),
-    accentDim: Color(0xFF7E3A15),
-    emissive: 0.0,
-  );
-
-  /// The table, lit: a warm window, a dimmer column, white panels.
-  static const KalloColors lightTable = KalloColors(
-    ground: Color(0xFFEFEBE4),
-    sidebar: Color(0xFFE6E1D7),
+  static const KalloColors light = KalloColors(
+    brightness: Brightness.light,
+    ground: Color(0xFFF6F5F2),
+    sidebar: Color(0xFFF0EEE9),
+    content: Color(0xFFFFFFFF),
     surface: Color(0xFFFFFFFF),
-    surfaceRaised: Color(0xFFFFFFFF),
-    hairline: Color(0xFFD8D2C7),
-    ink: Color(0xFF1F1D1A),
-    inkMuted: Color(0xFF6B665D),
-    inkFaint: Color(0xFFA39D92),
-    accent: Color(0xFFB8501E),
-    accentDim: Color(0xFFD79A6E),
-    emissive: 1.0,
+    hairline: Color(0xFFE2DFD8),
+    ink: Color(0xFF1D1B18),
+    inkMuted: Color(0xFF6E6A63),
+    inkFaint: Color(0xFFA6A199),
+    accent: Color(0xFF9A4318),
+    accentDim: Color(0xFFE3C6B4),
+    print: Color(0xFFFFFCF7),
   );
 
-  static KalloColors of(KalloEnvironment environment) =>
-      environment == KalloEnvironment.darkroom ? darkroom : lightTable;
+  static const KalloColors dark = KalloColors(
+    brightness: Brightness.dark,
+    ground: Color(0xFF1A1917),
+    sidebar: Color(0xFF252320),
+    content: Color(0xFF1C1B19),
+    surface: Color(0xFF232120),
+    hairline: Color(0xFF35322D),
+    ink: Color(0xFFF1EEE8),
+    inkMuted: Color(0xFFA29C93),
+    inkFaint: Color(0xFF6E6962),
+    accent: Color(0xFFC4652F),
+    accentDim: Color(0xFF5A2E18),
+    print: Color(0xFFF3EFE7),
+  );
+
+  static KalloColors of(Brightness brightness) =>
+      brightness == Brightness.dark ? dark : light;
 
   static KalloColors lerp(KalloColors a, KalloColors b, double t) => KalloColors(
+        brightness: t < 0.5 ? a.brightness : b.brightness,
         ground: Color.lerp(a.ground, b.ground, t)!,
         sidebar: Color.lerp(a.sidebar, b.sidebar, t)!,
+        content: Color.lerp(a.content, b.content, t)!,
         surface: Color.lerp(a.surface, b.surface, t)!,
-        surfaceRaised: Color.lerp(a.surfaceRaised, b.surfaceRaised, t)!,
         hairline: Color.lerp(a.hairline, b.hairline, t)!,
         ink: Color.lerp(a.ink, b.ink, t)!,
         inkMuted: Color.lerp(a.inkMuted, b.inkMuted, t)!,
         inkFaint: Color.lerp(a.inkFaint, b.inkFaint, t)!,
         accent: Color.lerp(a.accent, b.accent, t)!,
         accentDim: Color.lerp(a.accentDim, b.accentDim, t)!,
-        emissive: _mix(a.emissive, b.emissive, t),
+        print: Color.lerp(a.print, b.print, t)!,
       );
 }
 
@@ -153,7 +148,7 @@ abstract final class KalloShadow {
   ];
 
   static const List<BoxShadow> sheet = <BoxShadow>[
-    BoxShadow(color: Color(0x1F000000), blurRadius: 32, offset: Offset(0, 10)),
+    BoxShadow(color: Color(0x24000000), blurRadius: 32, offset: Offset(0, 10)),
   ];
 }
 
@@ -162,10 +157,7 @@ abstract final class KalloMotion {
   static const Duration instant = Duration(milliseconds: 90);
   static const Duration quick = Duration(milliseconds: 160);
   static const Duration settle = Duration(milliseconds: 240);
-
-  /// The environment transition: a light coming up, not a page changing.
   static const Duration slow = Duration(milliseconds: 460);
-
   static const Duration stagger = Duration(milliseconds: 40);
 
   static const Curve enter = Cubic(0.16, 1.0, 0.30, 1.0);

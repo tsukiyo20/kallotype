@@ -24,7 +24,7 @@ class ContactSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     return ColoredBox(
-      color: colors.ground,
+      color: colors.content,
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final int columns = switch (constraints.maxWidth) {
@@ -87,7 +87,7 @@ class _FrameTile extends StatelessWidget {
                 duration: KalloMotion.instant,
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: colors.surfaceRaised,
+                  color: colors.print,
                   borderRadius: BorderRadius.circular(KalloRadius.film + 1),
                   border: Border.all(
                     color: selected ? colors.accent : colors.hairline,
@@ -99,7 +99,7 @@ class _FrameTile extends StatelessWidget {
                   child: AspectRatio(
                     aspectRatio: 3 / 2,
                     child: CustomPaint(
-                      painter: _PrintPainter(frame.printColours(colors.surfaceRaised)),
+                      painter: _PrintPainter(frame.printColours(colors.print)),
                     ),
                   ),
                 ),

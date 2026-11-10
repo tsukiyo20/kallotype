@@ -94,7 +94,6 @@ class Inspector extends StatelessWidget {
                   selected,
                   colors.hairline,
                   colors.accent,
-                  colors.inkFaint,
                 ),
               ),
             ),
@@ -107,13 +106,13 @@ class Inspector extends StatelessWidget {
                   height: 32,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: colors.accent,
+                    color: colors.ink,
                     borderRadius: BorderRadius.circular(KalloRadius.control),
                   ),
                   child: Text(
                     'Develop',
                     style: KalloType.body.copyWith(
-                      color: const Color(0xFFFFFFFF),
+                      color: colors.content,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -172,25 +171,18 @@ class _Group extends StatelessWidget {
 }
 
 /// The wedge's tone: density against patch.
-/// Every frame's tone, on one pair of axes.
+/// The roll's tone, and the frame's place in it.
 ///
-/// The point of the product is on this chart: five frames, one wedge, five
-/// developments. The selected one is drawn in the accent and the rest are
-/// faint, so the difference between them is the picture rather than a caption.
+/// Forty lines is a moiré, so the roll is drawn as an envelope — the thinnest
+/// and densest development at each patch, filled — and the selected frame is
+/// drawn on top. The point of the product is the difference between the two.
 class _CurvePainter extends CustomPainter {
-  const _CurvePainter(
-    this.series,
-    this.selected,
-    this.hairline,
-    this.accent,
-    this.faint,
-  );
+  const _CurvePainter(this.series, this.selected, this.hairline, this.accent);
 
   final List<List<double>> series;
   final int selected;
   final Color hairline;
   final Color accent;
-  final Color faint;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -201,6 +193,10 @@ class _CurvePainter extends CustomPainter {
       floor = math.min(floor, values.reduce(math.min));
     }
     final double span = math.max(top - floor, 1e-6);
+    final int patches = series.first.length;
+    double x(int i) => patches == 1 ? 0 : i / (patches - 1) * size.width;
+    double y(double v) => size.height - (v - floor) / span * (size.height - 10) - 4;
+
     canvas.drawLine(
       Offset(0, size.height - 0.5),
       Offset(size.width, size.height - 0.5),
@@ -208,29 +204,44 @@ class _CurvePainter extends CustomPainter {
         ..color = hairline
         ..strokeWidth = 1,
     );
-    for (int s = 0; s < series.length; s++) {
-      final List<double> values = series[s];
-      final Path path = Path();
-      for (int i = 0; i < values.length; i++) {
-        final double x =
-            values.length == 1 ? 0 : i / (values.length - 1) * size.width;
-        final double y =
-            size.height - (values[i] - floor) / span * (size.height - 10) - 4;
-        if (i == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
+
+    final Path envelope = Path();
+    for (int i = 0; i < patches; i++) {
+      final double v = series
+          .map((List<double> s) => s[i])
+          .reduce((double a, double b) => math.max(a, b));
+      if (i == 0) {
+        envelope.moveTo(x(i), y(v));
+      } else {
+        envelope.lineTo(x(i), y(v));
       }
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = s == selected ? 1.6 : 1
-          ..strokeJoin = StrokeJoin.round
-          ..color = s == selected ? accent : faint,
-      );
     }
+    for (int i = patches - 1; i >= 0; i--) {
+      final double v = series
+          .map((List<double> s) => s[i])
+          .reduce((double a, double b) => math.min(a, b));
+      envelope.lineTo(x(i), y(v));
+    }
+    envelope.close();
+    canvas.drawPath(envelope, Paint()..color = accent.withValues(alpha: 0.10));
+
+    final List<double> values = series[selected];
+    final Path path = Path();
+    for (int i = 0; i < values.length; i++) {
+      if (i == 0) {
+        path.moveTo(x(i), y(values[i]));
+      } else {
+        path.lineTo(x(i), y(values[i]));
+      }
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6
+        ..strokeJoin = StrokeJoin.round
+        ..color = accent,
+    );
   }
 
   @override

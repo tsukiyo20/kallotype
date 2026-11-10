@@ -184,7 +184,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       case 0:
         return _language(s, colors);
       case 1:
-        return _statement(s.appearance, s.appearanceNote, colors);
+        return _appearance(s, colors);
       case 2:
         return _statement(s.colour, s.colourNote, colors);
       case 3:
@@ -207,6 +207,57 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           child: Text(
             body,
             style: KalloType.body.copyWith(color: colors.inkMuted),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _appearance(KalloStrings s, KalloColors colors) {
+    final KalloScope scope = KalloScope.of(context);
+    final String system =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark
+            ? s.dark
+            : s.light;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          s.appearance,
+          style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
+        ),
+        const SizedBox(height: KalloSpace.step2),
+        SizedBox(
+          width: 460,
+          child: Text(
+            s.appearanceNote,
+            style: KalloType.body.copyWith(color: colors.inkMuted),
+          ),
+        ),
+        const SizedBox(height: KalloSpace.step5),
+        _Label(s.appearanceLabel, colors),
+        const SizedBox(height: KalloSpace.step2),
+        _Segments(
+          options: <String>[s.system, s.light, s.dark],
+          selected: switch (scope.pinned) {
+            null => 0,
+            Brightness.light => 1,
+            Brightness.dark => 2,
+          },
+          onSelect: (int i) => scope.onPin(switch (i) {
+            1 => Brightness.light,
+            2 => Brightness.dark,
+            _ => null,
+          }),
+          colors: colors,
+        ),
+        const SizedBox(height: KalloSpace.step2 + 2),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            'system: $system',
+            style: KalloType.data.copyWith(fontSize: 10, color: colors.inkFaint),
           ),
         ),
       ],
@@ -369,7 +420,11 @@ class _Segments extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: i == selected ? colors.surface : null,
+                  // A selected segment has to lift off its track in both
+                  // appearances: white on light, a lit grey on dark.
+                  color: i == selected
+                      ? Color.lerp(colors.surface, colors.ink, 0.09)
+                      : null,
                   borderRadius: BorderRadius.circular(KalloRadius.control),
                   boxShadow: i == selected
                       ? const <BoxShadow>[
@@ -432,7 +487,7 @@ class _Toggle extends StatelessWidget {
             width: 14,
             height: 14,
             decoration: BoxDecoration(
-              color: colors.surfaceRaised,
+              color: colors.surface,
               borderRadius: BorderRadius.circular(7),
             ),
           ),

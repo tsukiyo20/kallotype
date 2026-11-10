@@ -51,6 +51,9 @@ class KalloStrings {
       : 'Density, exposure and time are never rounded for display.';
 
   String get appearance => zh ? '外观' : 'Appearance';
+  String get appearanceLabel => zh ? '界面外观' : 'Appearance';
+  String get light => zh ? '浅色' : 'Light';
+  String get dark => zh ? '深色' : 'Dark';
   String get appearanceNote => zh
       ? '动效只有三种词汇：光、液体、机械。系统要求减弱动效时，它们全部退成淡入。'
       : 'Motion has three vocabularies: light, liquid, mechanism. When the system asks for less, all three become a fade.';

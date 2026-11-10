@@ -199,7 +199,7 @@ class _Toolbar extends StatelessWidget {
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: colors.ground,
+        color: colors.content,
         border: Border(bottom: BorderSide(color: colors.hairline)),
       ),
       child: Row(
