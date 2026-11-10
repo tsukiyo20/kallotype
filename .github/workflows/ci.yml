@@ -1,13 +1,21 @@
 name: ci
 
-# No path filters, on purpose. A workflow that does not run leaves its required
-# status checks pending forever, and a pull request that never reports them can
-# never be merged. The minute saved is worth less than the trap it sets.
+# No path filter on the trigger, and that is still on purpose: a workflow that
+# does not run leaves its required status checks pending forever, and a pull
+# request that never reports them can never be merged. So the workflow always
+# runs, and its first job decides whether the rest is worth doing. A job that
+# is skipped reports success; one that never starts reports nothing.
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+  # `dorny/paths-filter` reads the pull request's file list, and on a fork it
+  # needs this rather than the implicit token.
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -18,7 +26,34 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
+  # The gate. Everything below is skipped when nothing under the Rust tree
+  # moved — an interface-only pull request should not pay for three operating
+  # systems. `data/` is in the list because `kallotype-core`'s build script
+  # reads it to generate the stock tables, so a new film is a Rust change.
+  changes:
+    name: what changed
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'crates/**'
+              - 'data/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - '.github/workflows/ci.yml'
+
   lint:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true
     name: fmt, clippy, docs
     runs-on: ubuntu-latest
     steps:
@@ -34,6 +69,8 @@ jobs:
           RUSTDOCFLAGS: -D warnings
 
   test:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -47,6 +84,8 @@ jobs:
       - run: cargo test --workspace --all-features
 
   msrv:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     name: minimum supported rust (1.85)
     runs-on: ubuntu-latest
     # rust-toolchain.toml pins "stable", so the override has to be explicit.

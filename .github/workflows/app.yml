@@ -1,11 +1,19 @@
 name: app
 
-# No path filters, on purpose: see the note in `ci.yml`.
+# No path filter on the trigger, on purpose: see the note in `ci.yml`. The
+# first job decides instead, so a Rust-only pull request does not download a
+# whole Flutter toolchain to analyse an interface nobody touched.
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+  # `dorny/paths-filter` reads the pull request's file list, and on a fork it
+  # needs this rather than the implicit token.
+  pull-requests: read
 
 concurrency:
   group: app-${{ github.ref }}
@@ -16,7 +24,26 @@ defaults:
     working-directory: app
 
 jobs:
+  changes:
+    name: what changed
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            app:
+              - 'app/**'
+              - '.github/workflows/app.yml'
+
   analyze:
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     name: analyze and test
     runs-on: ubuntu-latest
     steps:
