@@ -13,7 +13,11 @@ class Sidebar extends StatelessWidget {
     required this.rolls,
     required this.rollName,
     required this.frameCount,
+    this.topInset = 12,
   });
+
+  /// Room for the traffic lights when the title bar is hidden.
+  final double topInset;
 
   final Place current;
   final ValueChanged<Place> onSelect;
@@ -31,7 +35,7 @@ class Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const SizedBox(height: 36),
+          SizedBox(height: topInset),
           _Header('Library', colors),
           for (final Place place in Place.values)
             _Item(

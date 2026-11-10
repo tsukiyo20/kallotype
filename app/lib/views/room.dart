@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../design/chrome.dart';
 import '../design/scope.dart';
 import '../design/tokens.dart';
 import '../lab/roll.dart';
@@ -25,7 +26,12 @@ class Room extends StatefulWidget {
     required this.technicalTerms,
     required this.onTechnicalTerms,
     this.initiallyOpen = false,
+    this.chrome = WindowChrome.plain,
+    this.onDragWindow,
   });
+
+  final WindowChrome chrome;
+  final VoidCallback? onDragWindow;
 
   final Roll roll;
   final Locale? locale;
@@ -65,6 +71,7 @@ class _RoomState extends State<Room> {
                 SizedBox(
                   width: 216,
                   child: Sidebar(
+                    topInset: widget.chrome == WindowChrome.mac ? 44 : 12,
                     current: _place,
                     onSelect: (Place place) => setState(() {
                       _place = place;
@@ -80,6 +87,8 @@ class _RoomState extends State<Room> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       _Toolbar(
+                        draggable: widget.chrome == WindowChrome.mac,
+                        onDrag: widget.onDragWindow,
                         title: widget.roll.id,
                         subtitle:
                             '${widget.roll.frames.length} frames   ·   ${widget.roll.stockLabel}',
@@ -186,11 +195,17 @@ class _Toolbar extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onSettings,
+    this.draggable = false,
+    this.onDrag,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback onSettings;
+
+  /// The toolbar is the window's handle when there is no title bar.
+  final bool draggable;
+  final VoidCallback? onDrag;
 
   @override
   Widget build(BuildContext context) {
@@ -202,27 +217,31 @@ class _Toolbar extends StatelessWidget {
         color: colors.content,
         border: Border(bottom: BorderSide(color: colors.hairline)),
       ),
-      child: Row(
-        children: <Widget>[
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanStart: draggable && onDrag != null ? (_) => onDrag!() : null,
+          child: Row(
             children: <Widget>[
-              Text(
-                title,
-                style: KalloType.title.copyWith(color: colors.ink),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: KalloType.title.copyWith(color: colors.ink),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle,
+                    style: KalloType.small.copyWith(color: colors.inkMuted),
+                  ),
+                ],
               ),
-              const SizedBox(height: 1),
-              Text(
-                subtitle,
-                style: KalloType.small.copyWith(color: colors.inkMuted),
-              ),
+              const Spacer(),
+              _IconButton(onTap: onSettings, colours: colors),
             ],
           ),
-          const Spacer(),
-          _IconButton(onTap: onSettings, colours: colors),
-        ],
-      ),
+        ),
     );
   }
 }

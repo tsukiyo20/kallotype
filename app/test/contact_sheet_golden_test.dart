@@ -4,6 +4,7 @@ import 'dart:ui' show Brightness, Locale;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kallo_ui/design/chrome.dart';
 import 'package:kallo_ui/film/strip_data.dart';
 import 'package:kallo_ui/lab/fixture.dart';
 import 'package:kallo_ui/lab/roll.dart';
@@ -48,6 +49,7 @@ void main() {
     await tester.pumpWidget(KalloApp(
       roll: interpolatedRoll(strip),
       appearance: Brightness.light,
+      chrome: WindowChrome.mac,
     ));
     await tester.pumpAndSettle();
 

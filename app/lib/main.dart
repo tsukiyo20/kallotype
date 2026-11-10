@@ -1,5 +1,10 @@
-import 'package:flutter/widgets.dart';
+import 'dart:async';
+import 'dart:io' show Platform;
 
+import 'package:flutter/widgets.dart';
+import 'package:window_manager/window_manager.dart';
+
+import 'design/chrome.dart';
 import 'design/scope.dart';
 import 'design/strings.dart';
 import 'design/tokens.dart';
@@ -12,7 +17,35 @@ import 'views/room.dart';
 /// model drew. `fvm flutter run --dart-define=roll=36`.
 const bool _fixture = bool.fromEnvironment('roll36');
 
-void main() => runApp(const KalloApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final bool desktop =
+      Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+  if (desktop) {
+    await windowManager.ensureInitialized();
+    final WindowOptions options = WindowOptions(
+      size: Size(1280, 820),
+      minimumSize: Size(960, 600),
+      center: true,
+      title: 'Kallotype',
+      // The Mac keeps its traffic lights and loses its bar; the other two keep
+      // their frames until they have controls of their own, because a window
+      // with no way to close it is a bug, not a style.
+      titleBarStyle:
+          Platform.isMacOS ? TitleBarStyle.hidden : TitleBarStyle.normal,
+    );
+    unawaited(windowManager.waitUntilReadyToShow(options, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    }));
+  }
+  runApp(
+    KalloApp(
+      chrome: Platform.isMacOS ? WindowChrome.mac : WindowChrome.plain,
+      onDragWindow: desktop ? windowManager.startDragging : null,
+    ),
+  );
+}
 
 /// The app.
 ///
@@ -27,7 +60,15 @@ class KalloApp extends StatefulWidget {
     this.appearance,
     this.technicalTerms = false,
     this.drawerOpen = false,
+    this.chrome = WindowChrome.plain,
+    this.onDragWindow,
   });
+
+  /// What the window looks like around the app.
+  final WindowChrome chrome;
+
+  /// Moves the window, when the chrome has no title bar of its own.
+  final VoidCallback? onDragWindow;
 
   /// A roll to open directly. The tests pass one; the app loads the committed
   /// strip, which is the only roll there is until the model is behind an FFI.
@@ -122,6 +163,8 @@ class _KalloAppState extends State<KalloApp> {
               onTechnicalTerms: (bool next) =>
                   setState(() => _technical = next),
               initiallyOpen: widget.drawerOpen,
+              chrome: widget.chrome,
+              onDragWindow: widget.onDragWindow,
             ),
     );
   }
