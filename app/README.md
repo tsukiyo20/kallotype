@@ -43,13 +43,10 @@ flutter test                    # compares against the two images
 flutter test --update-goldens   # rewrites them, deliberately
 ```
 
-The test loads the machine's own faces 鈥?Segoe UI for Latin, DengXian for the
-Chinese, Consolas standing in for Menlo 鈥?because the test renderer otherwise
+The test loads the machine's own faces — Segoe UI for Latin, DengXian for the
+Chinese, Consolas standing in for Menlo — because the test renderer otherwise
 draws every glyph as a box, and a design judged on its type cannot be judged as
 boxes. See `test/gallery_golden_test.dart`.
-
-`docs/window.png` is the real Windows build, captured from a running window.
-
 
 ---
 
@@ -60,7 +57,7 @@ One screen, four arguments:
 | | |
 |---|---|
 | **Two places, not two themes** | A darkroom is lit by one safelight. A light table is a light source. The toggle at the top right moves between *lighting*, and everything that glows is multiplied by a single interpolated `emissive`. |
-| **The film is the artifact** | The strip is drawn in millimetres 鈥?35 mm wide, 24 mm frames, 38 mm pitch, 5.5 mm rebates 鈥?and the UI labels it from outside. Film is material; UI is annotation. |
+| **The film is the artifact** | The strip is drawn in millimetres — 35 mm wide, 24 mm frames, 38 mm pitch, 5.5 mm rebates — and the UI labels it from outside. Film is material; UI is annotation. |
 | **Time is a dimension** | The five frames are the same frame developed for 3, 6, 9, 12 and 15 minutes. The wedge on each one is the same nine-step exposure put through the H&D curve at that frame's 纬. Longer development is visibly more contrast, and it is not a filter. |
 | **Nothing is a default** | No ripple, no elevation, no Roboto, no colour roles, no 4 dp grid. |
 
@@ -80,8 +77,8 @@ These are the ones worth enforcing in review.
    on the film strip, and it means *light*, not height.
 
 3. **One accent.** The safelight. Everything else is a neutral on one
-   luminance ramp, because the contrast in this product is density 鈥?which is
-   brightness 鈥?and not hue.
+   luminance ramp, because the contrast in this product is density — which is
+   brightness — and not hue.
 
 4. **Five type roles, six spacing steps, two radii.** When you need a new one,
    the layout is usually wrong. `KalloSpace` has no step 12 or 24; that gap is
@@ -103,14 +100,14 @@ These are the ones worth enforcing in review.
 
 `lib/design/tokens.dart` is the whole visual contract.
 
-- **Colours** 鈥?two complete sets, `darkroom` and `lightTable`, plus
+- **Colours** — two complete sets, `darkroom` and `lightTable`, plus
   `KalloColors.lerp`. The `emissive` field is a `double` rather than a flag
   precisely so it can be interpolated; everything that appears to give off
   light reads it.
-- **Space** 鈥?2, 4, 8, 16, 32, 64.
-- **Radius** 鈥?1.5 for film, 12 for sheets. Nothing between.
-- **Motion** 鈥?90 / 160 / 240 / 460 ms, three curves, one stagger.
-- **Type** 鈥?`display`, `title`, `body`, `caption`, `data`. The `data` role is
+- **Space** — 2, 4, 8, 16, 32, 64.
+- **Radius** — 1.5 for film, 12 for sheets. Nothing between.
+- **Motion** — 90 / 160 / 240 / 460 ms, three curves, one stagger.
+- **Type** — `display`, `title`, `body`, `caption`, `data`. The `data` role is
   monospaced with tabular figures, because it is for numbers that change while
   you look at them and nothing around them may move.
 
@@ -140,4 +137,4 @@ platform's own face. When one is chosen it goes there and nowhere else.
 Screenshot the light table, remove the text, and look at it.
 
 If it still reads as *this* product, the language is working. If it reads as a
-Flutter app, the problem is in one of the seven rules above 鈥?not in a library.
+Flutter app, the problem is in one of the seven rules above — not in a library.

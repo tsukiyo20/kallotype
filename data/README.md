@@ -14,25 +14,13 @@ generates the stock tables from them, so the program text is MIT or Apache-2.0
 and this directory is CC BY-SA 4.0, with the boundary at a file read rather
 than at a comment. Building from source therefore needs this directory present.
 
-## What a file is
+Both formats are specified in [`films/FORMAT.md`](films/FORMAT.md), which also
+documents the TOML source file a stock is authored in and the four things
+`kalo stock check` refuses. No image of a data sheet is reproduced here: the
+sheets stay with their publishers, and each file names the publication, the page
+and the SHA-256 of the document its numbers were read from.
 
-A `.kalofilm` is the film: a TOML header that says where every number came from,
-the spectra as binary tables in a fixed order, and a SHA-256 over the lot. A
-`.kalopaper` is the same container with a different magic and one curve instead
-of three. Both formats are specified in [`films/FORMAT.md`](films/FORMAT.md),
-which also documents the TOML source file a stock is authored in and the four
-things `kalo stock check` refuses.
-
-No image of a data sheet is reproduced anywhere in here. The sheets stay with
-their publishers; what this project produced is the numbers read from them, and
-each file names the publication, the page and the SHA-256 of the document it was
-read from.
-
-## Licence
-
-The data is **CC BY-SA 4.0**: use it for anything, including commercially,
+The data is **CC BY-SA 4.0** — use it for anything, including commercially,
 provided the adaptation is shared under the same terms. The full text is in
-[`films/LICENSE`](films/LICENSE), which also records that the three films
-published before 2026-11-09 went out under CC BY 4.0 and that those copies keep
-that grant. Trademarks and what is not redistributed are in
-[`films/NOTICE.md`](films/NOTICE.md).
+[`films/LICENSE`](films/LICENSE); what is not redistributed, and the trademarks,
+are in [`films/NOTICE.md`](films/NOTICE.md).
