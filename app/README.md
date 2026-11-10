@@ -13,18 +13,25 @@ ship.
 
 ## Run it
 
-```bash
-cd app
-flutter run -d windows
-```
-
-The `windows/` platform folder is checked in. For the Mac, where this app is
-meant to live:
+Flutter is pinned to **3.47.9** with FVM, and `app/.fvmrc` is the record of it;
+CI reads the same number. 3.47 is the first release that renders the desktop
+with Impeller and leaves wide gamut on by default on the Mac, so it is a floor
+and not a preference.
 
 ```bash
-flutter create --platforms=macos --project-name kallo_ui .
-rm test/widget_test.dart   # the scaffold test refers to a MaterialApp we do not have
+brew install fvm    # once
+fvm install         # reads .fvmrc
+fvm flutter run -d macos
 ```
+
+Use `fvm flutter`, not `flutter`. A machine can have another SDK on its `PATH`,
+and the two render differently — which is exactly the failure this pin exists to
+prevent.
+
+All six platforms are checked in: `macos`, `windows`, `linux`, `ios`, `android`.
+They share one identity, `dev.kallotype.app`, and three floors — macOS 13,
+iOS 15, and Android API 29, which is where Impeller takes the Vulkan path
+instead of falling back to its OpenGL ES backend.
 
 There is no `MaterialApp` anywhere, and that is the point.
 

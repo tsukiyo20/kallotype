@@ -21,9 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Pinned, not `channel: stable`. A channel moves the renderer under the
+      # app: 3.47 swapped the desktop renderer to Impeller and turned on wide
+      # gamut on the Mac, which changed how every colour in this app is drawn.
+      # An unpinned channel means a build can change what the product looks
+      # like without a commit. The version here is the one in `app/.fvmrc`.
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: 3.47.9
           cache: true
       - run: flutter pub get
       - run: flutter analyze
