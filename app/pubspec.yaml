@@ -34,7 +34,9 @@ flutter:
 
   # Bundled, not borrowed from the platform: the product has to look the same
   # on six of them, and a golden test can only pin type it actually has.
-  # IBM Plex, SIL Open Font License 1.1 — see `fonts/OFL.txt`.
+  # Both families are under the SIL Open Font License 1.1, so a public
+  # repository may carry them — see `fonts/OFL-Inter.txt` and
+  # `fonts/OFL-NotoSansSC.txt`, which are upstream's own files.
   fonts:
     - family: Inter
       fonts:
@@ -43,9 +45,9 @@ flutter:
           weight: 500
         - asset: fonts/inter-600.ttf
           weight: 600
-    # The Chinese cut: Noto Sans SC (SIL OFL, so a public repository may carry
-    # it — Alibaba's PuHuiTi is free to use and not free to redistribute, which
-    # is why it is not here). Two weights, because Chinese headings need one.
+    # The Chinese cut: Noto Sans SC. Alibaba's PuHuiTi is free to use and not
+    # free to redistribute, which is why it is not here. Two weights, because
+    # Chinese headings need one.
     - family: NotoSansSC
       fonts:
         - asset: fonts/noto-sans-sc-Regular.otf
