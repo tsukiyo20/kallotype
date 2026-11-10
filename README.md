@@ -1,228 +1,137 @@
 # Kallotype
 
-**Film simulation, with developing time as a dimension.**
+**A photographic film and print model, in Rust.**
 
-Kallotype renders a digital image through a physical model of a photographic
-negative, a development step, and a print — and treats *how long the film was
-developed* as a first-class parameter, not as a separate preset.
+Kallotype takes a digital image and puts it through a physical model of a
+negative, a development step and a print. Light is reconstructed as a spectrum,
+the spectrum exposes three emulsion layers, each layer's exposure runs through
+its published characteristic curve, the dyes are printed onto paper, and the
+paper's reflectance is read back into sRGB. Grain is a count of developed
+grains, halation is light that left the pixel, and the orange mask is a coupler
+that disappears wherever cyan dye is formed.
+
+There is no "film look" table anywhere in it. Every number comes from a
+manufacturer's data sheet, and the numbers are data files rather than code.
+
+![The model: one render hung as a strip of seven frames, with the four effects
+carried alongside.](assets/pipeline.png)
 
 > *Kallotype* — from the Greek **kalos** (beautiful) and **typos** (impression).
 > The name William Henry Fox Talbot gave his negative-positive process in 1841,
 > before English flattened it into "calotype".
 
----
+## The model
 
-## Status
+**The curve is the sheet's.** Density against log exposure is a toe, a straight
+line and a shoulder, so the model is a trapezoid of two softplus corners:
+
+```text
+D(x) = d_min + γ·[ softplus(a·(x − toe))/a − softplus(b·(x − shoulder))/b ]
+```
+
+Each corner is a softplus divided by its own rate, so the plateau between them
+stays `γ·(shoulder − toe)` whatever the two rates are, and the derivative is
+`γ` times the difference of two logistic steps. A single logistic — a curve with
+a *point* of maximum contrast rather than a straight line — is four times worse
+against the same sheets, and puts its base density 0.2 below the measured one.
+
+![The characteristic curve: the model's line through the digitised points of one
+film, with 18 % grey marked.](assets/curves.png)
+
+**The exposure is metered, not guessed.** The input is linear light on the
+scale *1 is white*, so 18 % grey sits at `log10(0.18)` by definition. A camera
+file whose white point was normalised elsewhere has lost that scale, so
+`--ev auto` measures the frame and places its mean on 18 % — the rule an
+averaging meter and a laboratory's average printer both rest on, solved in
+closed form instead of by a test strip.
+
+**Development is kinetic.** Contrast follows
+`γ(t) = γ∞ − (γ∞ − γ₀)·e^(−t/τ)` over an *effective* time that compensates
+temperature with a Q10 law, and long development also raises fog and shifts
+speed. Three minutes against twelve takes a colour negative from ×0.71 to ×1.18
+of its contrast and pulls its speed back 0.27 of a stop. The kinetics were
+fitted to DELTA 400's contrast-against-time chart and then checked against
+TRI-X 400's exposure ladder, where they land within a tenth of a stop.
+
+**The print is solved, not dialled in.** The enlarger exposure is computed in
+closed form so that an 18 % grey card lands on the paper's target reflectance —
+what an operator does with a test strip — and a colour pack moves it the way the
+filter it names would.
+
+**The film is spectral.** Each layer integrates the light against its own
+sensitivity, so a colour is what the emulsion sees rather than a channel value.
+The dyes are measured absorptions, and the print reads the paper's own dyes.
+
+![Where each layer sees, and the base the unexposed film carries.](assets/spectra.png)
+
+**The orange mask is a coupler, not a colour.** The cyan layer carries a
+coloured coupler that absorbs blue and is destroyed wherever cyan is made, so
+its absorption and the dye's own unwanted absorption cancel. That is why an
+unexposed negative is orange and an exposed one is not, and it is a term on the
+base density rather than a constant.
+
+**Grain is a count.** A pixel is an aperture over a random arrangement of
+developed grains, so its exposure has counting statistics:
+`σ_logE = 1/(ln 10 · √N)`. One expression gives Selwyn granularity (σ ∝ 1/√area,
+so grain survives a change of scan resolution), keeps a blank frame clean, and
+needs one parameter per layer — the developed grain density — instead of a
+curve of σ against density fitted by hand. The one stock measured in full runs
+0.62, 0.51 and 0.07 grains per µm²: blue needs nine times fewer grains than red
+to be nine times grainier, which is what being the fast front layer means.
+
+**Halation and couplers are light and chemistry.** Halation is two unit-sum
+Gaussian kernels in micrometres of film added to the exposure before grain,
+because it is light reaching the emulsion and grain is what that light develops.
+The couplers are a matrix with a spatial kernel: a developing layer releases an
+inhibitor that suppresses its neighbours' development, which is where interimage
+correction and the light line along a dark edge come from — and the matrix can
+be fitted back out of measured patch densities rather than typed.
+
+The strip is a drawing of the process. The two plots are not drawings: they are
+the numbers in the shipped `.kalofilm`, plotted.
+
+## The data
 
 **Twenty-four films and six papers, every number traced to a data sheet.** A
-film is a `.kalofilm` file: the curves, the layer sensitivities, the dyes, the
-orange mask, the MTF and the grain its sheet publishes, plus a `[measured]`
-table that says field by field what is measured, borrowed or absent. A paper is
-a `.kalopaper` file: one curve, a target reflectance and its own dyes and layer
-sensitivities. The crate contains none of those numbers — the stock tables are
-generated from the files at build time (`crates/kallotype-core/build.rs`) — so
-the program text is MIT or Apache-2.0, the data is CC BY-SA 4.0, and a build needs
-`data/films/` and `data/papers/` present.
+film is a `.kalofilm` file — curves, layer sensitivities, dyes, mask, MTF and
+grain, plus a `[measured]` table saying field by field what is measured,
+borrowed or absent. A paper is a `.kalopaper` file: one curve, a target
+reflectance, its own dyes and layers. Everything measured lives in
+[`data/`](data/README.md) and nothing measured lives in the crates.
 
-The series covers Kodak's professional and consumer negatives (PORTRA 160, 400
-and 800, EKTAR 100, GOLD 200, TRI-X 400, T-MAX 400), the VISION3 cinema family
-(50D, 200T, 250D and 500T), Fuji's colour range (PRO 400H, NPH 400, C200,
-FUJIFILM 200 and 400), the three E-6 reversals (PROVIA 100F, VELVIA 50 and
-ECHTHROME E100) and three ILFORD silver films (DELTA 400, HP5 PLUS and the
-T-MAX above). One invented *film* remains as a placeholder and their notes say
-so; the papers are all measured now.
-
-Development is a dimension, not a preset. The kinetics were fitted to DELTA
-400's contrast-against-time chart and then checked against TRI-X 400's four
-exposure rungs; fog, ceiling, speed and toe all move with time, and the check
-lands within a tenth of a stop. `kalo curve --dev` prints what a development
-does to a stock before anything is rendered.
-
-The spectral exposure, print and scan are in place (`--spectral`,
-`--spectral-print`, `--spectral-scan`), as are grain (`--grain`), halation
-(`--halation`) and the inter-image stage (`--couplers`, where the orange mask
-is consumed as the cyan dye forms). Blur is measured from each film's MTF and is
-on by default — a no-op below about twelve megapixels, because a 35 mm frame
-sampled every 30 µm cannot show a 3 µm blur.
-
-For a reversal the film is the picture: there is no print, so `--paper` has no
-effect on those three stocks.
-
-What works today:
-
-```console
-$ kalo curve --dev 3.0
-  develop   3.00 min @ 20.0 °C  →  3.00 effective min
-  contrast  ×0.705  (R 0.423  G 0.444  B 0.465)
-  fog       -0.016 density
-  speed     +0.046 log10 E  (+0.15 stops)
-
-$ kalo curve --dev 12.0
-  develop   12.00 min @ 20.0 °C  →  12.00 effective min
-  contrast  ×1.177  (R 0.706  G 0.741  B 0.777)
-  fog       +0.018 density
-  speed     -0.037 log10 E  (-0.12 stops)
-```
+Six Kodak colour negatives (PORTRA 160, 400 and 800, EKTAR 100, GOLD 200,
+ULTRA MAX 400), four VISION3 cinema stocks (50D, 200T, 250D, 500T), six Fuji
+colour negatives (PRO 400H, NPH 400, C200, FILM 200 and 400, SUPERIA X-TRA 400),
+three E-6 reversals (PROVIA 100F, VELVIA 50, EKTACHROME E100) and five silver
+films (TRI-X 400, T-MAX 400, T-MAX 100, DELTA 400, HP5 PLUS). Each carries its
+own report: what was measured, what was borrowed and why, and what the sheet
+does not say.
 
 ## Quick start
 
 ```bash
 cargo build --release
-cargo run --release --bin kalo -- render crates/kallotype-cli/assets/testchart.png -o out/dev_065.png
-cargo run --release --bin kalo -- render crates/kallotype-cli/assets/testchart.png -o out/dev_12.png --dev 12.0
+cargo run --release --bin kalo -- render photo.png -o out/print.png \
+    --film kodak_portra_400 --paper portra_endura --dev 9
 ```
 
-Or install the binary from crates.io:
+Or install it:
 
 ```bash
 cargo install kallotype-cli
-kalo stocks
-kalo curve --dev 9.0 --temp 22 --sweep
-kalo render photo.png -o photo_c41.png --film vision3_500t --dev 9.0 --ev +0.3
-# A camera file with an unknown white point: let the frame meter itself.
-kalo render photo_linear.tif -o photo_nph400.png --input-encoding linear --ev auto
+kalo stocks                       # every film and paper, with what is measured
+kalo curve --dev 9 --sweep        # what a development does, before any render
+kalo render photo.png -o out.png --film vision3_500t --ev auto
 ```
 
-The library is on crates.io too — [`kallotype-core`](https://crates.io/crates/kallotype-core),
-[`kallotype-spectral`](https://crates.io/crates/kallotype-spectral),
-[`kallotype-io`](https://crates.io/crates/kallotype-io).
+A camera raw file is read as linear light directly, if the build has the
+feature: `--features raw` handles ARW, NEF, CR2/CR3, RAF, ORF, RW2, PEF, DNG and
+about twenty more. It is **off by default and that is a licensing decision** —
+`rawler` is LGPL-2.1. Decode elsewhere and pass the file with
+`--input-encoding linear` if you would rather not.
 
 > **macOS:** if `cargo build` fails with *"You have not agreed to the Xcode
-> license agreements"*, run `sudo xcodebuild -license accept` once. The system
-> linker refuses to run until the licence is accepted, and `git` fails the same
-> way.
-
-### Reading camera raw files
-
-A camera JPEG is display-referred: its tone curve, white balance and sharpening
-are baked in before Kallotype ever sees it. A raw file is scene-referred linear
-light — the same kind of data a film camera exposes — and reading it is one
-command:
-
-```bash
-cargo build --release --bin kalo --features raw
-kalo render DSC03315.ARW -o out/shot.png --film kodak_tmax400
-```
-
-The decoder handles what `rawler` handles — Sony ARW, Nikon NEF, Canon CR2/CR3,
-Fujifilm RAF (X-Trans), Olympus ORF, Panasonic RW2, Pentax PEF, DNG and about
-twenty more — and applies black level, demosaic, the as-shot white balance and
-the camera's own colour matrix to produce linear sRGB. `--input-encoding` does
-not apply to a raw file: it is linear by construction.
-
-**The feature is off by default, and that is a licensing decision.**
-`rawler` is LGPL-2.1, and `kallotype-raw` — the crate that wraps it — is
-deliberately outside this workspace, so a default build, `cargo test
---workspace` and `cargo deny` are MIT/Apache-2.0 all the way down. Build with
-`--features raw` and the resulting binary is a combined work that carries
-LGPL-2.1 obligations for that part. If you would rather not, decode elsewhere
-(a `dcraw`, `dnglab` or RawTherapee export) and pass the result with
-`--input-encoding linear`.
-
-## What is published, and what is not
-
-This repository is the **code**, plus the data it renders: twenty-four film
-stocks in [`data/films/`](data/films/) — three colour reversals, sixteen colour
-negatives and five black-and-white negatives — each digitised from its
-manufacturer's data sheet and each carrying a field-by-field account of what was
-measured and what was borrowed, and six measured papers in
-[`data/papers/`](data/papers/). Everything measured lives under
-[`data/`](data/README.md); nothing measured lives in the crates.
-
-The rest of the datasets the model was developed against, and the research notes
-that record the reasoning, stay local: they are the product of a separate
-digitisation effort, and some of the sources they describe are not
-redistributable in any case. The data sheets themselves are not republished —
-only the numbers read from them.
-
-The boundary is a file read: `crates/kallotype-core/build.rs` generates every
-stock table from those files when the crate is built, so the program text holds
-no measurements and a checkout without them does not compile. The tests that
-re-read the raw datasets are `#[ignore]`d, and the benchmark needs a reflectance
-CSV passed to `--data`.
-
-## Development
-
-```bash
-just check     # fmt + clippy + tests — the same three CI runs
-just run render crates/kallotype-cli/assets/testchart.png -o out/a.png --dev 9
-just bench     # compare RGB → spectrum reconstructions
-kalo bake -o out/model.klut --size 33 --film vision3_500t   # a table is per stock
-kalo render photo.png -o out/photo.png --dev 9 --lut out/model.klut
-just deny      # licences, advisories and sources
-```
-
-`just` is a convenience, not a requirement: every recipe is a plain `cargo`
-command, listed in [justfile](justfile).
-
-### Publishing
-
-Four crates, and they go up in dependency order: `kallotype-spectral`, then
-`kallotype-core`, then `kallotype-io` and `kallotype-cli`. Only the first can be
-packaged before the rest exist on crates.io — a path dependency carries a
-version, and packaging resolves that version against the registry, so
-`kallotype-core` cannot be built for upload until `kallotype-spectral` is
-already there.
-
-Layout:
-
-```
-crates/kallotype-core/   the model — no dependencies, no I/O, no unsafe
-crates/kallotype-io/     decoding and encoding, the only file-format code
-crates/kallotype-cli/    the kalo binary, plus a library so commands are testable
-crates/kallotype-spectral/ spectra, sensors and the RGB → spectrum benchmark
-```
-
-## The model
-
-```
-linear RGB ──► log10 E ──► negative density ──► print density ──► linear RGB
-                             ▲   H&D curve         ▲   paper curve,
-                             │   + development     │   balanced on 18 % grey
-                             └─────────────────────┘
-```
-
-A few things are worth calling out:
-
-1. **The exposure is metered, not guessed.** The input is linear light on the
-   scale *1 is white*, and 18 % grey is then at `log10(0.18)` by definition. A
-   camera file whose developer normalised the white point to something else has
-   lost that scale, so `--ev auto` measures the frame's mean luminance and
-   places it on 18 % — the rule an averaging exposure meter and a laboratory's
-   average printer both rest on, solved in closed form instead of by a test
-   strip. The report prints what it solved, so the number can be pinned down
-   afterwards with a fixed `--ev`.
-2. **Development is kinetic, not a preset.** Contrast follows
-   `γ(t) = γ∞ − (γ∞ − γ₀)·e^(−t/τ)` over an *effective* time that compensates
-   temperature with a Q10 law. Long development also raises fog and shifts speed.
-3. **The print balance is solved, not dialled in.** The enlarger exposure is
-   computed in closed form so that an 18 % grey card lands on the paper's target
-   reflectance. This is what an operator does with a test strip.
-4. **Everything is f64 and in physical units**, so a GPU implementation can be
-   checked against this one rather than trusted.
-5. **Halation is light, so it is added to the exposure.** Two unit-sum Gaussian
-   kernels — a short near-neutral scatter and a long red reflection, both in
-   micrometres of film rather than pixels — move the exposure around, and a
-   documented fraction returns. It runs before grain, because it is light
-   exposing the emulsion and grain is what that light develops.
-6. **Couplers are chemistry, not a colour matrix.** A layer that develops releases
-   an inhibitor that suppresses its neighbours', and its own, further
-   development — which is where interimage colour correction and the light line
-   along a dark edge come from. It is a matrix with a spatial kernel, and the
-   matrix can be fitted rather than typed: `fit_inhibition` recovers the matrix
-   that produced a set of measured patch densities.
-7. **The orange mask is not a colour, it is a coupler.** The cyan layer carries
-   a coloured coupler that absorbs blue and is destroyed wherever cyan dye is
-   made, so the mask's absorption and the dye's unwanted absorption cancel. That
-   is why an unexposed negative is orange and an exposed one is not, and it is
-   modelled as a term on the base density rather than as a constant.
-8. **Grain is a count, not noise.** A pixel is an aperture over a random
-   arrangement of developed grains, so its exposure has counting statistics:
-   `σ_logE = 1/(ln 10 · √N)` where `N` is how many grains the pixel holds. That
-   one expression gives Selwyn granularity (`σ ∝ 1/√area`, so grain survives a
-   change of scan resolution), keeps a blank frame clean and a shoulder clean,
-   and needs a single parameter — the developed grain density — instead of a
-   curve of `σ` against density fitted by hand.
+> license agreements"*, run `sudo xcodebuild -license accept` once.
 
 ## Checking the model
 
@@ -230,26 +139,34 @@ Three layers, cheapest first.
 
 **The data.** `kalo stock check <file>` re-derives every curve from the points
 the file carries and refuses a mismatch; the film reports quote the residuals,
-and `data/films/tools/kalofilm.py --check` verifies a file's digest and tables
-without the renderer.
+and [`kalofilm.py`](data/films/tools/kalofilm.py) verifies a file's digest and
+tables without the renderer at all.
 
-**The pipeline, without reference photographs.** `tools/eval.py` renders a known
-grey ramp through every stock and measures what must hold whatever the film is:
-an 18 per cent grey patch coming back at 18 per cent and neutral to the byte,
-a monotone ramp, contrast rising with development, and how far the scalar and
-the spectral print paths drift apart. `just eval` runs it.
+**The pipeline, without reference photographs.** [`tools/eval.py`](tools/eval.py)
+renders a known grey ramp through every stock and measures what must hold
+whatever the film is: an 18 % grey patch coming back at 18 % and neutral to the
+byte, a monotone ramp, contrast rising with development, and how far the scalar
+and the spectral print drift apart.
 
 **Against real film.** That needs paired exposures of the same scene — a
 ColorChecker and a grey card shot on the stock, scanned — and is not something
-the repository can do on its own. The numbers to compute are the ones the
-industry uses: density against exposure, ΔE2000 on the patches, the noise power
-spectrum, and an MTF from a slanted edge.
+the repository can do on its own. The numbers to compute are the industry's:
+density against exposure, ΔE2000 on the patches, the noise power spectrum, and
+an MTF from a slanted edge.
+
+The GPU backend is this same model, transcribed into WGSL and checked against
+the CPU pixel by pixel: across a 2 048-pixel grid spanning toe and shoulder the
+worst per-channel difference is 1.0 × 10⁻⁶ in linear light, against a stated
+tolerance of 1 × 10⁻⁴. It is on by default and worth it — about 4.5× on the
+scalar path and 80× on the spectral chain, where seventy-one wavelengths per
+pixel across four integrations is exactly the work a device is for. `--no-gpu`
+is there for when certain beats fast.
 
 ## What this is not
 
 - Not a LUT pack, and not a "film look" filter that happens to be called a
   simulation.
-- Not a reimplementation of anything. The physics is public; every line here is
+- Not a reimplementation of anything. The physics is public; every line is
   written against published literature and against manufacturer data sheets.
 - Not a product yet. There is no GUI and no colour management.
 
@@ -257,174 +174,28 @@ spectrum, and an MTF from a slanted edge.
 
 | Crate | Role |
 |---|---|
-| `kallotype-core` | The reference model: curves, development kinetics, built-in stocks, render. No I/O, no unsafe. |
-
-## The curve
-
-Density against log exposure, four parameters, and a shape taken from the
-measurement rather than chosen for convenience:
-
-```text
-D(x) = d_min + (gamma/a)·[ softplus(a·(x − toe)) − softplus(a·(x − shoulder)) ]
-```
-
-The derivative is `gamma` times the difference of two logistic steps — a plateau
-between the corners, flat outside. A single logistic, which is what this used to
-be, has a *point* of maximum contrast and no straight line; fitted to the data
-sheet's three curves it is four times worse, and the parameters it lands on are
-wrong in the way that matters for a negative (`d_min` 0.635 against a measured
-0.84). A sensitometric curve has a toe, a straight line and a shoulder, and a
-model that cannot express a straight line cannot express a negative.
-
-Grain comes from the same place. The manufacturer publishes rms granularity
-against density; the model's grain is counting statistics, `sigma_logE =
-1/(ln 10 · √N)`, and inverting the published curve gives `n` per layer: 0.62,
-0.51 and 0.07 grains per µm² for the red, green and blue records of the one
-measured stock. Blue needs nine times fewer grains than red to be nine times
-grainier, which is what being the fast front layer of a 500 T film means.
-
-A colour negative's minimum density is not part of its curve. It is base, fog and
-the orange mask — spectrally structured, so the model carries it as a spectrum
-and the curve describes only the dye, which is zero where nothing was exposed.
-The non-spectral print has no spectrum to put there, so the stock carries the
-same quantity as three status densities, and a test checks that the two agree.
-| `kallotype-io` | Decoding and encoding images. The only place that touches a file format. |
-| `kallotype-cli` | The `kalo` binary. |
-
-### `kallotype-gpu`
-
-A wgpu backend that must agree with `kallotype-core`. Both models are
-transcribed into WGSL and nothing else: the prepared render hands over what the
-CPU solved, or — where the model integrates over wavelength and there is no
-answer to hand over — the tables it integrates on, and tests compare the two on
-the same pixels.
-
-Across a 2 048-pixel grid that spans the toe and the shoulder, the worst
-per-channel difference in linear light is:
-
-| render | worst difference |
-|---|---|
-| scalar | 3.0 × 10⁻⁷ |
-| spectral exposure | 3.6 × 10⁻⁷ |
-| spectral print | 8.2 × 10⁻⁷ |
-| all three stages | 1.0 × 10⁻⁶ |
-| halation | 3.1 × 10⁻⁷ |
-| DIR couplers | 2.9 × 10⁻⁷ |
-| everything the model has | 7.0 × 10⁻⁷ |
-
-against a stated tolerance of 1 × 10⁻⁴.
-
-The tolerance is the contract. A GPU port that "looks right" is how a film
-simulation acquires two different films.
-
-**Grain**, **halation** and the **DIR couplers** are all implemented, which makes
-the backend the whole model rather than the front of it.
-
-Grain is the sharpest constraint on the transcription. Its draw is SplitMix64 — 64-bit arithmetic, which WGSL has no
-integers for — so `grain.wgsl` runs the same generator on pairs of `u32`, and
-`grain.rs` keeps twenty-three bits of state rather than fifty-three so that the
-draw is exact in an `f32`. For a random number "close enough" is false: the two
-backends either draw the same number or they have made two films.
-
-Halation and the couplers move light between pixels, so they need the frame in a
-buffer: the backend runs one dispatch when there is nothing spatial and a chain of
-up to seven when there is, skipping the passes that are off. A test renders the
-same frame both ways and asserts the two are **bit-identical**, because two ways
-to run a model is two ways to disagree.
-
-What is refused — with an error naming it, not a shrug — is a **baked exposure
-table** and a **dictionary prior**: a sampled cube and a per-pixel non-negative
-least squares are their own models, and neither is expressible as a constant
-matrix.
-
-It is the **default backend**: a renderer that ignores the device on a machine
-that has one is leaving the largest single speed-up on the table. The price is
-that the binary pulls in wgpu and about two hundred crates, which is why the
-feature can be turned off at build time:
-
-```bash
-kalo render photo.png -o out/photo.png            # gpu when there is one
-kalo render photo.png -o out/photo.png --no-gpu   # the CPU, for certain
-cargo install kallotype-cli --no-default-features # a binary without wgpu
-```
-
-The report always says which backend ran and which device it was, or says `cpu`:
-
-```text
-  backend   gpu — Apple M4 (Metal)
-```
-
-A missing adapter, or a render that needs a table or a dictionary, falls back to
-the CPU with a warning — never silently, never with an error. The message names
-the stage, because the backend is asked rather than assumed. At eight bits per
-channel the two backends agree to within one level; under a megapixel the files
-are usually byte-identical, but that is a coincidence of where samples land on
-rounding boundaries rather than a promise.
-
-Measured on 2 073 600 pixels, CPU against GPU including upload, dispatch and
-readback:
-
-| render | cpu | gpu | ratio |
-|---|---|---|---|
-| scalar | 106 ms | 23 ms | 4.5 × |
-| all three spectral stages | 3 062 ms | 36 ms | 84 × |
-| the same, with grain | 3 174 ms | 33 ms | 97 × |
-| the same, with halation and couplers | 3 356 ms | 45 ms | 74 × |
-
-The spectral path is where the device earns its place: seventy-one wavelength
-samples per pixel across four integrations is exactly the work a GPU is for.
-The spatial stages are on it too — the film's own three-layer blur, halation,
-the DIR couplers — so a full-frame 32.7 MP photo runs the whole spectral chain
-in about two and a half seconds. Below
-about a megapixel of scalar work the fixed cost of a device and a readback is the
-larger term, and the CPU wins — which is worth knowing before reaching for
-`--no-gpu` to make a large one.
-
-The CPU path is itself parallel: the pixel loop runs on every core through rayon
-(`parallel`, on by default), which is worth about four times on the spectral
-stages and seven of the eight cores here. Measured on an 8.2 MP frame,
-3514 × 2344, single thread → rayon → GPU:
-
-| render | one core | every core | gpu |
-|---|---|---|---|
-| scalar | 1.07 s | 0.73 s | 0.2 s |
-| spectral exposure | 5.12 s | 1.40 s | 0.60 s |
-| all three spectral stages | 13.13 s | 3.37 s | 0.65 s |
-| grain, halation and couplers | 2.39 s | 1.20 s | 0.68 s |
+| `kallotype-core` | The model: curves, development kinetics, the built-in stocks, render. No I/O, no unsafe. |
+| `kallotype-spectral` | Spectra, sensors, and the RGB → spectrum reconstruction. |
+| `kallotype-io` | Decoding and encoding. The only place that touches a file format. |
+| `kallotype-cli` | The `kalo` binary, plus a library so the commands are testable. |
+| `kallotype-gpu` | The wgpu backend, feature-gated into the CLI. |
 
 ## Licence
 
-Code is **MIT OR Apache-2.0**, at your option: see [LICENSE](LICENSE),
-[LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE).
+Code is **MIT OR Apache-2.0**, at your option. The **measurement data is
+CC BY-SA 4.0** — share it, adapt it, sell it, but keep it open; the full text is
+in [`data/films/LICENSE`](data/films/LICENSE), and what is not redistributed is
+in [`data/films/NOTICE.md`](data/films/NOTICE.md).
 
-The **measurement data is CC BY-SA 4.0**: the `.kalofilm` files, the digitised
-curves and the reports in [data/films/](data/films/), and the model files in
-[data/papers/](data/papers/), may be used for
-anything, including commercially, provided the adaptation is shared under the
-same terms. See [data/films/LICENSE](data/films/LICENSE),
-which also records that the three films published before 2026-11-09 went out
-under CC BY 4.0.
+The boundary is a file read. `crates/kallotype-core/build.rs` reads the
+`.kalofilm` and `.kalopaper` files at build time and generates the stock tables
+from them, so the program text holds no measurements and a checkout without
+[`data/`](data/README.md) does not compile.
 
-The crate does not contain the digitisation. `crates/kallotype-core/build.rs`
-reads the `.kalofilm` and `.kalopaper` files in `data/films/` and
-`data/papers/` when the crate is built and generates the stock tables from
-them, so the program text is MIT or Apache-2.0 and the measured data is
-CC BY-SA, with the boundary at a file read rather than at a comment. Building from source
-therefore needs those files present.
-
-One exception, and it is fenced off on purpose: `crates/kallotype-raw` is
-**LGPL-2.1**, because camera raw decoding is built on `rawler`. That crate is
-excluded from the workspace and reachable only through `--features raw`, so
-nothing in a default build links it.
-
-`Cargo.lock` does list the raw decoder's dependencies, because an optional path
-dependency has to be resolved whether or not it is selected. Listing is not
-linking: `cargo tree` with default features does not contain them, and neither
-does the binary.
-
-The measured curves that ship compiled into the crate are our own digitisation
-of published manufacturer data sheets; the data sheets themselves are not
-redistributed. Nothing copied from another project's data files is accepted.
+One exception, fenced off on purpose: `crates/kallotype-raw` is **LGPL-2.1**,
+because camera raw decoding is built on `rawler`. It is outside the workspace
+and reachable only through `--features raw`, so nothing in a default build links
+it.
 
 ## Contributing
 
@@ -432,13 +203,19 @@ Early days — open an issue before a large pull request. Useful contributions
 right now: curve digitisation, test images with known exposure, and critiques of
 the development model.
 
+`just check` runs formatting, clippy and the tests, which are the three jobs CI
+runs; [`justfile`](justfile) lists every recipe as the plain `cargo` command
+behind it. The interface in [`app/`](app/README.md) is a Flutter build that
+draws the film strip from a table this model generates — it is a second consumer
+of the same data, not a second model.
+
 ## References
 
 - Hurter & Driffield, *Photo-chemical Investigations* (1890) — the H&D curve.
 - Mees & James, *The Theory of the Photographic Process*, 4th ed. — development
-  kinetics.
+  kinetics, granularity.
 - Hunt, *The Reproduction of Colour*, 6th ed. — couplers and interimage effects.
-- Giorgianni & Madden, *Digital Color Management*, 2nd ed. — the negative/print
-  pipeline.
+- Giorgianni & Madden, *Digital Color Management*, 2nd ed. — the
+  negative/print pipeline.
 - Mallett & Yuksel, *Spectral Primary Decomposition for Rendering with sRGB
-  Reflectance* (2019) — spectral upsampling, for phase 2.
+  Reflectance* (2019) — spectral upsampling.
