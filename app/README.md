@@ -39,21 +39,20 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`flutter analyze` is clean, and two golden tests pin the language:
+`fvm flutter analyze` is clean, and one golden test pins the language:
 
-| light table | darkroom |
-|---|---|
-| ![the light table](test/goldens/light_table.png) | ![the darkroom](test/goldens/darkroom.png) |
+![the contact sheet](test/goldens/sheet.png)
 
 ```bash
-flutter test                    # compares against the two images
-flutter test --update-goldens   # rewrites them, deliberately
+fvm flutter test                    # compares against the image
+fvm flutter test --update-goldens   # rewrites it, deliberately
 ```
 
-The test loads the machine's own faces — Segoe UI for Latin, DengXian for the
-Chinese, Consolas standing in for Menlo — because the test renderer otherwise
-draws every glyph as a box, and a design judged on its type cannot be judged as
-boxes. See `test/gallery_golden_test.dart`.
+The test loads the bundled faces from disk before it draws, so the picture is in
+the product's own type rather than the runner's. This is the reason the fonts are
+bundled: the old goldens could only be trusted on the one machine whose system
+faces they happened to use, and skipped everywhere else. See
+`test/contact_sheet_golden_test.dart`.
 
 ---
 

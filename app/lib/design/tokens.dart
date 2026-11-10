@@ -51,7 +51,8 @@ class KalloColors {
   /// Text that must be felt.
   final Color inkFaint;
 
-  /// The safelight. The only saturated colour in the product.
+  /// The safelight in the dark, and the grease pencil in the light. The same
+  /// hue in two materials, and the only saturated colour in the chrome.
   final Color accent;
 
   /// The safelight, further away.
@@ -77,15 +78,16 @@ class KalloColors {
     emissive: 0.0,
   );
 
+  /// The table, lit: warm paper, ink, and a grease pencil.
   static const KalloColors lightTable = KalloColors(
-    ground: Color(0xFFE9E6E0),
-    surface: Color(0xFFF7F5F1),
+    ground: Color(0xFFF5F1E9),
+    surface: Color(0xFFFCFAF6),
     surfaceRaised: Color(0xFFFFFFFF),
-    hairline: Color(0xFFD5CFC5),
-    ink: Color(0xFF171410),
-    inkMuted: Color(0xFF6A6459),
-    inkFaint: Color(0xFFA29B90),
-    accent: Color(0xFF9B3A12),
+    hairline: Color(0xFFD9D1C3),
+    ink: Color(0xFF1A1712),
+    inkMuted: Color(0xFF6E6659),
+    inkFaint: Color(0xFFA69C8C),
+    accent: Color(0xFF9E3B14),
     accentDim: Color(0xFFC9805C),
     emissive: 1.0,
   );
@@ -149,88 +151,109 @@ abstract final class KalloMotion {
   static const Curve settleCurve = Cubic(0.22, 0.61, 0.36, 1.0);
 }
 
-/// Five roles, not fifteen sizes.
+/// One superfamily, four cuts, three voices.
 ///
-/// A face is not chosen yet: [sans] is `null`, which means the platform's own,
-/// and it is a variable rather than a constant so that a face can be loaded at
-/// startup — and so that the golden test can load a real one, because the test
-/// renderer otherwise draws every glyph as a box.
+/// Bundled rather than borrowed from the platform, because the product has to
+/// look identical on six of them and because the golden tests can then be
+/// portable: a face the test does not have is a box, and a design judged on its
+/// type cannot be judged as boxes.
+///
+/// | cut | voice |
+/// |---|---|
+/// | [sans] | body, controls |
+/// | [condensed] | the film: labels, the big numeral |
+/// | [mono] | the instrument: anything measured |
+/// | [serif] | the paper: records, captions, prose |
+///
+/// The Chinese is not bundled yet; it falls back to the platform's own face,
+/// which is the one place the six builds still differ.
 abstract final class KalloType {
-  static String? sans;
+  static const String sans = 'PlexSans';
+  static const String condensed = 'PlexCondensed';
+  static const String mono = 'PlexMono';
+  static const String serif = 'PlexSerif';
 
-  /// The face covers Latin; the labels are Chinese. These are the families the
-  /// engine falls back to for everything the first one has no glyph for, in the
-  /// order the platforms are likeliest to have them.
-  static const List<String> sansFallback = <String>[
+  /// Families the engine falls back to for everything Plex has no glyph for.
+  static const List<String> cjkFallback = <String>[
     'PingFang SC',
     'Hiragino Sans GB',
     'Microsoft YaHei',
-    'DengXian',
     'Noto Sans CJK SC',
     'Source Han Sans SC',
   ];
 
-  static const String monoFamily = 'Menlo';
-  static const List<String> monoFallback = <String>[
-    'SF Mono',
-    'Menlo',
-    'Consolas',
-    'Roboto Mono',
-    'monospace',
-  ];
+  static const String monoFallback = 'Menlo';
 
-  static const TextStyle _display = TextStyle(
-    fontFamilyFallback: sansFallback,
+  static const List<FontFeature> _tabular = <FontFeature>[FontFeature('tnum')];
+
+  /// The one big numeral on a screen.
+  static const TextStyle plate = TextStyle(
+    fontFamily: condensed,
+    fontFamilyFallback: cjkFallback,
     fontSize: 34,
-    height: 1.06,
-    letterSpacing: -0.9,
-    fontWeight: FontWeight.w300,
+    height: 1.0,
+    letterSpacing: 0.4,
+    fontWeight: FontWeight.w600,
   );
 
-  static const TextStyle _title = TextStyle(
-    fontFamilyFallback: sansFallback,
+  /// A screen's title.
+  static const TextStyle display = TextStyle(
+    fontFamily: sans,
+    fontFamilyFallback: cjkFallback,
+    fontSize: 30,
+    height: 1.1,
+    letterSpacing: -0.6,
+    fontWeight: FontWeight.w400,
+  );
+
+  /// A section of paper.
+  static const TextStyle title = TextStyle(
+    fontFamily: serif,
+    fontFamilyFallback: cjkFallback,
     fontSize: 19,
-    height: 1.2,
-    letterSpacing: -0.2,
-    fontWeight: FontWeight.w500,
+    height: 1.25,
+    fontWeight: FontWeight.w400,
   );
 
-  static const TextStyle _body = TextStyle(
-    fontFamilyFallback: sansFallback,
+  /// Prose.
+  static const TextStyle body = TextStyle(
+    fontFamily: sans,
+    fontFamilyFallback: cjkFallback,
     fontSize: 14,
     height: 1.45,
     fontWeight: FontWeight.w400,
   );
 
-  static const TextStyle _caption = TextStyle(
-    fontFamilyFallback: sansFallback,
-    fontSize: 10.5,
+  /// A label, set small and spaced out, always upper case.
+  static const TextStyle caption = TextStyle(
+    fontFamily: condensed,
+    fontFamilyFallback: cjkFallback,
+    fontSize: 9.5,
     height: 1.2,
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
     fontWeight: FontWeight.w600,
   );
-
-  /// The one number on the screen that matters.
-  static TextStyle get display => _display.copyWith(fontFamily: sans);
-
-  /// A section, a name.
-  static TextStyle get title => _title.copyWith(fontFamily: sans);
-
-  /// Prose.
-  static TextStyle get body => _body.copyWith(fontFamily: sans);
-
-  /// A label, set small and spaced out, always upper case.
-  static TextStyle get caption => _caption.copyWith(fontFamily: sans);
 
   /// Anything that is a measurement. Tabular, so that a number changing does
   /// not move the things around it.
   static const TextStyle data = TextStyle(
-    fontFamily: monoFamily,
-    fontFamilyFallback: monoFallback,
+    fontFamily: mono,
+    fontFamilyFallback: <String>[monoFallback],
     fontSize: 12.5,
     height: 1.3,
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
     fontWeight: FontWeight.w400,
-    fontFeatures: <FontFeature>[FontFeature('tnum')],
+    fontFeatures: _tabular,
+  );
+
+  /// A frame number, an edge code. Smaller than [data], still tabular.
+  static const TextStyle folio = TextStyle(
+    fontFamily: mono,
+    fontFamilyFallback: <String>[monoFallback],
+    fontSize: 10,
+    height: 1.2,
+    letterSpacing: 0.5,
+    fontWeight: FontWeight.w400,
+    fontFeatures: _tabular,
   );
 }

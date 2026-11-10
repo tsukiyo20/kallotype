@@ -7,4 +7,7 @@ export 'design/scope.dart';
 export 'design/tokens.dart';
 export 'film/film.dart';
 export 'film/strip_data.dart';
+export 'lab/roll.dart';
+export 'sheets/contact_sheet.dart';
+export 'widgets/edge_bar.dart';
 export 'widgets/primitives.dart';

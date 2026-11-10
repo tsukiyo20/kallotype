@@ -1,0 +1,56 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:kallo_ui/film/strip_data.dart';
+import 'package:kallo_ui/lab/roll.dart';
+import 'package:kallo_ui/main.dart';
+
+/// Load the bundled faces, so the golden is drawn in the product's type rather
+/// than in whatever the test runner has. The faces are read from disk: a test
+/// runs beside the package, and this is the one place where that is the honest
+/// source.
+Future<void> _loadFonts() async {
+  const Map<String, List<String>> faces = <String, List<String>>{
+    'PlexSans': <String>[
+      'fonts/plex-sans-400.ttf',
+      'fonts/plex-sans-500.ttf',
+      'fonts/plex-sans-600.ttf',
+    ],
+    'PlexCondensed': <String>['fonts/plex-condensed-600.ttf'],
+    'PlexMono': <String>['fonts/plex-mono-400.ttf', 'fonts/plex-mono-500.ttf'],
+    'PlexSerif': <String>['fonts/plex-serif-400.ttf'],
+  };
+  for (final MapEntry<String, List<String>> face in faces.entries) {
+    final FontLoader loader = FontLoader(face.key);
+    for (final String path in face.value) {
+      final Uint8List bytes = File(path).readAsBytesSync();
+      loader.addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));
+    }
+    await loader.load();
+  }
+}
+
+void main() {
+  setUpAll(_loadFonts);
+
+  testWidgets('the contact sheet', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final StripData strip = StripData.fromJson(
+      jsonDecode(File('assets/film_strip.json').readAsStringSync())
+          as Map<String, dynamic>,
+    );
+
+    await tester.pumpWidget(KalloApp(roll: Roll.fromStrip(strip)));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/sheet.png'),
+    );
+  });
+}
