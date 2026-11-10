@@ -47,6 +47,11 @@ class Print {
     return minutes == null ? null : darkroomClock(minutes);
   }
 
+  /// A decoded print owns a texture. When the wall stops hanging it, the
+  /// texture goes too — otherwise every visit to a folder with four prints in
+  /// it costs a hundred megabytes that nothing will ever free.
+  void dispose() => image.dispose();
+
   /// Read one exported print.
   ///
   /// The image is decoded at the display's width rather than the file's: an

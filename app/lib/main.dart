@@ -153,9 +153,25 @@ class _KalloAppState extends State<KalloApp> {
     final List<Print> prints = await Exports.read(
       folder: Exports.directoryFor(_exportPath),
     );
-    if (mounted) {
-      setState(() => _prints = prints);
+    if (!mounted) {
+      for (final Print print in prints) {
+        print.dispose();
+      }
+      return;
     }
+    final List<Print> previous = _prints;
+    setState(() => _prints = prints);
+    if (identical(previous, prints) || previous.isEmpty) {
+      return;
+    }
+    // The frame that shows the new prints has to be drawn before the old
+    // textures are freed: a picture that is disposed while it is on screen is
+    // a picture that draws as nothing.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final Print print in previous) {
+        print.dispose();
+      }
+    });
   }
 
   Future<void> _chooseExport() async {
@@ -248,6 +264,8 @@ class _KalloAppState extends State<KalloApp> {
           : Room(
               roll: _roll!,
               prints: _prints,
+              onEnterGallery:
+                  widget.prints == null ? () => unawaited(_reloadPrints()) : null,
               export: widget.export ?? _export,
               locale: _locale,
               onLocale: (Locale? next) => setState(() => _locale = next),

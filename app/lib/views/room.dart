@@ -29,6 +29,7 @@ class Room extends StatefulWidget {
     super.key,
     required this.roll,
     this.prints = const <Print>[],
+    this.onEnterGallery,
     required this.export,
     required this.locale,
     required this.onLocale,
@@ -48,6 +49,11 @@ class Room extends StatefulWidget {
   /// What has been exported, in the order it was printed. Nothing is a state
   /// the room can show: the gallery is a wall, and a wall can be empty.
   final List<Print> prints;
+
+  /// Walking into the gallery is what makes it look again: the folder is not
+  /// watched, and a room that shows yesterday's work is a room with the lights
+  /// off.
+  final VoidCallback? onEnterGallery;
 
   /// Where prints come from, and whether this platform lets a person say.
   final ExportSetting export;
@@ -130,10 +136,15 @@ class _RoomState extends State<Room> {
               child: Sidebar(
                 topInset: widget.chrome == WindowChrome.mac ? 44 : 12,
                 current: _place,
-                onSelect: (Place place) => setState(() {
-                  _place = place;
-                  _open = false;
-                }),
+                onSelect: (Place place) {
+                  setState(() {
+                    _place = place;
+                    _open = false;
+                  });
+                  if (place == Place.gallery) {
+                    widget.onEnterGallery?.call();
+                  }
+                },
                 rolls: 1,
                 rollName: s.rollName(widget.roll.number),
                 frameCount: widget.roll.frames.length,
