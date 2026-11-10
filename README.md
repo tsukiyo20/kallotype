@@ -142,11 +142,12 @@ the file carries and refuses a mismatch; the film reports quote the residuals,
 and [`kalofilm.py`](data/films/tools/kalofilm.py) verifies a file's digest and
 tables without the renderer at all.
 
-**The pipeline, without reference photographs.** [`tools/eval.py`](tools/eval.py)
-renders a known grey ramp through every stock and measures what must hold
-whatever the film is: an 18 % grey patch coming back at 18 % and neutral to the
-byte, a monotone ramp, contrast rising with development, and how far the scalar
-and the spectral print drift apart.
+**The pipeline, without reference photographs.** `cargo test` pushes an 18 %
+grey patch through every stock and asserts what must hold whatever the film is:
+it comes back at 18 % and neutral, a ramp stays monotone, and development moves
+contrast in the right direction. Those are tests over every film and paper in
+`data/` rather than over a default, so CI runs all thirty on three operating
+systems.
 
 **Against real film.** That needs paired exposures of the same scene — a
 ColorChecker and a grey card shot on the stock, scanned — and is not something
