@@ -22,7 +22,7 @@ a `.kalopaper` file: one curve, a target reflectance and its own dyes and layer
 sensitivities. The crate contains none of those numbers — the stock tables are
 generated from the files at build time (`crates/kallotype-core/build.rs`) — so
 the program text is MIT or Apache-2.0, the data is CC BY-SA 4.0, and a build needs
-`films/`, `data/films/` and `data/papers/` present.
+`data/films/` and `data/papers/` present.
 
 The series covers Kodak's professional and consumer negatives (PORTRA 160, 400
 and 800, EKTAR 100, GOLD 200, TRI-X 400, T-MAX 400), the VISION3 cinema family
@@ -122,10 +122,12 @@ LGPL-2.1 obligations for that part. If you would rather not, decode elsewhere
 ## What is published, and what is not
 
 This repository is the **code**, plus the data it renders: twenty-four film
-stocks in [`films/`](films/) — three colour reversals, sixteen colour negatives
-and five black-and-white negatives — each digitised from its manufacturer's data
-sheet and each carrying a field-by-field account of what was measured and what
-was borrowed, and six measured papers in [`data/papers/`](data/papers/).
+stocks in [`data/films/`](data/films/) — three colour reversals, sixteen colour
+negatives and five black-and-white negatives — each digitised from its
+manufacturer's data sheet and each carrying a field-by-field account of what was
+measured and what was borrowed, and six measured papers in
+[`data/papers/`](data/papers/). Everything measured lives under
+[`data/`](data/README.md); nothing measured lives in the crates.
 
 The rest of the datasets the model was developed against, and the research notes
 that record the reasoning, stay local: they are the product of a separate
@@ -228,7 +230,7 @@ Three layers, cheapest first.
 
 **The data.** `kalo stock check <file>` re-derives every curve from the points
 the file carries and refuses a mismatch; the film reports quote the residuals,
-and `films/tools/kalofilm.py --check` verifies a file's digest and tables
+and `data/films/tools/kalofilm.py --check` verifies a file's digest and tables
 without the renderer.
 
 **The pipeline, without reference photographs.** `tools/eval.py` renders a known
@@ -396,15 +398,15 @@ Code is **MIT OR Apache-2.0**, at your option: see [LICENSE](LICENSE),
 [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE).
 
 The **measurement data is CC BY-SA 4.0**: the `.kalofilm` files, the digitised
-curves and the reports in [films/](films/), and the model files in
-[data/films/](data/films/) and [data/papers/](data/papers/), may be used for
+curves and the reports in [data/films/](data/films/), and the model files in
+[data/papers/](data/papers/), may be used for
 anything, including commercially, provided the adaptation is shared under the
-same terms. See [films/LICENSE](films/LICENSE),
+same terms. See [data/films/LICENSE](data/films/LICENSE),
 which also records that the three films published before 2026-11-09 went out
 under CC BY 4.0.
 
 The crate does not contain the digitisation. `crates/kallotype-core/build.rs`
-reads the `.kalofilm` and `.kalopaper` files in `films/`, `data/films/` and
+reads the `.kalofilm` and `.kalopaper` files in `data/films/` and
 `data/papers/` when the crate is built and generates the stock tables from
 them, so the program text is MIT or Apache-2.0 and the measured data is
 CC BY-SA, with the boundary at a file read rather than at a comment. Building from source

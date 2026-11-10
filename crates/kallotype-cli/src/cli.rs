@@ -70,7 +70,7 @@ pub struct StockArgs {
     /// A `.kalofilm` file to render instead of a compiled stock.
     ///
     /// The file carries the film's curves, spectra and a field-by-field account
-    /// of what was measured; `films/` in the repository has two. Loading one
+    /// of what was measured; `data/films/` in the repository has two. Loading one
     /// needs no recompile, which is the point of the format.
     #[arg(long, value_name = "PATH", conflicts_with = "film")]
     pub film_file: Option<std::path::PathBuf>,

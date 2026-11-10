@@ -14,7 +14,7 @@
 A paper is a different file from a film on purpose: one characteristic curve
 instead of three, a target reflectance instead of a base density, no mask, no
 grain and no blur. The format is specified in
-[`films/FORMAT.md`](../films/FORMAT.md#paper-files-kalopaper).
+[`../films/FORMAT.md`](../films/FORMAT.md#paper-files-kalopaper).
 
 Both former placeholders are gone: `c41_paper` became the Fuji paper, and
 `bw_paper` became POLYMAX II RC. There are no invented papers left in the tree.
@@ -40,4 +40,4 @@ Two more Fuji sheets were digitised far enough to know:
   duplicate with a different name.
 
 The licence is CC BY-SA 4.0, as for the films; the full text is in
-[`films/LICENSE`](../films/LICENSE).
+[`../films/LICENSE`](../films/LICENSE).
