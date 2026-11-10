@@ -39,19 +39,50 @@ Future<void> _loadFonts() async {
   }
 }
 
-/// The print the model made, read from the two files `just print` writes.
+/// A picture for the goldens, drawn here and never committed.
 ///
-/// From disk rather than through `rootBundle`, for the same reason the fonts
-/// are: a test runs beside the package, and this is the honest source.
-Future<Print> _hangingPrint() async {
-  final ui.Codec codec = await ui.instantiateImageCodec(
-    File('assets/print.png').readAsBytesSync(),
+/// The app ships no photographs: a print is a file the model exports, and the
+/// gallery reads the export folder. But a golden of the gallery has to have
+/// something on the wall to be about, so the test paints a test card — three
+/// blocks on a ramp, which no one could mistake for a photograph.
+Future<Print> _fixturePrint() async {
+  const double width = 900;
+  const double height = 600;
+  final ui.PictureRecorder recorder = ui.PictureRecorder();
+  final Canvas canvas = Canvas(recorder);
+  final Rect full = Rect.fromLTWH(0, 0, width, height);
+  canvas.drawRect(
+    full,
+    Paint()
+      ..shader = ui.Gradient.linear(
+        full.topCenter,
+        full.bottomCenter,
+        <Color>[const Color(0xFFF2EDE4), const Color(0xFF2A2622)],
+      ),
   );
-  final ui.FrameInfo frame = await codec.getNextFrame();
-  return Print.of(
-    jsonDecode(File('assets/print.json').readAsStringSync())
-        as Map<String, dynamic>,
-    frame.image,
+  canvas.drawRect(
+    const Rect.fromLTWH(80, 120, 220, 340),
+    Paint()..color = const Color(0xFF8C6A4A),
+  );
+  canvas.drawRect(
+    const Rect.fromLTWH(340, 180, 180, 260),
+    Paint()..color = const Color(0xFF4E6B63),
+  );
+  canvas.drawRect(
+    const Rect.fromLTWH(560, 90, 260, 400),
+    Paint()..color = const Color(0xFF1E1B18),
+  );
+  final ui.Image image = await recorder.endRecording().toImage(
+        width.toInt(),
+        height.toInt(),
+      );
+  return Print(
+    image: image,
+    name: 'test-card',
+    film: 'VISION3 500T',
+    paper: 'CRYSTAL ARCHIVE PEARL',
+    minutes: 9,
+    tempC: 20,
   );
 }
 
@@ -75,13 +106,14 @@ void main() {
 
   setUpAll(() async {
     await _loadFonts();
-    hanging = await _hangingPrint();
+    hanging = await _fixturePrint();
   });
 
   testWidgets('the contact sheet', (WidgetTester tester) async {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      prints: const <Print>[],
       roll: interpolatedRoll(_strip()),
       appearance: Brightness.light,
       chrome: WindowChrome.mac,
@@ -98,6 +130,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      prints: const <Print>[],
       roll: interpolatedRoll(_strip()),
       locale: const Locale('zh'),
       appearance: Brightness.light,
@@ -115,6 +148,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      prints: const <Print>[],
       roll: Roll.fromStrip(_strip()),
       locale: const Locale('zh'),
       appearance: Brightness.dark,
@@ -134,7 +168,7 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       roll: Roll.fromStrip(_strip()),
-      print: hanging,
+      prints: <Print>[hanging],
       appearance: Brightness.dark,
       initialPlace: Place.gallery,
       chrome: WindowChrome.mac,
@@ -152,7 +186,7 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       roll: Roll.fromStrip(_strip()),
-      print: hanging,
+      prints: <Print>[hanging],
       appearance: Brightness.light,
       initialPlace: Place.gallery,
       chrome: WindowChrome.mac,
@@ -166,5 +200,23 @@ void main() {
       find.byType(KalloApp),
       matchesGoldenFile('goldens/gallery-unlit.png'),
     );
+  });
+
+  testWidgets('the gallery with nothing printed', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      prints: const <Print>[],
+      roll: Roll.fromStrip(_strip()),
+      appearance: Brightness.light,
+      initialPlace: Place.gallery,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    // A wall with nothing on it and a switch: no print, and no label claiming
+    // one. This is the state the app is in before anything has been exported.
+    expect(find.byType(RawImage), findsNothing);
+    expect(find.text('Light'), findsOneWidget);
   });
 }

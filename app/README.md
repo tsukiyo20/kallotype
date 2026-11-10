@@ -46,7 +46,11 @@ There is no `MaterialApp` anywhere, and that is the point.
 | ![the table](test/goldens/sheet.png) | ![the table in Chinese](test/goldens/sheet-zh.png) | ![the drawer](test/goldens/drawer.png) |
 | **the table**, forty frames, light | **the same**, in Chinese | **the drawer**, in Chinese, dark |
 | ![the gallery](test/goldens/gallery.png) | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | |
-| **the gallery**, one print, lit | **the same**, with the lamp off | |
+| **the gallery**, lit | **the same**, with the lamp off | |
+
+The gallery's goldens hang a test card the test draws, because the app ships no
+pictures: a print is a file the model exports, and the golden has to have
+something on the wall to be about.
 
 ```bash
 fvm flutter test                    # compares against the images
@@ -69,7 +73,8 @@ handle, a field, and — where the place has one — a record on the right.
 |---|---|
 | **Five places, one of each built** | Shelf, Table, Binder, Line, Gallery. The workbench belongs between the table and the binder and is not built yet. A place that has nothing in it says what it is for instead of showing another place's screen. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
-| **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. What hangs there is a real print: a photograph through the model, written by `just print`, never through a camera's own rendering. |
+| **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
+| **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into `Pictures/Kallotype`, and the gallery hangs whatever is in that folder — nothing, most of the time, which is why an empty wall is a state and not a bug. |
 | **The chrome is light, the print is paper** | The window is a tool, so its planes are one neutral ramp in both appearances. The only warm and saturated surfaces in the product are the paper a print sits on and the gallery wall behind it. |
 | **Time is a dimension** | The frames on the table are the same frame developed for longer, and the inspector draws the whole roll as an envelope with the selected frame inside it. The point is the difference between them. |
 | **Nothing is a default** | No ripple, no elevation, no Roboto, no colour roles, no 4 dp grid. |
@@ -149,12 +154,16 @@ translates.
   `assets/film_strip.json`, written by `just view` from `kallotype-view`. The
   roll is VISION3 500T developed five times, not a shape invented to look like
   one. Regenerate it; never edit it.
-- **Pixels on the roll.** The gallery hangs a photograph, but the contact sheet
-  still draws the nine-step wedge, because `assets/film_strip.json` carries
-  densities rather than pictures. The two places therefore disagree about their
-  subject until the roll has renders of its own — the next piece of pipeline,
-  not a design change. The gallery's loupe and its full resolution are waiting
-  for the same thing.
+- **Pixels on the roll.** The gallery now hangs a photograph the model
+  exported, but the contact sheet still draws the nine-step wedge, because
+  `assets/film_strip.json` carries densities rather than pictures. The two
+  places therefore disagree about their subject until the roll has renders of
+  its own — the next piece of pipeline, not a design change. The gallery's loupe
+  and its full resolution are waiting for the same thing.
+- **A folder chooser.** The export folder is the pictures directory the
+  platform already has (`lib/lab/exports.dart` is the only place that knows),
+  and that is a naming convention rather than a place the user chose. A real
+  chooser is a settings decision, not a hardcoded path.
 - **Colour management.** The model writes sRGB and the system manages the
   display. Wide gamut is the screen's business; nothing here is tagged or
   converted.

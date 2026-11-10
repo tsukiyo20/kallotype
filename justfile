@@ -88,19 +88,21 @@ bench *args:
 deny:
     cargo deny check
 
-# Write the print the gallery hangs, and the record of how it was made.
+# Render a photograph through the model, into the folder the app reads.
 #
-# The image is the model's: a photograph developed, printed on paper and saved
-# as sRGB. The record beside it is the same invocation written down, so that the
-# app can label the print without guessing — the model does not write one yet,
-# and when it does this second line goes.
+# A print is not an asset: it is output. The app ships no pictures, the gallery
+# hangs whatever is in the export folder, and an app that has not printed
+# anything has an empty wall — which is the state it is built to show. Nothing
+# here is committed.
 #
-# The source photograph is the author's own and is not in this repository; it
-# lives in the private tree, so it is passed in.
-# Example: just print private/raw/user/fuji_1200.jpg
+# The export lands in `Pictures/Kallotype` under $HOME, which is where the app
+# looks (`lib/lab/exports.dart` is the only place that knows the path).
+#
+# Example: just print ../file-test/DSCF0989.JPG
 print src dev="9" temp="20":
-    cargo run --release --quiet --bin kalo -- render {{src}} -o app/assets/print.png --film vision3_500t --paper fuji_crystal_archive_pearl --dev {{dev}} --temp {{temp}} --ev auto --grain
-    printf '{\n  "film": "VISION3 500T",\n  "paper": "CRYSTAL ARCHIVE PEARL",\n  "minutes": %s,\n  "temp_c": %s\n}\n' "{{dev}}" "{{temp}}" > app/assets/print.json
+    mkdir -p "$HOME/Pictures/Kallotype"
+    cargo run --release --quiet --bin kalo -- render {{src}} -o "$HOME/Pictures/Kallotype/print-{{dev}}min.png" --film vision3_500t --paper fuji_crystal_archive_pearl --dev {{dev}} --temp {{temp}} --ev auto --grain
+    printf '{\n  "film": "VISION3 500T",\n  "paper": "CRYSTAL ARCHIVE PEARL",\n  "minutes": %s,\n  "temp_c": %s\n}\n' "{{dev}}" "{{temp}}" > "$HOME/Pictures/Kallotype/print-{{dev}}min.json"
 
 # Write the strip the app draws, from the model.
 #

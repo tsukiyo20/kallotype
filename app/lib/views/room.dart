@@ -27,7 +27,7 @@ class Room extends StatefulWidget {
   const Room({
     super.key,
     required this.roll,
-    this.print,
+    this.prints = const <Print>[],
     required this.locale,
     required this.onLocale,
     required this.technicalTerms,
@@ -43,9 +43,9 @@ class Room extends StatefulWidget {
 
   final Roll roll;
 
-  /// What hangs in the gallery. Null until something has been printed, which
-  /// is a state the room can show.
-  final Print? print;
+  /// What has been exported, in the order it was printed. Nothing is a state
+  /// the room can show: the gallery is a wall, and a wall can be empty.
+  final List<Print> prints;
 
   final Locale? locale;
   final ValueChanged<Locale?> onLocale;
@@ -148,7 +148,7 @@ class _RoomState extends State<Room> {
                   ),
                   Expanded(
                     child: _place == Place.gallery
-                        ? Gallery(print: widget.print, onLight: _toggleLight)
+                        ? Gallery(prints: widget.prints, onLight: _toggleLight)
                         : _bench(frame, s),
                   ),
                 ],

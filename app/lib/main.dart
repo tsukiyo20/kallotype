@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -10,6 +9,7 @@ import 'design/scope.dart';
 import 'design/strings.dart';
 import 'design/tokens.dart';
 import 'film/strip_data.dart';
+import 'lab/exports.dart';
 import 'lab/fixture.dart';
 import 'lab/print.dart';
 import 'lab/roll.dart';
@@ -59,7 +59,7 @@ class KalloApp extends StatefulWidget {
   const KalloApp({
     super.key,
     this.roll,
-    this.print,
+    this.prints,
     this.locale,
     this.appearance,
     this.technicalTerms = false,
@@ -79,9 +79,9 @@ class KalloApp extends StatefulWidget {
   /// strip, which is the only roll there is until the model is behind an FFI.
   final Roll? roll;
 
-  /// A print to hang. The tests pass one; the app loads the committed print,
-  /// which is the only one there is until the model is behind an FFI.
-  final Print? print;
+  /// Prints to hang. The tests pass them; the app reads the export folder,
+  /// which is empty until something has been printed.
+  final List<Print>? prints;
 
   /// Pins the human language. Null follows the device, which is also what the
   /// drawer's first option does.
@@ -107,7 +107,7 @@ class _KalloAppState extends State<KalloApp> {
   Brightness? _pinned;
   late bool _technical = widget.technicalTerms;
   Roll? _roll;
-  Print? _print;
+  List<Print> _prints = const <Print>[];
 
   @override
   void initState() {
@@ -115,17 +115,18 @@ class _KalloAppState extends State<KalloApp> {
     _locale = widget.locale;
     _pinned = widget.appearance;
     _roll = widget.roll;
-    _print = widget.print;
-    if (_print == null) {
-      Print.load(rootBundle).then(
-        (Print print) {
+    final List<Print>? prints = widget.prints;
+    if (prints != null) {
+      _prints = prints;
+    } else {
+      Exports.read().then(
+        (List<Print> read) {
           if (mounted) {
-            setState(() => _print = print);
+            setState(() => _prints = read);
           }
         },
-        // A missing print is an empty wall, not a broken window: the gallery is
-        // a place you can be in with nothing hung in it.
-        onError: (Object error) => debugPrint('no print to hang: $error'),
+        // A folder that cannot be read is an empty wall, not a broken window.
+        onError: (Object error) => debugPrint('no exports to hang: $error'),
       );
     }
     if (_roll == null) {
@@ -183,7 +184,7 @@ class _KalloAppState extends State<KalloApp> {
           ? const ColoredBox(color: Color(0xFFF6F5F2))
           : Room(
               roll: _roll!,
-              print: _print,
+              prints: _prints,
               locale: _locale,
               onLocale: (Locale? next) => setState(() => _locale = next),
               technicalTerms: _technical,

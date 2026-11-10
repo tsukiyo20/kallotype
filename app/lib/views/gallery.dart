@@ -20,11 +20,11 @@ import '../lab/print.dart';
 /// adapting, and it is the one moment in this app where you are meant to see
 /// nothing and then see something.
 class Gallery extends StatelessWidget {
-  const Gallery({super.key, this.print, required this.onLight});
+  const Gallery({super.key, required this.prints, required this.onLight});
 
-  /// What is hanging. Nothing, until something has been printed: an empty wall
-  /// and a switch is a true picture of a gallery with no work in it.
-  final Print? print;
+  /// Everything exported, oldest first. The last one hangs: a gallery shows
+  /// the work there is, and there is one wall in this one.
+  final List<Print> prints;
 
   /// The switch belongs to the room, not to the wall.
   final VoidCallback onLight;
@@ -51,7 +51,7 @@ class Gallery extends StatelessWidget {
     // The paper holds its light better than the room does, for the same reason
     // everything else does not: the eye is the instrument here, not the lamp.
     final double printed = _darkAdaptation + (1 - _darkAdaptation) * light;
-    final Print? hanging = print;
+    final Print? hanging = prints.isEmpty ? null : prints.last;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints room) {
@@ -87,14 +87,16 @@ class Gallery extends StatelessWidget {
                           print: hanging,
                           light: printed,
                         ),
-                        const SizedBox(height: KalloSpace.step4),
-                        Text(
-                          '${hanging.film}   ·   ${hanging.clock}   ·   ${hanging.paper}',
-                          style: KalloType.small.copyWith(
-                            color: KalloColors.under(_label, light),
-                            letterSpacing: 0.2,
+                        if (hanging.label.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: KalloSpace.step4),
+                          Text(
+                            hanging.label,
+                            style: KalloType.small.copyWith(
+                              color: KalloColors.under(_label, light),
+                              letterSpacing: 0.2,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
             ),
