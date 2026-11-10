@@ -175,7 +175,7 @@ abstract final class KalloType {
   static const String sans = 'Inter';
 
   static const List<String> fallback = <String>[
-    'PlexSansSC',
+    'NotoSansSC',
     'PingFang SC',
     'Hiragino Sans GB',
     'Microsoft YaHei',

@@ -21,7 +21,10 @@ Future<void> _loadFonts() async {
       'fonts/inter-500.ttf',
       'fonts/inter-600.ttf',
     ],
-    'PlexSansSC': <String>['fonts/plex-sans-sc-400.ttf'],
+    'NotoSansSC': <String>[
+      'fonts/noto-sans-sc-Regular.otf',
+      'fonts/noto-sans-sc-Medium.otf',
+    ],
   };
   for (final MapEntry<String, List<String>> face in faces.entries) {
     final FontLoader loader = FontLoader(face.key);
@@ -56,6 +59,30 @@ void main() {
     await expectLater(
       find.byType(KalloApp),
       matchesGoldenFile('goldens/sheet.png'),
+    );
+  });
+
+  testWidgets('the table, in Chinese', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final StripData strip = StripData.fromJson(
+      jsonDecode(File('assets/film_strip.json').readAsStringSync())
+          as Map<String, dynamic>,
+    );
+
+    await tester.pumpWidget(KalloApp(
+      roll: interpolatedRoll(strip),
+      locale: const Locale('zh'),
+      appearance: Brightness.light,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/sheet-zh.png'),
     );
   });
 

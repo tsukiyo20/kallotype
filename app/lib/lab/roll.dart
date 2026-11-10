@@ -10,15 +10,16 @@ import '../film/strip_data.dart';
 /// what the contact sheet is.
 class Roll {
   const Roll({
-    required this.id,
+    required this.number,
     required this.stockId,
     required this.stockLabel,
     required this.baseDensity,
     required this.frames,
   });
 
-  /// What you call it: `Roll 01`.
-  final String id;
+  /// Which roll it is, from one. What it is called is the interface's business
+  /// — `Roll 01` in English, `第 01 卷` in Chinese.
+  final int number;
 
   /// The stock's id, as the CLI and the `.kalofilm` files spell it.
   final String stockId;
@@ -37,9 +38,9 @@ class Roll {
   /// the same exposure at five times rather than five different photographs —
   /// which is the one thing this product exists to show, and a good first roll
   /// to judge the sheet against.
-  factory Roll.fromStrip(StripData strip, {String id = 'Roll 01'}) {
+  factory Roll.fromStrip(StripData strip, {int number = 1}) {
     return Roll(
-      id: id,
+      number: number,
       stockId: strip.stockId,
       stockLabel: strip.label,
       baseDensity: strip.baseDensity,

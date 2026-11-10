@@ -46,7 +46,7 @@ Roll interpolatedRoll(StripData strip, {int frames = 40}) {
       ));
     }
     return Roll(
-      id: 'Roll 01',
+      number: 1,
       stockId: strip.stockId,
       stockLabel: strip.label,
       baseDensity: strip.baseDensity,

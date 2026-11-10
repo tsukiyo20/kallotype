@@ -30,14 +30,14 @@ class SettingsDrawer extends StatefulWidget {
 }
 
 class _SettingsDrawerState extends State<SettingsDrawer> {
-  static const List<String> _tabs = <String>[
-    'LANGUAGE',
-    'APPEARANCE',
-    'COLOUR',
-    'PERFORMANCE',
-    'SOUND',
-    'ABOUT',
-  ];
+  List<String> _tabs(KalloStrings s) => <String>[
+        s.tabLanguage,
+        s.tabAppearance,
+        s.tabColour,
+        s.tabPerformance,
+        s.tabSound,
+        s.tabAbout,
+      ];
 
   int _tab = 0;
 
@@ -148,7 +148,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          for (int i = 0; i < _tabs.length; i++)
+          for (int i = 0; i < _tabs(KalloStrings.of(context)).length; i++)
             GestureDetector(
               onTap: () => setState(() => _tab = i),
               behavior: HitTestBehavior.opaque,
@@ -166,7 +166,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                   ),
                 ),
                 child: Text(
-                  _tabs[i],
+                  _tabs(KalloStrings.of(context))[i],
                   style: KalloType.caption.copyWith(
                     color: i == _tab ? colors.ink : colors.inkFaint,
                     letterSpacing: 1.6,
@@ -256,7 +256,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         Align(
           alignment: Alignment.centerRight,
           child: Text(
-            'system: $system',
+            s.systemLine(system),
             style: KalloType.data.copyWith(fontSize: 10, color: colors.inkFaint),
           ),
         ),
@@ -295,7 +295,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         Align(
           alignment: Alignment.centerRight,
           child: Text(
-            'device: $device',
+            s.deviceLine(device),
             style: KalloType.data.copyWith(fontSize: 10, color: colors.inkFaint),
           ),
         ),

@@ -43,8 +43,11 @@ flutter:
           weight: 500
         - asset: fonts/inter-600.ttf
           weight: 600
-    # The Chinese cut. One weight, 8.4 MB: it is the difference between six
-    # builds that agree and six builds that each borrow their own face.
-    - family: PlexSansSC
+    # The Chinese cut: Noto Sans SC (SIL OFL, so a public repository may carry
+    # it — Alibaba's PuHuiTi is free to use and not free to redistribute, which
+    # is why it is not here). Two weights, because Chinese headings need one.
+    - family: NotoSansSC
       fonts:
-        - asset: fonts/plex-sans-sc-400.ttf
+        - asset: fonts/noto-sans-sc-Regular.otf
+        - asset: fonts/noto-sans-sc-Medium.otf
+          weight: 500

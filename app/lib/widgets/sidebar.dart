@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../design/scope.dart';
+import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../views/places.dart';
 
@@ -30,17 +31,18 @@ class Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
+    final KalloStrings s = KalloStrings.of(context);
     return ColoredBox(
       color: colors.sidebar,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           SizedBox(height: topInset),
-          _Header('Library', colors),
+          _Header(s.library, colors),
           for (final Place place in Place.values)
             _Item(
               selected: place == current,
-              label: place.label,
+              label: s.placeLabel(place.name),
               icon: PlaceIcon(
                 place: place,
                 colour: place == current ? colors.accent : colors.inkMuted,
@@ -48,7 +50,7 @@ class Sidebar extends StatelessWidget {
               onTap: () => onSelect(place),
             ),
           const SizedBox(height: 18),
-          _Header('Rolls', colors),
+          _Header(s.rolls, colors),
           _Item(
             selected: current == Place.table,
             label: rollName,

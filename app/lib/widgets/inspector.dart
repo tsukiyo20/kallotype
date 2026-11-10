@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import '../design/scope.dart';
+import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/roll.dart';
 
@@ -27,6 +28,7 @@ class Inspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
+    final KalloStrings s = KalloStrings.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -38,7 +40,7 @@ class Inspector extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
-              'FRAME',
+              s.frame,
               style: KalloType.caption.copyWith(color: colors.inkFaint),
             ),
             const SizedBox(height: 2),
@@ -53,7 +55,7 @@ class Inspector extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    'of $total',
+                    s.ofFrames(total),
                     style: KalloType.small.copyWith(color: colors.inkFaint),
                   ),
                 ),
@@ -62,10 +64,10 @@ class Inspector extends StatelessWidget {
             const SizedBox(height: 16),
             _Group(
               rows: <(String, String)>[
-                ('Time', frame.clock),
-                ('Temperature', '${frame.tempC.toStringAsFixed(1)} °C'),
-                ('Gamma', _triple(frame.gamma)),
-                ('D max', _triple(frame.dMax)),
+                (s.time, frame.clock),
+                (s.temperature, '${frame.tempC.toStringAsFixed(1)} °C'),
+                (s.gamma, _triple(frame.gamma)),
+                (s.dMax, _triple(frame.dMax)),
               ],
               colors: colors,
             ),
@@ -73,12 +75,12 @@ class Inspector extends StatelessWidget {
             Row(
               children: <Widget>[
                 Text(
-                  'TONE',
+                  s.tone,
                   style: KalloType.caption.copyWith(color: colors.inkFaint),
                 ),
                 const Spacer(),
                 Text(
-                  '$total frames',
+                  s.frames(total),
                   style: KalloType.small.copyWith(color: colors.inkFaint),
                 ),
               ],
@@ -110,7 +112,7 @@ class Inspector extends StatelessWidget {
                     borderRadius: BorderRadius.circular(KalloRadius.control),
                   ),
                   child: Text(
-                    'Develop',
+                    s.develop,
                     style: KalloType.body.copyWith(
                       color: colors.content,
                       fontWeight: FontWeight.w500,

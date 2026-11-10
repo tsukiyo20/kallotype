@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../design/chrome.dart';
 import '../design/scope.dart';
+import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/roll.dart';
 import '../sheets/contact_sheet.dart';
@@ -56,6 +57,7 @@ class _RoomState extends State<Room> {
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
+    final KalloStrings s = KalloStrings.of(context);
     final Frame frame = widget.roll.frames[_selected];
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -78,7 +80,7 @@ class _RoomState extends State<Room> {
                       _open = false;
                     }),
                     rolls: 1,
-                    rollName: widget.roll.id,
+                    rollName: s.rollName(widget.roll.number),
                     frameCount: widget.roll.frames.length,
                   ),
                 ),
@@ -89,9 +91,9 @@ class _RoomState extends State<Room> {
                       _Toolbar(
                         draggable: widget.chrome == WindowChrome.mac,
                         onDrag: widget.onDragWindow,
-                        title: widget.roll.id,
+                        title: s.rollName(widget.roll.number),
                         subtitle:
-                            '${widget.roll.frames.length} frames   ·   ${widget.roll.stockLabel}',
+                            '${s.frames(widget.roll.frames.length)}   ·   ${widget.roll.stockLabel}',
                         onSettings: () => setState(() => _open = true),
                       ),
                       Expanded(
@@ -111,8 +113,11 @@ class _RoomState extends State<Room> {
                                     ),
                                   ),
                                   _Status(
-                                    left:
-                                        'Frame ${frame.number.toString().padLeft(2, '0')}   ·   ${frame.clock}   ·   ${frame.tempC.toStringAsFixed(1)} °C',
+                                    left: s.statusBar(
+                                      frame.number,
+                                      frame.clock,
+                                      '${frame.tempC.toStringAsFixed(1)} °C',
+                                    ),
                                     right: 'sRGB',
                                   ),
                                 ],
