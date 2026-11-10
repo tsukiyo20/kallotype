@@ -1202,6 +1202,127 @@ mod tests {
         (high / low).log10() / 4.0_f64.log10()
     }
 
+    /// Luma of a linear RGB triple, the observer every check below uses.
+    fn luma(rgb: [f64; 3]) -> f64 {
+        0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+    }
+
+    /// The checks `tools/eval.py` used to make by rendering a grey ramp through
+    /// every stock and reading the PNG back. They were the only ones that
+    /// touched all thirty stocks instead of the default one, and they lived
+    /// outside `cargo test`, where nothing ran them but a person remembering to.
+    /// A stock is balanced or it is not; that is a test, not a screenshot.
+    #[test]
+    fn every_stock_prints_mid_grey_as_mid_grey() {
+        for film in crate::emulsion::FILM_STOCKS {
+            let prepared = RenderParams {
+                film,
+                ..RenderParams::default()
+            }
+            .prepare();
+            // A reversal is its own picture: there is no print to balance.
+            if prepared.reversal {
+                continue;
+            }
+            let out = prepared.render_pixel([0.18; 3]);
+            assert!(
+                (luma(out) - 0.18).abs() < 0.01,
+                "{} printed mid grey at {:.4}",
+                film.id,
+                luma(out)
+            );
+            let high = out.iter().copied().fold(f64::MIN, f64::max);
+            let low = out.iter().copied().fold(f64::MAX, f64::min);
+            assert!(
+                high - low < 0.01,
+                "{} printed mid grey {:.4} off neutral",
+                film.id,
+                high - low
+            );
+        }
+
+        for paper in crate::emulsion::PAPER_STOCKS {
+            let prepared = RenderParams {
+                paper,
+                ..RenderParams::default()
+            }
+            .prepare();
+            let out = prepared.render_pixel([0.18; 3]);
+            assert!(
+                (luma(out) - 0.18).abs() < 0.02,
+                "{} printed mid grey at {:.4}",
+                paper.id,
+                luma(out)
+            );
+        }
+    }
+
+    /// A ramp must not invert, whatever the stock: an inversion is a sign
+    /// error, a clamped tone or a channel swap, and none of them should need a
+    /// photograph to notice.
+    #[test]
+    fn every_stock_keeps_a_ramp_monotone() {
+        let steps = [0.0, 0.02, 0.05, 0.1, 0.18, 0.35, 0.6, 0.8, 1.0];
+        for film in crate::emulsion::FILM_STOCKS {
+            let prepared = RenderParams {
+                film,
+                ..RenderParams::default()
+            }
+            .prepare();
+            let mut previous = f64::MIN;
+            for step in steps {
+                let value = luma(prepared.render_pixel([step; 3]));
+                assert!(
+                    value >= previous - 1e-9,
+                    "{} inverts the ramp at {step}: {value:.4} under {previous:.4}",
+                    film.id
+                );
+                previous = value;
+            }
+        }
+    }
+
+    /// The spread of a nine-step ramp, which is how a printer judges contrast:
+    /// the slope of one stop either side of mid grey inverts its sign on a
+    /// reversal, whose output is a transmittance rather than a reflectance.
+    fn spread(prepared: &PreparedRender) -> f64 {
+        let steps = [0.0, 0.02, 0.05, 0.1, 0.18, 0.35, 0.6, 0.8, 1.0];
+        let values: Vec<f64> = steps
+            .iter()
+            .map(|step| luma(prepared.render_pixel([*step; 3])))
+            .collect();
+        let mean = values.iter().sum::<f64>() / values.len() as f64;
+        (values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64).sqrt()
+    }
+
+    /// Development reaches the render for every stock, not only the default.
+    #[test]
+    fn every_stock_gains_contrast_with_development() {
+        for film in crate::emulsion::FILM_STOCKS {
+            let at = |time_min: f64| {
+                spread(
+                    &RenderParams {
+                        film,
+                        development: DevelopmentParams {
+                            time_min,
+                            ..DevelopmentParams::default()
+                        },
+                        ..RenderParams::default()
+                    }
+                    .prepare(),
+                )
+            };
+            let pulled = at(4.0);
+            let normal = at(8.0);
+            let pushed = at(16.0);
+            assert!(
+                pulled < normal && normal < pushed,
+                "{}: spread {pulled:.3} / {normal:.3} / {pushed:.3} at 4 / 8 / 16 min",
+                film.id
+            );
+        }
+    }
+
     #[test]
     fn over_development_raises_contrast() {
         let normal = local_contrast(&chain(DevelopmentParams::default()));
