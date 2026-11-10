@@ -3,11 +3,13 @@ import 'package:flutter/widgets.dart';
 import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
+import '../lab/exports.dart';
 
 /// Settings, as a drawer in the bench.
 ///
-/// A place you open, not a page you go to. Six cards on one sheet of paper, and
-/// the film's own words are the ones that do not change when the language does.
+/// A place you open, not a page you go to. Seven cards on one sheet of paper,
+/// and the film's own words are the ones that do not change when the language
+/// does.
 class SettingsDrawer extends StatefulWidget {
   const SettingsDrawer({
     super.key,
@@ -15,6 +17,7 @@ class SettingsDrawer extends StatefulWidget {
     required this.onLocale,
     required this.technicalTerms,
     required this.onTechnicalTerms,
+    required this.export,
     required this.onClose,
   });
 
@@ -23,6 +26,10 @@ class SettingsDrawer extends StatefulWidget {
   final ValueChanged<Locale?> onLocale;
   final bool technicalTerms;
   final ValueChanged<bool> onTechnicalTerms;
+
+  /// Where prints come from, and whether this platform lets a person say.
+  final ExportSetting export;
+
   final VoidCallback onClose;
 
   @override
@@ -33,6 +40,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
   List<String> _tabs(KalloStrings s) => <String>[
         s.tabLanguage,
         s.tabAppearance,
+        s.tabPrints,
         s.tabColour,
         s.tabPerformance,
         s.tabSound,
@@ -186,10 +194,12 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       case 1:
         return _appearance(s, colors);
       case 2:
-        return _statement(s.colour, s.colourNote, colors);
+        return _prints(s, colors);
       case 3:
-        return _statement(s.performance, s.performanceNote, colors);
+        return _statement(s.colour, s.colourNote, colors);
       case 4:
+        return _statement(s.performance, s.performanceNote, colors);
+      case 5:
         return _statement(s.sound, s.soundNote, colors);
       default:
         return _statement(s.about, s.aboutNote, colors);
@@ -260,6 +270,92 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             style: KalloType.data.copyWith(fontSize: 10, color: colors.inkFaint),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _prints(KalloStrings s, KalloColors colors) {
+    final ExportSetting export = widget.export;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          s.prints,
+          style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
+        ),
+        const SizedBox(height: KalloSpace.step2),
+        SizedBox(
+          width: 460,
+          child: Text(
+            s.printsNote,
+            style: KalloType.body.copyWith(color: colors.inkMuted),
+          ),
+        ),
+        const SizedBox(height: KalloSpace.step5),
+        _Label(s.folder, colors),
+        const SizedBox(height: KalloSpace.step2),
+        Container(
+          constraints: const BoxConstraints(maxWidth: 460),
+          height: 34,
+          padding: const EdgeInsets.only(left: KalloSpace.step3, right: 3),
+          decoration: BoxDecoration(
+            color: colors.ground,
+            borderRadius: BorderRadius.circular(KalloRadius.control),
+            border: Border.all(color: colors.hairline),
+          ),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  export.label.isEmpty ? s.noFolder : export.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KalloType.data.copyWith(
+                    color: export.label.isEmpty
+                        ? colors.inkFaint
+                        : colors.ink,
+                  ),
+                ),
+              ),
+              if (export.canChoose)
+                _Button(
+                  label: s.choose,
+                  onTap: export.onChoose,
+                  colors: colors,
+                ),
+            ],
+          ),
+        ),
+        if (export.custom && export.onReset != null) ...<Widget>[
+          const SizedBox(height: KalloSpace.step2),
+          Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 460,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: export.onReset,
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    s.useDefault,
+                    style: KalloType.small.copyWith(color: colors.inkMuted),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+        if (!export.canChoose) ...<Widget>[
+          const SizedBox(height: KalloSpace.step4),
+          SizedBox(
+            width: 460,
+            child: Text(
+              s.fixedFolder,
+              style: KalloType.small.copyWith(color: colors.inkFaint),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -364,6 +460,44 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         ),
         const SizedBox(height: KalloSpace.step4),
       ],
+    );
+  }
+}
+
+/// A button on a field: small, bordered, and the same in both appearances.
+class _Button extends StatelessWidget {
+  const _Button({
+    required this.label,
+    required this.onTap,
+    required this.colors,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final KalloColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(KalloRadius.control - 1),
+            border: Border.all(color: colors.hairline),
+          ),
+          child: Text(
+            label,
+            style: KalloType.body.copyWith(fontSize: 12, color: colors.ink),
+          ),
+        ),
+      ),
     );
   }
 }

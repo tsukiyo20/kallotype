@@ -10,6 +10,7 @@ import 'design/strings.dart';
 import 'design/tokens.dart';
 import 'film/strip_data.dart';
 import 'lab/exports.dart';
+import 'lab/settings.dart';
 import 'lab/fixture.dart';
 import 'lab/print.dart';
 import 'lab/roll.dart';
@@ -60,6 +61,7 @@ class KalloApp extends StatefulWidget {
     super.key,
     this.roll,
     this.prints,
+    this.export,
     this.locale,
     this.appearance,
     this.technicalTerms = false,
@@ -82,6 +84,10 @@ class KalloApp extends StatefulWidget {
   /// Prints to hang. The tests pass them; the app reads the export folder,
   /// which is empty until something has been printed.
   final List<Print>? prints;
+
+  /// Where prints come from. The tests pin it, so that a golden does not show
+  /// the folder of whoever ran it.
+  final ExportSetting? export;
 
   /// Pins the human language. Null follows the device, which is also what the
   /// drawer's first option does.
@@ -108,6 +114,8 @@ class _KalloAppState extends State<KalloApp> {
   late bool _technical = widget.technicalTerms;
   Roll? _roll;
   List<Print> _prints = const <Print>[];
+  Settings _settings = const Settings();
+  String? _exportPath;
 
   @override
   void initState() {
@@ -119,15 +127,7 @@ class _KalloAppState extends State<KalloApp> {
     if (prints != null) {
       _prints = prints;
     } else {
-      Exports.read().then(
-        (List<Print> read) {
-          if (mounted) {
-            setState(() => _prints = read);
-          }
-        },
-        // A folder that cannot be read is an empty wall, not a broken window.
-        onError: (Object error) => debugPrint('no exports to hang: $error'),
-      );
+      unawaited(_openExports());
     }
     if (_roll == null) {
       StripData.load().then((StripData strip) {
@@ -138,6 +138,69 @@ class _KalloAppState extends State<KalloApp> {
       });
     }
   }
+
+  /// Read the folder the person chose, and the prints in it.
+  ///
+  /// One after the other rather than together: where the prints are is the
+  /// first question, and asking it twice at once would be two answers.
+  Future<void> _openExports() async {
+    _settings = await Settings.read();
+    _exportPath = _settings.exportPath;
+    await _reloadPrints();
+  }
+
+  Future<void> _reloadPrints() async {
+    final List<Print> prints = await Exports.read(
+      folder: Exports.directoryFor(_exportPath),
+    );
+    if (mounted) {
+      setState(() => _prints = prints);
+    }
+  }
+
+  Future<void> _chooseExport() async {
+    final String? chosen;
+    try {
+      chosen = await Exports.choose();
+    } on Exception catch (error) {
+      // A panel that cannot open is a setting that cannot change. It is not
+      // worth taking the window down for.
+      debugPrint('no folder panel: $error');
+      return;
+    }
+    if (chosen == null || !mounted) {
+      return;
+    }
+    _exportPath = chosen;
+    await _remember(chosen);
+    await _reloadPrints();
+  }
+
+  Future<void> _resetExport() async {
+    if (!mounted) {
+      return;
+    }
+    setState(() => _exportPath = null);
+    await _remember(null);
+    await _reloadPrints();
+  }
+
+  Future<void> _remember(String? path) async {
+    _settings = _settings.withExports(path);
+    if (mounted) {
+      setState(() {});
+    }
+    await _settings.write();
+  }
+
+  /// What the drawer says about the folder.
+  ExportSetting get _export => ExportSetting(
+        label: Exports.display(Exports.directoryFor(_exportPath)?.path),
+        canChoose: Exports.canChoose,
+        custom: _exportPath != null,
+        onChoose: _chooseExport,
+        onReset: _resetExport,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +248,7 @@ class _KalloAppState extends State<KalloApp> {
           : Room(
               roll: _roll!,
               prints: _prints,
+              export: widget.export ?? _export,
               locale: _locale,
               onLocale: (Locale? next) => setState(() => _locale = next),
               technicalTerms: _technical,

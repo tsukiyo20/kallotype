@@ -7,6 +7,7 @@ import '../design/chrome.dart';
 import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
+import '../lab/exports.dart';
 import '../lab/print.dart';
 import '../lab/roll.dart';
 import '../sheets/contact_sheet.dart';
@@ -28,6 +29,7 @@ class Room extends StatefulWidget {
     super.key,
     required this.roll,
     this.prints = const <Print>[],
+    required this.export,
     required this.locale,
     required this.onLocale,
     required this.technicalTerms,
@@ -46,6 +48,9 @@ class Room extends StatefulWidget {
   /// What has been exported, in the order it was printed. Nothing is a state
   /// the room can show: the gallery is a wall, and a wall can be empty.
   final List<Print> prints;
+
+  /// Where prints come from, and whether this platform lets a person say.
+  final ExportSetting export;
 
   final Locale? locale;
   final ValueChanged<Locale?> onLocale;
@@ -193,6 +198,7 @@ class _RoomState extends State<Room> {
                         boxShadow: KalloShadow.sheet,
                       ),
                       child: SettingsDrawer(
+                        export: widget.export,
                         locale: widget.locale,
                         onLocale: widget.onLocale,
                         technicalTerms: widget.technicalTerms,

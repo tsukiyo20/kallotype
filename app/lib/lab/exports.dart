@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
+
 import 'print.dart';
 
 /// The export folder: where the model's prints land, and what is in there.
@@ -15,18 +18,40 @@ abstract final class Exports {
   /// The name of the folder inside the pictures directory.
   static const String folder = 'Kallotype';
 
-  /// Where a person would look for it: the pictures folder the platform
-  /// already has, because that is where pictures go. Null where there is no
-  /// such place to name — an app on a phone has its own container instead, and
-  /// that path is a platform question this build does not answer yet.
-  static Directory? get directory {
+  /// Whether the app can ask for a folder.
+  ///
+  /// A chooser is a desktop idea. A phone does not let an app browse the
+  /// filesystem, and it does not need to: the system already decides where an
+  /// app's documents are, and it shows them — Files on iOS, the storage browser
+  /// on Android. Asking the user to pick a folder there would be asking them to
+  /// undo the platform.
+  static bool get canChoose =>
+      Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+
+  /// Where prints go when the user has not said otherwise.
+  ///
+  /// On a phone there is nowhere else: the app's own container is the one place
+  /// it can write without a permission dialog, and iOS shows that container as
+  /// the app's folder in Files. On the desktop it is the pictures folder the
+  /// person already has, because that is where pictures go.
+  static Directory? get defaultDirectory {
     final Map<String, String> environment = Platform.environment;
+    if (Platform.isIOS) {
+      final String? home = environment['HOME'];
+      return home == null ? null : Directory('$home/Documents');
+    }
+    if (!canChoose) {
+      // Android owns a directory of its own for an app, and finding it needs
+      // the platform's API rather than a guess: `Android/data/...` is a path
+      // that changes shape between devices and versions. Until that call is
+      // made, the honest answer is that there is no folder yet.
+      return null;
+    }
     final String? pictures = environment['XDG_PICTURES_DIR'];
     if (pictures != null && pictures.isNotEmpty) {
       return Directory('$pictures/$folder');
     }
-    final String? home =
-        environment['HOME'] ?? environment['USERPROFILE'];
+    final String? home = environment['HOME'] ?? environment['USERPROFILE'];
     if (home == null || home.isEmpty) {
       return null;
     }
@@ -34,13 +59,39 @@ abstract final class Exports {
         '${Platform.pathSeparator}$folder');
   }
 
+  /// The folder in use: the one the user chose, or the platform's own.
+  static Directory? directoryFor(String? chosen) =>
+      chosen != null && chosen.isNotEmpty ? Directory(chosen) : defaultDirectory;
+
+  /// `~/Pictures/Kallotype` — a path with the home shortened, because a path
+  /// that begins with a person's name begins with noise.
+  static String display(String? path) {
+    if (path == null || path.isEmpty) {
+      return '';
+    }
+    final String? home =
+        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    if (home != null && home.isNotEmpty && path.startsWith(home)) {
+      return '~${path.substring(home.length)}';
+    }
+    return path;
+  }
+
+  /// Ask the system for a folder. Null when the platform has no such dialog, or
+  /// the person changed their mind.
+  static Future<String?> choose() async {
+    if (!canChoose) {
+      return null;
+    }
+    return getDirectoryPath(confirmButtonText: 'Choose');
+  }
+
   /// Every exported print, oldest first, so that the last one is the one that
   /// would be hanging.
   ///
   /// A folder that does not exist is an empty gallery, not an error: nobody has
   /// printed anything yet, which is the ordinary state of a darkroom.
-  static Future<List<Print>> read({int width = 1600}) async {
-    final Directory? folder = directory;
+  static Future<List<Print>> read({Directory? folder, int width = 1600}) async {
     if (folder == null || !folder.existsSync()) {
       return const <Print>[];
     }
@@ -63,4 +114,29 @@ abstract final class Exports {
     }
     return prints;
   }
+}
+
+/// What the drawer needs to say about the export folder, and what it can do
+/// about it.
+@immutable
+class ExportSetting {
+  const ExportSetting({
+    required this.label,
+    required this.canChoose,
+    required this.custom,
+    this.onChoose,
+    this.onReset,
+  });
+
+  /// The folder as a person reads it: `~/Pictures/Kallotype`.
+  final String label;
+
+  /// Whether a chooser exists on this platform.
+  final bool canChoose;
+
+  /// Whether the folder is the person's choice rather than the platform's.
+  final bool custom;
+
+  final VoidCallback? onChoose;
+  final VoidCallback? onReset;
 }

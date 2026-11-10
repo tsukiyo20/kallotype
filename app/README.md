@@ -33,6 +33,14 @@ They share one identity, `dev.kallotype.app`, and three floors — macOS 13,
 iOS 15, and Android API 29, which is where Impeller takes the Vulkan path
 instead of falling back to its OpenGL ES backend.
 
+The Mac build is **not sandboxed**, and that is a decision rather than an
+omission. A sandboxed app's home directory *is* its container, so the export
+folder would be somewhere no person can find it, and remembering a folder the
+user chose across launches needs security-scoped bookmarks. Until this app is
+going to the App Store — the one place the sandbox is not optional — the folder
+behaves the way a person expects, and the bookmarks are the price of the day it
+does.
+
 There is no `MaterialApp` anywhere, and that is the point.
 
 ---
@@ -45,8 +53,8 @@ There is no `MaterialApp` anywhere, and that is the point.
 |---|---|---|
 | ![the table](test/goldens/sheet.png) | ![the table in Chinese](test/goldens/sheet-zh.png) | ![the drawer](test/goldens/drawer.png) |
 | **the table**, forty frames, light | **the same**, in Chinese | **the drawer**, in Chinese, dark |
-| ![the gallery](test/goldens/gallery.png) | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | |
-| **the gallery**, lit | **the same**, with the lamp off | |
+| ![the gallery](test/goldens/gallery.png) | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
+| **the gallery**, lit | **the same**, with the lamp off | **the drawer**, where the folder is set |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -74,7 +82,7 @@ handle, a field, and — where the place has one — a record on the right.
 | **Five places, one of each built** | Shelf, Table, Binder, Line, Gallery. The workbench belongs between the table and the binder and is not built yet. A place that has nothing in it says what it is for instead of showing another place's screen. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
 | **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
-| **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into `Pictures/Kallotype`, and the gallery hangs whatever is in that folder — nothing, most of the time, which is why an empty wall is a state and not a bug. |
+| **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery hangs whatever is in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting, and on a phone it is the one place the system lets an app write. |
 | **The chrome is light, the print is paper** | The window is a tool, so its planes are one neutral ramp in both appearances. The only warm and saturated surfaces in the product are the paper a print sits on and the gallery wall behind it. |
 | **Time is a dimension** | The frames on the table are the same frame developed for longer, and the inspector draws the whole roll as an envelope with the selected frame inside it. The point is the difference between them. |
 | **Nothing is a default** | No ripple, no elevation, no Roboto, no colour roles, no 4 dp grid. |
@@ -160,10 +168,12 @@ translates.
   places therefore disagree about their subject until the roll has renders of
   its own — the next piece of pipeline, not a design change. The gallery's loupe
   and its full resolution are waiting for the same thing.
-- **A folder chooser.** The export folder is the pictures directory the
-  platform already has (`lib/lab/exports.dart` is the only place that knows),
-  and that is a naming convention rather than a place the user chose. A real
-  chooser is a settings decision, not a hardcoded path.
+- **A folder chooser on a phone.** iOS gives an app one folder and shows it in
+  Files; Android has a per-app directory the system owns. A picker there is a
+  desktop idiom, and neither platform is wired yet: iOS reads its Documents
+  folder, Android has no folder at all until its own API is called. The drawer
+  says which of the two it is instead of showing a button that would do
+  nothing.
 - **Colour management.** The model writes sRGB and the system manages the
   display. Wide gamut is the screen's business; nothing here is tagged or
   converted.

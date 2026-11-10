@@ -81,6 +81,7 @@ class KalloStrings {
 
   String get tabLanguage => zh ? '语言' : 'LANGUAGE';
   String get tabAppearance => zh ? '外观' : 'APPEARANCE';
+  String get tabPrints => zh ? '印相' : 'PRINTS';
   String get tabColour => zh ? '色彩' : 'COLOUR';
   String get tabPerformance => zh ? '性能' : 'PERFORMANCE';
   String get tabSound => zh ? '声音' : 'SOUND';
@@ -110,6 +111,26 @@ class KalloStrings {
   String get appearanceNote => zh
       ? '动效只有三种词汇：光、液体、机械。系统要求减弱动效时，它们全部退成淡入。'
       : 'Motion has three vocabularies: light, liquid, mechanism. When the system asks for less, all three become a fade.';
+
+  // -- prints ---------------------------------------------------------------
+
+  String get prints => zh ? '印相' : 'Prints';
+
+  String get printsNote => zh
+      ? '印相是文件。模型把它写出来，观景台挂出这个文件夹里最新的一张——app 自己一张都不带。'
+      : 'A print is a file. The model writes it out, the gallery hangs the newest one in this folder, and the app carries none of them itself.';
+
+  String get folder => zh ? '文件夹' : 'Folder';
+  String get choose => zh ? '选择…' : 'Choose…';
+  String get useDefault => zh ? '用回默认位置' : 'Use the default';
+  String get noFolder => zh ? '这台设备上还没有位置' : 'No folder on this device yet';
+
+  /// Said where the platform does not let an app pick, which is every phone.
+  String get fixedFolder => zh
+      ? '手机上 app 不能挑文件夹。这里是系统给的位置：在「文件」里打开它，放进去什么，墙上就挂什么。'
+      : 'A phone does not let an app choose a folder. This one is the system\'s: open it in Files, and whatever you put there is on the wall.';
+
+  // -- colour ---------------------------------------------------------------
 
   String get colour => zh ? '色彩' : 'Colour';
   String get colourNote => zh
