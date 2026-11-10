@@ -14,14 +14,11 @@ import 'package:kallo_ui/main.dart';
 /// source.
 Future<void> _loadFonts() async {
   const Map<String, List<String>> faces = <String, List<String>>{
-    'PlexSans': <String>[
-      'fonts/plex-sans-400.ttf',
-      'fonts/plex-sans-500.ttf',
-      'fonts/plex-sans-600.ttf',
+    'Inter': <String>[
+      'fonts/inter-400.ttf',
+      'fonts/inter-500.ttf',
+      'fonts/inter-600.ttf',
     ],
-    'PlexCondensed': <String>['fonts/plex-condensed-600.ttf'],
-    'PlexMono': <String>['fonts/plex-mono-400.ttf', 'fonts/plex-mono-500.ttf'],
-    'PlexSerif': <String>['fonts/plex-serif-400.ttf'],
     'PlexSansSC': <String>['fonts/plex-sans-sc-400.ttf'],
   };
   for (final MapEntry<String, List<String>> face in faces.entries) {

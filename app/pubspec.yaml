@@ -35,25 +35,13 @@ flutter:
   # on six of them, and a golden test can only pin type it actually has.
   # IBM Plex, SIL Open Font License 1.1 — see `fonts/OFL.txt`.
   fonts:
-    - family: PlexSans
+    - family: Inter
       fonts:
-        - asset: fonts/plex-sans-400.ttf
-        - asset: fonts/plex-sans-500.ttf
+        - asset: fonts/inter-400.ttf
+        - asset: fonts/inter-500.ttf
           weight: 500
-        - asset: fonts/plex-sans-600.ttf
+        - asset: fonts/inter-600.ttf
           weight: 600
-    - family: PlexCondensed
-      fonts:
-        - asset: fonts/plex-condensed-600.ttf
-          weight: 600
-    - family: PlexMono
-      fonts:
-        - asset: fonts/plex-mono-400.ttf
-        - asset: fonts/plex-mono-500.ttf
-          weight: 500
-    - family: PlexSerif
-      fonts:
-        - asset: fonts/plex-serif-400.ttf
     # The Chinese cut. One weight, 8.4 MB: it is the difference between six
     # builds that agree and six builds that each borrow their own face.
     - family: PlexSansSC

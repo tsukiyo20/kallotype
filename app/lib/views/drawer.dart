@@ -349,7 +349,11 @@ class _Segments extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(border: Border.all(color: colors.hairline)),
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: colors.ground,
+        borderRadius: BorderRadius.circular(KalloRadius.control + 1),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -357,17 +361,33 @@ class _Segments extends StatelessWidget {
             GestureDetector(
               onTap: () => onSelect(i),
               behavior: HitTestBehavior.opaque,
-              child: Container(
+              child: AnimatedContainer(
+                duration: KalloMotion.quick,
+                curve: KalloMotion.enter,
                 padding: const EdgeInsets.symmetric(
                   horizontal: KalloSpace.step3 + 2,
-                  vertical: KalloSpace.step2 + 2,
+                  vertical: 5,
                 ),
-                color: i == selected ? colors.ink : null,
+                decoration: BoxDecoration(
+                  color: i == selected ? colors.surface : null,
+                  borderRadius: BorderRadius.circular(KalloRadius.control),
+                  boxShadow: i == selected
+                      ? const <BoxShadow>[
+                          BoxShadow(
+                            color: Color(0x14000000),
+                            blurRadius: 3,
+                            offset: Offset(0, 1),
+                          ),
+                        ]
+                      : null,
+                ),
                 child: Text(
                   options[i],
                   style: KalloType.body.copyWith(
                     fontSize: 12.5,
-                    color: i == selected ? colors.surface : colors.inkMuted,
+                    fontWeight:
+                        i == selected ? FontWeight.w500 : FontWeight.w400,
+                    color: i == selected ? colors.ink : colors.inkMuted,
                   ),
                 ),
               ),
