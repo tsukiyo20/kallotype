@@ -194,14 +194,10 @@ abstract final class KalloRadius {
 
 /// Depth.
 ///
-/// One shadow, for things that float above the window: a card, a popover, the
-/// drawer. Nothing else is raised — the planes of the app do that with colour.
+/// One shadow, for the one thing that floats above the window: the drawer.
+/// Nothing else is raised — the planes of the app do that with colour, and a
+/// shadow that is not a thing sitting on another thing is decoration.
 abstract final class KalloShadow {
-  static const List<BoxShadow> card = <BoxShadow>[
-    BoxShadow(color: Color(0x14000000), blurRadius: 12, offset: Offset(0, 2)),
-    BoxShadow(color: Color(0x0A000000), blurRadius: 2, offset: Offset(0, 0)),
-  ];
-
   static const List<BoxShadow> sheet = <BoxShadow>[
     BoxShadow(color: Color(0x24000000), blurRadius: 32, offset: Offset(0, 10)),
   ];

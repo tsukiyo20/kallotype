@@ -39,34 +39,39 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and two goldens pin the language:
+`fvm flutter analyze` is clean, and five goldens pin the language:
 
-| the table | the table, in Chinese | the drawer, in Chinese |
+| | | |
 |---|---|---|
-| ![the contact sheet](test/goldens/sheet.png) | ![the table in Chinese](test/goldens/sheet-zh.png) | ![the drawer](test/goldens/drawer.png) |
+| ![the table](test/goldens/sheet.png) | ![the table in Chinese](test/goldens/sheet-zh.png) | ![the drawer](test/goldens/drawer.png) |
+| **the table**, forty frames, light | **the same**, in Chinese | **the drawer**, in Chinese, dark |
+| ![the gallery](test/goldens/gallery.png) | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | |
+| **the gallery**, one print, lit | **the same**, with the lamp off | |
 
 ```bash
-fvm flutter test                    # compares against the image
-fvm flutter test --update-goldens   # rewrites it, deliberately
+fvm flutter test                    # compares against the images
+fvm flutter test --update-goldens   # rewrites them, deliberately
 ```
 
 The test loads the bundled faces from disk before it draws, so the picture is in
-the product's own type rather than the runner's. This is the reason the fonts are
-bundled: the old goldens could only be trusted on the one machine whose system
-faces they happened to use, and skipped everywhere else. See
-`test/contact_sheet_golden_test.dart`.
+the product's own type rather than the runner's. That is the reason the fonts are
+bundled — and both are under the SIL Open Font License, so a public repository
+may carry them: `fonts/OFL-Inter.txt`, `fonts/OFL-NotoSansSC.txt`.
 
 ---
 
 ## What you are looking at
 
-One screen, four arguments:
+One window. A column of places on the left, a toolbar that is also the window's
+handle, a field, and — where the place has one — a record on the right.
 
 | | |
 |---|---|
-| **Two places, not two themes** | A darkroom is lit by one safelight. A light table is a light source. The toggle at the top right moves between *lighting*, and everything that glows is multiplied by a single interpolated `emissive`. |
-| **The film is the artifact** | The strip is drawn in millimetres — 35 mm wide, 24 mm frames, 38 mm pitch, 5.5 mm rebates — and the UI labels it from outside. Film is material; UI is annotation. |
-| **Time is a dimension** | The five frames are the same frame developed for 3, 6, 9, 12 and 15 minutes. The wedge on each one is the same nine-step exposure put through the H&D curve at that frame's 纬. Longer development is visibly more contrast, and it is not a filter. |
+| **Five places, one of each built** | Shelf, Table, Binder, Line, Gallery. The workbench belongs between the table and the binder and is not built yet. A place that has nothing in it says what it is for instead of showing another place's screen. |
+| **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
+| **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
+| **The chrome is light, the print is paper** | The window is a tool, so its planes are one neutral ramp in both appearances. The only warm and saturated surfaces in the product are the paper a print sits on and the gallery wall behind it. |
+| **Time is a dimension** | The frames on the table are the same frame developed for longer, and the inspector draws the whole roll as an envelope with the selected frame inside it. The point is the difference between them. |
 | **Nothing is a default** | No ripple, no elevation, no Roboto, no colour roles, no 4 dp grid. |
 
 ---
@@ -80,27 +85,34 @@ These are the ones worth enforcing in review.
    It gives nothing else. `uses-material-design: false` in `pubspec.yaml` is
    where that is written down.
 
-2. **No shadows for depth.** A thing is raised by being lighter than what is
-   behind it, and by a hairline. `BoxShadow` appears exactly once in this code,
-   on the film strip, and it means *light*, not height.
+2. **No shadows for depth.** A plane is raised by being lighter than what is
+   behind it, and by a hairline. `KalloShadow.sheet` is the one shadow in the
+   code, and it says the drawer is above the window; it does not say anything is
+   deep.
 
-3. **One accent.** The safelight. Everything else is a neutral on one
-   luminance ramp, because the contrast in this product is density — which is
-   brightness — and not hue.
+3. **One accent.** The safelight, turned down: a selection and the tone curve.
+   Everything else is a neutral on one luminance ramp, because the contrast in
+   this product is density — which is brightness — and not hue. The gallery's
+   wall and paper are the exception that proves it: they are not state, they are
+   objects.
 
-4. **Five type roles, six spacing steps, two radii.** When you need a new one,
-   the layout is usually wrong. `KalloSpace` has no step 12 or 24; that gap is
-   the whole reason it reads as deliberate.
+4. **The ramps are closed sets.** Seven spacing steps, four radii, eight type
+   roles. When you need a new one, the layout is usually wrong. The gaps in
+   `KalloSpace` are the whole reason it reads as deliberate.
 
-5. **Hairlines are one device pixel, not one logical pixel.** On a Retina
-   screen those are different, and the difference is a seam.
+5. **A hairline is one device pixel, not one logical pixel.** *Not met yet*: the
+   hairlines are `BorderSide`s of width 1, which is two device pixels on a
+   Retina screen. The rule stands; the code has to catch up.
 
 6. **Nothing animates alone.** `KalloMotion.stagger` is 40 ms. If three things
-   move, they move 40 ms apart.
+   move, they move 40 ms apart. The room's light is one number and one tween, so
+   that when it changes, everything changes together.
 
-7. **The film is geometry, not sticker art.** `FilmMetrics` is the single
-   source of the strip's measurements; the painter and the label row both read
-   from it, so the labels stay under their frames at any width.
+7. **Nothing on screen is invented here.** No curve, no density and no grain is
+   derived in Dart; `assets/film_strip.json` is written by `just view` from the
+   model and is a rendering of it at a commit. The one thing the app decides is
+   *light* — a multiplication — and that is stated where it happens
+   (`KalloColors.under`).
 
 ---
 
@@ -108,41 +120,53 @@ These are the ones worth enforcing in review.
 
 `lib/design/tokens.dart` is the whole visual contract.
 
-- **Colours** — two complete sets, `darkroom` and `lightTable`, plus
-  `KalloColors.lerp`. The `emissive` field is a `double` rather than a flag
-  precisely so it can be interpolated; everything that appears to give off
-  light reads it.
-- **Space** — 2, 4, 8, 16, 32, 64.
-- **Radius** — 1.5 for film, 12 for sheets. Nothing between.
-- **Motion** — 90 / 160 / 240 / 460 ms, three curves, one stagger.
-- **Type** — `display`, `title`, `body`, `caption`, `data`. The `data` role is
-  monospaced with tabular figures, because it is for numbers that change while
-  you look at them and nothing around them may move.
+- **Colours** — two complete sets, `light` and `dark`, resolved once from the
+  system unless the user pinned one. Four planes (`ground`, `sidebar`, `content`,
+  `surface`), one `hairline`, three inks, one accent in two weights, and `print`:
+  the paper. Plus three operations — `under(colour, light)`, `toward(set, t)`
+  and `night` — because a room can go dark, and going dark is not the same event
+  as the system changing its theme.
+- **Space** — 2, 4, 8, 12, 16, 24, 32.
+- **Radius** — 3 for film, 6 for a control, 10 for a card, 14 for a sheet.
+- **Motion** — 90 / 160 / 240 / 460 ms, three curves, one stagger. A lamp comes
+  up faster than a room goes dark: the one direction is the filament, the other
+  is the eye.
+- **Type** — Inter, with Noto Sans SC behind it for Chinese. Eight roles:
+  `plate`, `display`, `title`, `body`, `small`, `caption` (spaced caps),
+  `data` and `folio` (tabular, so that a number changing does not move the
+  things around it).
 
-There is no brand typeface yet. `KalloType.sans` is `null`, which means the
-platform's own face. When one is chosen it goes there and nowhere else.
+The English build is the Chinese build with fewer words in it, so switching
+language moves no layout. `lib/design/strings.dart` holds every label; the
+film's own vocabulary — `EI`, `C-41`, a stock name, a temperature — never
+translates.
 
 ---
 
 ## What is deliberately not here
 
-- **The model.** The wedge on the strip is not drawn here. It is read from
-  `assets/film_strip.json`, which `just view` writes from `kallotype-view`, so
-  the five frames are VISION3 500T developed for 3, 6, 9, 12 and 15 minutes and
-  not a shape invented to look like one. Regenerate it; never edit it.
-- **Colour management.** The screen is not tagged, nothing is P3, and the
-  light table is therefore not yet truthful. This is the next hard thing.
+- **The model.** The nine densities on every frame are read from
+  `assets/film_strip.json`, written by `just view` from `kallotype-view`. The
+  roll is VISION3 500T developed five times, not a shape invented to look like
+  one. Regenerate it; never edit it.
+- **Pixels.** There is no photograph in this repository yet, so the print in the
+  gallery is the nine-step wedge — which is, truthfully, the first print in a
+  darkroom. Its first step is the paper, so it looks left-heavy against the
+  paper's margin: that is the film, not the layout. A loupe and full resolution
+  wait for the asset.
+- **Colour management.** The model writes sRGB and the system manages the
+  display. Wide gamut is the screen's business; nothing here is tagged or
+  converted.
 - **Text input.** `EditableText`, selection, IME and accessibility are the
   framework's job. Do not rebuild them; rebuild everything you can see.
-- **A real darkroom.** The room is a pre-rendered plate with a few live quads
-  on top. This code starts at the light table because that is where the design
-  language can be judged in a week.
+- **The other three places.** Shelf, Binder and Line exist on the map and say
+  what they are for. They are the next two or three milestones, not bugs.
 
 ---
 
 ## How to judge it
 
-Screenshot the light table, remove the text, and look at it.
+Screenshot a place, remove the text, and look at it.
 
 If it still reads as *this* product, the language is working. If it reads as a
 Flutter app, the problem is in one of the seven rules above — not in a library.
