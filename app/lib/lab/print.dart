@@ -47,13 +47,6 @@ class Print {
     return minutes == null ? null : darkroomClock(minutes);
   }
 
-  /// What a wall label says, from whatever the record carried. Nothing known
-  /// is a print with no label, not a print claiming to be something.
-  String get label => <String?>[film, clock, paper]
-      .whereType<String>()
-      .where((String part) => part.isNotEmpty)
-      .join('   ·   ');
-
   /// Read one exported print.
   ///
   /// The image is decoded at the display's width rather than the file's: an

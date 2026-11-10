@@ -46,7 +46,7 @@ Future<void> _loadFonts() async {
 /// gallery reads the export folder. But a golden of the gallery has to have
 /// something on the wall to be about, so the test paints a test card — three
 /// blocks on a ramp, which no one could mistake for a photograph.
-Future<Print> _fixturePrint() async {
+Future<List<Print>> _fixturePrints() async {
   const double width = 900;
   const double height = 600;
   final ui.PictureRecorder recorder = ui.PictureRecorder();
@@ -77,14 +77,19 @@ Future<Print> _fixturePrint() async {
         width.toInt(),
         height.toInt(),
       );
-  return Print(
-    image: image,
-    name: 'test-card',
-    film: 'VISION3 500T',
-    paper: 'CRYSTAL ARCHIVE PEARL',
-    minutes: 9,
-    tempC: 20,
-  );
+  // Three developments of one negative is the wall this product exists to show,
+  // so the fixture is three of them rather than one large one.
+  return <Print>[
+    for (final double minutes in <double>[3, 6, 9])
+      Print(
+        image: image,
+        name: 'test-card',
+        film: 'VISION3 500T',
+        paper: 'CRYSTAL ARCHIVE PEARL',
+        minutes: minutes,
+        tempC: 20,
+      ),
+  ];
 }
 
 /// Where prints come from, pinned rather than read: a golden that showed
@@ -111,11 +116,11 @@ void main() {
   // The print is decoded before any widget exists: `instantiateImageCodec` is a
   // real engine call, and a widget test runs in a zone that would never
   // complete it.
-  late Print hanging;
+  late List<Print> hanging;
 
   setUpAll(() async {
     await _loadFonts();
-    hanging = await _fixturePrint();
+    hanging = await _fixturePrints();
   });
 
   testWidgets('the contact sheet', (WidgetTester tester) async {
@@ -180,7 +185,7 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       roll: Roll.fromStrip(_strip()),
-      prints: <Print>[hanging],
+      prints: hanging,
       export: _exports,
       appearance: Brightness.dark,
       initialPlace: Place.gallery,
@@ -199,7 +204,7 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       roll: Roll.fromStrip(_strip()),
-      prints: <Print>[hanging],
+      prints: hanging,
       export: _exports,
       appearance: Brightness.light,
       initialPlace: Place.gallery,
@@ -256,5 +261,25 @@ void main() {
       find.byType(KalloApp),
       matchesGoldenFile('goldens/drawer-prints.png'),
     );
+  });
+
+  testWidgets('one print hangs on its own', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      prints: <Print>[hanging.last],
+      export: _exports,
+      roll: Roll.fromStrip(_strip()),
+      appearance: Brightness.dark,
+      initialPlace: Place.gallery,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    // One print is a print, not a sheet of stamps and not a billboard: 660
+    // points of paper, centred, with the paper's own margin inside it.
+    final Size image = tester.getSize(find.byType(RawImage));
+    expect(image.width, closeTo(660 * (1 - 0.06), 1));
+    expect(image.height, closeTo(image.width / 1.5, 1));
   });
 }

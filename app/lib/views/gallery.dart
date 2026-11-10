@@ -7,7 +7,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/print.dart';
 
-/// The gallery: the last place. One wall, one print, one light.
+/// The gallery: the last place. One wall, every print, one light.
 ///
 /// A print is not a picture, it is a sheet of paper reflecting whatever light
 /// falls on it. So the room is built the way that physics is built: every
@@ -15,15 +15,20 @@ import '../lab/print.dart';
 /// multiplied into each of them.
 ///
 /// Which is what makes the switch worth having. Turn the lamp off and the wall
-/// goes to black, the label goes with it, the chrome goes down — and the print
-/// does not go out, it stays at a tenth. That is not a filter: it is the eye
+/// goes to black, the labels go with it, the chrome goes down — and the prints
+/// do not go out, they stay at a tenth. That is not a filter: it is the eye
 /// adapting, and it is the one moment in this app where you are meant to see
 /// nothing and then see something.
+///
+/// Everything exported hangs here, because a gallery shows the work there is.
+/// The wall is arranged in a grid and not hung like a salon, because a grid is
+/// the only arrangement that says nothing about the pictures: five developments
+/// of one negative are five equal things, and the wall should not pretend to
+/// prefer one.
 class Gallery extends StatelessWidget {
   const Gallery({super.key, required this.prints, required this.onLight});
 
-  /// Everything exported, oldest first. The last one hangs: a gallery shows
-  /// the work there is, and there is one wall in this one.
+  /// Everything exported, oldest first.
   final List<Print> prints;
 
   /// The switch belongs to the room, not to the wall.
@@ -44,6 +49,10 @@ class Gallery extends StatelessWidget {
   /// you can still find, and only just.
   static const double _darkAdaptation = 0.10;
 
+  /// The largest a print gets on this wall. One print alone should not become a
+  /// billboard, and five in a row should not become stamps.
+  static const double _largest = 660;
+
   @override
   Widget build(BuildContext context) {
     final KalloStrings s = KalloStrings.of(context);
@@ -51,15 +60,33 @@ class Gallery extends StatelessWidget {
     // The paper holds its light better than the room does, for the same reason
     // everything else does not: the eye is the instrument here, not the lamp.
     final double printed = _darkAdaptation + (1 - _darkAdaptation) * light;
-    final Print? hanging = prints.isEmpty ? null : prints.last;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints room) {
-        final double width = math.max(
-          160,
-          math.min(room.maxWidth * 0.62, (room.maxHeight - 110) / 0.72),
+        const double gap = 28;
+        const double margin = 40;
+        // The switch floats over the wall, so the wall fades under it rather
+        // than putting a panel in front of the work.
+        const double floor = 120;
+        final double available = math.max(200, room.maxWidth - margin * 2);
+        // Three prints across a 1280 window, four across a wide one, and never
+        // fewer columns than there are prints to put in them.
+        final int fitting =
+            math.max(1, math.min(5, ((available + gap) / 328).floor()));
+        final int columns = math.max(1, math.min(prints.length, fitting));
+        final double paper = math.min(
+          math.min(
+            (available - gap * (columns - 1)) / columns,
+            (room.maxHeight - floor - 40) / 0.74,
+          ),
+          _largest,
         );
-        final double border = width * 0.030;
+        final int rows = (prints.length / columns).ceil();
+        final double height = paper * 0.74 + 30;
+        final double content =
+            rows * height + math.max(0, rows - 1) * gap;
+        final double top = math.max(margin, (room.maxHeight - content) / 2);
+
         return Stack(
           fit: StackFit.expand,
           children: <Widget>[
@@ -75,30 +102,43 @@ class Gallery extends StatelessWidget {
                 ),
               ),
             ),
-            Center(
-              child: hanging == null
-                  ? const SizedBox.shrink()
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        _Sheet(
-                          width: width,
-                          border: border,
-                          print: hanging,
-                          light: printed,
-                        ),
-                        if (hanging.label.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: KalloSpace.step4),
-                          Text(
-                            hanging.label,
-                            style: KalloType.small.copyWith(
-                              color: KalloColors.under(_label, light),
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
+            if (prints.isNotEmpty)
+              SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(margin, top, margin, floor),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: gap,
+                  runSpacing: gap,
+                  children: <Widget>[
+                    for (final Print print in prints)
+                      _Hung(
+                        print: print,
+                        width: paper,
+                        light: light,
+                        printed: printed,
+                      ),
+                  ],
+                ),
+              ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: floor,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[
+                        KalloColors.under(_wallBase, light).withValues(alpha: 0),
+                        KalloColors.under(_wallBase, light),
                       ],
                     ),
+                  ),
+                ),
+              ),
             ),
             Positioned(
               left: 0,
@@ -119,6 +159,80 @@ class Gallery extends StatelessWidget {
   }
 }
 
+/// One print on the wall, with the label under it.
+class _Hung extends StatelessWidget {
+  const _Hung({
+    required this.print,
+    required this.width,
+    required this.light,
+    required this.printed,
+  });
+
+  final Print print;
+  final double width;
+
+  /// The light on the wall, which the label is on.
+  final double light;
+
+  /// The light on the print, which holds a little longer.
+  final double printed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _Sheet(print: print, width: width, light: printed),
+          const SizedBox(height: KalloSpace.step3 - 2),
+          Text.rich(
+            TextSpan(children: _wallLabel(print, light)),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: KalloType.caption.copyWith(
+              letterSpacing: 0.5,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The wall label: what a person would read beside the work.
+///
+/// The film and the paper are set quiet and the development is set loud,
+/// because on a wall of the same negative at five times the only word that
+/// differs is the one worth finding. A print whose record was lost is called
+/// what its file is called — it is still a print, and it is still here.
+List<InlineSpan> _wallLabel(Print print, double light) {
+  final Color quiet =
+      KalloColors.under(Gallery._label, light).withValues(alpha: 0.60);
+  final Color loud = KalloColors.under(Gallery._label, light);
+  final List<InlineSpan> spans = <InlineSpan>[];
+  void add(String? text, Color colour) {
+    if (text == null || text.isEmpty) {
+      return;
+    }
+    if (spans.isNotEmpty) {
+      spans.add(TextSpan(text: '   ·   ', style: TextStyle(color: quiet)));
+    }
+    spans.add(TextSpan(text: text, style: TextStyle(color: colour)));
+  }
+
+  add(print.film, quiet);
+  add(print.clock, loud);
+  add(print.paper, quiet);
+  if (spans.isEmpty) {
+    spans.add(TextSpan(text: print.name, style: TextStyle(color: quiet)));
+  }
+  return spans;
+}
+
 /// The print: the image the model printed, on paper, with the paper's margin
 /// showing.
 ///
@@ -126,21 +240,20 @@ class Gallery extends StatelessWidget {
 /// number and it is the difference between a print and a screenshot.
 class _Sheet extends StatelessWidget {
   const _Sheet({
-    required this.width,
-    required this.border,
     required this.print,
+    required this.width,
     required this.light,
   });
 
-  final double width;
-  final double border;
   final Print print;
+  final double width;
 
   /// The light on the print, from a tenth to all of it.
   final double light;
 
   @override
   Widget build(BuildContext context) {
+    final double border = width * 0.030;
     final double image = width - border * 2;
     final Widget pixels = RawImage(
       image: print.image,
