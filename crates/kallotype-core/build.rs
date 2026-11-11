@@ -486,6 +486,14 @@ impl Film {
         let label = self.header.get("", "label");
         let short = escaped(self.header.maybe("", "short").unwrap_or(label));
         let note = escaped(self.header.get("provenance", "note"));
+        // A file that predates the key is a colour paper: that is the path the
+        // model renders when nothing says otherwise, and it is what every paper
+        // before POLYMAX II RC was.
+        let emulsion = match self.header.maybe("", "emulsion").unwrap_or("colour") {
+            "colour" => "PaperEmulsion::Colour",
+            "silver" => "PaperEmulsion::Silver",
+            other => panic!("unknown paper emulsion {other:?}"),
+        };
         let d_min = self.header.number("curve", "d_min");
         let d_max = self.header.number("curve", "d_max");
         let gamma = self.header.number("curve", "gamma");
@@ -498,6 +506,7 @@ impl Film {
         writeln!(code, "    PaperStock {{").unwrap();
         writeln!(code, "        id: \"{}\",", self.id()).unwrap();
         writeln!(code, "        short: \"{short}\",").unwrap();
+        writeln!(code, "        emulsion: {emulsion},").unwrap();
         writeln!(code, "        label: \"{label}\",").unwrap();
         writeln!(code, "        note: \"{note}\",").unwrap();
         writeln!(

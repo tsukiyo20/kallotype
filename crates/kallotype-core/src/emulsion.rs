@@ -178,6 +178,21 @@ pub struct FilmStock {
     pub measured: &'static [(&'static str, &'static str)],
 }
 
+/// What a paper carries.
+///
+/// A colour paper has three dye-forming layers and records colour; a silver
+/// paper has one silver image, no dyes, and records luminance. It is the
+/// paper's own fact, not a rendering preference: a colour film printed on a
+/// silver paper is a black-and-white print, and a paper that cannot say which
+/// it is cannot be printed honestly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaperEmulsion {
+    /// Three dye-forming layers, RA-4: the print carries colour.
+    Colour,
+    /// One silver image, no dyes: the print carries luminance.
+    Silver,
+}
+
 /// A paper stock: one curve, because paper only has to record what is on the
 /// negative, not sample a scene.
 #[derive(Debug, Clone, Copy)]
@@ -186,6 +201,8 @@ pub struct PaperStock {
     pub id: &'static str,
     /// The name a box or a wall label would use, without the catalogue numbers.
     pub short: &'static str,
+    /// What the paper carries: three dye-forming layers, or one silver image.
+    pub emulsion: PaperEmulsion,
     /// Human-readable name.
     pub label: &'static str,
     /// What this paper is, and what it is not.

@@ -67,6 +67,7 @@ offset 16+n+m  32   SHA-256 of every byte before it
 |---|---|
 | `schema` | `"paper/v1"` |
 | `id`, `label`, `short` | `short` as a film's: the name a box carries. Optional; falls back to `label` |
+| `emulsion` | what the paper carries: `colour` (three dye-forming layers, RA-4) or `silver` (one silver image, no dyes). Optional; a reader that does not find it assumes `colour`, which is the model's own default path |
 | `tables` | `["dyes", "layers"]` |
 | `[provenance]` | as a film's |
 | `[curve]` | **one** curve: `d_min`, `d_max`, `gamma`, `log_e0`, `transition` |

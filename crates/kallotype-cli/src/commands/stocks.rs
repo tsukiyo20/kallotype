@@ -1,6 +1,8 @@
 //! `kalo stocks` — what is compiled in.
 
-use kallotype_core::{FILM_STOCKS, FilmProcess, FilmStock, PAPER_STOCKS, PaperStock, Provenance};
+use kallotype_core::{
+    FILM_STOCKS, FilmProcess, FilmStock, PAPER_STOCKS, PaperEmulsion, PaperStock, Provenance,
+};
 use serde_json::{Map, Value, json};
 
 /// The words a `[measured]` line may begin with, before its colon.
@@ -66,6 +68,11 @@ fn paper(stock: &PaperStock) -> Value {
         "id": stock.id,
         "short": stock.short,
         "label": stock.label,
+        // What the paper carries, in the word the app groups the shelf by.
+        "emulsion": match stock.emulsion {
+            PaperEmulsion::Colour => "colour",
+            PaperEmulsion::Silver => "silver",
+        },
         "note": stock.note,
         "provenance": provenance(&stock.provenance),
         "measured": measured(stock.measured),
@@ -167,6 +174,34 @@ mod tests {
                     stock.id
                 );
             }
+        }
+    }
+
+    /// A paper says what it carries, and a silver one says so.
+    ///
+    /// A colour film printed on a silver paper is a black-and-white print in
+    /// the world and a colour print in this model, so the catalogue has to be
+    /// able to tell a shelf which papers are which.
+    #[test]
+    fn the_papers_say_what_they_carry() {
+        let silver: Vec<&str> = PAPER_STOCKS
+            .iter()
+            .filter(|paper| paper.emulsion == PaperEmulsion::Silver)
+            .map(|paper| paper.id)
+            .collect();
+        assert_eq!(silver, ["polymax_ii_rc"]);
+        assert!(
+            PAPER_STOCKS
+                .iter()
+                .any(|paper| paper.emulsion == PaperEmulsion::Colour),
+            "no colour paper to print a colour film on"
+        );
+        let Value::Array(papers) = &catalogue()["papers"] else {
+            panic!("no papers");
+        };
+        for paper in papers {
+            let emulsion = paper["emulsion"].as_str().expect("an emulsion");
+            assert!(emulsion == "colour" || emulsion == "silver", "{emulsion}");
         }
     }
 
