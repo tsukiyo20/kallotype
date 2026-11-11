@@ -526,6 +526,41 @@ void main() {
     );
   });
 
+  testWidgets('a reversal has no print', (WidgetTester tester) async {
+    _window(tester);
+
+    // A roll developed from a slide: the model has no print stage for it, so
+    // the bench must not offer one. The note stands where the button would be.
+    final Roll reversal = Roll(
+      number: 1,
+      stockId: 'provia_100f',
+      stockLabel: 'FUJICHROME PROVIA 100F (RDP III), E-6',
+      photo: '/photographs/uji.jpg',
+      frames: <Frame>[
+        Frame(
+          number: 1,
+          minutes: 6,
+          tempC: 20,
+          image: hanging.first.image,
+        ),
+      ],
+    );
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: reversal,
+      appearance: Brightness.light,
+      initialPlace: Place.workbench,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Print'), findsNothing);
+    expect(find.textContaining('reversal is its own picture'), findsOneWidget);
+  });
+
   testWidgets('the line', (WidgetTester tester) async {
     _window(tester);
 

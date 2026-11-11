@@ -8,6 +8,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/clock.dart';
 import '../lab/roll.dart';
+import '../lab/stock.dart';
 import '../widgets/button.dart';
 import '../widgets/patch_print.dart';
 import '../widgets/record.dart';
@@ -29,6 +30,7 @@ class Workbench extends StatefulWidget {
     required this.onSelect,
     required this.exports,
     required this.paperName,
+    required this.film,
     required this.onPrint,
   });
 
@@ -36,6 +38,9 @@ class Workbench extends StatefulWidget {
 
   /// What the print's paper is called, resolved at the top of the app.
   final String paperName;
+
+  /// The film this roll was made of, when the shelf knows it.
+  final Stock? film;
   final int selected;
   final ValueChanged<int> onSelect;
 
@@ -184,7 +189,11 @@ class _WorkbenchState extends State<Workbench> {
 
   Widget _record(KalloColors colors, KalloStrings s) {
     final Frame frame = _frame;
-    final bool printable = frame.image != null && widget.exports != null;
+    // A reversal is developed to a positive and scanned: there is no print
+    // stage between the film and the picture, so there is nothing to make here.
+    final bool reversal = widget.film?.process == FilmProcess.reversal;
+    final bool printable =
+        frame.image != null && widget.exports != null && !reversal;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -221,12 +230,18 @@ class _WorkbenchState extends State<Workbench> {
               style: KalloType.data.copyWith(color: colors.ink),
             ),
             const Spacer(),
-            KalloButton(
-              label: _busy ? s.printing : s.printOut,
-              onTap: printable && !_busy ? _print : null,
-              filled: true,
-              height: 32,
-            ),
+            if (reversal)
+              Text(
+                s.noPrintStage,
+                style: KalloType.small.copyWith(color: colors.inkMuted),
+              )
+            else
+              KalloButton(
+                label: _busy ? s.printing : s.printOut,
+                onTap: printable && !_busy ? _print : null,
+                filled: true,
+                height: 32,
+              ),
           ],
         ),
       ),

@@ -135,6 +135,11 @@ class KalloStrings {
   // -- the workbench --------------------------------------------------------
 
   String get printOut => zh ? '印' : 'Print';
+
+  /// Said where the print button would be, for a film that has no print stage.
+  String get noPrintStage => zh
+      ? '反转片自己就是照片 —— 这一卷没有印相。'
+      : 'A reversal is its own picture — there is no print to make here.';
   String get paper => zh ? '相纸' : 'PAPER';
   String get printedOut => zh ? '印好了' : 'printed';
   String get printing => zh ? '正在印…' : 'Printing…';

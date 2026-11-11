@@ -213,6 +213,7 @@ class _RoomState extends State<Room> {
                               setState(() => _selected = index),
                           exports: widget.exports,
                           paperName: widget.roll.paperName(widget.catalogue),
+                          film: widget.catalogue.film(widget.roll.stockId),
                           onPrint: widget.onPrint,
                         ),
                       Place.binder => Binder(

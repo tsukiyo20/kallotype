@@ -182,6 +182,10 @@ translates.
   record rather than a second copy of the picture. There is no soft proof and
   no paper simulation beyond the paper's own curve: what you see on the bench is
   a preview of the tones, not a simulation of the sheet under a lamp.
+- **A print from a reversal.** A reversal is developed to a positive and
+  scanned: there is no print stage between the film and the picture. The bench
+  says so where the button would be rather than making a print that is a second
+  scan of the same slide.
 - **A paper for the film.** The shelf offers every paper to every film. A silver
   paper printed with a colour negative renders — the model's paper is three
   channels, and `polymax_ii_rc` says in its own note that the format cannot say
