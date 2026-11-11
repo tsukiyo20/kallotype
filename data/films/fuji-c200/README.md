@@ -5,7 +5,7 @@ painted over the curves, and the densest curve digitisation in the series.
 
 - **The report:** [REPORT.md](REPORT.md) — the sheet, the fit, the anchor and what
   is borrowed rather than measured.
-- **The film:** `fuji-c200.kalofilm` (5,935 bytes) — load it with
+- **The film:** `fuji-c200.kalofilm` (6,131 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 1137 points per layer.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png).

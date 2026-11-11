@@ -284,6 +284,102 @@ mod tests {
         );
     }
 
+    /// What a stock says about a field matches what it carries.
+    ///
+    /// The catalogue's value is that its claims are checkable, so they are
+    /// checked. A stock that said `none` about its mask while shipping another
+    /// film's — which seven of them did until this test existed — is worse than
+    /// one that said nothing at all, because a reader believes it.
+    ///
+    /// The claims are read the way `kalo stocks --json` reads them: the word
+    /// before the first colon.
+    #[test]
+    fn the_claims_match_the_tables() {
+        fn claim<'a>(stock: &'a FilmStock, field: &str) -> &'a str {
+            stock
+                .measured
+                .iter()
+                .find(|(name, _)| *name == field)
+                .map(|(_, text)| text.split(':').next().unwrap_or("").trim())
+                .unwrap_or_else(|| panic!("{} says nothing about its {field}", stock.id))
+        }
+
+        let reference_mask: &[f64] = FILM_MASK.as_slice();
+        let reference_dyes: &[[f64; GRID_LEN]] = FILM_DYES.as_slice();
+        for stock in FILM_STOCKS {
+            for field in ["curves", "layers", "dyes", "mask", "mtf", "grain"] {
+                let verdict = claim(stock, field);
+                assert!(
+                    matches!(verdict, "measured" | "borrowed" | "placeholder" | "none"),
+                    "{}'s {field} begins with {verdict:?}",
+                    stock.id
+                );
+            }
+
+            let masks = stock.mask.as_slice();
+            let mask_empty = masks.iter().all(|value| *value == 0.0);
+            match claim(stock, "mask") {
+                "none" => assert!(
+                    mask_empty,
+                    "{} says it has no mask and carries one",
+                    stock.id
+                ),
+                "borrowed" => assert!(
+                    masks == reference_mask,
+                    "{} says its mask is borrowed and it is not the reference",
+                    stock.id
+                ),
+                _ => assert!(
+                    !mask_empty,
+                    "{} says its mask is measured and has none",
+                    stock.id
+                ),
+            }
+
+            let dyes = stock.dyes.as_slice();
+            let dyes_empty = dyes.iter().flatten().all(|value| *value == 0.0);
+            match claim(stock, "dyes") {
+                "none" => assert!(
+                    dyes_empty,
+                    "{} says it has no dyes and carries some",
+                    stock.id
+                ),
+                "borrowed" => assert!(
+                    dyes == reference_dyes,
+                    "{} says its dyes are borrowed and they are not the reference",
+                    stock.id
+                ),
+                _ => assert!(
+                    !dyes_empty,
+                    "{} says its dyes are measured and has none",
+                    stock.id
+                ),
+            }
+
+            // The render blurs every stock: a stock whose sheet published no MTF
+            // runs on the compiled VISION3 fit, so `none` is a claim the model
+            // contradicts — the honest word for a sheet without an MTF is
+            // `borrowed`, and the note has to say what is borrowed.
+            match claim(stock, "mtf") {
+                "measured" => assert!(
+                    stock.sigma_um.is_some(),
+                    "{} says its blur is measured and carries none",
+                    stock.id
+                ),
+                "borrowed" => assert!(
+                    stock.sigma_um.is_none(),
+                    "{} says its blur is borrowed and carries its own",
+                    stock.id
+                ),
+                other => panic!(
+                    "{} claims {other:?} for its blur; a stock without an MTF \
+                     borrows the measured VISION3 blur and has to say so",
+                    stock.id
+                ),
+            }
+        }
+    }
+
     /// Every film carries three dyes, three layer sensitivities and a mask, on
     /// the grid the model integrates over, and none of them is negative.
     ///
