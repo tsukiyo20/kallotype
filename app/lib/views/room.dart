@@ -10,6 +10,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/exports.dart';
 import '../lab/print.dart';
+import '../lab/print_out.dart';
 import '../lab/roll.dart';
 import '../sheets/contact_sheet.dart';
 import '../widgets/inspector.dart';
@@ -38,6 +39,8 @@ class Room extends StatefulWidget {
     required this.onDeveloped,
     required this.exports,
     required this.rollFolder,
+    required this.jobs,
+    required this.onPrint,
     required this.export,
     required this.locale,
     required this.onLocale,
@@ -61,6 +64,10 @@ class Room extends StatefulWidget {
   /// Where a print goes, and where the roll lives, resolved once at the top.
   final Directory? exports;
   final Directory? rollFolder;
+
+  /// The prints being made, and the way to make one.
+  final List<PrintJob> jobs;
+  final Future<void> Function(Frame frame) onPrint;
 
   /// Walking into a room that shows exports is what makes it look again: the
   /// folder is not watched, and a room that shows yesterday's work is a room
@@ -197,13 +204,17 @@ class _RoomState extends State<Room> {
                           onSelect: (int index) =>
                               setState(() => _selected = index),
                           exports: widget.exports,
+                          onPrint: widget.onPrint,
                         ),
                       Place.binder => Binder(
                           roll: widget.roll,
                           exports: widget.exports,
                           rollFolder: widget.rollFolder,
                         ),
-                      Place.line => Line(prints: widget.prints),
+                      Place.line => Line(
+                          prints: widget.prints,
+                          jobs: widget.jobs,
+                        ),
                       Place.gallery => Gallery(
                           prints: widget.prints,
                           onLight: _toggleLight,

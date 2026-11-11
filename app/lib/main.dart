@@ -13,6 +13,7 @@ import 'lab/exports.dart';
 import 'lab/settings.dart';
 import 'lab/fixture.dart';
 import 'lab/print.dart';
+import 'lab/print_out.dart';
 import 'lab/roll.dart';
 import 'lab/roll_store.dart';
 import 'views/places.dart';
@@ -62,6 +63,7 @@ class KalloApp extends StatefulWidget {
     super.key,
     this.roll,
     this.prints,
+    this.jobs,
     this.exportsFolder,
     this.rollFolder,
     this.locale,
@@ -86,6 +88,9 @@ class KalloApp extends StatefulWidget {
   /// Prints to hang. The tests pass them; the app reads the export folder,
   /// which is empty until something has been printed.
   final List<Print>? prints;
+
+  /// Prints in progress. The tests pin them; the app makes them.
+  final List<PrintJob>? jobs;
 
   /// Where prints come from. The tests pin it, so that a golden does not show
   /// the folder of whoever ran it.
@@ -119,6 +124,7 @@ class _KalloAppState extends State<KalloApp> {
   late bool _technical = widget.technicalTerms;
   Roll? _roll;
   List<Print> _prints = const <Print>[];
+  List<PrintJob> _jobs = const <PrintJob>[];
   Settings _settings = const Settings();
   String? _exportPath;
 
@@ -129,6 +135,7 @@ class _KalloAppState extends State<KalloApp> {
     _pinned = widget.appearance;
     _roll = widget.roll;
     final List<Print>? prints = widget.prints;
+    _jobs = widget.jobs ?? const <PrintJob>[];
     if (prints != null) {
       _prints = prints;
     } else {
@@ -158,6 +165,32 @@ class _KalloAppState extends State<KalloApp> {
     setState(
       () => _roll = _fixture ? interpolatedRoll(strip) : Roll.fromStrip(strip),
     );
+  }
+
+  /// Make a print: render the frame at the size a print is, then hang it.
+  ///
+  /// The job goes on the list before the render starts, because a print that
+  /// takes eight seconds is a print that is not finished, and the line is where
+  /// a darkroom says so.
+  Future<void> _print(Frame frame) async {
+    final Roll? roll = _roll;
+    final Directory? exports = _folder;
+    if (roll == null || exports == null) {
+      return;
+    }
+    final PrintJob job = PrintJob(frame: frame, exports: exports);
+    setState(() => _jobs = <PrintJob>[job, ..._jobs]);
+    try {
+      await printFrame(roll: roll, frame: frame, exports: exports);
+      await _reloadPrints();
+    } finally {
+      if (mounted) {
+        setState(() => _jobs = <PrintJob>[
+              for (final PrintJob other in _jobs)
+                if (!identical(other, job)) other,
+            ]);
+      }
+    }
   }
 
   void _developed(Roll roll) {
@@ -304,6 +337,8 @@ class _KalloAppState extends State<KalloApp> {
               exports: _folder,
               rollFolder: widget.rollFolder ?? RollStore.folder,
               onDeveloped: _developed,
+              jobs: _jobs,
+              onPrint: _print,
               onEnterExports:
                   widget.prints == null ? () => unawaited(_reloadPrints()) : null,
               export: _exportSetting,

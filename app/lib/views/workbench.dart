@@ -7,7 +7,6 @@ import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/clock.dart';
-import '../lab/print_out.dart';
 import '../lab/roll.dart';
 import '../lab/stock.dart';
 import '../widgets/button.dart';
@@ -30,6 +29,7 @@ class Workbench extends StatefulWidget {
     required this.selected,
     required this.onSelect,
     required this.exports,
+    required this.onPrint,
   });
 
   final Roll roll;
@@ -40,13 +40,17 @@ class Workbench extends StatefulWidget {
   /// bench can look but not print.
   final Directory? exports;
 
+  /// Make the print. It is a render and not a copy, so it takes time, and the
+  /// app owns the job: the line has to know about it.
+  final Future<void> Function(Frame frame) onPrint;
+
   @override
   State<Workbench> createState() => _WorkbenchState();
 }
 
 class _WorkbenchState extends State<Workbench> {
   bool _busy = false;
-  String? _printed;
+  bool _printed = false;
   String? _error;
 
   Frame get _frame => widget.roll.frames[widget.selected];
@@ -57,28 +61,24 @@ class _WorkbenchState extends State<Workbench> {
     // A print belongs to the frame it was made from. Changing the frame is
     // starting again, and the notice goes with it.
     if (old.selected != widget.selected) {
-      _printed = null;
+      _printed = false;
       _error = null;
     }
   }
 
   Future<void> _print() async {
-    final Directory? exports = widget.exports;
-    if (exports == null || _busy) {
+    if (widget.exports == null || _busy) {
       return;
     }
     setState(() {
       _busy = true;
       _error = null;
+      _printed = false;
     });
     try {
-      final File file = await printFrame(
-        roll: widget.roll,
-        frame: _frame,
-        exports: exports,
-      );
+      await widget.onPrint(_frame);
       if (mounted) {
-        setState(() => _printed = file.path.split(Platform.pathSeparator).last);
+        setState(() => _printed = true);
       }
     } on Object catch (error) {
       if (mounted) {
@@ -170,9 +170,9 @@ class _WorkbenchState extends State<Workbench> {
         style: KalloType.small.copyWith(color: colors.accent),
       );
     }
-    if (_printed != null) {
+    if (_printed) {
       return Text(
-        '${s.printedOut}   ·   ${s.onTheLine}   ·   $_printed',
+        '${s.printedOut}   ·   ${s.onTheLine}',
         style: KalloType.small.copyWith(color: colors.inkFaint),
       );
     }

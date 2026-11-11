@@ -6,18 +6,23 @@ import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/print.dart';
+import '../lab/print_out.dart';
 
-/// The line: prints drying.
+/// The line: prints drying, and the ones still wet.
 ///
 /// A string across the room and the work hanging from it, newest first, because
-/// the line is what happened and the gallery is what it looked like. Nothing
-/// here is a queue yet — a print is a file copied into the export folder, which
-/// takes no time — so what hangs is what has been done, not what is running.
+/// the line is what happened and the gallery is what it looked like. A print is
+/// a render and not a copy, so there is also a corner that says what is being
+/// made — the one thing on this string that does not exist yet.
 class Line extends StatelessWidget {
-  const Line({super.key, required this.prints});
+  const Line({super.key, required this.prints, required this.jobs});
 
   /// Everything exported, oldest first. The line reads it backwards.
   final List<Print> prints;
+
+  /// The prints being made. A print is a render, not a copy, so there is
+  /// always something on the line before there is anything on it.
+  final List<PrintJob> jobs;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +90,18 @@ class Line extends StatelessWidget {
                   ),
                 ),
               ),
+              if (jobs.isNotEmpty)
+                Positioned(
+                  top: KalloSpace.step4,
+                  right: 40,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: <Widget>[
+                      for (final PrintJob job in jobs)
+                        _Running(job: job, s: s, colors: colors),
+                    ],
+                  ),
+                ),
             ],
           );
         },
@@ -94,6 +111,48 @@ class Line extends StatelessWidget {
 
   /// Where the string is. One number, because the line is a line.
   static const double _string = 96;
+}
+
+/// A print being made, said quietly in the corner: the frame, its time, and the
+/// one thing a rendering cannot tell you, which is how long it will take.
+class _Running extends StatelessWidget {
+  const _Running({required this.job, required this.s, required this.colors});
+
+  final PrintJob job;
+  final KalloStrings s;
+  final KalloColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: KalloSpace.step2 - 2),
+      padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
+      height: 26,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(KalloRadius.control),
+        border: Border.all(color: colors.hairline),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.accent,
+            ),
+          ),
+          const SizedBox(width: KalloSpace.step2),
+          Text(
+            '${s.printing}   ${job.frame.number.toString().padLeft(2, '0')}   ·   ${job.frame.clock}',
+            style: KalloType.small.copyWith(color: colors.inkMuted),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// One print on the string: a peg, the paper, and the two facts worth reading.

@@ -51,6 +51,24 @@ void main() {
     expect(roll.photo, '${folder.path}/DSCF0989.JPG');
     expect(File(roll.photo!).existsSync(), isTrue);
 
+    final Directory exports = Directory('${folder.path}/exports');
+    final File print = await printFrame(
+      roll: roll,
+      frame: roll.frames.first,
+      exports: exports,
+      rollFolder: folder,
+    );
+    // A print is rendered again from the photograph, so it is the size of the
+    // photograph and not the size of the bench.
+    final ui.ImmutableBuffer buffer =
+        await ui.ImmutableBuffer.fromUint8List(print.readAsBytesSync());
+    final ui.ImageDescriptor descriptor =
+        await ui.ImageDescriptor.encoded(buffer);
+    // The photograph is 6240 wide; a print is capped at 6000, which is where
+    // the emulsion's own blur stops being smaller than a pixel.
+    expect(descriptor.width, 6000);
+    descriptor.dispose();
+
     final Roll? stored = await RollStore.load(folder: folder);
     expect(stored, isNotNull);
     expect(stored!.frames, hasLength(2));

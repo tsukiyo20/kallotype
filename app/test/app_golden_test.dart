@@ -9,6 +9,7 @@ import 'package:kallo_ui/design/chrome.dart';
 import 'package:kallo_ui/film/strip_data.dart';
 import 'package:kallo_ui/lab/fixture.dart';
 import 'package:kallo_ui/lab/print.dart';
+import 'package:kallo_ui/lab/print_out.dart';
 import 'package:kallo_ui/lab/roll.dart';
 import 'package:kallo_ui/main.dart';
 import 'package:kallo_ui/views/places.dart';
@@ -357,6 +358,9 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: hanging,
+      jobs: <PrintJob>[
+        PrintJob(frame: developed.frames[3], exports: _prints),
+      ],
       exportsFolder: _prints,
       rollFolder: _roll,
       roll: developed,
