@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'contact.dart';
 import 'image_file.dart';
 import 'model.dart';
 import 'roll.dart';
@@ -73,6 +74,43 @@ Future<Roll> develop({
     onProgress?.call(i + 1, times.length);
   }
 
+  // The proof is printed from the same photograph and the same times as the
+  // frames, but as one exposure of the ladder rather than a corrected print of
+  // each frame — which is the one thing the bench cannot draw.
+  ContactProof? contact;
+  // A proof from an earlier roll would be a proof of another photograph: the
+  // folder is reused, so the old sheet goes before the new one is asked for.
+  for (final File stale in <File>[
+    RollStore.contactFile(target),
+    RollStore.contactRecord(target),
+  ]) {
+    if (stale.existsSync()) {
+      stale.deleteSync();
+    }
+  }
+  if (stock.process != FilmProcess.reversal) {
+    try {
+      await model.contact(
+        photograph: source,
+        stock: stock.id,
+        paper: paper?.id ?? Stocks.paper,
+        times: times,
+        tempC: tempC,
+        sheet: RollStore.contactFile(target),
+        record: RollStore.contactRecord(target),
+        spectral: spectral,
+      );
+      contact = await ContactProof.read(
+        RollStore.contactFile(target),
+        RollStore.contactRecord(target),
+      );
+    } catch (error) {
+      // A roll without its proof is still a roll: the table falls back to the
+      // chart it can draw, and the developer can say why in the console.
+      Model.log('the contact proof could not be printed: $error');
+    }
+  }
+
   final Roll roll = Roll(
     stockId: stock.id,
     stockLabel: stock.label,
@@ -81,6 +119,7 @@ Future<Roll> develop({
     spectral: spectral,
     photo: source.path,
     frames: frames,
+    contact: contact,
   );
   await RollStore.save(roll, folder: target);
   return roll;

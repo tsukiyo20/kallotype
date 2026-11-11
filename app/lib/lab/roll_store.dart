@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'contact.dart';
 import 'image_file.dart';
 import 'roll.dart';
 import 'settings.dart';
@@ -28,6 +29,13 @@ abstract final class RollStore {
         '${folder.path}${Platform.pathSeparator}'
         '${number.toString().padLeft(2, '0')}.png',
       );
+
+  /// The proof the model printed: the sheet, and where its frames are.
+  static File contactFile(Directory folder) =>
+      File('${folder.path}${Platform.pathSeparator}contact.png');
+
+  static File contactRecord(Directory folder) =>
+      File('${folder.path}${Platform.pathSeparator}contact.json');
 
   static Future<void> save(Roll roll, {Directory? folder}) async {
     final Directory? target = folder ?? RollStore.folder;
@@ -95,6 +103,10 @@ abstract final class RollStore {
     if (frames.isEmpty) {
       return null;
     }
+    final ContactProof? contact = await ContactProof.read(
+      contactFile(target),
+      contactRecord(target),
+    );
     return Roll(
       stockId: json['stock'] as String? ?? '',
       stockLabel: json['label'] as String? ?? '',
@@ -103,6 +115,7 @@ abstract final class RollStore {
       spectral: json['spectral'] == true,
       photo: json['photo'] as String?,
       frames: frames,
+      contact: contact,
     );
   }
 }

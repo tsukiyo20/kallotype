@@ -4,22 +4,28 @@ import 'package:flutter/widgets.dart';
 
 import '../design/scope.dart';
 import '../design/tokens.dart';
+import '../lab/contact.dart';
 import '../lab/roll.dart';
 import '../widgets/patch_print.dart';
 
-/// The roll, unrolled: a contact proof on the table.
+/// The roll, unrolled: the contact proof on the table.
 ///
-/// A contact sheet is a print — the negative laid on paper, exposed, developed
-/// — so the roll is one sheet and not a grid of cards: the frames sit on the
-/// paper, their numbers and times are written on it, and the margin carries the
-/// paper it was made on. That margin is the difference between a preview of the
-/// prints and a proof of them. What the frames look like is the model's work;
-/// that they are on this sheet, on this paper, is the thing the table could not
-/// say before, and the reason a proof is worth making before a print.
+/// A contact proof is a print — the film laid on paper, exposed once, developed
+/// — so the table shows the model's print of it: one sheet, five strips, the
+/// clear rebate printed black and the edge codes printed light. The app adds
+/// only what a person adds to a print: a pencil box around the development
+/// being considered, and the paper's name in the sheet's own margin.
 ///
-/// The frames are a grid and not a strip. The roll is one frame at five times,
-/// and a grid is the only arrangement that says nothing about which development
-/// is the good one — a strip would impose an order the work does not have.
+/// The proof is not drawn here and cannot be. Its one exposure is the thing it
+/// has to say, and a frame at a time — each at its own exposure, which is what
+/// the drawings and the exports are — would say the opposite. The model prints
+/// it; the record beside the print says where the frames are, so the app scales
+/// a print instead of laying one out.
+///
+/// A roll the model drew has no negative, and a roll developed before the proof
+/// existed has no sheet: those fall back to the chart, frames on paper in a
+/// grid. A grid is the right arrangement for a chart — five rows of numbers say
+/// nothing about which one is the good one — and the wrong one for a proof.
 class ContactSheet extends StatelessWidget {
   const ContactSheet({
     super.key,
@@ -49,6 +55,16 @@ class ContactSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ContactProof? proof = roll.contact;
+    if (proof != null) {
+      return _ProofSheet(
+        proof: proof,
+        roll: roll,
+        selected: selected,
+        onSelect: onSelect,
+        paperName: paperName,
+      );
+    }
     final KalloColors colors = KalloScope.colorsOf(context);
     return ColoredBox(
       color: colors.content,
@@ -110,6 +126,135 @@ class ContactSheet extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+/// The model's proof, on the table.
+///
+/// A contact proof is one sheet of paper, exposed once under the whole ladder.
+/// The table shows the print itself — not a redrawing of it — so the only thing
+/// the app adds is what a person adds to a print: a pencil box around the
+/// development being considered, and the paper's name in its own margin.
+class _ProofSheet extends StatelessWidget {
+  const _ProofSheet({
+    required this.proof,
+    required this.roll,
+    required this.selected,
+    required this.onSelect,
+    this.paperName,
+  });
+
+  final ContactProof proof;
+  final Roll roll;
+  final int selected;
+  final ValueChanged<int> onSelect;
+
+  /// The paper the proof was made on, written in its margin.
+  final String? paperName;
+
+  /// What the page leaves around the sheet, which is what makes it a sheet.
+  static const double _page = 20;
+
+  /// The box's clearance and weight: a pencil does not touch the picture it is
+  /// choosing.
+  static const double _clearance = 4;
+  static const double _mark = 1.5;
+
+  @override
+  Widget build(BuildContext context) {
+    final KalloColors colors = KalloScope.colorsOf(context);
+    return ColoredBox(
+      color: colors.content,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double available =
+              math.max(240, constraints.maxWidth - _page * 2);
+          final double scale = available / proof.pixels.width;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(_page),
+            child: Center(
+              child: SizedBox(
+                width: proof.pixels.width * scale,
+                height: proof.pixels.height * scale,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (TapUpDetails details) => _choose(details, scale),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: <Widget>[
+                      Positioned.fill(
+                        child: RawImage(
+                          image: proof.image,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: colors.hairline),
+                            ),
+                          ),
+                        ),
+                      ),
+                      for (final ContactFrame frame in proof.frames)
+                        if (roll.frames.length > selected &&
+                            roll.frames[selected].number == frame.number)
+                          Positioned.fromRect(
+                            rect: Rect.fromLTWH(
+                              frame.rect.left * scale - _clearance,
+                              frame.rect.top * scale - _clearance,
+                              frame.rect.width * scale + _clearance * 2,
+                              frame.rect.height * scale + _clearance * 2,
+                            ),
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border:
+                                      Border.all(color: KalloInk.accent, width: _mark),
+                                ),
+                              ),
+                            ),
+                          ),
+                      if (paperName != null)
+                        Positioned(
+                          right: proof.paperMargin * scale * 0.5,
+                          bottom: proof.paperMargin * scale * 0.45,
+                          child: IgnorePointer(
+                            child: Text(
+                              paperName!,
+                              style: KalloType.caption.copyWith(
+                                color: KalloInk.faint,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// A tap picks the development it landed on, if it landed on one.
+  void _choose(TapUpDetails details, double scale) {
+    final Offset at = details.localPosition / scale;
+    for (final ContactFrame frame in proof.frames) {
+      if (!frame.rect.contains(at)) {
+        continue;
+      }
+      final int index =
+          roll.frames.indexWhere((Frame candidate) => candidate.number == frame.number);
+      if (index >= 0) {
+        onSelect(index);
+      }
+      return;
+    }
   }
 }
 

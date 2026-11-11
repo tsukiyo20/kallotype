@@ -5,6 +5,7 @@ import 'dart:ui' show Color;
 
 import '../film/strip_data.dart';
 import 'clock.dart';
+import 'contact.dart';
 import 'stock.dart';
 
 /// A roll: the thing you are carrying.
@@ -21,6 +22,7 @@ class Roll {
     this.paperId,
     this.paperLabel,
     this.spectral = false,
+    this.contact,
   });
 
   /// The stock's id, as the CLI and the `.kalofilm` files spell it.
@@ -59,6 +61,14 @@ class Roll {
 
   /// The paper's label, for a catalogue that cannot name it.
   final String? paperLabel;
+
+  /// The contact proof the model printed for this roll.
+  ///
+  /// A proof is of one film exposed once: it is what the roll carries, frame
+  /// against frame, and the only thing on the table that is a print rather than
+  /// a picture of one. Null for a roll the model drew — a chart has no negative
+  /// to lay on paper — and for a roll developed before the proof existed.
+  final ContactProof? contact;
 
   /// Whether this roll was exposed, printed and scanned through the spectrum.
   ///

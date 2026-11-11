@@ -48,6 +48,11 @@ void main() {
       expect(frame.toneCurve, isNull);
     }
     expect(roll.frames.first.clock, '3:00');
+    // The proof is the model's, printed from the same photograph and times: two
+    // strips on one sheet, and the record that says where they are.
+    expect(roll.contact, isNotNull);
+    expect(roll.contact!.frames, hasLength(2));
+    expect(roll.contact!.frames.last.minutes, 9);
     // The photograph is kept inside the roll, under its own name: the record
     // has to point at something that will still be there tomorrow.
     expect(roll.photo, '${folder.path}/DSCF0989.JPG');
@@ -76,6 +81,10 @@ void main() {
     expect(stored, isNotNull);
     expect(stored!.frames, hasLength(2));
     expect(stored.frames.last.clock, '9:00');
+    // The proof survives the round trip, because it is a file in the roll's
+    // folder and not a thing the app holds in memory.
+    expect(stored.contact, isNotNull);
+    expect(stored.contact!.frames, hasLength(2));
     expect(stored.frames.last.image!.width, benchWidth);
     expect(stored.stockId, Stocks.vision.id);
     // The paper is part of the roll's record: the shelf chose it before the

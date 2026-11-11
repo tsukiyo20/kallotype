@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kallo_ui/design/chrome.dart';
 import 'package:kallo_ui/film/strip_data.dart';
+import 'package:kallo_ui/lab/contact.dart';
 import 'package:kallo_ui/lab/fixture.dart';
 import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/print_out.dart';
@@ -257,16 +258,71 @@ void _window(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
+/// The proof, drawn rather than printed.
+///
+/// The real sheet is the model's; a widget test has no model to ask, so this
+/// draws the shape a proof has — five strips on paper, black rebate, one sheet
+/// — with the test card where the photograph would be. It is a layout fixture,
+/// like the card itself: it is not model output and does not stand in for it.
+Future<ContactProof> _proof(ui.Image card) async {
+  const double width = 1320;
+  const double height = 810;
+  const double margin = 60;
+  const double stripWidth = 380;
+  const double stripHeight = 330;
+  const double gap = 30;
+  const double inset = 14;
+  final ui.PictureRecorder recorder = ui.PictureRecorder();
+  final Canvas canvas = Canvas(recorder);
+  canvas.drawRect(
+    const Rect.fromLTWH(0, 0, width, height),
+    Paint()..color = const Color(0xFFF7F4EC),
+  );
+  final List<ContactFrame> frames = <ContactFrame>[];
+  for (int i = 0; i < 5; i++) {
+    final double left = margin + (i % 3) * (stripWidth + gap);
+    final double top = margin + (i ~/ 3) * (stripHeight + gap);
+    canvas.drawRect(
+      Rect.fromLTWH(left, top, stripWidth, stripHeight),
+      Paint()..color = const Color(0xFF0A0A0A),
+    );
+    final Rect frame = Rect.fromLTWH(
+      left + inset,
+      top + 48,
+      stripWidth - inset * 2,
+      (stripWidth - inset * 2) / 1.5,
+    );
+    frames.add(
+      ContactFrame(number: i + 1, minutes: 3.0 * (i + 1), rect: frame),
+    );
+    canvas.drawImageRect(
+      card,
+      Rect.fromLTWH(0, 0, card.width.toDouble(), card.height.toDouble()),
+      frame,
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+  }
+  final ui.Image sheet =
+      await recorder.endRecording().toImage(width.toInt(), height.toInt());
+  return ContactProof(
+    image: sheet,
+    pixels: const Size(width, height),
+    frames: frames,
+    paperMargin: margin,
+  );
+}
+
 /// A roll the way a developed one looks: five frames, one picture each, and no
 /// chart — the same shape the shelf produces, with the test card standing in
 /// for the photograph.
-Roll _developed(ui.Image image) => Roll(
+Roll _developed(ui.Image image, {ContactProof? contact}) => Roll(
       stockId: 'vision3_500t',
       stockLabel: 'KODAK VISION3 500T 5219/7219, ECN-2',
       photo: '/photographs/uji.jpg',
       // What the shelf develops a negative onto, so that the record on every
       // page is the roll's own and not the app's fallback.
       paperId: 'fuji_crystal_archive_pearl',
+      contact: contact,
       frames: <Frame>[
         for (int i = 0; i < 5; i++)
           Frame(
@@ -288,7 +344,10 @@ void main() {
   setUpAll(() async {
     await _loadFonts();
     hanging = await _fixturePrints();
-    developed = _developed(hanging.first.image);
+    developed = _developed(
+      hanging.first.image,
+      contact: await _proof(hanging.first.image),
+    );
   });
 
   testWidgets('the contact sheet', (WidgetTester tester) async {

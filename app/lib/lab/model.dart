@@ -129,6 +129,57 @@ class Model {
     }
   }
 
+  /// Print the contact proof: the ladder on one sheet, exposed once.
+  ///
+  /// It is a different command because it is a different print. `render` solves
+  /// an enlarger exposure for one frame and corrects it; `contact` exposes the
+  /// whole sheet at one exposure, which is the comparison a print cannot make.
+  Future<void> contact({
+    required File photograph,
+    required String stock,
+    required String paper,
+    required List<double> times,
+    required double tempC,
+    required File sheet,
+    required File record,
+    int dpi = 600,
+    bool spectral = false,
+  }) async {
+    if (!available) {
+      throw const ModelMissing();
+    }
+    final ProcessResult result = await Process.run(executable, <String>[
+      'contact',
+      photograph.path,
+      '-o',
+      sheet.path,
+      '--record',
+      record.path,
+      '--film',
+      stock,
+      '--paper',
+      paper,
+      '--dev',
+      times.map((double minutes) => minutes.toStringAsFixed(2)).join(','),
+      '--temp',
+      tempC.toStringAsFixed(1),
+      '--ev',
+      'auto',
+      '--grain',
+      '--halation',
+      '--couplers',
+      // The proof is a print, not a scan: the spectral stages that make sense
+      // here are the exposure and the print, and the model's `contact` command
+      // carries exactly those.
+      if (spectral) '--spectral',
+      '--dpi',
+      '$dpi',
+    ]);
+    if (result.exitCode != 0) {
+      throw ModelFailed(result.stderr.toString().trim());
+    }
+  }
+
   /// Ask the model what stock it carries.
   ///
   /// One call, one document: every film and paper with its provenance, so that
