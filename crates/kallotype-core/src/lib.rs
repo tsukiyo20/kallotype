@@ -26,6 +26,7 @@
 #![forbid(unsafe_code)]
 
 pub mod color;
+pub mod contact;
 pub mod couplers;
 pub mod curve;
 pub mod development;
@@ -49,6 +50,8 @@ pub mod scanner;
 pub mod spectral;
 
 pub use color::{linear_to_srgb, srgb_to_linear};
+pub use contact::print as contact_print;
+pub use contact::{Contact, ContactSpec, LADDER_MINUTES, SheetGeometry};
 pub use couplers::{Couplers, fit_inhibition};
 pub use curve::CharacteristicCurve;
 pub use development::DevelopmentParams;

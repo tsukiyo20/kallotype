@@ -58,6 +58,14 @@ closed form so that an 18 % grey card lands on the paper's target reflectance �
 what an operator does with a test strip — and a colour pack moves it the way the
 filter it names would.
 
+**A contact proof is the film, not a print of it.** `kalo contact` develops one
+frame at every time in the ladder, lays each development on paper as its own
+strip, and exposes the sheet **once** — the middle strip's balance, which is what
+a laboratory's average printer does. So the rebate prints black, the edge
+markings print light, and the strips can be compared, because none of them was
+corrected. A five-frame strip would be a lie: five development times are five
+pieces of film.
+
 **The film is spectral.** Each layer integrates the light against its own
 sensitivity, so a colour is what the emulsion sees rather than a channel value.
 The dyes are measured absorptions, and the print reads the paper's own dyes.
@@ -123,6 +131,7 @@ kalo stocks                       # every film and paper, with what is measured
 kalo stocks --json                # the same, as one document a program can read
 kalo curve --dev 9 --sweep        # what a development does, before any render
 kalo render photo.png -o out.png --film vision3_500t --ev auto
+kalo contact photo.png -o out/proof.png --dev 3,6,9,12,15
 ```
 
 A camera raw file is read as linear light directly, if the build has the

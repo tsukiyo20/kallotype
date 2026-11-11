@@ -84,6 +84,11 @@ pub enum CliError {
         /// What the table layer said.
         message: String,
     },
+    /// A contact proof could not be made, or its record written.
+    Contact {
+        /// What to tell the user.
+        message: String,
+    },
     /// The output could not be encoded.
     Write {
         /// The file that failed.
@@ -131,6 +136,7 @@ impl std::fmt::Display for CliError {
             Self::Lut { path, message } => {
                 write!(f, "lookup table {}: {message}", path.display())
             }
+            Self::Contact { message } => write!(f, "{message}"),
             Self::Write { path, source } => {
                 write!(f, "could not write {}: {source}", path.display())
             }
@@ -151,7 +157,8 @@ impl std::error::Error for CliError {
             | Self::Camera { .. }
             | Self::Gpu { .. }
             | Self::Lut { .. }
-            | Self::Stock { .. } => None,
+            | Self::Stock { .. }
+            | Self::Contact { .. } => None,
         }
     }
 }
