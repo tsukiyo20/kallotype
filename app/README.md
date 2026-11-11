@@ -47,8 +47,8 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and eleven goldens pin the language — one for
-each place, the states a place can be in, and the shelf at the window's narrowest:
+`fvm flutter analyze` is clean, and twelve goldens pin the language — one for
+each place, the states a place can be in, and the two shelves:
 
 | | | |
 |---|---|---|
@@ -58,8 +58,8 @@ each place, the states a place can be in, and the shelf at the window's narrowes
 | **the shelf**, where a photograph enters | **the workbench**, one frame enlarged | **the gallery**, lit |
 | ![the line](test/goldens/line.png) | ![the binder](test/goldens/binder.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
 | **the line**, what has been printed | **the binder**, where the roll came from | **the drawer**, where the folder is set |
-| ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the shelf in a narrow window](test/goldens/shelf-narrow.png) | |
-| **the gallery**, with the lamp off | **the shelf**, in the narrowest window | |
+| ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the shelf with a silver film taken](test/goldens/shelf-silver.png) | ![the shelf in a narrow window](test/goldens/shelf-narrow.png) |
+| **the gallery**, with the lamp off | **the shelf**, with a silver film taken | **the shelf**, in the narrowest window |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -186,11 +186,14 @@ translates.
   scanned: there is no print stage between the film and the picture. The bench
   says so where the button would be rather than making a print that is a second
   scan of the same slide.
-- **A paper for the film.** The shelf offers every paper to every film. A silver
-  paper printed with a colour negative renders — the model's paper is three
-  channels, and `polymax_ii_rc` says in its own note that the format cannot say
-  "one record"; whether the two are a good idea together is the printer's call,
-  not the shelf's.
+- **A silver paper for a colour film.** The shelf does not offer one. The model's
+  print is three channels and a silver paper has one record, so a colour film on
+  a silver paper would render colour — `polymax_ii_rc` says in its own note that
+  the format cannot express a paper that is one record. The shelf offers what the
+  model can actually do, and a paper that rendered colour would be a lie about
+  the paper.
+- **A paper for a film with no print stage.** A reversal has no paper to choose:
+  there is no print. The shelf says so where the papers would be.
 - **A folder chooser on a phone.** iOS gives an app one folder and shows it in
   Files; Android has a per-app directory the system owns. A picker there is a
   desktop idiom, and neither platform is wired yet: iOS reads its Documents

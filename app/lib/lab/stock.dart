@@ -11,6 +11,15 @@ import 'model.dart';
 /// something different for each.
 enum FilmProcess { negative, reversal, monochrome }
 
+/// What a paper carries.
+///
+/// A colour paper has three dye-forming layers and records colour; a silver
+/// paper has one silver image, no dyes, and records luminance. The model's
+/// print stage is three channels either way, so the difference is a fact the
+/// shelf needs: a colour film on a silver paper renders colour, and that is not
+/// what a silver paper does.
+enum PaperEmulsion { colour, silver }
+
 /// One field of a stock's record: what it is, and what the file admits to.
 ///
 /// The sentence is the file's, split at its own verdict. `claim` is
@@ -81,6 +90,7 @@ class Stock {
     required this.short,
     required this.label,
     this.process,
+    this.emulsion,
     this.note = '',
     this.referenceMinutes = 0,
     this.referenceTempC = 0,
@@ -99,6 +109,9 @@ class Stock {
   /// Which chemistry the film is. Null for a paper, which has no process of its
   /// own: it records what is on the negative.
   final FilmProcess? process;
+
+  /// What the paper carries. Null for a film, which is not a paper.
+  final PaperEmulsion? emulsion;
 
   /// What this stock is, and what it is not, in the model's own words.
   final String note;
@@ -125,6 +138,11 @@ class Stock {
         'negative' => FilmProcess.negative,
         'reversal' => FilmProcess.reversal,
         'monochrome' => FilmProcess.monochrome,
+        _ => null,
+      },
+      emulsion: switch (json['emulsion']) {
+        'colour' => PaperEmulsion.colour,
+        'silver' => PaperEmulsion.silver,
         _ => null,
       },
       note: json['note'] as String? ?? '',
@@ -187,6 +205,38 @@ class Catalogue {
     }
     return null;
   }
+
+  /// The papers that can print a film of this chemistry.
+  ///
+  /// A reversal has no print stage at all, so it has no papers. A silver paper
+  /// records luminance and the model's print is three channels, so a colour
+  /// film on one would render colour — the shelf does not offer what the model
+  /// cannot do. A silver film is offered both, its own paper first, because a
+  /// silver negative on a colour paper is a print a darkroom actually makes.
+  List<Stock> papersFor(FilmProcess? process) {
+    if (process == FilmProcess.reversal) {
+      return const <Stock>[];
+    }
+    if (process == FilmProcess.monochrome) {
+      // Its own paper first. A silver negative on a colour paper is a print a
+      // darkroom does make, so both are offered — the darkroom's own paper is
+      // simply the one in front.
+      return <Stock>[
+        for (final Stock paper in papers)
+          if (isSilver(paper)) paper,
+        for (final Stock paper in papers)
+          if (!isSilver(paper)) paper,
+      ];
+    }
+    return <Stock>[
+      for (final Stock paper in papers)
+        if (!isSilver(paper)) paper,
+    ];
+  }
+
+  /// Whether a paper is silver. A paper that did not say is a colour paper:
+  /// that is the model's default path, and what every paper before the key was.
+  static bool isSilver(Stock paper) => paper.emulsion == PaperEmulsion.silver;
 
   /// Ask the model for its catalogue.
   ///

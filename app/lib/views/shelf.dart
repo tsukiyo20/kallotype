@@ -72,16 +72,31 @@ class _ShelfState extends State<Shelf> {
         (catalogue.films.isEmpty ? Stocks.vision : catalogue.films.first);
   }
 
-  /// The paper the next roll is printed on.
+  /// The paper the next roll is printed on, or null when this film has no print
+  /// stage at all.
   ///
-  /// The last sheet taken, or the one the app prints on, or the first on the
-  /// shelf. Every frame the bench shows is a print, so this is asked before the
-  /// roll is developed rather than when one is printed.
+  /// The last sheet taken, or the one on the roll, or the app's own — but only
+  /// if the film can be printed on it: changing the film can leave a sheet in
+  /// hand that the new film cannot use.
   Stock? get _paper {
     final Catalogue catalogue = widget.catalogue;
-    return catalogue.paper(_paperTaken ?? Stocks.paper) ??
-        catalogue.paper(widget.roll?.paperId ?? Stocks.paper) ??
-        (catalogue.papers.isEmpty ? Stocks.crystal : catalogue.papers.first);
+    final List<Stock> offered = catalogue.papersFor(_stock?.process);
+    if (offered.isEmpty) {
+      // No papers at all: the app's own, unless there is no print stage.
+      return _stock?.process == FilmProcess.reversal ? null : Stocks.crystal;
+    }
+    // What was taken, then what the roll was printed on, then the app's own
+    // sheet for a colour film. A silver film has no such default: the shelf
+    // puts its own paper first, and that is the one it gets.
+    final String? preferred = _paperTaken ??
+        widget.roll?.paperId ??
+        (_stock?.process == FilmProcess.monochrome ? null : Stocks.paper);
+    for (final Stock paper in offered) {
+      if (paper.id == preferred) {
+        return paper;
+      }
+    }
+    return offered.first;
   }
 
   Future<void> _choose() async {
@@ -106,7 +121,7 @@ class _ShelfState extends State<Shelf> {
     final File? photo = _photo;
     final Stock? stock = _stock;
     final Stock? paper = _paper;
-    if (photo == null || stock == null || paper == null || _developing) {
+    if (photo == null || stock == null || _developing) {
       return;
     }
     final KalloStrings s = KalloStrings.of(context);
@@ -218,7 +233,13 @@ class _ShelfState extends State<Shelf> {
           const SizedBox(height: KalloSpace.step4),
           _label(s.paper, colors),
           const SizedBox(height: KalloSpace.step1),
-          _chosen(_paper, colors),
+          if (_paper != null)
+            _chosen(_paper, colors)
+          else
+            Text(
+              s.noPaper,
+              style: KalloType.small.copyWith(color: colors.inkFaint),
+            ),
           const SizedBox(height: KalloSpace.step4),
           _label(s.developments, colors),
           const SizedBox(height: KalloSpace.step1),
@@ -247,6 +268,8 @@ class _ShelfState extends State<Shelf> {
     final List<FilmProcess> processes = FilmProcess.values
         .where((FilmProcess process) => catalogue.of(process).isNotEmpty)
         .toList();
+    // What this film can be printed on: it narrows with the box in hand.
+    final List<Stock> offered = catalogue.papersFor(_stock?.process);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -261,7 +284,9 @@ class _ShelfState extends State<Shelf> {
             ),
             const Spacer(),
             Text(
-              s.shelfCount(catalogue.films.length, catalogue.papers.length),
+              // What is on the shelf now, not what the model has in the back:
+              // the papers narrow with the film in hand.
+              s.shelfCount(catalogue.films.length, offered.length),
               style: KalloType.small.copyWith(color: colors.inkFaint),
             ),
           ],
@@ -283,7 +308,30 @@ class _ShelfState extends State<Shelf> {
           const SizedBox(height: KalloSpace.step5),
           Container(height: 1, color: colors.hairline),
           const SizedBox(height: KalloSpace.step4),
-          _group(s.paper, catalogue.papers, colors),
+          if (offered.isEmpty)
+            // Nothing to print on: a reversal is its own picture, and a shelf
+            // of paper it cannot use would be a shelf of dead ends.
+            Text(
+              s.noPaper,
+              style: KalloType.small.copyWith(color: colors.inkFaint),
+            )
+          else
+            for (final PaperEmulsion emulsion in PaperEmulsion.values)
+              if (offered.any(
+                (Stock paper) =>
+                    (paper.emulsion ?? PaperEmulsion.colour) == emulsion,
+              ))
+                _group(
+                  emulsion == PaperEmulsion.silver
+                      ? s.silverPaper
+                      : s.colourPaper,
+                  <Stock>[
+                    for (final Stock paper in offered)
+                      if ((paper.emulsion ?? PaperEmulsion.colour) == emulsion)
+                        paper,
+                  ],
+                  colors,
+                ),
         ],
       ],
     );

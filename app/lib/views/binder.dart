@@ -44,7 +44,10 @@ class Binder extends StatelessWidget {
     final bool charted = roll.frames.every((Frame frame) => frame.isMeasured);
     final String? photo = roll.photo;
     final Stock? stock = catalogue.film(roll.stockId);
-    final Stock? paper = catalogue.paper(roll.paper);
+    // A reversal is its own picture: there is no print stage, so there is no
+    // paper to record and no paper record to show.
+    final bool prints = stock?.process != FilmProcess.reversal;
+    final Stock? paper = prints ? catalogue.paper(roll.paper) : null;
 
     return ColoredBox(
       color: colors.content,
@@ -77,7 +80,7 @@ class Binder extends StatelessWidget {
                         if (photo != null)
                           (s.photograph, photo.split(Platform.pathSeparator).last),
                         (s.film, stock?.short ?? roll.stockLabel),
-                        (s.paper, roll.paperName(catalogue)),
+                        if (prints) (s.paper, roll.paperName(catalogue)),
                       ],
                     ),
                   ],

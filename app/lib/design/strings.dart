@@ -136,6 +136,14 @@ class KalloStrings {
 
   String get printOut => zh ? '印' : 'Print';
 
+  String get colourPaper => zh ? '彩色相纸' : 'COLOUR PAPER';
+  String get silverPaper => zh ? '黑白相纸' : 'SILVER PAPER';
+
+  /// Said where the papers would be, for a film whose print stage is skipped.
+  String get noPaper => zh
+      ? '反转片自己就是照片 —— 没有印相，也就没有相纸可选。'
+      : 'A reversal is its own picture — no print, and so no paper to choose.';
+
   /// Said where the print button would be, for a film that has no print stage.
   String get noPrintStage => zh
       ? '反转片自己就是照片 —— 这一卷没有印相。'

@@ -40,7 +40,14 @@ const String _document = '''
     {
       "id": "fuji_crystal_archive_pearl",
       "short": "CRYSTAL ARCHIVE PEARL",
-      "label": "FUJICOLOR CRYSTAL ARCHIVE DIGITAL PEARL PAPER, RA-4"
+      "label": "FUJICOLOR CRYSTAL ARCHIVE DIGITAL PEARL PAPER, RA-4",
+      "emulsion": "colour"
+    },
+    {
+      "id": "polymax_ii_rc",
+      "short": "POLYMAX II RC",
+      "label": "KODAK PROFESSIONAL POLYMAX II RC Paper, F surface",
+      "emulsion": "silver"
     }
   ]
 }
@@ -79,6 +86,40 @@ void main() {
     expect(
       catalogue.paper('fuji_crystal_archive_pearl')?.short,
       'CRYSTAL ARCHIVE PEARL',
+    );
+  });
+
+  test('the shelf offers the papers a film can be printed on', () {
+    // A colour film is never offered a silver paper: the model's print is three
+    // channels, and a silver paper has one record, so the print would come out
+    // colour — a silver paper that does that is a lie about the paper.
+    expect(
+      catalogue.papersFor(FilmProcess.negative).map((Stock s) => s.id),
+      <String>['fuji_crystal_archive_pearl'],
+    );
+
+    // A silver film is offered both, its own paper first, because a silver
+    // negative on a colour paper is a print a darkroom does make.
+    expect(
+      catalogue.papersFor(FilmProcess.monochrome).map((Stock s) => s.id),
+      <String>['polymax_ii_rc', 'fuji_crystal_archive_pearl'],
+    );
+
+    // A reversal has no print stage at all.
+    expect(catalogue.papersFor(FilmProcess.reversal), isEmpty);
+  });
+
+  test('a paper without an emulsion is a colour paper', () {
+    // The key is optional in the format, and every paper before it was colour.
+    final Catalogue old = Catalogue.fromJson(
+      jsonDecode('''
+{"papers": [{"id": "endura_premier", "label": "KODAK ENDURA"}]}
+''') as Map<String, dynamic>,
+    );
+    expect(old.paper('endura_premier')!.emulsion, isNull);
+    expect(
+      old.papersFor(FilmProcess.negative).single.id,
+      'endura_premier',
     );
   });
 

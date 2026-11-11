@@ -30,7 +30,7 @@ Future<Roll> develop({
   required Model model,
   required File photograph,
   required Stock stock,
-  required Stock paper,
+  Stock? paper,
   List<double> times = ladder,
   double tempC = 20,
   Directory? folder,
@@ -52,8 +52,9 @@ Future<Roll> develop({
       photograph: source,
       stock: stock.id,
       // The paper is part of the roll: every frame the bench shows is already
-      // printed, and a print is balanced against the paper's own curve.
-      paper: paper.id,
+      // printed, and a print is balanced against the paper's own curve. A
+      // reversal skips the print stage, and the model ignores this argument.
+      paper: paper?.id ?? Stocks.paper,
       minutes: minutes,
       tempC: tempC,
       width: benchWidth,
@@ -74,8 +75,8 @@ Future<Roll> develop({
     number: 1,
     stockId: stock.id,
     stockLabel: stock.label,
-    paperId: paper.id,
-    paperLabel: paper.label,
+    paperId: paper?.id,
+    paperLabel: paper?.label,
     photo: source.path,
     frames: frames,
   );

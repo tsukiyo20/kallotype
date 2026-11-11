@@ -194,6 +194,7 @@ const Catalogue _catalogue = Catalogue(
       id: 'fuji_crystal_archive_pearl',
       short: 'CRYSTAL ARCHIVE PEARL',
       label: 'FUJICOLOR CRYSTAL ARCHIVE DIGITAL PEARL PAPER, RA-4',
+      emulsion: PaperEmulsion.colour,
       provenance: Provenance(
         publication: 'AF3-0220E',
         page: '4',
@@ -219,16 +220,19 @@ const Catalogue _catalogue = Catalogue(
       id: 'endura_premier',
       short: 'ENDURA PREMIER',
       label: 'KODAK PROFESSIONAL ENDURA Premier Paper, RA-4',
+      emulsion: PaperEmulsion.colour,
     ),
     Stock(
       id: 'portra_endura',
       short: 'PORTRA ENDURA',
       label: 'KODAK PROFESSIONAL PORTRA ENDURA, RA-4',
+      emulsion: PaperEmulsion.colour,
     ),
     Stock(
       id: 'polymax_ii_rc',
       short: 'POLYMAX II RC',
       label: 'KODAK PROFESSIONAL POLYMAX II RC Paper, F surface',
+      emulsion: PaperEmulsion.silver,
     ),
   ],
 );
@@ -476,6 +480,35 @@ void main() {
     await expectLater(
       find.byType(KalloApp),
       matchesGoldenFile('goldens/shelf.png'),
+    );
+  });
+
+  testWidgets('the shelf, with a silver film taken', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: Roll.fromStrip(_strip()),
+      appearance: Brightness.light,
+      initialPlace: Place.shelf,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    // Taking a silver film changes what the paper shelf offers: both families,
+    // and the app's sheet gives way to the paper the film is actually made for.
+    await tester.tap(find.text('DELTA 400'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SILVER PAPER'), findsOneWidget);
+    expect(find.text('COLOUR PAPER'), findsOneWidget);
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/shelf-silver.png'),
     );
   });
 
