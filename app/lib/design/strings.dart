@@ -215,6 +215,16 @@ class KalloStrings {
   /// The switch on the wall. Not the appearance's light: the room's.
   String get roomLight => zh ? '灯' : 'Light';
 
+  /// Back to the wall, from a print looked at closely.
+  String get back => zh ? '返回墙上' : 'Back to the wall';
+
+  /// What a person is looking at: the file's pixels, and how much of them.
+  String magnification(String size, String percent) =>
+      zh ? '$size 像素   ·   $percent' : '$size pixels   ·   $percent';
+
+  /// The one scale worth naming: one image pixel on one device pixel.
+  String get actualPixels => zh ? '1:1' : '1:1';
+
   // -- the drawer -----------------------------------------------------------
 
   String get drawer => zh ? '抽屉' : 'DRAWER';

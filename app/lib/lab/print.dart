@@ -2,8 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:ui' show Size;
+
+import 'package:flutter/foundation.dart';
 
 import 'clock.dart';
+import 'model.dart';
 
 /// A print: a photograph, developed and printed, on paper.
 ///
@@ -19,6 +23,8 @@ class Print {
   const Print({
     required this.image,
     required this.name,
+    this.path,
+    this.pixels,
     this.frame,
     this.film,
     this.paper,
@@ -27,7 +33,16 @@ class Print {
     this.printed,
   });
 
+  /// The wall's copy: as wide as the wall, not as wide as the file.
   final ui.Image image;
+
+  /// The file this print came from. Null for a print a test built, which is the
+  /// one case where a print has pixels and no file behind it.
+  final String? path;
+
+  /// The file's own pixel size, which is what the loupe magnifies and what the
+  /// readout says. Null when there is no file.
+  final Size? pixels;
 
   /// The image's file name. A print with no record still has a name, and a
   /// name is what a picture remains when everything else about it was lost.
@@ -81,6 +96,31 @@ class Print {
   /// it costs a hundred megabytes that nothing will ever free.
   void dispose() => image.dispose();
 
+  /// The print at its own size, for the loupe.
+  ///
+  /// The wall holds every print at 1600 points because the wall is 660 wide and
+  /// holding the difference would cost a hundred megabytes to throw away. The
+  /// loupe is the one place the difference is the point: it shows the file's
+  /// own pixels, so what you see at 1:1 is what the model wrote.
+  ///
+  /// Null when there is no file behind this print, or when the file cannot be
+  /// decoded any more — the wall's copy is always there to fall back to.
+  Future<ui.Image?> full() async {
+    final String? path = this.path;
+    if (path == null) {
+      return null;
+    }
+    try {
+      final Uint8List bytes = await File(path).readAsBytes();
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      return frame.image;
+    } on Object catch (error) {
+      Model.log('no larger print for $path: $error');
+      return null;
+    }
+  }
+
   /// Read one exported print.
   ///
   /// The image is decoded at the display's width rather than the file's: an
@@ -89,7 +129,8 @@ class Print {
   /// header is read first so that a small export is never upscaled.
   static Future<Print?> read(File image, {int width = 1600}) async {
     final Uint8List bytes = await image.readAsBytes();
-    final int source = _pngWidth(bytes);
+    final Size? pixels = _pngSize(bytes);
+    final int source = pixels?.width.toInt() ?? 0;
     final ui.Codec codec = await ui.instantiateImageCodec(
       bytes,
       targetWidth: source > width ? width : null,
@@ -98,6 +139,8 @@ class Print {
     return Print(
       image: frame.image,
       name: _name(image.path),
+      path: image.path,
+      pixels: pixels,
       frame: (_record(image, 'frame') as num?)?.toInt(),
       printed: image.statSync().modified,
       film: _record(image, 'film') as String?,
@@ -107,11 +150,18 @@ class Print {
     );
   }
 
-  /// The width a PNG says it is. Position 16 is where the first chunk's data
+  /// The size a PNG says it is. Position 16 is where the first chunk's data
   /// begins, and it is the only part of a decode that costs nothing.
-  static int _pngWidth(Uint8List bytes) => bytes.length < 24
-      ? 0
-      : (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+  static Size? _pngSize(Uint8List bytes) {
+    if (bytes.length < 24) {
+      return null;
+    }
+    final int width =
+        (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+    final int height =
+        (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+    return width <= 0 || height <= 0 ? null : Size(width.toDouble(), height.toDouble());
+  }
 
   /// The record beside the image, if there is one. A file that is not JSON is
   /// a missing record, not a crash: the folder belongs to a person.

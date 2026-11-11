@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,6 +86,9 @@ Future<List<Print>> _fixturePrints() async {
       Print(
         image: image,
         name: 'test-card',
+        // A print is 6000 wide; the test card stands in for the picture, and
+        // the record's dimensions are what the loupe's readout says.
+        pixels: const Size(6000, 4000),
         frame: 3,
         film: 'VISION3 500T',
         paper: 'CRYSTAL ARCHIVE PEARL',
@@ -413,6 +417,113 @@ void main() {
     // one. This is the state the app is in before anything has been exported.
     expect(find.byType(RawImage), findsNothing);
     expect(find.text('Light'), findsOneWidget);
+  });
+
+  testWidgets('the print, looked at closely', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      roll: Roll.fromStrip(_strip()),
+      prints: hanging,
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      appearance: Brightness.dark,
+      initialPlace: Place.gallery,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    // Walking up to a print: the wall goes away and the sheet stays, with the
+    // file's own size under it and the scale the eye is at.
+    await tester.tap(find.byType(RawImage).first);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('6000 × 4000'), findsOneWidget);
+    expect(find.byKey(const Key('back')), findsOneWidget);
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/gallery-loupe.png'),
+    );
+
+    // And back out to the wall, where the prints are.
+    await tester.tap(find.byKey(const Key('back')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('6000 × 4000'), findsNothing);
+  });
+
+  testWidgets('the loupe goes to 1:1, and escape goes back', (
+    WidgetTester tester,
+  ) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      roll: Roll.fromStrip(_strip()),
+      prints: hanging,
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      appearance: Brightness.light,
+      initialPlace: Place.gallery,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(RawImage).first);
+    await tester.pumpAndSettle();
+
+    // The print is on the paper at the scale the room is at, which is a
+    // fraction of the file: the readout says how much.
+    expect(find.textContaining('6000 × 4000 pixels'), findsOneWidget);
+    expect(find.textContaining('1:1'), findsNothing);
+
+    // Twice on the paper: the file's own pixels, one image pixel to one device
+    // pixel, and the loupe stops there.
+    await tester.tap(find.byType(RawImage).first);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byType(RawImage).first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('1:1'), findsOneWidget);
+
+    // Escape puts the print back on the wall.
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('6000 × 4000 pixels'), findsNothing);
+    expect(find.byKey(const Key('light')), findsOneWidget);
+  });
+
+  testWidgets('the wheel magnifies the print', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      roll: Roll.fromStrip(_strip()),
+      prints: hanging,
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      appearance: Brightness.dark,
+      initialPlace: Place.gallery,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(RawImage).first);
+    await tester.pumpAndSettle();
+
+    double readout() {
+      final Text text = tester.widget<Text>(find.textContaining('pixels'));
+      final Match match =
+          RegExp(r'([0-9.]+)\s*%').firstMatch(text.data!)!;
+      return double.parse(match.group(1)!);
+    }
+
+    final double before = readout();
+    final TestPointer pointer = TestPointer(1, PointerDeviceKind.mouse);
+    final Offset at = tester.getCenter(find.byType(RawImage).first);
+    await tester.sendEventToBinding(pointer.hover(at));
+    await tester.sendEventToBinding(pointer.scroll(const Offset(0, -240)));
+    await tester.pumpAndSettle();
+
+    expect(readout(), greaterThan(before));
   });
 
   testWidgets('the drawer, on prints', (WidgetTester tester) async {

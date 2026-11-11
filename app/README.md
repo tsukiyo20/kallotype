@@ -47,7 +47,7 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and twelve goldens pin the language — one for
+`fvm flutter analyze` is clean, and thirteen goldens pin the language — one for
 each place, the states a place can be in, and the two shelves:
 
 | | | |
@@ -60,6 +60,8 @@ each place, the states a place can be in, and the two shelves:
 | **the line**, what has been printed | **the binder**, where the roll came from | **the drawer**, where the folder is set |
 | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the shelf with a silver film taken](test/goldens/shelf-silver.png) | ![the shelf in a narrow window](test/goldens/shelf-narrow.png) |
 | **the gallery**, with the lamp off | **the shelf**, with a silver film taken | **the shelf**, in the narrowest window |
+| ![a print, looked at closely](test/goldens/gallery-loupe.png) | | |
+| **a print**, walked up to | | |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -91,6 +93,7 @@ handle, a field, and — where the place has one — a record on the right.
 | **The model is a process, for now** | `kalo` is asked for each frame — grain, halation and the DIR couplers, which are physics and cost nothing — and writes a PNG into the app's own folder; the app decodes them at the bench's width. It is asked once more, at the start, for its catalogue. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
 | **Six places, all six built** | Shelf, Table, Workbench, Binder, Line, Gallery. The order is the work's: what you have, what you compare, what you judge one frame on, what you keep, what you print, and where it hangs. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
+| **A print can be walked up to** | Clicking a print opens it at the file's own size. The sheet keeps its size and shape — this is a loupe on paper, not a picture viewer — and the image is magnified *inside* it, clipped by its own margin, up to 1:1, one image pixel per device pixel, which is as far as the file goes. The label under it says the file's pixels and the scale; escape puts it back on the wall. The lamp is still the room's, so the switch comes with you. |
 | **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
 | **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery hangs whatever is in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting, and on a phone it is the one place the system lets an app write. |
 | **The chrome is light, the print is paper** | The window is a tool, so its planes are one neutral ramp in both appearances. The only warm and saturated surfaces in the product are the paper a print sits on and the gallery wall behind it. |

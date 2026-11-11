@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kallo_ui/lab/develop.dart';
 import 'package:kallo_ui/lab/model.dart';
+import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/print_out.dart';
 import 'package:kallo_ui/lab/roll.dart';
 import 'package:kallo_ui/lab/roll_store.dart';
@@ -126,6 +127,18 @@ void main() {
     ) as Map<String, dynamic>;
     expect(image.existsSync(), isTrue);
     expect(record['paper'], paper.short);
+
+    // The wall holds the print small and the loupe holds it whole: the file is
+    // 6000 wide, the wall's copy is 1600, and walking up decodes the rest.
+    final Print? shown = await Print.read(image);
+    expect(shown, isNotNull);
+    expect(shown!.image.width, 1600);
+    expect(shown.pixels, const Size(6000, 4000));
+    final ui.Image? everyPixel = await shown.full();
+    expect(everyPixel, isNotNull);
+    expect(everyPixel!.width, 6000);
+    everyPixel.dispose();
+    shown.dispose();
     // And the roll printed on the paper is still the roll's film.
     expect(record['film'], 'VISION3 500T');
   }, skip: ready ? false : 'no model or no photograph on this machine',

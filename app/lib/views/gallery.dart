@@ -1,5 +1,8 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../design/scope.dart';
@@ -25,7 +28,7 @@ import '../lab/print.dart';
 /// the only arrangement that says nothing about the pictures: five developments
 /// of one negative are five equal things, and the wall should not pretend to
 /// prefer one.
-class Gallery extends StatelessWidget {
+class Gallery extends StatefulWidget {
   const Gallery({super.key, required this.prints, required this.onLight});
 
   /// Everything exported, oldest first.
@@ -54,12 +57,43 @@ class Gallery extends StatelessWidget {
   static const double _largest = 660;
 
   @override
+  State<Gallery> createState() => _GalleryState();
+}
+
+class _GalleryState extends State<Gallery> {
+  /// The print being looked at closely, if one is.
+  Print? _near;
+
+  @override
+  void didUpdateWidget(Gallery old) {
+    super.didUpdateWidget(old);
+    // Prints are re-read when the folder changes, and the one in hand is about
+    // to be disposed: a loupe cannot look at a texture that no longer exists.
+    final Print? near = _near;
+    if (near != null && !widget.prints.any((Print p) => identical(p, near))) {
+      _near = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final KalloStrings s = KalloStrings.of(context);
     final double light = KalloScope.lightOf(context);
+    final Print? near = _near;
     // The paper holds its light better than the room does, for the same reason
     // everything else does not: the eye is the instrument here, not the lamp.
-    final double printed = _darkAdaptation + (1 - _darkAdaptation) * light;
+    final double printed = Gallery._darkAdaptation +
+        (1 - Gallery._darkAdaptation) * light;
+    final List<Print> prints = widget.prints;
+
+    if (near != null) {
+      return _Loupe(
+        print: near,
+        light: light,
+        onLight: widget.onLight,
+        onClose: () => setState(() => _near = null),
+      );
+    }
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints room) {
@@ -79,7 +113,7 @@ class Gallery extends StatelessWidget {
             (available - gap * (columns - 1)) / columns,
             (room.maxHeight - floor - 40) / 0.74,
           ),
-          _largest,
+          Gallery._largest,
         );
         final int rows = (prints.length / columns).ceil();
         final double height = paper * 0.74 + 30;
@@ -96,8 +130,8 @@ class Gallery extends StatelessWidget {
                   center: const Alignment(0, -0.10),
                   radius: 0.85,
                   colors: <Color>[
-                    KalloColors.under(_wallTop, light),
-                    KalloColors.under(_wallBase, light),
+                    KalloColors.under(Gallery._wallTop, light),
+                    KalloColors.under(Gallery._wallBase, light),
                   ],
                 ),
               ),
@@ -116,6 +150,7 @@ class Gallery extends StatelessWidget {
                         width: paper,
                         light: light,
                         printed: printed,
+                        onTap: () => setState(() => _near = print),
                       ),
                   ],
                 ),
@@ -132,8 +167,8 @@ class Gallery extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: <Color>[
-                        KalloColors.under(_wallBase, light).withValues(alpha: 0),
-                        KalloColors.under(_wallBase, light),
+                        KalloColors.under(Gallery._wallBase, light).withValues(alpha: 0),
+                        KalloColors.under(Gallery._wallBase, light),
                       ],
                     ),
                   ),
@@ -148,13 +183,397 @@ class Gallery extends StatelessWidget {
                 child: _LightSwitch(
                   label: s.roomLight,
                   on: light > 0.5,
-                  onTap: onLight,
+                  onTap: widget.onLight,
                 ),
               ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+/// The print, looked at closely.
+///
+/// The wall hangs a print 660 points wide because that is what a wall is; the
+/// file the model wrote is 6000, and the difference is the whole point of
+/// walking up to it. The paper does not grow — this is not a picture viewer, it
+/// is a loupe on a sheet — so the sheet keeps its size and shape, and the image
+/// is magnified *inside* it, clipped by its own margin. What you never see is a
+/// photograph floating on a dark background: you see paper, and a corner of it
+/// enlarged.
+///
+/// The scale readout is absolute: it says how big one of the file's pixels is on
+/// this display, so `1:1` means one image pixel per device pixel and is as far
+/// as the loupe goes. Past that there is nothing left in the file to show.
+class _Loupe extends StatefulWidget {
+  const _Loupe({
+    required this.print,
+    required this.light,
+    required this.onLight,
+    required this.onClose,
+  });
+
+  final Print print;
+
+  /// The room's light: the sheet and its label are under it.
+  final double light;
+
+  /// The lamp is the room's, and this is still the room: a person who walked up
+  /// to a print in the dark has to be able to turn the light on.
+  final VoidCallback onLight;
+
+  final VoidCallback onClose;
+
+  @override
+  State<_Loupe> createState() => _LoupeState();
+}
+
+class _LoupeState extends State<_Loupe> {
+  /// The file's own pixels, once they have been decoded. The wall's copy stands
+  /// in until then, which is what the eye was already looking at.
+  ui.Image? _full;
+
+  /// Magnification over the fit: 1 is the whole print, and the ceiling is the
+  /// scale at which one image pixel is one device pixel.
+  double _mag = 1;
+
+  /// Where the print is held, in points, from the centre of its area.
+  Offset _pan = Offset.zero;
+
+  /// The loupe takes the keyboard while it is open, so that escape closes it
+  /// rather than anything behind it. The room already has a focus node and
+  /// autofocus on this one would not take it away from a node that has it.
+  final FocusNode _keys = FocusNode(debugLabel: 'loupe');
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _keys.requestFocus();
+      }
+    });
+  }
+
+  Future<void> _load() async {
+    final ui.Image? full = await widget.print.full();
+    if (!mounted) {
+      full?.dispose();
+      return;
+    }
+    setState(() => _full = full);
+  }
+
+  @override
+  void dispose() {
+    _full?.dispose();
+    _keys.dispose();
+    super.dispose();
+  }
+
+  /// The image and the size it says it is: the file's, or the wall's copy when
+  /// the print had no file behind it.
+  ({ui.Image image, Size pixels}) get _pixels {
+    final ui.Image? full = _full;
+    if (full != null) {
+      final Size? declared = widget.print.pixels;
+      return (
+        image: full,
+        pixels: declared ??
+            Size(full.width.toDouble(), full.height.toDouble()),
+      );
+    }
+    final ui.Image wall = widget.print.image;
+    return (
+      image: wall,
+      pixels: widget.print.pixels ??
+          Size(wall.width.toDouble(), wall.height.toDouble()),
+    );
+  }
+
+  double get _aspect {
+    final Size pixels = _pixels.pixels;
+    return pixels.width / pixels.height;
+  }
+
+  /// One image pixel per device pixel, as a magnification over the fit.
+  double _ceiling(double fit) => fit >= 1 ? 1 : 1 / fit;
+
+  @override
+  Widget build(BuildContext context) {
+    final KalloStrings s = KalloStrings.of(context);
+    final double dpr = MediaQuery.devicePixelRatioOf(context);
+    final double light = widget.light;
+
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
+      },
+      child: Focus(
+        focusNode: _keys,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: const Alignment(0, -0.10),
+                  radius: 0.85,
+                  colors: <Color>[
+                    KalloColors.under(Gallery._wallTop, light),
+                    KalloColors.under(Gallery._wallBase, light),
+                  ],
+                ),
+              ),
+            ),
+            LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints room) {
+                final Size pixels = _pixels.pixels;
+                final double aspect = _aspect;
+                // A fine print's margin, as on the wall: 3 % on three sides
+                // and a little more at the bottom.
+                const double border = 0.030;
+                final double perWidth =
+                    border + (1 - border * 2) / aspect + border * 2.2;
+                final double freeWidth =
+                    math.max(240, room.maxWidth - 80);
+                final double freeHeight =
+                    math.max(200, room.maxHeight - 132);
+                final double paper = math.min(
+                  freeWidth,
+                  freeHeight / perWidth,
+                );
+                final double edge = paper * border;
+                final double area =
+                    paper - edge * 2;
+                final double fit = math.min(1, dpr * area / pixels.width);
+                final double ceiling = _ceiling(fit);
+                final double mag = _mag.clamp(1.0, ceiling);
+                final double percent = fit * mag * 100;
+                final Size held = Size(area * mag, area * mag / aspect);
+                final Offset pan = _clamp(
+                  _pan,
+                  Size(
+                    math.max(0, held.width - area) / 2,
+                    math.max(0, held.height - area / aspect) / 2,
+                  ),
+                );
+
+                return Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    Align(
+                      alignment: const Alignment(0, -0.12),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: KalloColors.under(Gallery._paper, light),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            edge,
+                            edge,
+                            edge,
+                            edge * 2.2,
+                          ),
+                          child: SizedBox(
+                            width: area,
+                            height: area / aspect,
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.zoomIn,
+                              child: Listener(
+                                onPointerSignal: (PointerSignalEvent event) {
+                                if (event is PointerScrollEvent) {
+                                  _zoom(event, area, aspect, ceiling);
+                                }
+                              },
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onPanUpdate: (DragUpdateDetails d) => setState(
+                                  () => _pan = _clamp(
+                                    _pan + d.delta,
+                                    Size(
+                                      math.max(0, held.width - area) / 2,
+                                      math.max(0, held.height - area / aspect) /
+                                          2,
+                                    ),
+                                  ),
+                                ),
+                                onDoubleTap: () => setState(() {
+                                  _mag = _mag >= ceiling - 0.001 ? 1 : ceiling;
+                                  _pan = Offset.zero;
+                                }),
+                                  child: ClipRect(
+                                    child: Transform(
+                                      alignment: Alignment.center,
+                                      transform: Matrix4.identity()
+                                        ..translateByDouble(
+                                          pan.dx,
+                                          pan.dy,
+                                          0,
+                                          1,
+                                        )
+                                        ..scaleByDouble(mag, mag, 1, 1),
+                                      child: RawImage(
+                                        image: _pixels.image,
+                                        fit: BoxFit.fill,
+                                        filterQuality: FilterQuality.high,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 40,
+                      right: 40,
+                      bottom: 28,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: <Widget>[
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text.rich(
+                                  TextSpan(
+                                    children: _wallLabel(widget.print, light),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: KalloType.caption.copyWith(
+                                    letterSpacing: 0.5,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  s.magnification(
+                                    '${pixels.width.round()} × '
+                                    '${pixels.height.round()}',
+                                    percent >= 99.5
+                                        ? s.actualPixels
+                                        : '${percent.round()} %',
+                                  ),
+                                  style: KalloType.data.copyWith(
+                                    color: KalloColors.under(
+                                      Gallery._label,
+                                      light,
+                                    ).withValues(alpha: 0.60),
+                                    fontFeatures: const <FontFeature>[
+                                      FontFeature('tnum'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: KalloSpace.step4),
+                          _LightSwitch(
+                            label: s.roomLight,
+                            on: widget.light > 0.5,
+                            onTap: widget.onLight,
+                          ),
+                          const SizedBox(width: KalloSpace.step3),
+                          _Pill(label: s.back, onTap: widget.onClose),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Zoom about the pointer, so that what is under it stays under it.
+  void _zoom(
+    PointerScrollEvent event,
+    double area,
+    double aspect,
+    double ceiling,
+  ) {
+    final double fit = _mag;
+    final double next =
+        (fit * math.exp(-event.scrollDelta.dy / 420)).clamp(1.0, ceiling);
+    if ((next - fit).abs() < 0.001) {
+      return;
+    }
+    final Offset centre = Offset(area / 2, area / aspect / 2);
+    final Offset held = event.localPosition - centre;
+    setState(() {
+      _pan = _clamp(
+        _pan * (next / fit) + held * (1 - next / fit),
+        Size(
+          math.max(0, area * next - area) / 2,
+          math.max(0, area * next / aspect - area / aspect) / 2,
+        ),
+      );
+      _mag = next;
+    });
+  }
+
+  static Offset _clamp(Offset value, Size limit) => Offset(
+        value.dx.clamp(-limit.width, limit.width),
+        value.dy.clamp(-limit.height, limit.height),
+      );
+}
+
+/// A control on the wall, lit by itself: a pill you can still find in the dark.
+class _Pill extends StatefulWidget {
+  const _Pill({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_Pill> createState() => _PillState();
+}
+
+class _PillState extends State<_Pill> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    const Color slate = Color(0xFFF4EFE6);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        key: const Key('back'),
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: slate.withValues(alpha: _hover ? 0.10 : 0.04),
+            borderRadius: BorderRadius.circular(KalloRadius.control),
+            border: Border.all(
+              color: slate.withValues(alpha: _hover ? 0.28 : 0.16),
+            ),
+          ),
+          child: Text(
+            widget.label,
+            style: KalloType.small.copyWith(
+              color: slate.withValues(alpha: _hover ? 0.92 : 0.70),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -166,6 +585,7 @@ class _Hung extends StatelessWidget {
     required this.width,
     required this.light,
     required this.printed,
+    required this.onTap,
   });
 
   final Print print;
@@ -177,6 +597,9 @@ class _Hung extends StatelessWidget {
   /// The light on the print, which holds a little longer.
   final double printed;
 
+  /// Walking up to the print: the loupe.
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -185,7 +608,14 @@ class _Hung extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _Sheet(print: print, width: width, light: printed),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: _Sheet(print: print, width: width, light: printed),
+            ),
+          ),
           const SizedBox(height: KalloSpace.step3 - 2),
           Text.rich(
             TextSpan(children: _wallLabel(print, light)),
