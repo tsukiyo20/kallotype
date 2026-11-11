@@ -9,6 +9,7 @@ import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/print.dart';
+import '../widgets/wall.dart';
 
 /// The gallery: the last place. One wall, every print, one light.
 ///
@@ -37,25 +38,6 @@ class Gallery extends StatefulWidget {
   /// The switch belongs to the room, not to the wall.
   final VoidCallback onLight;
 
-  /// The wall: warm, and never neutral, so that the paper reads as paper.
-  static const Color _wallTop = Color(0xFF262119);
-  static const Color _wallBase = Color(0xFF090807);
-
-  /// The paper the print is on. Warmer and duller than the screen's white,
-  /// because it is the one surface here that is a material.
-  static const Color _paper = Color(0xFFFFFBF2);
-
-  /// The graphite of a wall label.
-  static const Color _label = Color(0xFF9A9387);
-
-  /// In a dark room an eye keeps about this much. Not a fade to nothing: a print
-  /// you can still find, and only just.
-  static const double _darkAdaptation = 0.10;
-
-  /// The largest a print gets on this wall. One print alone should not become a
-  /// billboard, and five in a row should not become stamps.
-  static const double _largest = 660;
-
   @override
   State<Gallery> createState() => _GalleryState();
 }
@@ -82,8 +64,8 @@ class _GalleryState extends State<Gallery> {
     final Print? near = _near;
     // The paper holds its light better than the room does, for the same reason
     // everything else does not: the eye is the instrument here, not the lamp.
-    final double printed = Gallery._darkAdaptation +
-        (1 - Gallery._darkAdaptation) * light;
+    final double printed = KalloWall.darkAdaptation +
+        (1 - KalloWall.darkAdaptation) * light;
     final List<Print> prints = widget.prints;
 
     if (near != null) {
@@ -113,7 +95,7 @@ class _GalleryState extends State<Gallery> {
             (available - gap * (columns - 1)) / columns,
             (room.maxHeight - floor - 40) / 0.74,
           ),
-          Gallery._largest,
+          KalloWall.largest,
         );
         final int rows = (prints.length / columns).ceil();
         final double height = paper * 0.74 + 30;
@@ -124,18 +106,7 @@ class _GalleryState extends State<Gallery> {
         return Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.10),
-                  radius: 0.85,
-                  colors: <Color>[
-                    KalloColors.under(Gallery._wallTop, light),
-                    KalloColors.under(Gallery._wallBase, light),
-                  ],
-                ),
-              ),
-            ),
+            Wall(light: light),
             if (prints.isNotEmpty)
               SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(margin, top, margin, floor),
@@ -167,8 +138,8 @@ class _GalleryState extends State<Gallery> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: <Color>[
-                        KalloColors.under(Gallery._wallBase, light).withValues(alpha: 0),
-                        KalloColors.under(Gallery._wallBase, light),
+                        KalloColors.under(KalloWall.base, light).withValues(alpha: 0),
+                        KalloColors.under(KalloWall.base, light),
                       ],
                     ),
                   ),
@@ -317,18 +288,7 @@ class _LoupeState extends State<_Loupe> {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.10),
-                  radius: 0.85,
-                  colors: <Color>[
-                    KalloColors.under(Gallery._wallTop, light),
-                    KalloColors.under(Gallery._wallBase, light),
-                  ],
-                ),
-              ),
-            ),
+            Wall(light: light),
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints room) {
                 final Size pixels = _pixels.pixels;
@@ -369,7 +329,7 @@ class _LoupeState extends State<_Loupe> {
                       alignment: const Alignment(0, -0.12),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: KalloColors.under(Gallery._paper, light),
+                          color: KalloColors.under(KalloWall.paper, light),
                         ),
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(
@@ -444,7 +404,13 @@ class _LoupeState extends State<_Loupe> {
                               children: <Widget>[
                                 Text.rich(
                                   TextSpan(
-                                    children: _wallLabel(widget.print, light),
+                                    children: wallLabel(
+                                      light: light,
+                                      film: widget.print.film,
+                                      clock: widget.print.clock,
+                                      paper: widget.print.paper,
+                                      fallback: widget.print.name,
+                                    ),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -464,7 +430,7 @@ class _LoupeState extends State<_Loupe> {
                                   ),
                                   style: KalloType.data.copyWith(
                                     color: KalloColors.under(
-                                      Gallery._label,
+                                      KalloWall.label,
                                       light,
                                     ).withValues(alpha: 0.60),
                                     fontFeatures: const <FontFeature>[
@@ -613,12 +579,28 @@ class _Hung extends StatelessWidget {
             child: GestureDetector(
               onTap: onTap,
               behavior: HitTestBehavior.opaque,
-              child: _Sheet(print: print, width: width, light: printed),
+              child: PrintSheet(
+                width: width,
+                light: printed,
+                child: RawImage(
+                  image: print.image,
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: KalloSpace.step3 - 2),
           Text.rich(
-            TextSpan(children: _wallLabel(print, light)),
+            TextSpan(
+              children: wallLabel(
+                light: light,
+                film: print.film,
+                clock: print.clock,
+                paper: print.paper,
+                fallback: print.name,
+              ),
+            ),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -628,92 +610,6 @@ class _Hung extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// The wall label: what a person would read beside the work.
-///
-/// The film and the paper are set quiet and the development is set loud,
-/// because on a wall of the same negative at five times the only word that
-/// differs is the one worth finding. A print whose record was lost is called
-/// what its file is called — it is still a print, and it is still here.
-List<InlineSpan> _wallLabel(Print print, double light) {
-  final Color quiet =
-      KalloColors.under(Gallery._label, light).withValues(alpha: 0.60);
-  final Color loud = KalloColors.under(Gallery._label, light);
-  final List<InlineSpan> spans = <InlineSpan>[];
-  void add(String? text, Color colour) {
-    if (text == null || text.isEmpty) {
-      return;
-    }
-    if (spans.isNotEmpty) {
-      spans.add(TextSpan(text: '   ·   ', style: TextStyle(color: quiet)));
-    }
-    spans.add(TextSpan(text: text, style: TextStyle(color: colour)));
-  }
-
-  add(print.film, quiet);
-  add(print.clock, loud);
-  add(print.paper, quiet);
-  if (spans.isEmpty) {
-    spans.add(TextSpan(text: print.name, style: TextStyle(color: quiet)));
-  }
-  return spans;
-}
-
-/// The print: the image the model printed, on paper, with the paper's margin
-/// showing.
-///
-/// A fine print leaves more paper at the bottom than at the top. It costs one
-/// number and it is the difference between a print and a screenshot.
-class _Sheet extends StatelessWidget {
-  const _Sheet({
-    required this.print,
-    required this.width,
-    required this.light,
-  });
-
-  final Print print;
-  final double width;
-
-  /// The light on the print, from a tenth to all of it.
-  final double light;
-
-  @override
-  Widget build(BuildContext context) {
-    final double border = width * 0.030;
-    final double image = width - border * 2;
-    final Widget pixels = RawImage(
-      image: print.image,
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.high,
-    );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: KalloColors.under(Gallery._paper, light),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(border, border, border, border * 2.2),
-        child: SizedBox(
-          width: image,
-          height: image / 1.5,
-          child: light >= 1
-              ? pixels
-              : ColorFiltered(
-                  // A print under less light is the same print with every
-                  // channel multiplied, which is what the matrix is and what
-                  // opacity would not be: fading to the wall is not dimming.
-                  colorFilter: ColorFilter.matrix(<double>[
-                    light, 0, 0, 0, 0, //
-                    0, light, 0, 0, 0, //
-                    0, 0, light, 0, 0, //
-                    0, 0, 0, 1, 0, //
-                  ]),
-                  child: pixels,
-                ),
-        ),
       ),
     );
   }

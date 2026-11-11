@@ -166,6 +166,34 @@ class KalloColors {
   }
 }
 
+/// The wall's own numbers.
+///
+/// Not in the appearance sets, on purpose: a room with one lamp behind a sheet
+/// of paper looks the same whether the window outside it is light or dark. The
+/// paper is a material and the label is graphite, and neither is a plane.
+abstract final class KalloWall {
+  /// The wall at the top, where the lamp is.
+  static const Color top = Color(0xFF262119);
+
+  /// The wall at the bottom, where the light has fallen off.
+  static const Color base = Color(0xFF090807);
+
+  /// The paper the print is on. Warmer and duller than the screen's white,
+  /// because it is the one surface here that is a material.
+  static const Color paper = Color(0xFFFFFBF2);
+
+  /// The graphite of a wall label.
+  static const Color label = Color(0xFF9A9387);
+
+  /// In a dark room an eye keeps about this much. Not a fade to nothing: a print
+  /// you can still find, and only just.
+  static const double darkAdaptation = 0.10;
+
+  /// The largest a print gets on a wall. One print alone should not become a
+  /// billboard, and five in a row should not become stamps.
+  static const double largest = 660;
+}
+
 /// The spacing ramp. Six steps, and the gaps are the point.
 abstract final class KalloSpace {
   static const double step0 = 2;
