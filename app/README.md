@@ -47,7 +47,7 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and sixteen goldens pin the language — one for
+`fvm flutter analyze` is clean, and eighteen goldens pin the language — one for
 each place, the states a place can be in, and the two shelves:
 
 | | | |
@@ -62,8 +62,8 @@ each place, the states a place can be in, and the two shelves:
 | **the drawer**, in Chinese, dark | **the drawer**, where the folder is set | **the drawer**, where the path is chosen |
 | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the shelf with a silver film taken](test/goldens/shelf-silver.png) | ![the shelf in a narrow window](test/goldens/shelf-narrow.png) |
 | **the gallery**, with the lamp off | **the shelf**, with a silver film taken | **the shelf**, in the narrowest window |
-| ![a print, looked at closely](test/goldens/gallery-loupe.png) | | |
-| **a print**, walked up to | | |
+| ![the gallery in a light appearance](test/goldens/gallery-light.png) | ![a loupe on the wall](test/goldens/gallery-lens.png) | ![a print, looked at closely](test/goldens/gallery-loupe.png) |
+| **the gallery**, in a light appearance | **the lens**, held over a print | **a print**, walked up to |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -96,8 +96,8 @@ handle, a field, and — where the place has one — a record on the right.
 | **The model is a process, for now** | `kalo` is asked for each frame — grain, halation and the DIR couplers, which are physics and cost nothing — and writes a PNG into the app's own folder; the app decodes them at the bench's width. It is asked once more, at the start, for its catalogue. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
 | **Six places, all six built** | Shelf, Table, Workbench, Binder, Line, Gallery. The order is the work's: what you have, what you compare, what you judge one frame on, what you keep, what you print, and where it hangs. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so the roll is one sheet and not a grid of cards: the frames sit on the paper, their numbers and times are written on it, and the margin names the paper it was printed on. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. The mark around a frame is the safelight's colour, because a mark on a contact proof is a pencil. |
-| **A print can be walked up to** | Clicking a print opens it at the file's own size. The sheet keeps its size and shape — this is a loupe on paper, not a picture viewer — and the image is magnified *inside* it, clipped by its own margin, up to 1:1, one image pixel per device pixel, which is as far as the file goes. The label under it says the file's pixels and the scale; escape puts it back on the wall. The lamp is still the room's, so the switch comes with you. |
-| **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
+| **A print can be looked through, then walked up to** | Hovering a print brings a loupe to the pointer: three times the wall, from the print's own file decoded wide enough to be sharp, with the sheet's paper still in the glass. The lens goes away when the pointer does. Clicking opens the print at the file's own size: the sheet keeps its size and shape — this is a loupe on paper, not a picture viewer — and the image is magnified *inside* it, clipped by its own margin, up to 1:1, one image pixel per device pixel, which is as far as the file goes. The label under it says the file's pixels and the scale; escape puts it back on the wall, and the lamp comes with you. |
+| **The gallery is a wall with one lamp** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper and the wall label multiply by one number, and the switch is that number. Turn it off and the wall goes black, the labels go with it, the print stays at a tenth — and the window around them does not move: the lamp is the gallery's, not the app's. In a light appearance the wall is a wall in daylight; the lamp still goes out. |
 | **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery hangs whatever is in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting, and on a phone it is the one place the system lets an app write. |
 | **The chrome is light, the print is paper** | The window is a tool, so its planes are one neutral ramp in both appearances. The only warm and saturated surfaces in the product are the paper a print sits on and the gallery wall behind it. |
 | **Time is a dimension** | The frames on the table are the same frame developed for longer, and the inspector draws the whole roll as an envelope with the selected frame inside it. The point is the difference between them. |
@@ -152,13 +152,14 @@ These are the ones worth enforcing in review.
 - **Colours** — two complete sets, `light` and `dark`, resolved once from the
   system unless the user pinned one. Four planes (`ground`, `sidebar`, `content`,
   `surface`), one `hairline`, three inks, one accent in two weights, and `print`:
-  the paper. Plus three operations — `under(colour, light)`, `toward(set, t)`
-  and `night` — because a room can go dark, and going dark is not the same event
-  as the system changing its theme.
-- **The wall** — `KalloWall`: the ground, the paper and the label of the one
-  room in the product that is lit by a lamp, plus the largest a print gets on it
-  and how much light an eye keeps in the dark. Not an appearance set: a dark
-  room looks the same whatever the window prefers.
+  the paper. Plus one operation — `under(colour, light)` — because a wall under
+  a lamp is the same wall lit less, and a print is a reflectance, not an image
+  with an opacity.
+- **The wall** — `KalloWall`: the ground, the paper, the label and the control
+  colours of the one room in the product that is lit by a lamp, in both
+  appearances, plus the largest a print gets on it and how much light an eye
+  keeps in the dark. A wall is lit by the room it stands in, so it follows the
+  window's appearance; the lamp is the gallery's and takes the wall with it.
 - **Ink on paper** — `KalloInk`: what a contact proof writes on its sheet, at
   the light set's values in both appearances, because the paper does not turn
   dark when the window does. The accent is the safelight's, for the mark around

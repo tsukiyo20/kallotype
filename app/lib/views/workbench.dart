@@ -141,7 +141,7 @@ class _WorkbenchState extends State<Workbench> {
                   children: <Widget>[
                     Expanded(
                       child: _proof && _printable
-                          ? _wall(s)
+                          ? _wall(s, KalloWall.of(colors.brightness))
                           : Center(child: _easel(width, colors)),
                     ),
                     KalloSegments(
@@ -203,7 +203,7 @@ class _WorkbenchState extends State<Workbench> {
   /// smaller gallery but the gallery's condition brought to the bench. The
   /// ladder stays under it: the time is still being chosen, and the label's
   /// loud word is the one it is being chosen at.
-  Widget _wall(KalloStrings s) {
+  Widget _wall(KalloStrings s, KalloWall wall) {
     // The sheet's height over its width: the picture at 3:2 inside a 3 % margin
     // with a deeper one at the bottom. It is `PrintSheet`'s arithmetic, and the
     // proof is the one place that has to know it before it builds the sheet.
@@ -219,19 +219,22 @@ class _WorkbenchState extends State<Workbench> {
           ),
         );
         return Wall(
+          wall: wall,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 PrintSheet(
                   width: sheet,
-                  child: _picture(KalloWall.paper),
+                  paper: wall.paper,
+                  child: _picture(wall.paper),
                 ),
                 const SizedBox(height: KalloSpace.step3 + 2),
                 Text.rich(
                   TextSpan(
                     children: wallLabel(
                       light: 1,
+                      wall: wall,
                       film: widget.film?.short ?? widget.roll.stockLabel,
                       clock: _frame.clock,
                       paper: widget.paperName,

@@ -109,8 +109,9 @@ class _RoomState extends State<Room> {
   int _selected = 2;
   late bool _open = widget.initiallyOpen;
 
-  /// The lamp. It belongs to the room and it is remembered by it: leaving the
-  /// gallery with the light off and coming back finds the room still dark.
+  /// The gallery's lamp. It is the room's to remember — leaving the gallery
+  /// with the light off and coming back finds it still off — but it is the
+  /// field's to apply: it dims the wall and the work, not the window.
   bool _lit = true;
 
   void _closeDrawer() => setState(() => _open = false);
@@ -123,38 +124,17 @@ class _RoomState extends State<Room> {
 
   @override
   Widget build(BuildContext context) {
-    final KalloScope scope = KalloScope.of(context);
     final KalloStrings s = KalloStrings.of(context);
-    final bool gallery = _place == Place.gallery;
-    // The lamp is on everywhere except in the gallery with the switch off, so
-    // leaving a dark room brings the lights up on the way out.
-    final double target = gallery && !_lit ? 0.0 : 1.0;
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.escape): _closeDrawer,
-        if (gallery)
+        if (_place == Place.gallery)
           const SingleActivator(LogicalKeyboardKey.keyL): _toggleLight,
       },
-      child: Focus(
-        autofocus: true,
-        child: TweenAnimationBuilder<double>(
-          tween: Tween<double>(end: target),
-          // A lamp comes up faster than a room goes dark. The one direction is
-          // the filament, the other is the eye.
-          duration: target >= 1 ? KalloMotion.settle : KalloMotion.slow,
-          curve: target >= 1 ? KalloMotion.enter : KalloMotion.settleCurve,
-          child: _window(s),
-          builder: (BuildContext context, double light, Widget? child) {
-            return KalloScope(
-              colors: scope.colors.toward(KalloColors.night, 1 - light),
-              light: light,
-              pinned: scope.pinned,
-              onPin: scope.onPin,
-              child: child!,
-            );
-          },
-        ),
-      ),
+      // The window does not go dark: the gallery's lamp takes the wall and the
+      // work, and the window around them is the window. A person who turned the
+      // light off to look at a print still has to be able to find the way back.
+      child: Focus(autofocus: true, child: _window(s)),
     );
   }
 
@@ -228,9 +208,23 @@ class _RoomState extends State<Room> {
                           prints: widget.prints,
                           jobs: widget.jobs,
                         ),
-                      Place.gallery => Gallery(
-                          prints: widget.prints,
-                          onLight: _toggleLight,
+                      Place.gallery => TweenAnimationBuilder<double>(
+                          tween: Tween<double>(end: _lit ? 1 : 0),
+                          // A lamp comes up faster than it goes out: the one
+                          // direction is the filament, the other the eye.
+                          duration: _lit
+                              ? KalloMotion.settle
+                              : KalloMotion.slow,
+                          curve: _lit
+                              ? KalloMotion.enter
+                              : KalloMotion.settleCurve,
+                          builder: (BuildContext context, double light,
+                                  Widget? child) =>
+                              Gallery(
+                            prints: widget.prints,
+                            light: light,
+                            onLight: _toggleLight,
+                          ),
                         ),
                       _ => _bench(frame, s),
                     },

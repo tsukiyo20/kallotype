@@ -121,6 +121,33 @@ class Print {
     }
   }
 
+  /// The print at a size worth looking through.
+  ///
+  /// The wall holds every print at 1600 points because the wall is 660 wide and
+  /// holding the difference would cost a hundred megabytes; a loupe that
+  /// magnified that copy would only magnify a screen image. Four thousand is
+  /// what three times the wall needs to be honest at a device pixel ratio of
+  /// two, and it is thrown away when the pointer leaves the print.
+  Future<ui.Image?> magnified({int width = 4000}) async {
+    final String? path = this.path;
+    if (path == null) {
+      return null;
+    }
+    try {
+      final Uint8List bytes = await File(path).readAsBytes();
+      final int source = pixels?.width.toInt() ?? 0;
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        bytes,
+        targetWidth: source > width ? width : null,
+      );
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      return frame.image;
+    } on Object catch (error) {
+      Model.log('no magnified print for $path: $error');
+      return null;
+    }
+  }
+
   /// Read one exported print.
   ///
   /// The image is decoded at the display's width rather than the file's: an

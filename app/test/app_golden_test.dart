@@ -42,18 +42,17 @@ Future<void> _loadFonts() async {
   }
 }
 
-/// A picture for the goldens, drawn here and never committed.
+/// The test card: three blocks on a ramp, which no one could mistake for a
+/// photograph.
 ///
-/// The app ships no photographs: a print is a file the model exports, and the
-/// gallery reads the export folder. But a golden of the gallery has to have
-/// something on the wall to be about, so the test paints a test card — three
-/// blocks on a ramp, which no one could mistake for a photograph.
-Future<List<Print>> _fixturePrints() async {
-  const double width = 900;
-  const double height = 600;
+/// The app ships no pictures, and a golden of the gallery has to have something
+/// on the wall to be about. The size is the caller's because the lens is a
+/// golden too, and a loupe on a 900-pixel card is a loupe on a blurred card.
+Future<ui.Image> _testCard({int width = 900, int height = 600}) async {
+  final double scale = width / 900;
   final ui.PictureRecorder recorder = ui.PictureRecorder();
   final Canvas canvas = Canvas(recorder);
-  final Rect full = Rect.fromLTWH(0, 0, width, height);
+  final Rect full = Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
   canvas.drawRect(
     full,
     Paint()
@@ -63,22 +62,22 @@ Future<List<Print>> _fixturePrints() async {
         <Color>[const Color(0xFFF2EDE4), const Color(0xFF2A2622)],
       ),
   );
-  canvas.drawRect(
-    const Rect.fromLTWH(80, 120, 220, 340),
-    Paint()..color = const Color(0xFF8C6A4A),
-  );
-  canvas.drawRect(
-    const Rect.fromLTWH(340, 180, 180, 260),
-    Paint()..color = const Color(0xFF4E6B63),
-  );
-  canvas.drawRect(
-    const Rect.fromLTWH(560, 90, 260, 400),
-    Paint()..color = const Color(0xFF1E1B18),
-  );
-  final ui.Image image = await recorder.endRecording().toImage(
-        width.toInt(),
-        height.toInt(),
-      );
+  void block(double left, double top, double w, double h, Color colour) {
+    canvas.drawRect(
+      Rect.fromLTWH(left * scale, top * scale, w * scale, h * scale),
+      Paint()..color = colour,
+    );
+  }
+
+  block(80, 120, 220, 340, const Color(0xFF8C6A4A));
+  block(340, 180, 180, 260, const Color(0xFF4E6B63));
+  block(560, 90, 260, 400, const Color(0xFF1E1B18));
+  return recorder.endRecording().toImage(width, height);
+}
+
+/// A picture for the goldens, drawn here and never committed.
+Future<List<Print>> _fixturePrints() async {
+  final ui.Image image = await _testCard();
   // Three developments of one negative is the wall this product exists to show,
   // so the fixture is three of them rather than one large one.
   return <Print>[
@@ -399,6 +398,27 @@ void main() {
     );
   });
 
+  testWidgets('the gallery, lit, in a light room', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      roll: Roll.fromStrip(_strip()),
+      prints: hanging,
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      appearance: Brightness.light,
+      initialPlace: Place.gallery,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/gallery-light.png'),
+    );
+  });
+
   testWidgets('the gallery, with the lamp off', (WidgetTester tester) async {
     _window(tester);
 
@@ -421,6 +441,76 @@ void main() {
       find.byType(KalloApp),
       matchesGoldenFile('goldens/gallery-unlit.png'),
     );
+  });
+
+  testWidgets('the lens is a loupe on the wall', (WidgetTester tester) async {
+    _window(tester);
+
+    // The lens decodes the print's own file, so the print has one. Three
+    // thousand wide is what three times the wall needs to be sharp here. The
+    // engine's own work happens outside the test's clock, or it never happens.
+    final Print print = (await tester.runAsync(() async {
+      final ui.Image card = await _testCard(width: 3000, height: 2000);
+      final ByteData png =
+          (await card.toByteData(format: ui.ImageByteFormat.png))!;
+      final Directory folder =
+          Directory.systemTemp.createTempSync('kallo-lens');
+      addTearDown(() => folder.deleteSync(recursive: true));
+      final File file = File('${folder.path}/test-card.png');
+      file.writeAsBytesSync(png.buffer.asUint8List());
+      return Print(
+        image: card,
+        name: 'test-card',
+        path: file.path,
+        pixels: const Size(3000, 2000),
+        frame: 3,
+        film: 'VISION3 500T',
+        paper: 'CRYSTAL ARCHIVE PEARL',
+        minutes: 9,
+        tempC: 20,
+        printed: DateTime(2026, 10, 2, 21, 40),
+      );
+    }))!;
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      roll: Roll.fromStrip(_strip()),
+      prints: <Print>[print],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      appearance: Brightness.light,
+      initialPlace: Place.gallery,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('lens')), findsNothing);
+    final TestGesture mouse =
+        await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    // Off the middle of the card, so that the lens has an edge in it: a loupe
+    // over a flat patch is a circle of one colour and proves nothing.
+    await mouse.moveTo(
+      tester.getCenter(find.byType(RawImage).first) + const Offset(46, 0),
+    );
+    await tester.pump();
+    // Let the decode land: the lens is a loupe on the file, not on the wall's
+    // copy, and the file is read for real.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('lens')), findsOneWidget);
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/gallery-lens.png'),
+    );
+
+    // Off the print, off the glass: the lens is held over a sheet, not a mode.
+    await mouse.moveTo(const Offset(4, 4));
+    await tester.pump();
+    expect(find.byKey(const Key('lens')), findsNothing);
   });
 
   testWidgets('the gallery with nothing printed', (WidgetTester tester) async {

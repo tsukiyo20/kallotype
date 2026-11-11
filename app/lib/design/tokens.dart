@@ -112,58 +112,6 @@ class KalloColors {
       blue: colour.b * k,
     );
   }
-
-  /// Every plane, dimmed together. Returns itself at full light, so that a lit
-  /// window does not rebuild for nothing.
-  KalloColors scaled(double light) => light >= 1
-      ? this
-      : KalloColors(
-          brightness: brightness,
-          ground: under(ground, light),
-          sidebar: under(sidebar, light),
-          content: under(content, light),
-          surface: under(surface, light),
-          hairline: under(hairline, light),
-          ink: under(ink, light),
-          inkMuted: under(inkMuted, light),
-          inkFaint: under(inkFaint, light),
-          accent: under(accent, light),
-          accentDim: under(accentDim, light),
-          print: under(print, light),
-        );
-
-  /// The window with the lights off.
-  ///
-  /// The dark set a step darker still, so that a room that has gone dark looks
-  /// the same in either appearance. It should: it is the same room, and the
-  /// lamp does not care what the system prefers.
-  static final KalloColors night = dark.scaled(0.72);
-
-  /// Every plane moving toward another set.
-  ///
-  /// The appearance does not move with them: a room going dark is not the
-  /// system changing its theme, and everything that reports the brightness —
-  /// the drawer, the device line — has to keep telling the truth.
-  KalloColors toward(KalloColors other, double t) {
-    final double k = t.clamp(0.0, 1.0);
-    if (k <= 0) {
-      return this;
-    }
-    return KalloColors(
-      brightness: brightness,
-      ground: Color.lerp(ground, other.ground, k)!,
-      sidebar: Color.lerp(sidebar, other.sidebar, k)!,
-      content: Color.lerp(content, other.content, k)!,
-      surface: Color.lerp(surface, other.surface, k)!,
-      hairline: Color.lerp(hairline, other.hairline, k)!,
-      ink: Color.lerp(ink, other.ink, k)!,
-      inkMuted: Color.lerp(inkMuted, other.inkMuted, k)!,
-      inkFaint: Color.lerp(inkFaint, other.inkFaint, k)!,
-      accent: Color.lerp(accent, other.accent, k)!,
-      accentDim: Color.lerp(accentDim, other.accentDim, k)!,
-      print: Color.lerp(print, other.print, k)!,
-    );
-  }
 }
 
 /// What is written on a print's paper.
@@ -189,32 +137,81 @@ abstract final class KalloInk {
   static const Color accent = Color(0xFF9A4318);
 }
 
-/// The wall's own numbers.
+/// A wall: its ground, the paper on it, and the graphite beside it.
 ///
-/// Not in the appearance sets, on purpose: a room with one lamp behind a sheet
-/// of paper looks the same whether the window outside it is light or dark. The
-/// paper is a material and the label is graphite, and neither is a plane.
-abstract final class KalloWall {
+/// Two sets, because a wall is lit by the room it stands in. The gallery is a
+/// room with a lamp, and a lamp is not a dark room: in a light appearance the
+/// wall is a wall in daylight, in a dark one it is the wall after dark. The
+/// lamp still goes out — but it takes the wall and the work with it, not the
+/// window around them.
+class KalloWall {
+  const KalloWall({
+    required this.top,
+    required this.base,
+    required this.paper,
+    required this.label,
+    required this.control,
+    this.outline,
+  });
+
   /// The wall at the top, where the lamp is.
-  static const Color top = Color(0xFF262119);
+  final Color top;
 
   /// The wall at the bottom, where the light has fallen off.
-  static const Color base = Color(0xFF090807);
+  final Color base;
 
   /// The paper the print is on. Warmer and duller than the screen's white,
   /// because it is the one surface here that is a material.
-  static const Color paper = Color(0xFFFFFBF2);
+  final Color paper;
 
   /// The graphite of a wall label.
-  static const Color label = Color(0xFF9A9387);
+  final Color label;
 
-  /// In a dark room an eye keeps about this much. Not a fade to nothing: a print
-  /// you can still find, and only just.
-  static const double darkAdaptation = 0.10;
+  /// A control on the wall — the switch, the readout. It is the wall's own
+  /// light: pale on a dark wall, ink on a light one.
+  final Color control;
+
+  /// The sheet's edge, when the wall is close to the paper's own colour. On a
+  /// dark wall the paper states its own edge; on a light one it needs the
+  /// hairline to be a sheet and not a hole.
+  final Color? outline;
+
+  static const KalloWall light = KalloWall(
+    top: Color(0xFFF4F0E8),
+    base: Color(0xFFE3DDD0),
+    paper: Color(0xFFFFFDF8),
+    label: Color(0xFF6E6A63),
+    control: Color(0xFF3F3A33),
+    outline: Color(0xFFD8D2C5),
+  );
+
+  static const KalloWall dark = KalloWall(
+    top: Color(0xFF262119),
+    base: Color(0xFF090807),
+    paper: Color(0xFFFFFBF2),
+    label: Color(0xFF9A9387),
+    control: Color(0xFFF4EFE6),
+  );
+
+  static KalloWall of(Brightness brightness) =>
+      brightness == Brightness.dark ? dark : light;
+
+  /// The colour a control on the wall is, at this light.
+  ///
+  /// The lamp takes the wall and the wall's control with it. A switch you
+  /// cannot find in the dark is a switch that has been taken away, so the
+  /// control that can be found is the one the dark wall would have had: ink on
+  /// a lit wall, the pale slate on a wall that has gone out.
+  Color controlAt(double light) =>
+      Color.lerp(control, KalloWall.dark.control, 1 - light)!;
 
   /// The largest a print gets on a wall. One print alone should not become a
   /// billboard, and five in a row should not become stamps.
   static const double largest = 660;
+
+  /// In a dark room an eye keeps about this much. Not a fade to nothing: a print
+  /// you can still find, and only just.
+  static const double darkAdaptation = 0.10;
 }
 
 /// The spacing ramp. Six steps, and the gaps are the point.

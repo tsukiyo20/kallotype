@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -11,18 +12,19 @@ import '../design/tokens.dart';
 import '../lab/print.dart';
 import '../widgets/wall.dart';
 
-/// The gallery: the last place. One wall, every print, one light.
+/// The gallery: the last place. One wall, every print, one lamp.
 ///
 /// A print is not a picture, it is a sheet of paper reflecting whatever light
 /// falls on it. So the room is built the way that physics is built: every
 /// surface is a reflectance, the lamp is a single number, and the number is
 /// multiplied into each of them.
 ///
-/// Which is what makes the switch worth having. Turn the lamp off and the wall
-/// goes to black, the labels go with it, the chrome goes down — and the prints
-/// do not go out, they stay at a tenth. That is not a filter: it is the eye
-/// adapting, and it is the one moment in this app where you are meant to see
-/// nothing and then see something.
+/// The wall is the window's: a gallery is white in daylight and dark after
+/// hours. The lamp is the gallery's: turn it off and the wall goes black, the
+/// labels go with it — and the prints do not go out, they stay at a tenth. What
+/// does not move is the window around them. Turning a lamp off is not the same
+/// event as the system changing its theme, and a person who turned the light
+/// off to look at a print still has to be able to find the way back.
 ///
 /// Everything exported hangs here, because a gallery shows the work there is.
 /// The wall is arranged in a grid and not hung like a salon, because a grid is
@@ -30,10 +32,19 @@ import '../widgets/wall.dart';
 /// of one negative are five equal things, and the wall should not pretend to
 /// prefer one.
 class Gallery extends StatefulWidget {
-  const Gallery({super.key, required this.prints, required this.onLight});
+  const Gallery({
+    super.key,
+    required this.prints,
+    required this.light,
+    required this.onLight,
+  });
 
   /// Everything exported, oldest first.
   final List<Print> prints;
+
+  /// The lamp on the wall, from off to all of it. It is the room's, and it
+  /// takes the wall and the work with it — not the window around them.
+  final double light;
 
   /// The switch belongs to the room, not to the wall.
   final VoidCallback onLight;
@@ -46,6 +57,73 @@ class _GalleryState extends State<Gallery> {
   /// The print being looked at closely, if one is.
   Print? _near;
 
+  /// The print under the lens, and where the lens is.
+  ///
+  /// The lens is a loupe held over the sheet, not a picture viewer: it shows
+  /// the print at the scale a loupe would, three times the wall, from a decode
+  /// wide enough that the glass has something to show. It goes away when the
+  /// pointer does, and clicking still walks up to the whole file.
+  Print? _lensFor;
+  ui.Image? _lens;
+  Offset _lensAt = Offset.zero;
+  Offset _lensPoint = Offset.zero;
+  Size _lensSheet = Size.zero;
+
+  /// The wall's box, which is where the lens is placed.
+  final GlobalKey _field = GlobalKey(debugLabel: 'wall');
+
+  void _lookAt(Print print, Offset local, Size sheet, Offset global) {
+    final RenderBox? box = _field.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) {
+      return;
+    }
+    if (!identical(print, _lensFor)) {
+      _lensFor = print;
+      _dropLens();
+      unawaited(_loadLens(print));
+    }
+    setState(() {
+      _lensAt = box.globalToLocal(global);
+      _lensPoint = local;
+      _lensSheet = sheet;
+    });
+  }
+
+  void _leaveLens() {
+    if (_lensFor == null) {
+      return;
+    }
+    setState(() {
+      _lensFor = null;
+      _dropLens();
+    });
+  }
+
+  /// Free the magnified copy, but only after the frame that drew it: a texture
+  /// disposed while it is on screen is a texture that draws as nothing.
+  void _dropLens() {
+    final ui.Image? old = _lens;
+    _lens = null;
+    if (old != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    }
+  }
+
+  Future<void> _loadLens(Print print) async {
+    final ui.Image? image = await print.magnified();
+    if (!mounted || !identical(print, _lensFor)) {
+      image?.dispose();
+      return;
+    }
+    setState(() => _lens = image);
+  }
+
+  @override
+  void dispose() {
+    _lens?.dispose();
+    super.dispose();
+  }
+
   @override
   void didUpdateWidget(Gallery old) {
     super.didUpdateWidget(old);
@@ -55,12 +133,21 @@ class _GalleryState extends State<Gallery> {
     if (near != null && !widget.prints.any((Print p) => identical(p, near))) {
       _near = null;
     }
+    final Print? lens = _lensFor;
+    if (lens != null && !widget.prints.any((Print p) => identical(p, lens))) {
+      _lensFor = null;
+      _dropLens();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final KalloStrings s = KalloStrings.of(context);
-    final double light = KalloScope.lightOf(context);
+    // The wall is the appearance's: a gallery is white in daylight and dark
+    // after hours, and the lamp goes out in both.
+    final KalloWall wall =
+        KalloWall.of(KalloScope.colorsOf(context).brightness);
+    final double light = widget.light;
     final Print? near = _near;
     // The paper holds its light better than the room does, for the same reason
     // everything else does not: the eye is the instrument here, not the lamp.
@@ -71,6 +158,7 @@ class _GalleryState extends State<Gallery> {
     if (near != null) {
       return _Loupe(
         print: near,
+        wall: wall,
         light: light,
         onLight: widget.onLight,
         onClose: () => setState(() => _near = null),
@@ -104,9 +192,10 @@ class _GalleryState extends State<Gallery> {
         final double top = math.max(margin, (room.maxHeight - content) / 2);
 
         return Stack(
+          key: _field,
           fit: StackFit.expand,
           children: <Widget>[
-            Wall(light: light),
+            Wall(wall: wall, light: light),
             if (prints.isNotEmpty)
               SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(margin, top, margin, floor),
@@ -118,13 +207,26 @@ class _GalleryState extends State<Gallery> {
                     for (final Print print in prints)
                       _Hung(
                         print: print,
+                        wall: wall,
                         width: paper,
                         light: light,
                         printed: printed,
+                        onHover: (Offset local, Size sheet, Offset global) =>
+                            _lookAt(print, local, sheet, global),
+                        onLeave: _leaveLens,
                         onTap: () => setState(() => _near = print),
                       ),
                   ],
                 ),
+              ),
+            if (_lensFor != null)
+              _Lens(
+                key: const Key('lens'),
+                at: _lensAt,
+                sheet: _lensSheet,
+                point: _lensPoint,
+                image: _lens ?? _lensFor!.image,
+                wall: wall,
               ),
             Positioned(
               left: 0,
@@ -138,8 +240,8 @@ class _GalleryState extends State<Gallery> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: <Color>[
-                        KalloColors.under(KalloWall.base, light).withValues(alpha: 0),
-                        KalloColors.under(KalloWall.base, light),
+                        KalloColors.under(wall.base, light).withValues(alpha: 0),
+                        KalloColors.under(wall.base, light),
                       ],
                     ),
                   ),
@@ -153,6 +255,7 @@ class _GalleryState extends State<Gallery> {
               child: Center(
                 child: _LightSwitch(
                   label: s.roomLight,
+                  control: wall.controlAt(light),
                   on: light > 0.5,
                   onTap: widget.onLight,
                 ),
@@ -172,7 +275,7 @@ class _GalleryState extends State<Gallery> {
 /// walking up to it. The paper does not grow — this is not a picture viewer, it
 /// is a loupe on a sheet — so the sheet keeps its size and shape, and the image
 /// is magnified *inside* it, clipped by its own margin. What you never see is a
-/// photograph floating on a dark background: you see paper, and a corner of it
+/// photograph floating on a background: you see paper, and a corner of it
 /// enlarged.
 ///
 /// The scale readout is absolute: it says how big one of the file's pixels is on
@@ -181,12 +284,16 @@ class _GalleryState extends State<Gallery> {
 class _Loupe extends StatefulWidget {
   const _Loupe({
     required this.print,
+    required this.wall,
     required this.light,
     required this.onLight,
     required this.onClose,
   });
 
   final Print print;
+
+  /// Which wall: the one the print was hanging on.
+  final KalloWall wall;
 
   /// The room's light: the sheet and its label are under it.
   final double light;
@@ -288,7 +395,7 @@ class _LoupeState extends State<_Loupe> {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            Wall(light: light),
+            Wall(wall: widget.wall, light: light),
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints room) {
                 final Size pixels = _pixels.pixels;
@@ -329,7 +436,7 @@ class _LoupeState extends State<_Loupe> {
                       alignment: const Alignment(0, -0.12),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: KalloColors.under(KalloWall.paper, light),
+                          color: KalloColors.under(widget.wall.paper, light),
                         ),
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(
@@ -406,6 +513,7 @@ class _LoupeState extends State<_Loupe> {
                                   TextSpan(
                                     children: wallLabel(
                                       light: light,
+                                      wall: widget.wall,
                                       film: widget.print.film,
                                       clock: widget.print.clock,
                                       paper: widget.print.paper,
@@ -430,7 +538,7 @@ class _LoupeState extends State<_Loupe> {
                                   ),
                                   style: KalloType.data.copyWith(
                                     color: KalloColors.under(
-                                      KalloWall.label,
+                                      widget.wall.label,
                                       light,
                                     ).withValues(alpha: 0.60),
                                     fontFeatures: const <FontFeature>[
@@ -444,11 +552,16 @@ class _LoupeState extends State<_Loupe> {
                           const SizedBox(width: KalloSpace.step4),
                           _LightSwitch(
                             label: s.roomLight,
+                            control: widget.wall.controlAt(light),
                             on: widget.light > 0.5,
                             onTap: widget.onLight,
                           ),
                           const SizedBox(width: KalloSpace.step3),
-                          _Pill(label: s.back, onTap: widget.onClose),
+                          _Pill(
+                            label: s.back,
+                            control: widget.wall.controlAt(light),
+                            onTap: widget.onClose,
+                          ),
                         ],
                       ),
                     ),
@@ -497,9 +610,17 @@ class _LoupeState extends State<_Loupe> {
 
 /// A control on the wall, lit by itself: a pill you can still find in the dark.
 class _Pill extends StatefulWidget {
-  const _Pill({required this.label, required this.onTap});
+  const _Pill({
+    required this.label,
+    required this.control,
+    required this.onTap,
+  });
 
   final String label;
+
+  /// The wall's own light: a pale control on a dark wall, ink on a light one.
+  final Color control;
+
   final VoidCallback onTap;
 
   @override
@@ -511,7 +632,7 @@ class _PillState extends State<_Pill> {
 
   @override
   Widget build(BuildContext context) {
-    const Color slate = Color(0xFFF4EFE6);
+    final Color control = widget.control;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
@@ -525,16 +646,16 @@ class _PillState extends State<_Pill> {
           padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: slate.withValues(alpha: _hover ? 0.10 : 0.04),
+            color: control.withValues(alpha: _hover ? 0.10 : 0.04),
             borderRadius: BorderRadius.circular(KalloRadius.control),
             border: Border.all(
-              color: slate.withValues(alpha: _hover ? 0.28 : 0.16),
+              color: control.withValues(alpha: _hover ? 0.28 : 0.16),
             ),
           ),
           child: Text(
             widget.label,
             style: KalloType.small.copyWith(
-              color: slate.withValues(alpha: _hover ? 0.92 : 0.70),
+              color: control.withValues(alpha: _hover ? 0.92 : 0.70),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -548,13 +669,20 @@ class _PillState extends State<_Pill> {
 class _Hung extends StatelessWidget {
   const _Hung({
     required this.print,
+    required this.wall,
     required this.width,
     required this.light,
     required this.printed,
+    required this.onHover,
+    required this.onLeave,
     required this.onTap,
   });
 
   final Print print;
+
+  /// Which wall: the light one in a light appearance, the dark one after dark.
+  final KalloWall wall;
+
   final double width;
 
   /// The light on the wall, which the label is on.
@@ -562,6 +690,11 @@ class _Hung extends StatelessWidget {
 
   /// The light on the print, which holds a little longer.
   final double printed;
+
+  /// The lens: the pointer over the sheet, its place on the sheet, the sheet's
+  /// size, and where it is on the wall.
+  final void Function(Offset local, Size sheet, Offset global) onHover;
+  final VoidCallback onLeave;
 
   /// Walking up to the print: the loupe.
   final VoidCallback onTap;
@@ -576,11 +709,19 @@ class _Hung extends StatelessWidget {
         children: <Widget>[
           MouseRegion(
             cursor: SystemMouseCursors.click,
+            onHover: (PointerHoverEvent event) => onHover(
+              event.localPosition,
+              Size(width, PrintSheet.heightOf(width)),
+              event.position,
+            ),
+            onExit: (_) => onLeave(),
             child: GestureDetector(
               onTap: onTap,
               behavior: HitTestBehavior.opaque,
               child: PrintSheet(
                 width: width,
+                paper: wall.paper,
+                outline: wall.outline,
                 light: printed,
                 child: RawImage(
                   image: print.image,
@@ -595,6 +736,7 @@ class _Hung extends StatelessWidget {
             TextSpan(
               children: wallLabel(
                 light: light,
+                wall: wall,
                 film: print.film,
                 clock: print.clock,
                 paper: print.paper,
@@ -621,11 +763,16 @@ class _Hung extends StatelessWidget {
 class _LightSwitch extends StatefulWidget {
   const _LightSwitch({
     required this.label,
+    required this.control,
     required this.on,
     required this.onTap,
   });
 
   final String label;
+
+  /// The wall's own light: a pale control on a dark wall, ink on a light one.
+  final Color control;
+
   final bool on;
   final VoidCallback onTap;
 
@@ -638,7 +785,7 @@ class _LightSwitchState extends State<_LightSwitch> {
 
   @override
   Widget build(BuildContext context) {
-    const Color slate = Color(0xFFF4EFE6);
+    final Color control = widget.control;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
@@ -652,10 +799,10 @@ class _LightSwitchState extends State<_LightSwitch> {
           height: 28,
           padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
           decoration: BoxDecoration(
-            color: slate.withValues(alpha: _hover ? 0.10 : 0.04),
+            color: control.withValues(alpha: _hover ? 0.10 : 0.04),
             borderRadius: BorderRadius.circular(KalloRadius.control),
             border: Border.all(
-              color: slate.withValues(alpha: _hover ? 0.28 : 0.16),
+              color: control.withValues(alpha: _hover ? 0.28 : 0.16),
             ),
           ),
           child: Row(
@@ -667,21 +814,95 @@ class _LightSwitchState extends State<_LightSwitch> {
                 height: 6,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: widget.on ? slate : null,
+                  color: widget.on ? control : null,
                   border: widget.on
                       ? null
-                      : Border.all(color: slate.withValues(alpha: 0.45)),
+                      : Border.all(color: control.withValues(alpha: 0.45)),
                 ),
               ),
               const SizedBox(width: KalloSpace.step2),
               Text(
                 widget.label,
                 style: KalloType.small.copyWith(
-                  color: slate.withValues(alpha: _hover ? 0.92 : 0.70),
+                  color: control.withValues(alpha: _hover ? 0.92 : 0.70),
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A loupe held over the wall.
+///
+/// It is the print at three times the wall, from a decode wide enough that the
+/// glass has something to show: magnifying the wall's own copy would only
+/// magnify a screen image. The rim is a hairline, because the wall has no
+/// shadows to say where the circle ends.
+class _Lens extends StatelessWidget {
+  const _Lens({
+    super.key,
+    required this.at,
+    required this.sheet,
+    required this.point,
+    required this.image,
+    required this.wall,
+  });
+
+  /// Where the lens is, in the wall's coordinates.
+  final Offset at;
+
+  /// The sheet's size on the wall.
+  final Size sheet;
+
+  /// Where the pointer is on the sheet.
+  final Offset point;
+
+  /// The print's picture, at the best size there is.
+  final ui.Image image;
+
+  final KalloWall wall;
+
+  static const double radius = 90;
+  static const double _magnification = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    final double width = sheet.width * _magnification;
+    final double height = PrintSheet.heightOf(width);
+    return Positioned(
+      left: at.dx - radius,
+      top: at.dy - radius,
+      child: IgnorePointer(
+        child: Container(
+          width: radius * 2,
+          height: radius * 2,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: wall.control.withValues(alpha: 0.35)),
+          ),
+          child: ClipOval(
+            child: Stack(
+              children: <Widget>[
+                Positioned(
+                  left: radius - (point.dx / sheet.width) * width,
+                  top: radius - (point.dy / sheet.height) * height,
+                  child: PrintSheet(
+                    width: width,
+                    paper: wall.paper,
+                    outline: wall.outline,
+                    child: RawImage(
+                      image: image,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.high,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

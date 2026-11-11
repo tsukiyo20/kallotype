@@ -10,13 +10,16 @@ import '../design/tokens.dart';
 /// proof and a hanging are the same statement made at different times — which
 /// is the only way a proof is worth trusting.
 
-/// The wall behind a print: warm at the top, black at the bottom.
+/// The wall behind a print: warm at the top, the light falling off the bottom.
 class Wall extends StatelessWidget {
-  const Wall({super.key, this.light = 1, this.child});
+  const Wall({super.key, required this.wall, this.light = 1, this.child});
+
+  /// Which wall: the light one in a light appearance, the dark one after dark.
+  final KalloWall wall;
 
   /// The light on the wall. A wall is a reflectance too, so the lamp goes out
   /// on it before it goes out on the print — which is what makes the print hold
-  /// when everything else has gone black.
+  /// when everything else has gone dark.
   final double light;
 
   final Widget? child;
@@ -28,8 +31,8 @@ class Wall extends StatelessWidget {
             center: const Alignment(0, -0.10),
             radius: 0.85,
             colors: <Color>[
-              KalloColors.under(KalloWall.top, light),
-              KalloColors.under(KalloWall.base, light),
+              KalloColors.under(wall.top, light),
+              KalloColors.under(wall.base, light),
             ],
           ),
         ),
@@ -49,7 +52,7 @@ class PrintSheet extends StatelessWidget {
     super.key,
     required this.width,
     required this.child,
-    this.paper = KalloWall.paper,
+    required this.paper,
     this.outline,
     this.light = 1,
     this.aspect = 1.5,
@@ -58,11 +61,8 @@ class PrintSheet extends StatelessWidget {
   /// How wide the sheet is. The picture is the sheet minus its margins.
   final double width;
 
-  /// The paper the sheet is.
-  ///
-  /// The wall's is a constant, because a room with one lamp does not follow the
-  /// window. The bench's easel is the window's paper, because the easel sits on
-  /// a page that belongs to the room.
+  /// The paper the sheet is: the wall's paper when the sheet is on a wall, the
+  /// bench's own when the easel sits on a page that belongs to the room.
   final Color paper;
 
   /// The sheet's edge, when the page under it is close to the paper's own
@@ -84,6 +84,12 @@ class PrintSheet extends StatelessWidget {
 
   /// The margin, as a fraction of the sheet's width.
   static const double _border = 0.030;
+
+  /// The sheet's height for a width: the picture, the margin and the deeper
+  /// one at the bottom. Somebody has to know it before the sheet is built —
+  /// the lens, which is a sheet at another size.
+  static double heightOf(double width, {double aspect = 1.5}) =>
+      width * ((1 - _border * 2) / aspect + _border * 3.2);
 
   @override
   Widget build(BuildContext context) {
@@ -127,14 +133,14 @@ class PrintSheet extends StatelessWidget {
 /// bench, so it does not need to be named.
 List<InlineSpan> wallLabel({
   required double light,
+  required KalloWall wall,
   String? film,
   String? clock,
   String? paper,
   String? fallback,
 }) {
-  final Color quiet =
-      KalloColors.under(KalloWall.label, light).withValues(alpha: 0.60);
-  final Color loud = KalloColors.under(KalloWall.label, light);
+  final Color quiet = KalloColors.under(wall.label, light).withValues(alpha: 0.60);
+  final Color loud = KalloColors.under(wall.label, light);
   final List<InlineSpan> spans = <InlineSpan>[];
   void add(String? text, Color colour) {
     if (text == null || text.isEmpty) {
