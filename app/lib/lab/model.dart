@@ -94,6 +94,14 @@ class Model {
       '--ev',
       'auto',
       '--grain',
+      // The two stages that cost nothing and are physics rather than polish:
+      // light that scattered in the emulsion and reflected off the base, and
+      // the inhibition a developing layer releases into its neighbours. Both
+      // are sub-pixel at the bench's width — a 30 µm pixel cannot show an 11 µm
+      // scatter — so they read as a slight change of density and edge contrast
+      // here, and as themselves in a full-size print.
+      '--halation',
+      '--couplers',
       '--size',
       '$width',
     ]);

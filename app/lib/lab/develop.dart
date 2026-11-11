@@ -37,13 +37,18 @@ Future<Roll> develop({
 }) async {
   final Directory target = folder ?? RollStore.folder!;
   await target.create(recursive: true);
+  // The photograph comes into the roll's own folder before it is developed.
+  // A file panel can hand over a temporary copy of something in a photo
+  // library, and a record that points at a file which will be gone tomorrow is
+  // not a record — it is a note to self that the work cannot be done again.
+  final File source = await _keep(photograph, target);
 
   final List<Frame> frames = <Frame>[];
   for (int i = 0; i < times.length; i++) {
     final double minutes = times[i];
     final File output = RollStore.frameFile(target, i + 1);
     await model.develop(
-      photograph: photograph,
+      photograph: source,
       stock: stock.id,
       minutes: minutes,
       tempC: tempC,
@@ -65,9 +70,23 @@ Future<Roll> develop({
     number: 1,
     stockId: stock.id,
     stockLabel: stock.label,
-    photo: photograph.path,
+    photo: source.path,
     frames: frames,
   );
   await RollStore.save(roll, folder: target);
   return roll;
+}
+
+/// Copy the photograph in, unless it is already here.
+///
+/// The name is kept rather than invented: the photograph is the one thing in
+/// this folder the app did not make, and it should still be called what it was
+/// called.
+Future<File> _keep(File photograph, Directory folder) async {
+  final String name = photograph.path.split(Platform.pathSeparator).last;
+  final File kept = File('${folder.path}${Platform.pathSeparator}$name');
+  if (kept.absolute.path == photograph.absolute.path) {
+    return kept;
+  }
+  return photograph.copy(kept.path);
 }

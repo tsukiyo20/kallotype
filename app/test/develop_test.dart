@@ -46,7 +46,10 @@ void main() {
       expect(frame.toneCurve, isNull);
     }
     expect(roll.frames.first.clock, '3:00');
-    expect(roll.photo, photograph.path);
+    // The photograph is kept inside the roll, under its own name: the record
+    // has to point at something that will still be there tomorrow.
+    expect(roll.photo, '${folder.path}/DSCF0989.JPG');
+    expect(File(roll.photo!).existsSync(), isTrue);
 
     final Roll? stored = await RollStore.load(folder: folder);
     expect(stored, isNotNull);

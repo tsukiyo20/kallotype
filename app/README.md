@@ -87,7 +87,7 @@ handle, a field, and — where the place has one — a record on the right.
 | **The shelf is the way in** | One photograph, into the developer five times, and a roll comes out: the same frame at 3, 6, 9, 12 and 15 minutes. That ladder is the product's whole argument, so the first roll is a comparison rather than a collection. |
 | **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. |
 | **The line is what happened** | A string across the room with the work hanging from it, newest first: what has been printed, not what is running. The gallery is the same files looked at properly, on a wall, in the dark. |
-| **The model is a process, for now** | `kalo` is asked for each frame and writes a PNG into the app's own folder; the app decodes them at the bench's width. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
+| **The model is a process, for now** | `kalo` is asked for each frame — grain, halation and the DIR couplers, which are physics and cost nothing — and writes a PNG into the app's own folder; the app decodes them at the bench's width. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
 | **Six places, all six built** | Shelf, Table, Workbench, Binder, Line, Gallery. The order is the work's: what you have, what you compare, what you judge one frame on, what you keep, what you print, and where it hangs. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
 | **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
@@ -176,6 +176,7 @@ translates.
   the roll the model drew — the committed strip — and not for a roll the app
   developed. The chart comes back when the model is behind an FFI and can be
   asked for the numbers directly.
+- **The physics at print size.** Halation scatters 11 µm and the couplers diffuse 20 µm; at the bench's 30 µm pixel both are smaller than a pixel, so what they change on screen is a slightly deeper density and a crisper edge. They become themselves in a print rendered at paper size, which is the same missing thing as the queue.
 - **A queue.** Printing a frame copies its PNG into the export folder and
   writes the record beside it, because a print is a file and the frame on the
   roll is already the render. Nothing takes long enough to queue, so the line
