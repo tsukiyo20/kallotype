@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
@@ -62,7 +62,8 @@ class KalloApp extends StatefulWidget {
     super.key,
     this.roll,
     this.prints,
-    this.export,
+    this.exportsFolder,
+    this.rollFolder,
     this.locale,
     this.appearance,
     this.technicalTerms = false,
@@ -88,7 +89,10 @@ class KalloApp extends StatefulWidget {
 
   /// Where prints come from. The tests pin it, so that a golden does not show
   /// the folder of whoever ran it.
-  final ExportSetting? export;
+  final Directory? exportsFolder;
+
+  /// Where the roll lives. Pinned by the tests for the same reason.
+  final Directory? rollFolder;
 
   /// Pins the human language. Null follows the device, which is also what the
   /// drawer's first option does.
@@ -180,9 +184,7 @@ class _KalloAppState extends State<KalloApp> {
   }
 
   Future<void> _reloadPrints() async {
-    final List<Print> prints = await Exports.read(
-      folder: Exports.directoryFor(_exportPath),
-    );
+    final List<Print> prints = await Exports.read(folder: _folder);
     if (!mounted) {
       for (final Print print in prints) {
         print.dispose();
@@ -239,9 +241,14 @@ class _KalloAppState extends State<KalloApp> {
     await _settings.write();
   }
 
-  /// What the drawer says about the folder.
-  ExportSetting get _export => ExportSetting(
-        label: Exports.display(Exports.directoryFor(_exportPath)?.path),
+  /// The folder prints come from, resolved once: the one the person chose, or
+  /// the platform's own.
+  Directory? get _folder =>
+      widget.exportsFolder ?? Exports.directoryFor(_exportPath);
+
+  /// What the drawer says about it.
+  ExportSetting get _exportSetting => ExportSetting(
+        label: Exports.display(_folder?.path),
         canChoose: Exports.canChoose,
         custom: _exportPath != null,
         onChoose: _chooseExport,
@@ -294,11 +301,12 @@ class _KalloAppState extends State<KalloApp> {
           : Room(
               roll: _roll!,
               prints: _prints,
-              exports: Exports.directoryFor(_exportPath),
+              exports: _folder,
+              rollFolder: widget.rollFolder ?? RollStore.folder,
               onDeveloped: _developed,
               onEnterExports:
                   widget.prints == null ? () => unawaited(_reloadPrints()) : null,
-              export: widget.export ?? _export,
+              export: _exportSetting,
               locale: _locale,
               onLocale: (Locale? next) => setState(() => _locale = next),
               technicalTerms: _technical,

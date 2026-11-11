@@ -110,6 +110,22 @@ class KalloStrings {
   String get lineEmptyNote =>
       zh ? '在工作台上按印，印相会挂到这里，等干了再看。' : 'Print a frame on the workbench and it hangs here until you look at it.';
 
+  // -- the binder -----------------------------------------------------------
+
+  String get binderNote =>
+      zh ? '这一卷的来历，和模型量到的数。' : 'Where this roll came from, and the numbers the model measured.';
+
+  String get theRoll => zh ? '这一卷' : 'THE ROLL';
+  String get theLadder => zh ? '显影梯度' : 'THE LADDER';
+  String get theCurves => zh ? '曲线' : 'THE CURVES';
+  String get theFiles => zh ? '文件' : 'THE FILES';
+  String get rollFolder => zh ? '卷' : 'Roll';
+  String get printsFolder => zh ? '印相' : 'Prints';
+
+  String get noCurve => zh
+      ? '这一卷是模型直接渲出来的：它交出像，不交出像背后的密度。等它肯把数给出来，曲线就回来了。'
+      : 'This roll came out as pixels. The model writes a picture and not the densities behind it; the curves come back when it hands over the numbers.';
+
   // -- the gallery ----------------------------------------------------------
 
   /// The switch on the wall. Not the appearance's light: the room's.

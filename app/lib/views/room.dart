@@ -15,6 +15,7 @@ import '../sheets/contact_sheet.dart';
 import '../widgets/inspector.dart';
 import '../widgets/sidebar.dart';
 import 'drawer.dart';
+import 'binder.dart';
 import 'gallery.dart';
 import 'line.dart';
 import 'places.dart';
@@ -36,6 +37,7 @@ class Room extends StatefulWidget {
     this.onEnterExports,
     required this.onDeveloped,
     required this.exports,
+    required this.rollFolder,
     required this.export,
     required this.locale,
     required this.onLocale,
@@ -56,8 +58,9 @@ class Room extends StatefulWidget {
   /// the room can show: the gallery is a wall, and a wall can be empty.
   final List<Print> prints;
 
-  /// Where a print goes, resolved once at the top.
+  /// Where a print goes, and where the roll lives, resolved once at the top.
   final Directory? exports;
+  final Directory? rollFolder;
 
   /// Walking into a room that shows exports is what makes it look again: the
   /// folder is not watched, and a room that shows yesterday's work is a room
@@ -195,6 +198,11 @@ class _RoomState extends State<Room> {
                               setState(() => _selected = index),
                           exports: widget.exports,
                         ),
+                      Place.binder => Binder(
+                          roll: widget.roll,
+                          exports: widget.exports,
+                          rollFolder: widget.rollFolder,
+                        ),
                       Place.line => Line(prints: widget.prints),
                       Place.gallery => Gallery(
                           prints: widget.prints,
@@ -263,8 +271,8 @@ class _RoomState extends State<Room> {
     );
   }
 
-  /// The bench: the field on the left, the record on the right, the status
-  /// under it. Everything that is not the gallery.
+  /// The bench: the sheet on the left, the record on the right, the status
+  /// under it. The table's layout, and the only place that has one.
   Widget _bench(Frame frame, KalloStrings s) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -274,15 +282,11 @@ class _RoomState extends State<Room> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Expanded(
-                child: switch (_place) {
-                  Place.table => ContactSheet(
-                      roll: widget.roll,
-                      selected: _index,
-                      onSelect: (int index) =>
-                          setState(() => _selected = index),
-                    ),
-                  _ => _Unbuilt(place: _place),
-                },
+                child: ContactSheet(
+                  roll: widget.roll,
+                  selected: _index,
+                  onSelect: (int index) => setState(() => _selected = index),
+                ),
               ),
               _Status(
                 left: s.statusBar(
@@ -304,41 +308,6 @@ class _RoomState extends State<Room> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A place on the map with nothing in it yet.
-///
-/// It says what it is for rather than that it is missing: a place that has not
-/// been filled is a room, and a blank field is a bug.
-class _Unbuilt extends StatelessWidget {
-  const _Unbuilt({required this.place});
-
-  final Place place;
-
-  @override
-  Widget build(BuildContext context) {
-    final KalloColors colors = KalloScope.colorsOf(context);
-    final KalloStrings s = KalloStrings.of(context);
-    return ColoredBox(
-      color: colors.content,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              s.placeLabel(place.name),
-              style: KalloType.title.copyWith(color: colors.ink),
-            ),
-            const SizedBox(height: KalloSpace.step1),
-            Text(
-              s.placeNote(place.name),
-              style: KalloType.small.copyWith(color: colors.inkFaint),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

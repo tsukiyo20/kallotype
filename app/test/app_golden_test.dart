@@ -7,7 +7,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kallo_ui/design/chrome.dart';
 import 'package:kallo_ui/film/strip_data.dart';
-import 'package:kallo_ui/lab/exports.dart';
 import 'package:kallo_ui/lab/fixture.dart';
 import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/roll.dart';
@@ -98,11 +97,8 @@ Future<List<Print>> _fixturePrints() async {
 
 /// Where prints come from, pinned rather than read: a golden that showed
 /// whoever ran it's home folder would be a golden of a person, not of the app.
-const ExportSetting _exports = ExportSetting(
-  label: '~/Pictures/Kallotype',
-  canChoose: true,
-  custom: false,
-);
+final Directory _prints = Directory('/prints');
+final Directory _roll = Directory('/roll');
 
 /// The roll the model drew, five developments of one wedge.
 StripData _strip() => StripData.fromJson(
@@ -153,7 +149,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: const <Print>[],
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: interpolatedRoll(_strip()),
       appearance: Brightness.light,
       chrome: WindowChrome.mac,
@@ -171,7 +168,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: const <Print>[],
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: interpolatedRoll(_strip()),
       locale: const Locale('zh'),
       appearance: Brightness.light,
@@ -190,7 +188,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: const <Print>[],
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: Roll.fromStrip(_strip()),
       locale: const Locale('zh'),
       appearance: Brightness.dark,
@@ -211,7 +210,8 @@ void main() {
     await tester.pumpWidget(KalloApp(
       roll: Roll.fromStrip(_strip()),
       prints: hanging,
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       appearance: Brightness.dark,
       initialPlace: Place.gallery,
       chrome: WindowChrome.mac,
@@ -230,7 +230,8 @@ void main() {
     await tester.pumpWidget(KalloApp(
       roll: Roll.fromStrip(_strip()),
       prints: hanging,
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       appearance: Brightness.light,
       initialPlace: Place.gallery,
       chrome: WindowChrome.mac,
@@ -251,7 +252,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: const <Print>[],
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: Roll.fromStrip(_strip()),
       appearance: Brightness.light,
       initialPlace: Place.gallery,
@@ -270,7 +272,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: const <Print>[],
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: Roll.fromStrip(_strip()),
       locale: const Locale('zh'),
       appearance: Brightness.light,
@@ -293,7 +296,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: <Print>[hanging.last],
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: Roll.fromStrip(_strip()),
       appearance: Brightness.dark,
       initialPlace: Place.gallery,
@@ -313,7 +317,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: const <Print>[],
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: Roll.fromStrip(_strip()),
       appearance: Brightness.light,
       initialPlace: Place.shelf,
@@ -332,7 +337,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: const <Print>[],
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: developed,
       appearance: Brightness.light,
       initialPlace: Place.workbench,
@@ -351,7 +357,8 @@ void main() {
 
     await tester.pumpWidget(KalloApp(
       prints: hanging,
-      export: _exports,
+      exportsFolder: _prints,
+      rollFolder: _roll,
       roll: developed,
       appearance: Brightness.light,
       initialPlace: Place.line,
@@ -362,6 +369,26 @@ void main() {
     await expectLater(
       find.byType(KalloApp),
       matchesGoldenFile('goldens/line.png'),
+    );
+  });
+
+  testWidgets('the binder', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: developed,
+      appearance: Brightness.light,
+      initialPlace: Place.binder,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/binder.png'),
     );
   });
 }

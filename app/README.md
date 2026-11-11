@@ -47,8 +47,8 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and nine goldens pin the language — one for
-each place, and the states a place can be in:
+`fvm flutter analyze` is clean, and ten goldens pin the language — one for each
+place, and the states a place can be in:
 
 | | | |
 |---|---|---|
@@ -56,8 +56,10 @@ each place, and the states a place can be in:
 | **the table**, forty frames, light | **the same**, in Chinese | **the drawer**, in Chinese, dark |
 | ![the shelf](test/goldens/shelf.png) | ![the workbench](test/goldens/workbench.png) | ![the gallery](test/goldens/gallery.png) |
 | **the shelf**, where a photograph enters | **the workbench**, one frame enlarged | **the gallery**, lit |
-| ![the line](test/goldens/line.png) | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
-| **the line**, what has been printed | **the same**, with the lamp off | **the drawer**, where the folder is set |
+| ![the line](test/goldens/line.png) | ![the binder](test/goldens/binder.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
+| **the line**, what has been printed | **the binder**, where the roll came from | **the drawer**, where the folder is set |
+| ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | | |
+| **the gallery**, with the lamp off | | |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -86,7 +88,7 @@ handle, a field, and — where the place has one — a record on the right.
 | **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. |
 | **The line is what happened** | A string across the room with the work hanging from it, newest first: what has been printed, not what is running. The gallery is the same files looked at properly, on a wall, in the dark. |
 | **The model is a process, for now** | `kalo` is asked for each frame and writes a PNG into the app's own folder; the app decodes them at the bench's width. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
-| **Five places, one of each built** | Shelf, Table, Binder, Line, Gallery. The workbench belongs between the table and the binder and is not built yet. A place that has nothing in it says what it is for instead of showing another place's screen. |
+| **Six places, all six built** | Shelf, Table, Workbench, Binder, Line, Gallery. The order is the work's: what you have, what you compare, what you judge one frame on, what you keep, what you print, and where it hangs. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
 | **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
 | **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery hangs whatever is in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting, and on a phone it is the one place the system lets an app write. |
