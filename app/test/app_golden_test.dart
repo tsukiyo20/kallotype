@@ -763,6 +763,69 @@ void main() {
     );
   });
 
+  testWidgets('the workbench, proved', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: developed,
+      appearance: Brightness.light,
+      initialPlace: Place.workbench,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('proof')));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/workbench-proof.png'),
+    );
+  });
+
+  testWidgets('the proof follows the ladder', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: developed,
+      appearance: Brightness.light,
+      initialPlace: Place.workbench,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('proof-label')), findsNothing);
+    await tester.tap(find.byKey(const Key('proof')));
+    await tester.pumpAndSettle();
+
+    String label() =>
+        tester.widget<Text>(find.byKey(const Key('proof-label'))).textSpan!
+            .toPlainText();
+    expect(label(), contains('VISION3 500T'));
+    expect(label(), contains('9:00'));
+    expect(label(), contains('CRYSTAL ARCHIVE PEARL'));
+
+    // The proof is a way of looking, not a frame's property: the ladder still
+    // chooses the time, and the wall follows it.
+    await tester.tap(find.text('12:00'));
+    await tester.pumpAndSettle();
+    expect(label(), contains('12:00'));
+    expect(label(), isNot(contains('9:00')));
+
+    // And the easel comes back with the switch, not by leaving the bench.
+    await tester.tap(find.byKey(const Key('proof')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('proof-label')), findsNothing);
+  });
+
   testWidgets('a reversal has no print', (WidgetTester tester) async {
     _window(tester);
 
@@ -795,6 +858,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Print'), findsNothing);
+    expect(find.byKey(const Key('proof')), findsNothing);
     expect(find.textContaining('reversal is its own picture'), findsOneWidget);
   });
 

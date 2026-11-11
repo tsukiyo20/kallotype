@@ -149,6 +149,10 @@ class KalloStrings {
       ? '反转片自己就是照片 —— 这一卷没有印相。'
       : 'A reversal is its own picture — there is no print to make here.';
   String get paper => zh ? '相纸' : 'PAPER';
+
+  /// The bench's lamp: the frame as the wall will hang it. A proof, not a
+  /// print — nothing is made, and nothing leaves the bench.
+  String get proof => zh ? '打样' : 'Proof';
   String get printedOut => zh ? '印好了' : 'printed';
   String get printing => zh ? '正在印…' : 'Printing…';
   String get onTheLine => zh ? '已进晾片绳' : 'on the line';

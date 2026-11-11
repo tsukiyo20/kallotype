@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
@@ -13,6 +14,7 @@ import '../widgets/button.dart';
 import '../widgets/patch_print.dart';
 import '../widgets/record.dart';
 import '../widgets/segments.dart';
+import '../widgets/wall.dart';
 
 /// The workbench: one frame, enlarged.
 ///
@@ -22,6 +24,14 @@ import '../widgets/segments.dart';
 /// time, and the picture changing as you move along it. Every step is a real
 /// print the model made at that time, which is the only honest way to show a
 /// ladder: nothing here interpolates.
+///
+/// The bench also has the one lamp that makes the easel a proof. A print is
+/// judged on a wall, against dark, with its paper as the brightest thing in
+/// view — which is the gallery's condition and not the bench's. So the proof
+/// takes the frame out of the room and hangs it: the same sheet, the same
+/// label, the same wall the gallery builds, at the size the gallery hangs it.
+/// The panel stays lit and the ladder stays under the wall, because the point
+/// is still to choose a time, and you choose it by looking at the print.
 class Workbench extends StatefulWidget {
   const Workbench({
     super.key,
@@ -61,7 +71,19 @@ class _WorkbenchState extends State<Workbench> {
   bool _printed = false;
   String? _error;
 
+  /// Whether the frame is being looked at as the wall will show it.
+  ///
+  /// It belongs to the bench and not to the frame: it is a way of looking, and
+  /// moving along the ladder keeps it — the whole point of a proof is to see
+  /// the same wall change.
+  bool _proof = false;
+
   Frame get _frame => widget.roll.frames[widget.selected];
+
+  /// A reversal is developed to a positive and scanned: there is no print stage
+  /// between the film and the picture, so there is no sheet to hang.
+  bool get _printable =>
+      widget.film?.process != FilmProcess.reversal;
 
   @override
   void didUpdateWidget(Workbench old) {
@@ -118,9 +140,9 @@ class _WorkbenchState extends State<Workbench> {
                 return Column(
                   children: <Widget>[
                     Expanded(
-                      child: Center(
-                        child: _easel(width, colors),
-                      ),
+                      child: _proof && _printable
+                          ? _wall(s)
+                          : Center(child: _easel(width, colors)),
                     ),
                     KalloSegments(
                       options: <String>[
@@ -148,26 +170,87 @@ class _WorkbenchState extends State<Workbench> {
   }
 
   /// The print on the easel: paper, a margin, and the frame the model made.
+  ///
+  /// The easel's paper is the window's, because the easel sits on a page that
+  /// belongs to the room. The wall's is a constant; see [`PrintSheet`].
   Widget _easel(double width, KalloColors colors) {
-    final double border = width * 0.030;
-    final double image = width - border * 2;
-    final Frame frame = _frame;
-    final Widget picture = frame.image != null
-        ? RawImage(
-            image: frame.image,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.high,
-          )
-        : PatchPrint(patches: frame.printColours(colors.print)!);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.print,
-        border: Border.all(color: colors.hairline),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(border, border, border, border * 2.2),
-        child: SizedBox(width: image, height: image / 1.5, child: picture),
-      ),
+    return PrintSheet(
+      width: width,
+      paper: colors.print,
+      outline: colors.hairline,
+      child: _picture(colors.print),
+    );
+  }
+
+  /// The frame, as the model printed it — or the chart, when there are no
+  /// pixels.
+  Widget _picture(Color paper) {
+    final ui.Image? image = _frame.image;
+    if (image != null) {
+      return RawImage(
+        image: image,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
+      );
+    }
+    return PatchPrint(patches: _frame.printColours(paper)!);
+  }
+
+  /// The frame hung the way the gallery hangs a print.
+  ///
+  /// The sheet is the wall's paper and the wall's size — the same 3 % margin,
+  /// the same label, the same ground — so that what the bench shows is not a
+  /// smaller gallery but the gallery's condition brought to the bench. The
+  /// ladder stays under it: the time is still being chosen, and the label's
+  /// loud word is the one it is being chosen at.
+  Widget _wall(KalloStrings s) {
+    // The sheet's height over its width: the picture at 3:2 inside a 3 % margin
+    // with a deeper one at the bottom. It is `PrintSheet`'s arithmetic, and the
+    // proof is the one place that has to know it before it builds the sheet.
+    const double border = 0.030;
+    final double perWidth = (1 / 1.5) * (1 - border * 2) + border * 3.2;
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints band) {
+        final double sheet = math.max(
+          160,
+          math.min(
+            math.min(band.maxWidth - 112, (band.maxHeight - 72) / perWidth),
+            KalloWall.largest,
+          ),
+        );
+        return Wall(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                PrintSheet(
+                  width: sheet,
+                  child: _picture(KalloWall.paper),
+                ),
+                const SizedBox(height: KalloSpace.step3 + 2),
+                Text.rich(
+                  TextSpan(
+                    children: wallLabel(
+                      light: 1,
+                      film: widget.film?.short ?? widget.roll.stockLabel,
+                      clock: _frame.clock,
+                      paper: widget.paperName,
+                    ),
+                  ),
+                  key: const Key('proof-label'),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: KalloType.caption.copyWith(
+                    letterSpacing: 0.5,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -229,6 +312,17 @@ class _WorkbenchState extends State<Workbench> {
               widget.paperName,
               style: KalloType.data.copyWith(color: colors.ink),
             ),
+            if (!reversal) ...<Widget>[
+              const SizedBox(height: KalloSpace.step4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _ProofSwitch(
+                  label: s.proof,
+                  on: _proof,
+                  onTap: () => setState(() => _proof = !_proof),
+                ),
+              ),
+            ],
             const Spacer(),
             if (reversal)
               Text(
@@ -243,6 +337,81 @@ class _WorkbenchState extends State<Workbench> {
                 height: 32,
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The bench's lamp: the proof is on or off, and the dot says which.
+///
+/// It is the gallery's switch brought to a light surface — a room's lamp, not
+/// an appearance — and it is quiet, because it is a way of looking and not a
+/// decision about the work. The dot is not the accent: the accent marks the
+/// frame that was chosen, and this switch chooses nothing.
+class _ProofSwitch extends StatefulWidget {
+  const _ProofSwitch({
+    required this.label,
+    required this.on,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  State<_ProofSwitch> createState() => _ProofSwitchState();
+}
+
+class _ProofSwitchState extends State<_ProofSwitch> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final KalloColors colors = KalloScope.colorsOf(context);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        key: const Key('proof'),
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
+          decoration: BoxDecoration(
+            color: _hover ? colors.ground : null,
+            borderRadius: BorderRadius.circular(KalloRadius.control),
+            border: Border.all(
+              color: _hover ? colors.inkFaint : colors.hairline,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.on ? colors.ink : null,
+                  border: widget.on
+                      ? null
+                      : Border.all(color: colors.inkFaint),
+                ),
+              ),
+              const SizedBox(width: KalloSpace.step2),
+              Text(
+                widget.label,
+                style: KalloType.small.copyWith(
+                  color: widget.on ? colors.ink : colors.inkMuted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
