@@ -74,7 +74,6 @@ Future<Roll> develop({
   }
 
   final Roll roll = Roll(
-    number: 1,
     stockId: stock.id,
     stockLabel: stock.label,
     paperId: paper?.id,

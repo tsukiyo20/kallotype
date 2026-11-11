@@ -96,7 +96,7 @@ class Inspector extends StatelessWidget {
                     borderRadius: BorderRadius.circular(KalloRadius.control),
                   ),
                   child: Text(
-                    s.develop,
+                    s.enlarge,
                     style: KalloType.body.copyWith(
                       color: colors.content,
                       fontWeight: FontWeight.w500,

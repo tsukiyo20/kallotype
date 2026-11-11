@@ -3,9 +3,9 @@ import 'dart:io';
 
 /// The choices that outlive a window.
 ///
-/// A file, not a service: this app has one setting the system does not already
-/// own, and a file a person can open and delete is worth more than one they
-/// cannot. It is also the file the next four settings will go in.
+/// A file, not a service: these are the two choices the system does not already
+/// own — where prints go, and which path a new roll is developed through — and
+/// a file a person can open and delete is worth more than one they cannot.
 class Settings {
   const Settings({this.exportPath, this.spectral = false});
 

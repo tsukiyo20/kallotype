@@ -28,7 +28,7 @@ Use `fvm flutter`, not `flutter`. A machine can have another SDK on its `PATH`,
 and the two render differently — which is exactly the failure this pin exists to
 prevent.
 
-All six platforms are checked in: `macos`, `windows`, `linux`, `ios`, `android`.
+All five platforms are checked in: `macos`, `windows`, `linux`, `ios`, `android`.
 They share one identity, `dev.kallotype.app`, and three floors — macOS 13,
 iOS 15, and Android API 29, which is where Impeller takes the Vulkan path
 instead of falling back to its OpenGL ES backend.
@@ -191,6 +191,12 @@ translates.
   the roll the model drew — the committed strip — and not for a roll the app
   developed. The chart comes back when the model is behind an FFI and can be
   asked for the numbers directly.
+- **A settings card with nothing to set.** The drawer is five cards: language,
+  appearance, the print folder, the path, and what the app is. A card about a
+  renderer the app cannot switch, or a sound it does not make, was the
+  scaffold's idea of a settings page; it is not this one. The same goes for the
+  version: it is the bundle's, and an app that wrote it out twice got it wrong
+  in both places.
 - **A soft proof of the paper's surface.** A print is rendered again from the
   photograph, at the size the photograph has and capped at 6000 points, and the
   file beside it is the record rather than a second copy of the picture. What

@@ -22,8 +22,8 @@ import 'views/places.dart';
 import 'views/room.dart';
 
 /// Whether the app opens the forty-frame layout fixture instead of the roll the
-/// model drew. `fvm flutter run --dart-define=roll=36`.
-const bool _fixture = bool.fromEnvironment('roll36');
+/// model drew. `fvm flutter run --dart-define=fixture`.
+const bool _fixture = bool.fromEnvironment('fixture');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,7 +71,6 @@ class KalloApp extends StatefulWidget {
     this.rollFolder,
     this.locale,
     this.appearance,
-    this.technicalTerms = false,
     this.spectral = false,
     this.drawerOpen = false,
     this.initialPlace = Place.table,
@@ -115,8 +114,6 @@ class KalloApp extends StatefulWidget {
   /// Pins the appearance. Null follows the system.
   final Brightness? appearance;
 
-  final bool technicalTerms;
-
   /// Whether a new roll is developed through the spectral path. The drawer's
   /// colour card sets it; the settings file remembers it.
   final bool spectral;
@@ -134,7 +131,6 @@ class KalloApp extends StatefulWidget {
 class _KalloAppState extends State<KalloApp> {
   Locale? _locale;
   Brightness? _pinned;
-  late bool _technical = widget.technicalTerms;
   late bool _spectral = widget.spectral;
   Roll? _roll;
   Catalogue? _catalogue;
@@ -392,9 +388,6 @@ class _KalloAppState extends State<KalloApp> {
               export: _exportSetting,
               locale: _locale,
               onLocale: (Locale? next) => setState(() => _locale = next),
-              technicalTerms: _technical,
-              onTechnicalTerms: (bool next) =>
-                  setState(() => _technical = next),
               spectral: _spectral,
               onSpectral: _setSpectral,
               initiallyOpen: widget.drawerOpen,

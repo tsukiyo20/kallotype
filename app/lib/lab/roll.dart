@@ -1,3 +1,4 @@
+import 'dart:io' as io;
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'dart:ui' show Color;
@@ -13,7 +14,6 @@ import 'stock.dart';
 /// what the contact sheet is.
 class Roll {
   const Roll({
-    required this.number,
     required this.stockId,
     required this.stockLabel,
     required this.frames,
@@ -22,10 +22,6 @@ class Roll {
     this.paperLabel,
     this.spectral = false,
   });
-
-  /// Which roll it is, from one. What it is called is the interface's business
-  /// — `Roll 01` in English, `第 01 卷` in Chinese.
-  final int number;
 
   /// The stock's id, as the CLI and the `.kalofilm` files spell it.
   final String stockId;
@@ -36,6 +32,22 @@ class Roll {
   /// The photograph this roll was developed from, when the app developed it.
   /// A roll the model drew has none: it is a chart, not a picture.
   final String? photo;
+
+  /// What this roll is called: the photograph's own name, without its folder
+  /// or its extension.
+  ///
+  /// There is one roll, so there is no number to give it. A serial would be a
+  /// list of one, and the photograph is the thing a person calls the roll by —
+  /// and the only thing on this roll that the app did not make.
+  String? get name {
+    final String? photo = this.photo;
+    if (photo == null) {
+      return null;
+    }
+    final String file = photo.split(io.Platform.pathSeparator).last;
+    final int dot = file.lastIndexOf('.');
+    return dot <= 0 ? file : file.substring(0, dot);
+  }
 
   /// The paper the frames were printed on, when the shelf chose one. A roll
   /// from before the choice has none, and prints on the app's paper.
@@ -74,9 +86,8 @@ class Roll {
   /// the same exposure at five times rather than five different photographs —
   /// which is the one thing this product exists to show, and a good first roll
   /// to judge the sheet against.
-  factory Roll.fromStrip(StripData strip, {int number = 1}) {
+  factory Roll.fromStrip(StripData strip) {
     return Roll(
-      number: number,
       stockId: strip.stockId,
       stockLabel: strip.label,
       frames: <Frame>[

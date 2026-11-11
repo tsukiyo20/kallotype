@@ -11,7 +11,6 @@ class Sidebar extends StatelessWidget {
     super.key,
     required this.current,
     required this.onSelect,
-    required this.rolls,
     required this.rollName,
     required this.frameCount,
     this.topInset = 12,
@@ -23,8 +22,8 @@ class Sidebar extends StatelessWidget {
   final Place current;
   final ValueChanged<Place> onSelect;
 
-  /// How many rolls there are. One, until the model is behind an FFI.
-  final int rolls;
+  /// The roll on the table: one, because a darkroom holds the roll you left in
+  /// it.
   final String rollName;
   final int frameCount;
 
@@ -50,7 +49,7 @@ class Sidebar extends StatelessWidget {
               onTap: () => onSelect(place),
             ),
           const SizedBox(height: 18),
-          _Header(s.rolls, colors),
+          _Header(s.theRoll, colors),
           _Item(
             selected: current == Place.table,
             label: rollName,

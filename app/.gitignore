@@ -10,3 +10,6 @@ build/
 
 # FVM Version Cache
 .fvm/
+
+# The golden runner's failure images: diffs, not sources.
+test/failures/

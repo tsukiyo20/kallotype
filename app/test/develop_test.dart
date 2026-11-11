@@ -249,7 +249,6 @@ void main() {
     final Frame frame =
         Frame(number: 3, minutes: 9, tempC: 20, image: image);
     final Roll whole = Roll(
-      number: 1,
       stockId: 'vision3_500t',
       stockLabel: 'KODAK VISION3 500T 5219/7219, ECN-2',
       frames: <Frame>[frame],

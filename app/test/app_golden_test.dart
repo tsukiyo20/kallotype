@@ -262,7 +262,6 @@ void _window(WidgetTester tester) {
 /// chart — the same shape the shelf produces, with the test card standing in
 /// for the photograph.
 Roll _developed(ui.Image image) => Roll(
-      number: 1,
       stockId: 'vision3_500t',
       stockLabel: 'KODAK VISION3 500T 5219/7219, ECN-2',
       photo: '/photographs/uji.jpg',
@@ -370,7 +369,6 @@ void main() {
       locale: const Locale('zh'),
       appearance: Brightness.dark,
       drawerOpen: true,
-      technicalTerms: true,
     ));
     await tester.pumpAndSettle();
 
@@ -684,7 +682,6 @@ void main() {
     // a reversal has no print stage, so the shelf offers no papers at all and
     // the form has no paper row.
     final Roll reversal = Roll(
-      number: 1,
       stockId: 'provia_100f',
       stockLabel: 'FUJICHROME PROVIA 100F (RDP III), E-6',
       photo: '/photographs/uji.jpg',
@@ -832,7 +829,6 @@ void main() {
     // A roll developed from a slide: the model has no print stage for it, so
     // the bench must not offer one. The note stands where the button would be.
     final Roll reversal = Roll(
-      number: 1,
       stockId: 'provia_100f',
       stockLabel: 'FUJICHROME PROVIA 100F (RDP III), E-6',
       photo: '/photographs/uji.jpg',

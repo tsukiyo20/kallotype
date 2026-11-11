@@ -46,8 +46,6 @@ class Room extends StatefulWidget {
     required this.export,
     required this.locale,
     required this.onLocale,
-    required this.technicalTerms,
-    required this.onTechnicalTerms,
     required this.spectral,
     required this.onSpectral,
     this.initiallyOpen = false,
@@ -90,8 +88,6 @@ class Room extends StatefulWidget {
 
   final Locale? locale;
   final ValueChanged<Locale?> onLocale;
-  final bool technicalTerms;
-  final ValueChanged<bool> onTechnicalTerms;
 
   /// The path a new roll is developed through, and the way to change it.
   final bool spectral;
@@ -183,8 +179,7 @@ class _RoomState extends State<Room> {
                     widget.onEnterExports?.call();
                   }
                 },
-                rolls: 1,
-                rollName: s.rollName(widget.roll.number),
+                rollName: s.rollName(widget.roll),
                 frameCount: widget.roll.frames.length,
               ),
             ),
@@ -195,7 +190,7 @@ class _RoomState extends State<Room> {
                   _Toolbar(
                     draggable: widget.chrome == WindowChrome.mac,
                     onDrag: widget.onDragWindow,
-                    title: s.rollName(widget.roll.number),
+                    title: s.rollName(widget.roll),
                     subtitle:
                         '${s.frames(widget.roll.frames.length)}   ·   '
                         '${widget.catalogue.film(widget.roll.stockId)?.short ?? widget.roll.stockLabel}',
@@ -285,8 +280,6 @@ class _RoomState extends State<Room> {
                         export: widget.export,
                         locale: widget.locale,
                         onLocale: widget.onLocale,
-                        technicalTerms: widget.technicalTerms,
-                        onTechnicalTerms: widget.onTechnicalTerms,
                         spectral: widget.spectral,
                         onSpectral: widget.onSpectral,
                         onClose: _closeDrawer,

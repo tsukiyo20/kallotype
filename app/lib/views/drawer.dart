@@ -9,16 +9,16 @@ import '../widgets/segments.dart';
 
 /// Settings, as a drawer in the bench.
 ///
-/// A place you open, not a page you go to. Seven cards on one sheet of paper,
+/// A place you open, not a page you go to. Five cards on one sheet of paper,
 /// and the film's own words are the ones that do not change when the language
-/// does.
+/// does. Four of them set something; the fifth says what the app is. A card
+/// about a renderer the app cannot switch, or a sound it does not make, would
+/// be an advertisement — and this drawer has nothing to sell.
 class SettingsDrawer extends StatefulWidget {
   const SettingsDrawer({
     super.key,
     required this.locale,
     required this.onLocale,
-    required this.technicalTerms,
-    required this.onTechnicalTerms,
     required this.spectral,
     required this.onSpectral,
     required this.export,
@@ -28,8 +28,6 @@ class SettingsDrawer extends StatefulWidget {
   /// What the user pinned, or null to follow the device.
   final Locale? locale;
   final ValueChanged<Locale?> onLocale;
-  final bool technicalTerms;
-  final ValueChanged<bool> onTechnicalTerms;
 
   /// The path a new roll is developed through, and the way to change it.
   final bool spectral;
@@ -50,8 +48,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         s.tabAppearance,
         s.tabPrints,
         s.tabColour,
-        s.tabPerformance,
-        s.tabSound,
         s.tabAbout,
       ];
 
@@ -133,24 +129,12 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
               horizontal: KalloSpace.step3,
               vertical: KalloSpace.step2 + 2,
             ),
-            child: Row(
-              children: <Widget>[
-                Text(
-                  s.applyAtOnce,
-                  style: KalloType.data.copyWith(
-                    fontSize: 10,
-                    color: colors.inkFaint,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'v0.2.0',
-                  style: KalloType.data.copyWith(
-                    fontSize: 10,
-                    color: colors.inkFaint,
-                  ),
-                ),
-              ],
+            child: Text(
+              s.applyAtOnce,
+              style: KalloType.data.copyWith(
+                fontSize: 10,
+                color: colors.inkFaint,
+              ),
             ),
           ),
         ],
@@ -205,10 +189,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         return _prints(s, colors);
       case 3:
         return _colour(s, colors);
-      case 4:
-        return _statement(s.performance, s.performanceNote, colors);
-      case 5:
-        return _statement(s.sound, s.soundNote, colors);
       default:
         return _statement(s.about, s.aboutNote, colors);
     }
@@ -280,14 +260,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         Text(
           s.appearance,
           style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
-        ),
-        const SizedBox(height: KalloSpace.step2),
-        SizedBox(
-          width: 460,
-          child: Text(
-            s.appearanceNote,
-            style: KalloType.body.copyWith(color: colors.inkMuted),
-          ),
         ),
         const SizedBox(height: KalloSpace.step5),
         _Label(s.appearanceLabel, colors),
@@ -433,69 +405,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             style: KalloType.data.copyWith(fontSize: 10, color: colors.inkFaint),
           ),
         ),
-        const SizedBox(height: KalloSpace.step4 - 8),
-        Container(height: 1, color: colors.hairline),
-        const SizedBox(height: KalloSpace.step3 + 4),
-        _Label(s.technicalTerms, colors),
-        const SizedBox(height: KalloSpace.step2 + 2),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                s.keepEnglish,
-                style: KalloType.body.copyWith(color: colors.ink),
-              ),
-            ),
-            _Toggle(
-              on: widget.technicalTerms,
-              onChanged: widget.onTechnicalTerms,
-              colors: colors,
-            ),
-          ],
-        ),
-        const SizedBox(height: KalloSpace.step2),
-        Row(
-          children: <Widget>[
-            Text('显影', style: KalloType.body.copyWith(color: colors.inkMuted)),
-            const SizedBox(width: KalloSpace.step2),
-            Text(
-              widget.technicalTerms ? 'DEVELOP   ·   EI 200   ·   C-41' : 'EI 200   ·   C-41',
-              style: KalloType.data.copyWith(
-                fontSize: 11,
-                color: colors.inkFaint,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: KalloSpace.step4 - 8),
-        Container(height: 1, color: colors.hairline),
-        const SizedBox(height: KalloSpace.step3 + 4),
-        _Label(s.numbers, colors),
-        const SizedBox(height: KalloSpace.step2 + 2),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                s.decimalPoint,
-                style: KalloType.body.copyWith(color: colors.ink),
-              ),
-            ),
-            Text(
-              '1.24   ·   −0.05',
-              style: KalloType.data.copyWith(color: colors.inkMuted),
-            ),
-          ],
-        ),
-        const SizedBox(height: KalloSpace.step4 - 8),
-        Container(height: 1, color: colors.hairline),
-        const SizedBox(height: KalloSpace.step3 + 4),
-        SizedBox(
-          width: 460,
-          child: Text(
-            s.neverRounded,
-            style: KalloType.body.copyWith(color: colors.inkMuted),
-          ),
-        ),
         const SizedBox(height: KalloSpace.step4),
       ],
     );
@@ -513,50 +422,6 @@ class _Label extends StatelessWidget {
     return Text(
       text.toUpperCase(),
       style: KalloType.caption.copyWith(color: colors.inkFaint),
-    );
-  }
-}
-
-class _Toggle extends StatelessWidget {
-  const _Toggle({
-    required this.on,
-    required this.onChanged,
-    required this.colors,
-  });
-
-  final bool on;
-  final ValueChanged<bool> onChanged;
-  final KalloColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => onChanged(!on),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: KalloMotion.quick,
-        curve: KalloMotion.enter,
-        width: 34,
-        height: 18,
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: on ? colors.accent : colors.hairline,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: AnimatedAlign(
-          duration: KalloMotion.quick,
-          curve: KalloMotion.enter,
-          alignment: on ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(7),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

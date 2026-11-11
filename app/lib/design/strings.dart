@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../lab/roll.dart';
 import '../lab/stock.dart';
 
 /// The words that are not the film's.
@@ -34,24 +35,16 @@ class KalloStrings {
         _ => zh ? '观景台' : 'Gallery',
       };
 
-  /// What a place is for, in the room's own words.
-  String placeNote(String name) => switch (name) {
-        'shelf' => zh ? '胶片，和一卷新的' : 'stock, and a new roll',
-        'table' => zh ? '胶卷，卷起或铺开' : 'the roll, rolled or unrolled',
-        'workbench' => zh ? '一格，放大' : 'one frame, enlarged',
-        'binder' => zh ? '曲线和来历' : 'curves and provenance',
-        'line' => zh ? '印相，和队列' : 'prints, and the queue',
-        _ => zh ? '挂起来的作品' : 'the work, hung',
-      };
-
   String get library => zh ? '资料库' : 'Library';
-  String get rolls => zh ? '胶卷' : 'Rolls';
 
-  /// `Roll 01` in English, `第 01 卷` in Chinese.
-  String rollName(int number) {
-    final String padded = number.toString().padLeft(2, '0');
-    return zh ? '第 $padded 卷' : 'Roll $padded';
-  }
+  /// What a roll is called on the pages that name it.
+  ///
+  /// The photograph, because that is what the roll is — there is one, so it
+  /// does not need a number, and a name is what it had before it was film. A
+  /// roll the model drew has no photograph: it is the strip that proves the
+  /// sheet can be read at all, and it says so.
+  String rollName(Roll roll) =>
+      roll.name ?? (zh ? '模型的样片' : "The model's strip");
 
   String frames(int count) => zh ? '$count 格' : '$count frame${count == 1 ? '' : 's'}';
 
@@ -72,6 +65,11 @@ class KalloStrings {
   String get dMax => zh ? '最大密度' : 'D max';
   String get tone => zh ? '影调' : 'TONE';
   String get develop => zh ? '显影' : 'Develop';
+
+  /// The inspector's one action: the frame, on the bench, where it is one frame
+  /// and not one of forty. It says what it does, not what a button on a table
+  /// is expected to say.
+  String get enlarge => zh ? '放大' : 'Enlarge';
 
   // -- the shelf ------------------------------------------------------------
 
@@ -238,8 +236,6 @@ class KalloStrings {
   String get tabAppearance => zh ? '外观' : 'APPEARANCE';
   String get tabPrints => zh ? '印相' : 'PRINTS';
   String get tabColour => zh ? '色彩' : 'COLOUR';
-  String get tabPerformance => zh ? '性能' : 'PERFORMANCE';
-  String get tabSound => zh ? '声音' : 'SOUND';
   String get tabAbout => zh ? '关于' : 'ABOUT';
 
   String get language => zh ? '语言' : 'Language';
@@ -247,15 +243,6 @@ class KalloStrings {
       zh ? '跟随系统，除非你在这里把它钉住。' : 'Follows your device unless you pin it here.';
   String get interfaceLanguage => zh ? '界面语言' : 'Interface language';
   String get system => zh ? '跟随系统' : 'System';
-  String get technicalTerms => zh ? '技术词' : 'Technical terms';
-  String get keepEnglish =>
-      zh ? '中文旁边保留实验室的英文' : "Keep the lab's English beside the Chinese";
-  String get numbers => zh ? '数字' : 'Numbers';
-  String get decimalPoint => zh ? '小数点' : 'Decimal point';
-  String get neverRounded => zh
-      ? '密度、曝光和时间从不为了显示而取整。'
-      : 'Density, exposure and time are never rounded for display.';
-
   String deviceLine(String tag) => zh ? '设备：$tag' : 'device: $tag';
 
   String get appearance => zh ? '外观' : 'Appearance';
@@ -263,17 +250,13 @@ class KalloStrings {
   String get light => zh ? '浅色' : 'Light';
   String get dark => zh ? '深色' : 'Dark';
   String systemLine(String value) => zh ? '系统：$value' : 'system: $value';
-  String get appearanceNote => zh
-      ? '动效只有三种词汇：光、液体、机械。系统要求减弱动效时，它们全部退成淡入。'
-      : 'Motion has three vocabularies: light, liquid, mechanism. When the system asks for less, all three become a fade.';
-
   // -- prints ---------------------------------------------------------------
 
   String get prints => zh ? '印相' : 'Prints';
 
   String get printsNote => zh
-      ? '印相是文件。模型把它写出来，观景台挂出这个文件夹里最新的一张——app 自己一张都不带。'
-      : 'A print is a file. The model writes it out, the gallery hangs the newest one in this folder, and the app carries none of them itself.';
+      ? '印相是文件。模型把它写出来，观景台挂出这个文件夹里的每一张——app 自己一张都不带。'
+      : 'A print is a file. The model writes it out, the gallery hangs whatever is in this folder, and the app carries none of them itself.';
 
   String get folder => zh ? '文件夹' : 'Folder';
   String get choose => zh ? '选择…' : 'Choose…';
@@ -300,20 +283,10 @@ class KalloStrings {
       ? '模型只输出 sRGB，显示交给系统管理。宽色域是显示器的本事，不是我们的。'
       : 'The model writes sRGB and the system manages the display. Wide gamut is the screen\'s business, not ours.';
 
-  String get performance => zh ? '性能' : 'Performance';
-  String get performanceNote => zh
-      ? '六端都跑 Impeller，没有可切换的渲染器。这台机器上是 Metal。'
-      : 'Impeller on all six platforms. There is no renderer to switch. On this machine it is Metal.';
-
-  String get sound => zh ? '声音' : 'Sound';
-  String get soundNote => zh
-      ? '默认关。打开之后，你听到的第一声是计时器。'
-      : 'Off by default. When you turn it on, the first thing you hear is the timer.';
-
   String get about => zh ? '关于' : 'About';
   String get aboutNote => zh
-      ? 'Kallotype 0.2.0。字体是 Inter 和 Noto Sans SC。模型在 Rust 里，这里是它的脸。'
-      : 'Kallotype 0.2.0. Type is Inter and Noto Sans SC. The model is in Rust; this is its face.';
+      ? 'Kallotype。字体是 Inter 和 Noto Sans SC。模型在 Rust 里，这里是它的脸。'
+      : 'Kallotype. Type is Inter and Noto Sans SC. The model is in Rust; this is its face.';
 
   String get applyAtOnce =>
       zh ? '设置立即生效，不重启。' : 'Settings apply at once. Nothing restarts.';

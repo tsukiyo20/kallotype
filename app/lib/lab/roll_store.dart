@@ -36,7 +36,6 @@ abstract final class RollStore {
     }
     await target.create(recursive: true);
     final Map<String, Object?> record = <String, Object?>{
-      'number': roll.number,
       'stock': roll.stockId,
       'label': roll.stockLabel,
       if (roll.paperId != null) 'paper': roll.paperId,
@@ -97,7 +96,6 @@ abstract final class RollStore {
       return null;
     }
     return Roll(
-      number: (json['number'] as num?)?.toInt() ?? 1,
       stockId: json['stock'] as String? ?? '',
       stockLabel: json['label'] as String? ?? '',
       paperId: json['paper'] as String?,

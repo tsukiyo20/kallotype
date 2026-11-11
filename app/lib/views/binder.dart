@@ -76,7 +76,6 @@ class Binder extends StatelessWidget {
                   children: <Widget>[
                     RecordGroup(
                       rows: <(String, String)>[
-                        (s.rollName(roll.number), s.frames(roll.frames.length)),
                         if (photo != null)
                           (s.photograph, photo.split(Platform.pathSeparator).last),
                         (s.film, stock?.short ?? roll.stockLabel),

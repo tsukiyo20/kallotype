@@ -531,7 +531,7 @@ class _ShelfState extends State<Shelf> {
     return Row(
       children: <Widget>[
         Text(
-          s.rollName(roll.number),
+          s.rollName(roll),
           style: KalloType.title.copyWith(color: colors.ink),
         ),
         const SizedBox(width: KalloSpace.step3),

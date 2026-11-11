@@ -10,7 +10,7 @@ import 'roll.dart';
 ///
 /// It is not model output. It is not shipped as an asset, it never stands in
 /// for a render, and the app only opens it when asked
-/// (`--dart-define=roll36`). Every number in it is a straight line between two
+/// (`--dart-define=fixture`). Every number in it is a straight line between two
 /// numbers the model did produce.
 Roll interpolatedRoll(StripData strip, {int frames = 40}) {
     final List<StripFrame> measured = strip.frames;
@@ -46,7 +46,6 @@ Roll interpolatedRoll(StripData strip, {int frames = 40}) {
       ));
     }
     return Roll(
-      number: 1,
       stockId: strip.stockId,
       stockLabel: strip.label,
       frames: built,
