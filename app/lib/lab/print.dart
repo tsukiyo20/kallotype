@@ -19,10 +19,12 @@ class Print {
   const Print({
     required this.image,
     required this.name,
+    this.frame,
     this.film,
     this.paper,
     this.minutes,
     this.tempC,
+    this.printed,
   });
 
   final ui.Image image;
@@ -30,6 +32,13 @@ class Print {
   /// The image's file name. A print with no record still has a name, and a
   /// name is what a picture remains when everything else about it was lost.
   final String name;
+
+  /// Which frame on the roll it came from, when the record says. A print of a
+  /// frame is that frame; a print whose record was lost is only a picture.
+  final int? frame;
+
+  /// When the file was written, which is when the print was made.
+  final DateTime? printed;
 
   /// The film and the paper, as they would be printed on the box. They do not
   /// translate: they are the material's own names. Null when the export came
@@ -45,6 +54,26 @@ class Print {
   String? get clock {
     final double? minutes = this.minutes;
     return minutes == null ? null : darkroomClock(minutes);
+  }
+
+  /// `03 · 9:00` — the frame, and how long it was in the developer.
+  String get folio {
+    final String? clock = this.clock;
+    final int? frame = this.frame;
+    if (frame != null && clock != null) {
+      return '${frame.toString().padLeft(2, '0')}   ·   $clock';
+    }
+    return frame?.toString().padLeft(2, '0') ?? clock ?? name;
+  }
+
+  /// `21:40` — when it came off the line.
+  String? get at {
+    final DateTime? printed = this.printed;
+    if (printed == null) {
+      return null;
+    }
+    return '${printed.hour.toString().padLeft(2, '0')}:'
+        '${printed.minute.toString().padLeft(2, '0')}';
   }
 
   /// A decoded print owns a texture. When the wall stops hanging it, the
@@ -69,6 +98,8 @@ class Print {
     return Print(
       image: frame.image,
       name: _name(image.path),
+      frame: (_record(image, 'frame') as num?)?.toInt(),
+      printed: image.statSync().modified,
       film: _record(image, 'film') as String?,
       paper: _record(image, 'paper') as String?,
       minutes: (_record(image, 'minutes') as num?)?.toDouble(),

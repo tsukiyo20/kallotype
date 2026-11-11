@@ -47,7 +47,7 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and eight goldens pin the language — one for
+`fvm flutter analyze` is clean, and nine goldens pin the language — one for
 each place, and the states a place can be in:
 
 | | | |
@@ -56,8 +56,8 @@ each place, and the states a place can be in:
 | **the table**, forty frames, light | **the same**, in Chinese | **the drawer**, in Chinese, dark |
 | ![the shelf](test/goldens/shelf.png) | ![the workbench](test/goldens/workbench.png) | ![the gallery](test/goldens/gallery.png) |
 | **the shelf**, where a photograph enters | **the workbench**, one frame enlarged | **the gallery**, lit |
-| ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) | |
-| **the same**, with the lamp off | **the drawer**, where the folder is set | |
+| ![the line](test/goldens/line.png) | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
+| **the line**, what has been printed | **the same**, with the lamp off | **the drawer**, where the folder is set |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -84,6 +84,7 @@ handle, a field, and — where the place has one — a record on the right.
 |---|---|
 | **The shelf is the way in** | One photograph, into the developer five times, and a roll comes out: the same frame at 3, 6, 9, 12 and 15 minutes. That ladder is the product's whole argument, so the first roll is a comparison rather than a collection. |
 | **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. |
+| **The line is what happened** | A string across the room with the work hanging from it, newest first: what has been printed, not what is running. The gallery is the same files looked at properly, on a wall, in the dark. |
 | **The model is a process, for now** | `kalo` is asked for each frame and writes a PNG into the app's own folder; the app decodes them at the bench's width. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
 | **Five places, one of each built** | Shelf, Table, Binder, Line, Gallery. The workbench belongs between the table and the binder and is not built yet. A place that has nothing in it says what it is for instead of showing another place's screen. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
@@ -173,10 +174,11 @@ translates.
   the roll the model drew — the committed strip — and not for a roll the app
   developed. The chart comes back when the model is behind an FFI and can be
   asked for the numbers directly.
-- **The line.** Printing a frame copies its PNG into the export folder and
+- **A queue.** Printing a frame copies its PNG into the export folder and
   writes the record beside it, because a print is a file and the frame on the
-  roll is already the render. The queue of prints is therefore always empty,
-  and the place that would show it is still a statement.
+  roll is already the render. Nothing takes long enough to queue, so the line
+  is a drying line and not a queue; it becomes one when a print is a render at
+  paper size rather than a copy.
 - **A folder chooser on a phone.** iOS gives an app one folder and shows it in
   Files; Android has a per-app directory the system owns. A picker there is a
   desktop idiom, and neither platform is wired yet: iOS reads its Documents

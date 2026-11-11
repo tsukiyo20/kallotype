@@ -296,7 +296,7 @@ class _KalloAppState extends State<KalloApp> {
               prints: _prints,
               exports: Exports.directoryFor(_exportPath),
               onDeveloped: _developed,
-              onEnterGallery:
+              onEnterExports:
                   widget.prints == null ? () => unawaited(_reloadPrints()) : null,
               export: widget.export ?? _export,
               locale: _locale,

@@ -84,10 +84,14 @@ Future<List<Print>> _fixturePrints() async {
       Print(
         image: image,
         name: 'test-card',
+        frame: 3,
         film: 'VISION3 500T',
         paper: 'CRYSTAL ARCHIVE PEARL',
         minutes: minutes,
         tempC: 20,
+        // A fixed hour, so that a golden is a picture of the app rather than a
+        // picture of when it was run.
+        printed: DateTime(2026, 10, 2, 21, 40),
       ),
   ];
 }
@@ -339,6 +343,25 @@ void main() {
     await expectLater(
       find.byType(KalloApp),
       matchesGoldenFile('goldens/workbench.png'),
+    );
+  });
+
+  testWidgets('the line', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      prints: hanging,
+      export: _exports,
+      roll: developed,
+      appearance: Brightness.light,
+      initialPlace: Place.line,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/line.png'),
     );
   });
 }

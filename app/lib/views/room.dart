@@ -16,6 +16,7 @@ import '../widgets/inspector.dart';
 import '../widgets/sidebar.dart';
 import 'drawer.dart';
 import 'gallery.dart';
+import 'line.dart';
 import 'places.dart';
 import 'shelf.dart';
 import 'workbench.dart';
@@ -32,7 +33,7 @@ class Room extends StatefulWidget {
     super.key,
     required this.roll,
     this.prints = const <Print>[],
-    this.onEnterGallery,
+    this.onEnterExports,
     required this.onDeveloped,
     required this.exports,
     required this.export,
@@ -58,10 +59,10 @@ class Room extends StatefulWidget {
   /// Where a print goes, resolved once at the top.
   final Directory? exports;
 
-  /// Walking into the gallery is what makes it look again: the folder is not
-  /// watched, and a room that shows yesterday's work is a room with the lights
-  /// off.
-  final VoidCallback? onEnterGallery;
+  /// Walking into a room that shows exports is what makes it look again: the
+  /// folder is not watched, and a room that shows yesterday's work is a room
+  /// with the lights off.
+  final VoidCallback? onEnterExports;
 
   /// A roll that has just come off the shelf: one photograph, developed.
   final ValueChanged<Roll> onDeveloped;
@@ -156,8 +157,8 @@ class _RoomState extends State<Room> {
                     _place = place;
                     _open = false;
                   });
-                  if (place == Place.gallery) {
-                    widget.onEnterGallery?.call();
+                  if (place == Place.gallery || place == Place.line) {
+                    widget.onEnterExports?.call();
                   }
                 },
                 rolls: 1,
@@ -194,6 +195,7 @@ class _RoomState extends State<Room> {
                               setState(() => _selected = index),
                           exports: widget.exports,
                         ),
+                      Place.line => Line(prints: widget.prints),
                       Place.gallery => Gallery(
                           prints: widget.prints,
                           onLight: _toggleLight,

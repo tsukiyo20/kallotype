@@ -32,6 +32,7 @@ Future<File> printFrame({
   final File record = File('${exports.path}${Platform.pathSeparator}$name.json');
   await record.writeAsString(
     const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+      'frame': frame.number,
       'film': stock?.short ?? roll.stockLabel,
       'paper': Stocks.paperShort,
       'minutes': frame.minutes,

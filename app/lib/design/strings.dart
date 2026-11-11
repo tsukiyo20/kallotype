@@ -103,6 +103,13 @@ class KalloStrings {
   String get printing => zh ? '正在印…' : 'Printing…';
   String get onTheLine => zh ? '已进晾片绳' : 'on the line';
 
+  // -- the line -------------------------------------------------------------
+
+  String printCount(int count) => zh ? '$count 张' : '$count print${count == 1 ? '' : 's'}';
+  String get lineEmpty => zh ? '晾片绳是空的' : 'Nothing on the line';
+  String get lineEmptyNote =>
+      zh ? '在工作台上按印，印相会挂到这里，等干了再看。' : 'Print a frame on the workbench and it hangs here until you look at it.';
+
   // -- the gallery ----------------------------------------------------------
 
   /// The switch on the wall. Not the appearance's light: the room's.
