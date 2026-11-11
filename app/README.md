@@ -47,21 +47,23 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and fourteen goldens pin the language — one for
+`fvm flutter analyze` is clean, and sixteen goldens pin the language — one for
 each place, the states a place can be in, and the two shelves:
 
 | | | |
 |---|---|---|
-| ![the table](test/goldens/sheet.png) | ![the table in Chinese](test/goldens/sheet-zh.png) | ![the drawer](test/goldens/drawer.png) |
-| **the table**, forty frames, light | **the same**, in Chinese | **the drawer**, in Chinese, dark |
-| ![the shelf](test/goldens/shelf.png) | ![the workbench](test/goldens/workbench.png) | ![the gallery](test/goldens/gallery.png) |
-| **the shelf**, where a photograph enters | **the workbench**, one frame enlarged | **the gallery**, lit |
-| ![the line](test/goldens/line.png) | ![the binder](test/goldens/binder.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
-| **the line**, what has been printed | **the binder**, where the roll came from | **the drawer**, where the folder is set |
+| ![the table](test/goldens/sheet.png) | ![the table in Chinese](test/goldens/sheet-zh.png) | ![the table, a developed roll](test/goldens/table-roll.png) |
+| **the table**, forty frames, light | **the same**, in Chinese | **the table**, a roll from the shelf |
+| ![the shelf](test/goldens/shelf.png) | ![the workbench](test/goldens/workbench.png) | ![the workbench, proved](test/goldens/workbench-proof.png) |
+| **the shelf**, where a photograph enters | **the workbench**, one frame enlarged | **the workbench**, the frame proved |
+| ![the gallery](test/goldens/gallery.png) | ![the line](test/goldens/line.png) | ![the binder](test/goldens/binder.png) |
+| **the gallery**, lit | **the line**, what has been printed | **the binder**, where the roll came from |
+| ![the drawer](test/goldens/drawer.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) | ![the drawer, on colour](test/goldens/drawer-colour.png) |
+| **the drawer**, in Chinese, dark | **the drawer**, where the folder is set | **the drawer**, where the path is chosen |
 | ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the shelf with a silver film taken](test/goldens/shelf-silver.png) | ![the shelf in a narrow window](test/goldens/shelf-narrow.png) |
 | **the gallery**, with the lamp off | **the shelf**, with a silver film taken | **the shelf**, in the narrowest window |
-| ![a print, looked at closely](test/goldens/gallery-loupe.png) | ![the drawer, on colour](test/goldens/drawer-colour.png) | |
-| **a print**, walked up to | **the drawer**, where the path is chosen | |
+| ![a print, looked at closely](test/goldens/gallery-loupe.png) | | |
+| **a print**, walked up to | | |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -88,12 +90,12 @@ handle, a field, and — where the place has one — a record on the right.
 |---|---|
 | **The shelf is the way in, and it is the model's** | One photograph, into the developer five times, and a roll comes out: the same frame at 3, 6, 9, 12 and 15 minutes. That ladder is the product's whole argument, so the first roll is a comparison rather than a collection. The materials are not constants in the app: `kalo stocks --json` hands over every film the model carries, grouped by chemistry, and every paper under a rule of its own, so a roll is developed as the two boxes you took off the shelf — and the shelf cannot show a film or a paper the model does not have. |
 | **The binder is where the roll came from** | The photograph, the film, the paper, the five times, and — under each material — the sheet it was read from and one line per field saying whether that field was measured, borrowed from another stock, or left as a compiled placeholder. A stock that borrowed its dyes is a different claim from one that measured them, and this is the page that says which is which. |
-| **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. |
+| **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. The bench also has one lamp: *proof* takes the frame out of the room and hangs it the way the gallery will — the same wall, the same sheet, the same label, at the size a hanging is — so the time is chosen against the wall and not against a screen. The ladder stays under it: the label's loud word is the time in hand. |
 | **The line is what happened** | A string across the room with the work hanging from it, newest first, and a corner that says what is still being made. The gallery is the same files looked at properly, on a wall, in the dark. |
 | **The path is a choice** | Exposure, print and scan go through the spectrum — 71 wavelengths, reconstructed from the input and integrated against each layer's sensitivity — or through one number per channel. It is a setting because the model keeps it opt-in: the structure is physical end to end, and the data under it is mixed — the curves and layer sensitivities of twenty-one films are measured, the papers are, the illuminant is CIE D50, and fifteen films still borrow their dye shapes because their sheets print a neutral instead of three dyes. The binder says per film which is which. The two paths are different photographs, not different labels, and the roll remembers which made it: the binder says so under the film, and a print of that roll is made the same way. |
 | **The model is a process, for now** | `kalo` is asked for each frame — grain, halation and the DIR couplers, which are physics and cost nothing — and writes a PNG into the app's own folder; the app decodes them at the bench's width. It is asked once more, at the start, for its catalogue. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
 | **Six places, all six built** | Shelf, Table, Workbench, Binder, Line, Gallery. The order is the work's: what you have, what you compare, what you judge one frame on, what you keep, what you print, and where it hangs. |
-| **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
+| **The table is the roll, unrolled** | A contact sheet is a print, so the roll is one sheet and not a grid of cards: the frames sit on the paper, their numbers and times are written on it, and the margin names the paper it was printed on. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. The mark around a frame is the safelight's colour, because a mark on a contact proof is a pencil. |
 | **A print can be walked up to** | Clicking a print opens it at the file's own size. The sheet keeps its size and shape — this is a loupe on paper, not a picture viewer — and the image is magnified *inside* it, clipped by its own margin, up to 1:1, one image pixel per device pixel, which is as far as the file goes. The label under it says the file's pixels and the scale; escape puts it back on the wall. The lamp is still the room's, so the switch comes with you. |
 | **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
 | **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery hangs whatever is in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting, and on a phone it is the one place the system lets an app write. |
@@ -153,6 +155,14 @@ These are the ones worth enforcing in review.
   the paper. Plus three operations — `under(colour, light)`, `toward(set, t)`
   and `night` — because a room can go dark, and going dark is not the same event
   as the system changing its theme.
+- **The wall** — `KalloWall`: the ground, the paper and the label of the one
+  room in the product that is lit by a lamp, plus the largest a print gets on it
+  and how much light an eye keeps in the dark. Not an appearance set: a dark
+  room looks the same whatever the window prefers.
+- **Ink on paper** — `KalloInk`: what a contact proof writes on its sheet, at
+  the light set's values in both appearances, because the paper does not turn
+  dark when the window does. The accent is the safelight's, for the mark around
+  the frame that was chosen.
 - **Space** — 2, 4, 8, 12, 16, 24, 32.
 - **Radius** — 3 for film, 6 for a control, 10 for a card, 14 for a sheet.
 - **Motion** — 90 / 160 / 240 / 460 ms, three curves, one stagger. A lamp comes
@@ -181,11 +191,15 @@ translates.
   the roll the model drew — the committed strip — and not for a roll the app
   developed. The chart comes back when the model is behind an FFI and can be
   asked for the numbers directly.
-- **A proof.** A print is rendered again from the photograph, at the size the
-  photograph has and capped at 6000 points, and the file beside it is the
-  record rather than a second copy of the picture. There is no soft proof and
-  no paper simulation beyond the paper's own curve: what you see on the bench is
-  a preview of the tones, not a simulation of the sheet under a lamp.
+- **A soft proof of the paper's surface.** A print is rendered again from the
+  photograph, at the size the photograph has and capped at 6000 points, and the
+  file beside it is the record rather than a second copy of the picture. What
+  the app can show before that is the presentation: the bench hangs the frame
+  the way the wall will, and the table is one contact proof on one sheet. What
+  it cannot show is the paper itself — the model exports pixels, not a
+  reflectance, so the surface, the sheen, and the difference between Crystal
+  Archive and Endura are not simulated, and the sheet is one paper colour in
+  both rooms.
 - **A print from a reversal.** A reversal is developed to a positive and
   scanned: there is no print stage between the film and the picture. The bench
   says so where the button would be rather than making a print that is a second
