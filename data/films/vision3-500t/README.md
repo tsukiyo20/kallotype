@@ -5,7 +5,7 @@ other films borrow. The only negative in the series with nothing borrowed.
 
 - **The report:** [REPORT.md](REPORT.md) — the sheet, the fit, the anchor and what
   is borrowed rather than measured.
-- **The film:** `vision3-500t.kalofilm` (5,297 bytes) — load it with
+- **The film:** `vision3-500t.kalofilm` (5,320 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 563 points per layer.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png).

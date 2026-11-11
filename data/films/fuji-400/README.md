@@ -5,7 +5,7 @@ faster curve and the same three declared borrowings.
 
 - **The report:** [REPORT.md](REPORT.md) — the sheet, the fit, the anchor and what
   is borrowed rather than measured.
-- **The film:** `fuji-400.kalofilm` (5,498 bytes) — load it with
+- **The film:** `fuji-400.kalofilm` (5,521 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 points per layer.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png).

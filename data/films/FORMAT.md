@@ -21,6 +21,7 @@ before the first section.
 |---|---|
 | `schema` | `"film/v1"` |
 | `id`, `label`, `process` | `process` is `negative`, `reversal` or `monochrome` |
+| `short` | the name a box carries — `PORTRA 400`, not `KODAK PROFESSIONAL PORTRA 400, C-41`. Optional: without it a reader falls back to `label`, which is the right name in the wrong size. It is here because a wall label under a print is two words wide |
 | `tables` | the table names, in file order: `["layers", "dyes", "mask"]` |
 | `[provenance]` | `publication`, `page`, `retrieved`, `checksum` (of the data sheet), `note` |
 | `[character]` | what the film is, without rendering: `d_min`, `d_max`, `gamma`, `base_density`, `grains_per_um2`, `sigma_um` |
@@ -65,7 +66,7 @@ offset 16+n+m  32   SHA-256 of every byte before it
 | key | meaning |
 |---|---|
 | `schema` | `"paper/v1"` |
-| `id`, `label` | |
+| `id`, `label`, `short` | `short` as a film's: the name a box carries. Optional; falls back to `label` |
 | `tables` | `["dyes", "layers"]` |
 | `[provenance]` | as a film's |
 | `[curve]` | **one** curve: `d_min`, `d_max`, `gamma`, `log_e0`, `transition` |
@@ -92,7 +93,7 @@ fit is re-derived from — and `kalo stock check` reads it and nothing else.
 
 | section | key | what |
 |---|---|---|
-| `[stock]` | `id`, `label`, `kind`, `process`, `claim`, `borrowed`, `note` | identity, and what the file admits to owing |
+| `[stock]` | `id`, `label`, `short`, `kind`, `process`, `claim`, `borrowed`, `note` | identity, and what the file admits to owing |
 | `[provenance]` | `source`, `publication`, `page`, `retrieved`, `checksum` | where the numbers came from |
 | `[curve.red]`, `[curve.green]`, `[curve.blue]` | `d_min`, `d_max`, `gamma`, `log_e0`, `toe_transition`, `shoulder_transition`, `points`, `rms` | one curve per layer, and the points it was fitted to |
 | `[emulsion]` | `sigma_um` | one blur per layer, in micrometres |

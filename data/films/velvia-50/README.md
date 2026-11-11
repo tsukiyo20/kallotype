@@ -6,7 +6,7 @@ granularity are all from its own sheet.
 - **The report:** [REPORT.md](REPORT.md) — the order rule that reads three
   overprinted curves, the shared tail and what it costs, the fits, the anchor,
   and the four panels on AF3-960E page 7.
-- **The film:** `velvia-50.kalofilm` (6,006 bytes) — load it with
+- **The film:** `velvia-50.kalofilm` (6,026 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 672, 655 and 591 digitised points.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn

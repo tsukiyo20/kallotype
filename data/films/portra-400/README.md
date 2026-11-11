@@ -7,7 +7,7 @@ is a measured spectrum rather than a borrowed one.
 - **The report:** [REPORT.md](REPORT.md) — why the fitter had to learn that a
   negative *rises*, the anchor the sheet prints, the two halves of the dye
   panel, and the grain number the sheet explicitly refuses to give.
-- **The film:** `portra-400.kalofilm` (6,268 bytes) — load it with
+- **The film:** `portra-400.kalofilm` (6,289 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 points per layer.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn
