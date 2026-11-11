@@ -61,14 +61,17 @@ class _ShelfState extends State<Shelf> {
 
   /// The film the next roll is developed as.
   ///
-  /// The last box taken, or the stock with nothing borrowed in it, or whatever
-  /// the first box is — in that order, because a shelf whose first answer is
-  /// "EKTACHROME E100" would make a reversal the default and there would be no
-  /// print at the end of the roll.
+  /// The last box taken, or the film the roll on the table was made of, or the
+  /// stock with nothing borrowed in it — the shelf starts where the work left
+  /// off. The last fallback is whatever the first box is, because a shelf whose
+  /// first answer is "EKTACHROME E100" would make a reversal the default and
+  /// there would be no print at the end of the roll.
   Stock? get _stock {
     final Catalogue catalogue = widget.catalogue;
-    return catalogue.film(_taken ?? Stocks.defaultId) ??
-        catalogue.film(widget.roll?.stockId ?? '') ??
+    return catalogue.film(
+          _taken ?? widget.roll?.stockId ?? Stocks.defaultId,
+        ) ??
+        catalogue.film(Stocks.defaultId) ??
         (catalogue.films.isEmpty ? Stocks.vision : catalogue.films.first);
   }
 
@@ -231,16 +234,14 @@ class _ShelfState extends State<Shelf> {
           const SizedBox(height: KalloSpace.step1),
           _chosen(stock, colors),
           const SizedBox(height: KalloSpace.step4),
-          _label(s.paper, colors),
-          const SizedBox(height: KalloSpace.step1),
-          if (_paper != null)
-            _chosen(_paper, colors)
-          else
-            Text(
-              s.noPaper,
-              style: KalloType.small.copyWith(color: colors.inkFaint),
-            ),
-          const SizedBox(height: KalloSpace.step4),
+          // No paper row for a film with no print stage: the shelf says why,
+          // once, where the papers would be.
+          if (_paper != null) ...<Widget>[
+            _label(s.paper, colors),
+            const SizedBox(height: KalloSpace.step1),
+            _chosen(_paper, colors),
+            const SizedBox(height: KalloSpace.step4),
+          ],
           _label(s.developments, colors),
           const SizedBox(height: KalloSpace.step1),
           Text(

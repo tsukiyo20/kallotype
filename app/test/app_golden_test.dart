@@ -512,6 +512,45 @@ void main() {
     );
   });
 
+  testWidgets('a reversal has no paper to choose', (WidgetTester tester) async {
+    _window(tester);
+
+    // The roll on the table was made of PROVIA, so the shelf starts there — and
+    // a reversal has no print stage, so the shelf offers no papers at all and
+    // the form has no paper row.
+    final Roll reversal = Roll(
+      number: 1,
+      stockId: 'provia_100f',
+      stockLabel: 'FUJICHROME PROVIA 100F (RDP III), E-6',
+      photo: '/photographs/uji.jpg',
+      frames: <Frame>[
+        Frame(
+          number: 1,
+          minutes: 6,
+          tempC: 20,
+          image: hanging.first.image,
+        ),
+      ],
+    );
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: reversal,
+      appearance: Brightness.light,
+      initialPlace: Place.shelf,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('COLOUR PAPER'), findsNothing);
+    expect(find.text('SILVER PAPER'), findsNothing);
+    expect(find.textContaining('no print'), findsOneWidget);
+    // The film row is still there: the roll was made of something.
+    expect(find.text('PROVIA 100F'), findsWidgets);
+  });
+
   testWidgets('the shelf in a narrow window', (WidgetTester tester) async {
     // The minimum window is 960 wide, and the content column is that minus the
     // sidebar: not enough for a form and a shelf side by side, so the shelf goes
