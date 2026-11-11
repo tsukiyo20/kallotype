@@ -26,6 +26,7 @@ class KalloStrings {
   String placeLabel(String name) => switch (name) {
         'shelf' => zh ? '架子' : 'Shelf',
         'table' => zh ? '台面' : 'Table',
+        'workbench' => zh ? '工作台' : 'Workbench',
         'binder' => zh ? '活页夹' : 'Binder',
         'line' => zh ? '晾片绳' : 'Line',
         _ => zh ? '观景台' : 'Gallery',
@@ -35,6 +36,7 @@ class KalloStrings {
   String placeNote(String name) => switch (name) {
         'shelf' => zh ? '胶片，和一卷新的' : 'stock, and a new roll',
         'table' => zh ? '胶卷，卷起或铺开' : 'the roll, rolled or unrolled',
+        'workbench' => zh ? '一格，放大' : 'one frame, enlarged',
         'binder' => zh ? '曲线和来历' : 'curves and provenance',
         'line' => zh ? '印相，和队列' : 'prints, and the queue',
         _ => zh ? '挂起来的作品' : 'the work, hung',
@@ -92,6 +94,14 @@ class KalloStrings {
 
   String get onTheTable => zh ? '在台面上' : 'on the table';
   String get openRoll => zh ? '打开' : 'Open';
+
+  // -- the workbench --------------------------------------------------------
+
+  String get printOut => zh ? '印' : 'Print';
+  String get paper => zh ? '相纸' : 'PAPER';
+  String get printedOut => zh ? '印好了' : 'printed';
+  String get printing => zh ? '正在印…' : 'Printing…';
+  String get onTheLine => zh ? '已进晾片绳' : 'on the line';
 
   // -- the gallery ----------------------------------------------------------
 

@@ -6,9 +6,9 @@ import 'package:flutter/widgets.dart';
 /// toolbar, and it slides over wherever you already are.
 ///
 /// The order is the work's order — what you have, what you look at it with,
-/// what you keep, what you print, and finally where it hangs. The workbench
-/// belongs between the table and the binder and is not built yet.
-enum Place { shelf, table, binder, line, gallery }
+/// what you judge one frame on, what you keep, what you print, and finally
+/// where it hangs.
+enum Place { shelf, table, workbench, binder, line, gallery }
 
 /// A place's mark: geometric, one weight, drawn rather than imported.
 class PlaceIcon extends StatelessWidget {
@@ -51,6 +51,17 @@ class _IconPainter extends CustomPainter {
           stroke,
         );
         canvas.drawLine(const Offset(2, 7), const Offset(14, 7), stroke);
+      case Place.workbench:
+        // An enlarger: a head, a column, and the easel it throws onto.
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(4, 2.5, 8, 3.6),
+            const Radius.circular(1),
+          ),
+          stroke,
+        );
+        canvas.drawLine(const Offset(8, 6.1), const Offset(8, 11.4), stroke);
+        canvas.drawLine(const Offset(3.2, 13), const Offset(12.8, 13), stroke);
       case Place.binder:
         canvas.drawRRect(
           RRect.fromRectAndRadius(box, const Radius.circular(2)),

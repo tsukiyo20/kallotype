@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
@@ -17,6 +18,7 @@ import 'drawer.dart';
 import 'gallery.dart';
 import 'places.dart';
 import 'shelf.dart';
+import 'workbench.dart';
 
 /// The window.
 ///
@@ -32,6 +34,7 @@ class Room extends StatefulWidget {
     this.prints = const <Print>[],
     this.onEnterGallery,
     required this.onDeveloped,
+    required this.exports,
     required this.export,
     required this.locale,
     required this.onLocale,
@@ -51,6 +54,9 @@ class Room extends StatefulWidget {
   /// What has been exported, in the order it was printed. Nothing is a state
   /// the room can show: the gallery is a wall, and a wall can be empty.
   final List<Print> prints;
+
+  /// Where a print goes, resolved once at the top.
+  final Directory? exports;
 
   /// Walking into the gallery is what makes it look again: the folder is not
   /// watched, and a room that shows yesterday's work is a room with the lights
@@ -89,6 +95,10 @@ class _RoomState extends State<Room> {
   bool _lit = true;
 
   void _closeDrawer() => setState(() => _open = false);
+
+  /// The selected frame, held inside the roll: developing a new roll can leave
+  /// the old selection past its end.
+  int get _index => math.min(_selected, widget.roll.frames.length - 1);
 
   void _toggleLight() => setState(() => _lit = !_lit);
 
@@ -130,7 +140,7 @@ class _RoomState extends State<Room> {
   }
 
   Widget _window(KalloStrings s) {
-    final Frame frame = widget.roll.frames[_selected];
+    final Frame frame = widget.roll.frames[_index];
     return Stack(
       children: <Widget>[
         Row(
@@ -176,6 +186,13 @@ class _RoomState extends State<Room> {
                           roll: widget.roll,
                           onDeveloped: widget.onDeveloped,
                           onOpen: () => setState(() => _place = Place.table),
+                        ),
+                      Place.workbench => Workbench(
+                          roll: widget.roll,
+                          selected: _index,
+                          onSelect: (int index) =>
+                              setState(() => _selected = index),
+                          exports: widget.exports,
                         ),
                       Place.gallery => Gallery(
                           prints: widget.prints,
@@ -258,7 +275,7 @@ class _RoomState extends State<Room> {
                 child: switch (_place) {
                   Place.table => ContactSheet(
                       roll: widget.roll,
-                      selected: _selected,
+                      selected: _index,
                       onSelect: (int index) =>
                           setState(() => _selected = index),
                     ),
@@ -278,7 +295,11 @@ class _RoomState extends State<Room> {
         ),
         SizedBox(
           width: 280,
-          child: Inspector(roll: widget.roll, selected: _selected),
+          child: Inspector(
+            roll: widget.roll,
+            selected: _index,
+            onEnlarge: () => setState(() => _place = Place.workbench),
+          ),
         ),
       ],
     );

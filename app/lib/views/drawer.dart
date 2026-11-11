@@ -5,6 +5,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/exports.dart';
 import '../widgets/button.dart';
+import '../widgets/segments.dart';
 
 /// Settings, as a drawer in the bench.
 ///
@@ -249,7 +250,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         const SizedBox(height: KalloSpace.step5),
         _Label(s.appearanceLabel, colors),
         const SizedBox(height: KalloSpace.step2),
-        _Segments(
+        KalloSegments(
           options: <String>[s.system, s.light, s.dark],
           selected: switch (scope.pinned) {
             null => 0,
@@ -261,7 +262,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             2 => Brightness.dark,
             _ => null,
           }),
-          colors: colors,
         ),
         const SizedBox(height: KalloSpace.step2 + 2),
         Align(
@@ -372,7 +372,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         const SizedBox(height: KalloSpace.step4),
         _Label(s.interfaceLanguage, colors),
         const SizedBox(height: KalloSpace.step2),
-        _Segments(
+        KalloSegments(
           options: <String>[s.system, '中文', 'English'],
           selected: widget.locale == null
               ? 0
@@ -382,7 +382,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             2 => const Locale('en'),
             _ => null,
           }),
-          colors: colors,
         ),
         const SizedBox(height: KalloSpace.step2 + 2),
         Align(
@@ -472,76 +471,6 @@ class _Label extends StatelessWidget {
     return Text(
       text.toUpperCase(),
       style: KalloType.caption.copyWith(color: colors.inkFaint),
-    );
-  }
-}
-
-/// Three choices, one of them a pair of characters wide.
-class _Segments extends StatelessWidget {
-  const _Segments({
-    required this.options,
-    required this.selected,
-    required this.onSelect,
-    required this.colors,
-  });
-
-  final List<String> options;
-  final int selected;
-  final ValueChanged<int> onSelect;
-  final KalloColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: colors.ground,
-        borderRadius: BorderRadius.circular(KalloRadius.control + 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          for (int i = 0; i < options.length; i++)
-            GestureDetector(
-              onTap: () => onSelect(i),
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: KalloMotion.quick,
-                curve: KalloMotion.enter,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KalloSpace.step3 + 2,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  // A selected segment has to lift off its track in both
-                  // appearances: white on light, a lit grey on dark.
-                  color: i == selected
-                      ? Color.lerp(colors.surface, colors.ink, 0.09)
-                      : null,
-                  borderRadius: BorderRadius.circular(KalloRadius.control),
-                  boxShadow: i == selected
-                      ? const <BoxShadow>[
-                          BoxShadow(
-                            color: Color(0x14000000),
-                            blurRadius: 3,
-                            offset: Offset(0, 1),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  options[i],
-                  style: KalloType.body.copyWith(
-                    fontSize: 12.5,
-                    fontWeight:
-                        i == selected ? FontWeight.w500 : FontWeight.w400,
-                    color: i == selected ? colors.ink : colors.inkMuted,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

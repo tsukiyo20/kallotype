@@ -112,15 +112,36 @@ void _window(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
+/// A roll the way a developed one looks: five frames, one picture each, and no
+/// chart — the same shape the shelf produces, with the test card standing in
+/// for the photograph.
+Roll _developed(ui.Image image) => Roll(
+      number: 1,
+      stockId: 'vision3_500t',
+      stockLabel: 'KODAK VISION3 500T 5219/7219, ECN-2',
+      photo: '/photographs/uji.jpg',
+      frames: <Frame>[
+        for (int i = 0; i < 5; i++)
+          Frame(
+            number: i + 1,
+            minutes: 3.0 * (i + 1),
+            tempC: 20,
+            image: image,
+          ),
+      ],
+    );
+
 void main() {
   // The print is decoded before any widget exists: `instantiateImageCodec` is a
   // real engine call, and a widget test runs in a zone that would never
   // complete it.
   late List<Print> hanging;
+  late Roll developed;
 
   setUpAll(() async {
     await _loadFonts();
     hanging = await _fixturePrints();
+    developed = _developed(hanging.first.image);
   });
 
   testWidgets('the contact sheet', (WidgetTester tester) async {
@@ -299,6 +320,25 @@ void main() {
     await expectLater(
       find.byType(KalloApp),
       matchesGoldenFile('goldens/shelf.png'),
+    );
+  });
+
+  testWidgets('the workbench', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      prints: const <Print>[],
+      export: _exports,
+      roll: developed,
+      appearance: Brightness.light,
+      initialPlace: Place.workbench,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/workbench.png'),
     );
   });
 }

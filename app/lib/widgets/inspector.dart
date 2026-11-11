@@ -6,6 +6,7 @@ import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/roll.dart';
+import 'record.dart';
 
 /// The frame's record, on the right.
 ///
@@ -17,10 +18,15 @@ class Inspector extends StatelessWidget {
     super.key,
     required this.roll,
     required this.selected,
+    required this.onEnlarge,
   });
 
   final Roll roll;
   final int selected;
+
+  /// Take this frame to the bench, where it is one frame rather than one of
+  /// forty.
+  final VoidCallback onEnlarge;
 
   Frame get frame => roll.frames[selected];
   int get total => roll.frames.length;
@@ -44,37 +50,15 @@ class Inspector extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              s.frame,
-              style: KalloType.caption.copyWith(color: colors.inkFaint),
-            ),
-            const SizedBox(height: 2),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                Text(
-                  frame.number.toString().padLeft(2, '0'),
-                  style: KalloType.plate.copyWith(color: colors.ink),
-                ),
-                const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    s.ofFrames(total),
-                    style: KalloType.small.copyWith(color: colors.inkFaint),
-                  ),
-                ),
-              ],
-            ),
+            RecordHeader(number: frame.number, total: total),
             const SizedBox(height: 16),
-            _Group(
+            RecordGroup(
               rows: <(String, String)>[
                 (s.time, frame.clock),
                 (s.temperature, '${frame.tempC.toStringAsFixed(1)} °C'),
                 if (frame.gamma != null) (s.gamma, _triple(frame.gamma!)),
                 if (frame.dMax != null) (s.dMax, _triple(frame.dMax!)),
               ],
-              colors: colors,
             ),
             if (!charted) const Spacer(),
             if (charted) ...<Widget>[
@@ -111,7 +95,7 @@ class Inspector extends StatelessWidget {
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
-                onTap: () {},
+                onTap: onEnlarge,
                 child: Container(
                   height: 32,
                   alignment: Alignment.center,
@@ -135,49 +119,9 @@ class Inspector extends StatelessWidget {
     );
   }
 
+  /// Three figures, tabular, never rounded to fewer than they were measured.
   static String _triple(List<double> values) =>
       values.map((double v) => v.toStringAsFixed(2)).join('  ');
-}
-
-class _Group extends StatelessWidget {
-  const _Group({required this.rows, required this.colors});
-
-  final List<(String, String)> rows;
-  final KalloColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        for (int i = 0; i < rows.length; i++)
-          Container(
-            height: 30,
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: i == rows.length - 1
-                      ? const Color(0x00000000)
-                      : colors.hairline,
-                ),
-              ),
-            ),
-            child: Row(
-              children: <Widget>[
-                Text(
-                  rows[i].$1,
-                  style: KalloType.small.copyWith(color: colors.inkMuted),
-                ),
-                const Spacer(),
-                Text(
-                  rows[i].$2,
-                  style: KalloType.data.copyWith(color: colors.ink),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
 }
 
 /// The wedge's tone: density against patch.

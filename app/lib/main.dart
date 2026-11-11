@@ -294,6 +294,7 @@ class _KalloAppState extends State<KalloApp> {
           : Room(
               roll: _roll!,
               prints: _prints,
+              exports: Exports.directoryFor(_exportPath),
               onDeveloped: _developed,
               onEnterGallery:
                   widget.prints == null ? () => unawaited(_reloadPrints()) : null,
