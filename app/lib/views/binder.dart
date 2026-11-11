@@ -81,6 +81,7 @@ class Binder extends StatelessWidget {
                           (s.photograph, photo.split(Platform.pathSeparator).last),
                         (s.film, stock?.short ?? roll.stockLabel),
                         if (prints) (s.paper, roll.paperName(catalogue)),
+                        (s.path, roll.spectral ? s.spectralPath : s.scalarPath),
                       ],
                     ),
                   ],

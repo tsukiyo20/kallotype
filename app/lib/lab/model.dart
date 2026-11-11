@@ -81,6 +81,7 @@ class Model {
     required double tempC,
     required int width,
     required File output,
+    bool spectral = false,
   }) async {
     if (!available) {
       throw const ModelMissing();
@@ -109,6 +110,17 @@ class Model {
       // here, and as themselves in a full-size print.
       '--halation',
       '--couplers',
+      // The three spectral stages, when asked for: the input is reconstructed
+      // into a spectrum and integrated against the film's layers, the print
+      // goes through dye absorption and the paper's layers, and the scan turns
+      // reflectance into XYZ and linear sRGB. The model keeps them opt-in and
+      // the ADRs say why: the structure is physical end to end, the numbers
+      // behind it are still placeholder shapes.
+      if (spectral) ...<String>[
+        '--spectral',
+        '--spectral-print',
+        '--spectral-scan',
+      ],
       '--size',
       '$width',
     ]);

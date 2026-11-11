@@ -284,6 +284,14 @@ class KalloStrings {
   // -- colour ---------------------------------------------------------------
 
   String get colour => zh ? '色彩' : 'Colour';
+  String get path => zh ? '路径' : 'PATH';
+  String get scalarPath => zh ? '逐通道' : 'Per channel';
+  String get spectralPath => zh ? '光谱' : 'Spectral';
+
+  /// What choosing the spectral path does, and what it changes.
+  String get spectralNote => zh
+      ? '71 个波长：曝光、印相、扫描都走光谱，而不是逐通道。图会变淡——染料串色是真的，不是滤镜。'
+      : 'Seventy-one wavelengths through exposure, print and scan, instead of one number per channel. The image goes more muted: dye crosstalk is real, not a filter.';
   String get colourNote => zh
       ? '模型只输出 sRGB，显示交给系统管理。宽色域是显示器的本事，不是我们的。'
       : 'The model writes sRGB and the system manages the display. Wide gamut is the screen\'s business, not ours.';

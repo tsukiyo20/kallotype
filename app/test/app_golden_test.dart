@@ -551,6 +551,33 @@ void main() {
     );
   });
 
+  testWidgets('the drawer, on colour', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: Roll.fromStrip(_strip()),
+      locale: const Locale('zh'),
+      appearance: Brightness.light,
+      drawerOpen: true,
+      // The one thing on this card that changes the picture.
+      spectral: true,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('色彩'));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/drawer-colour.png'),
+    );
+  });
+
   testWidgets('one print hangs on its own', (WidgetTester tester) async {
     _window(tester);
 

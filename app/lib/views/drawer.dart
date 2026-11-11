@@ -19,6 +19,8 @@ class SettingsDrawer extends StatefulWidget {
     required this.onLocale,
     required this.technicalTerms,
     required this.onTechnicalTerms,
+    required this.spectral,
+    required this.onSpectral,
     required this.export,
     required this.onClose,
   });
@@ -28,6 +30,10 @@ class SettingsDrawer extends StatefulWidget {
   final ValueChanged<Locale?> onLocale;
   final bool technicalTerms;
   final ValueChanged<bool> onTechnicalTerms;
+
+  /// The path a new roll is developed through, and the way to change it.
+  final bool spectral;
+  final ValueChanged<bool> onSpectral;
 
   /// Where prints come from, and whether this platform lets a person say.
   final ExportSetting export;
@@ -198,7 +204,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       case 2:
         return _prints(s, colors);
       case 3:
-        return _statement(s.colour, s.colourNote, colors);
+        return _colour(s, colors);
       case 4:
         return _statement(s.performance, s.performanceNote, colors);
       case 5:
@@ -206,6 +212,42 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       default:
         return _statement(s.about, s.aboutNote, colors);
     }
+  }
+
+  Widget _colour(KalloStrings s, KalloColors colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          s.colour,
+          style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
+        ),
+        const SizedBox(height: KalloSpace.step2),
+        SizedBox(
+          width: 460,
+          child: Text(
+            s.colourNote,
+            style: KalloType.body.copyWith(color: colors.inkMuted),
+          ),
+        ),
+        const SizedBox(height: KalloSpace.step5),
+        _Label(s.path, colors),
+        const SizedBox(height: KalloSpace.step2),
+        KalloSegments(
+          options: <String>[s.scalarPath, s.spectralPath],
+          selected: widget.spectral ? 1 : 0,
+          onSelect: (int i) => widget.onSpectral(i == 1),
+        ),
+        const SizedBox(height: KalloSpace.step3),
+        SizedBox(
+          width: 460,
+          child: Text(
+            s.spectralNote,
+            style: KalloType.small.copyWith(color: colors.inkMuted),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _statement(String title, String body, KalloColors colors) {

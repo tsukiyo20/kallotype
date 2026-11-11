@@ -31,6 +31,7 @@ Future<Roll> develop({
   required File photograph,
   required Stock stock,
   Stock? paper,
+  bool spectral = false,
   List<double> times = ladder,
   double tempC = 20,
   Directory? folder,
@@ -59,6 +60,7 @@ Future<Roll> develop({
       tempC: tempC,
       width: benchWidth,
       output: output,
+      spectral: spectral,
     );
     frames.add(
       Frame(
@@ -77,6 +79,7 @@ Future<Roll> develop({
     stockLabel: stock.label,
     paperId: paper?.id,
     paperLabel: paper?.label,
+    spectral: spectral,
     photo: source.path,
     frames: frames,
   );

@@ -41,6 +41,7 @@ abstract final class RollStore {
       'label': roll.stockLabel,
       if (roll.paperId != null) 'paper': roll.paperId,
       if (roll.paperLabel != null) 'paper_label': roll.paperLabel,
+      if (roll.spectral) 'spectral': true,
       if (roll.photo != null) 'photo': roll.photo,
       'frames': <Object?>[
         for (final Frame frame in roll.frames)
@@ -101,6 +102,7 @@ abstract final class RollStore {
       stockLabel: json['label'] as String? ?? '',
       paperId: json['paper'] as String?,
       paperLabel: json['paper_label'] as String?,
+      spectral: json['spectral'] == true,
       photo: json['photo'] as String?,
       frames: frames,
     );

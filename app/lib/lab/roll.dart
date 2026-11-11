@@ -20,6 +20,7 @@ class Roll {
     this.photo,
     this.paperId,
     this.paperLabel,
+    this.spectral = false,
   });
 
   /// Which roll it is, from one. What it is called is the interface's business
@@ -46,6 +47,14 @@ class Roll {
 
   /// The paper's label, for a catalogue that cannot name it.
   final String? paperLabel;
+
+  /// Whether this roll was exposed, printed and scanned through the spectrum.
+  ///
+  /// It belongs to the roll for the same reason the paper does: every frame on
+  /// the bench is already a print, made once, one way. A print of this roll is
+  /// made the same way, because a print of a spectral negative through the
+  /// scalar path would not be the same photograph.
+  final bool spectral;
 
   /// The paper a print of this roll is made on.
   String get paper => paperId ?? Stocks.paper;

@@ -171,6 +171,61 @@ void main() {
     expect(catalogue.paper(Stocks.paper)?.short, 'CRYSTAL ARCHIVE PEARL');
   }, skip: model.available ? false : 'no model on this machine');
 
+  test('the spectral path is a different photograph', () async {
+    final Directory folder =
+        await Directory.systemTemp.createTemp('kallotype-spectral-');
+    addTearDown(() => folder.delete(recursive: true));
+
+    Future<Roll> developInto(String name, {required bool spectral}) =>
+        develop(
+          model: model,
+          photograph: photograph,
+          stock: Stocks.vision,
+          paper: Stocks.crystal,
+          times: <double>[9],
+          folder: Directory('${folder.path}/$name'),
+          spectral: spectral,
+        );
+
+    final Roll scalar = await developInto('scalar', spectral: false);
+    final Roll spectrum = await developInto('spectral', spectral: true);
+
+    // The roll remembers how it was made, and the record keeps it.
+    expect(scalar.spectral, isFalse);
+    expect(spectrum.spectral, isTrue);
+    final Roll? stored = await RollStore.load(folder: Directory('${folder.path}/spectral'));
+    expect(stored, isNotNull);
+    expect(stored!.spectral, isTrue);
+
+    // And the two frames are not the same picture: the path is a different
+    // model, not a different label, so this is the assertion that the flags
+    // reached the renderer at all.
+    Future<List<int>> pixels(Roll roll) async {
+      final ByteData data =
+          (await roll.frames.first.image!.toByteData())!;
+      return data.buffer.asUint8List();
+    }
+
+    final List<int> a = await pixels(scalar);
+    final List<int> b = await pixels(spectrum);
+    expect(a.length, b.length);
+    double total = 0;
+    int counted = 0;
+    for (int i = 0; i < a.length; i += 4) {
+      for (int channel = 0; channel < 3; channel++) {
+        total += (a[i + channel] - b[i + channel]).abs();
+        counted++;
+      }
+    }
+    final double difference = total / counted;
+    expect(
+      difference,
+      greaterThan(2.0),
+      reason: 'the two paths rendered the same pixels: ${difference.toStringAsFixed(2)}',
+    );
+  }, skip: ready ? false : 'no model or no photograph on this machine',
+      timeout: const Timeout(Duration(minutes: 3)));
+
   test('a frame becomes a print, with the record that labels it', () async {
     final Directory folder =
         await Directory.systemTemp.createTemp('kallotype-print-');

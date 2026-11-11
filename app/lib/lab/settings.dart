@@ -7,13 +7,26 @@ import 'dart:io';
 /// own, and a file a person can open and delete is worth more than one they
 /// cannot. It is also the file the next four settings will go in.
 class Settings {
-  const Settings({this.exportPath});
+  const Settings({this.exportPath, this.spectral = false});
 
   /// The folder prints are exported to and read from, or null for the place the
   /// platform gives the app.
   final String? exportPath;
 
-  Settings withExports(String? path) => Settings(exportPath: path);
+  /// Whether a new roll is developed through the spectral path.
+  ///
+  /// It is a setting rather than a fact of the app because the model keeps it
+  /// opt-in: the structure is physical end to end and every spectral input is
+  /// still a placeholder shape (ADR 0003, 0005, 0006), so it changes the colour
+  /// and not only its accuracy. The render is the same speed on a GPU and slower
+  /// on a CPU, which is why the switch says nothing about speed either.
+  final bool spectral;
+
+  Settings withExports(String? path) =>
+      Settings(exportPath: path, spectral: spectral);
+
+  Settings withSpectral(bool on) =>
+      Settings(exportPath: exportPath, spectral: on);
 
   static const String _name = 'settings.json';
 
@@ -66,7 +79,10 @@ class Settings {
       final Object? json = jsonDecode(text);
       if (json is Map<String, dynamic>) {
         final Object? exports = json['exports'];
-        return Settings(exportPath: exports is String ? exports : null);
+        return Settings(
+          exportPath: exports is String ? exports : null,
+          spectral: json['spectral'] == true,
+        );
       }
     } on FormatException {
       // A settings file that is not JSON is a settings file somebody edited.
@@ -86,6 +102,7 @@ class Settings {
       await file.writeAsString(
         const JsonEncoder.withIndent('  ').convert(<String, Object?>{
           if (exportPath != null) 'exports': exportPath,
+          if (spectral) 'spectral': true,
         }),
       );
     } on FileSystemException {

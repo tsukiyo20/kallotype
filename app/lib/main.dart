@@ -72,6 +72,7 @@ class KalloApp extends StatefulWidget {
     this.locale,
     this.appearance,
     this.technicalTerms = false,
+    this.spectral = false,
     this.drawerOpen = false,
     this.initialPlace = Place.table,
     this.chrome = WindowChrome.plain,
@@ -116,6 +117,10 @@ class KalloApp extends StatefulWidget {
 
   final bool technicalTerms;
 
+  /// Whether a new roll is developed through the spectral path. The drawer's
+  /// colour card sets it; the settings file remembers it.
+  final bool spectral;
+
   /// Opens the drawer on the first frame, for the golden that shows it.
   final bool drawerOpen;
 
@@ -130,6 +135,7 @@ class _KalloAppState extends State<KalloApp> {
   Locale? _locale;
   Brightness? _pinned;
   late bool _technical = widget.technicalTerms;
+  late bool _spectral = widget.spectral;
   Roll? _roll;
   Catalogue? _catalogue;
   List<Print> _prints = const <Print>[];
@@ -245,7 +251,16 @@ class _KalloAppState extends State<KalloApp> {
   Future<void> _openExports() async {
     _settings = await Settings.read();
     _exportPath = _settings.exportPath;
+    _spectral = _settings.spectral;
     await _reloadPrints();
+  }
+
+  /// The path a roll is developed through. It is a new roll's setting, not a
+  /// switch on the roll in the table: a roll is made one way.
+  Future<void> _setSpectral(bool on) async {
+    setState(() => _spectral = on);
+    _settings = _settings.withSpectral(on);
+    await _settings.write();
   }
 
   Future<void> _reloadPrints() async {
@@ -380,6 +395,8 @@ class _KalloAppState extends State<KalloApp> {
               technicalTerms: _technical,
               onTechnicalTerms: (bool next) =>
                   setState(() => _technical = next),
+              spectral: _spectral,
+              onSpectral: _setSpectral,
               initiallyOpen: widget.drawerOpen,
               initialPlace: widget.initialPlace,
               chrome: widget.chrome,

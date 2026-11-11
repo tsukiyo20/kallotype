@@ -66,6 +66,7 @@ Future<File> printFrame({
           tempC: frame.tempC,
           width: width > _largest ? _largest : width,
           output: image,
+          spectral: roll.spectral,
         );
         rendered = true;
       } on Object {

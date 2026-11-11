@@ -29,6 +29,7 @@ class Shelf extends StatefulWidget {
     super.key,
     required this.roll,
     required this.catalogue,
+    required this.spectral,
     required this.onDeveloped,
     required this.onOpen,
   });
@@ -38,6 +39,10 @@ class Shelf extends StatefulWidget {
 
   /// Every film the model carries. One, when the model did not answer.
   final Catalogue catalogue;
+
+  /// Whether this roll goes through the spectral path. The drawer sets it; the
+  /// shelf obeys it and the roll remembers what it was.
+  final bool spectral;
 
   final ValueChanged<Roll> onDeveloped;
   final VoidCallback onOpen;
@@ -145,6 +150,7 @@ class _ShelfState extends State<Shelf> {
         photograph: photo,
         stock: stock,
         paper: paper,
+        spectral: widget.spectral,
         onProgress: (int done, int total) {
           if (mounted) {
             setState(() {

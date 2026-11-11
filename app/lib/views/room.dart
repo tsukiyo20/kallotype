@@ -48,6 +48,8 @@ class Room extends StatefulWidget {
     required this.onLocale,
     required this.technicalTerms,
     required this.onTechnicalTerms,
+    required this.spectral,
+    required this.onSpectral,
     this.initiallyOpen = false,
     this.initialPlace = Place.table,
     this.chrome = WindowChrome.plain,
@@ -90,6 +92,10 @@ class Room extends StatefulWidget {
   final ValueChanged<Locale?> onLocale;
   final bool technicalTerms;
   final ValueChanged<bool> onTechnicalTerms;
+
+  /// The path a new roll is developed through, and the way to change it.
+  final bool spectral;
+  final ValueChanged<bool> onSpectral;
 
   /// Opened on the first frame. The golden test uses it; the app does not.
   final bool initiallyOpen;
@@ -203,6 +209,7 @@ class _RoomState extends State<Room> {
                       Place.shelf => Shelf(
                           roll: widget.roll,
                           catalogue: widget.catalogue,
+                          spectral: widget.spectral,
                           onDeveloped: widget.onDeveloped,
                           onOpen: () => setState(() => _place = Place.table),
                         ),
@@ -280,6 +287,8 @@ class _RoomState extends State<Room> {
                         onLocale: widget.onLocale,
                         technicalTerms: widget.technicalTerms,
                         onTechnicalTerms: widget.onTechnicalTerms,
+                        spectral: widget.spectral,
+                        onSpectral: widget.onSpectral,
                         onClose: _closeDrawer,
                       ),
                     ),
