@@ -39,6 +39,8 @@ abstract final class RollStore {
       'number': roll.number,
       'stock': roll.stockId,
       'label': roll.stockLabel,
+      if (roll.paperId != null) 'paper': roll.paperId,
+      if (roll.paperLabel != null) 'paper_label': roll.paperLabel,
       if (roll.photo != null) 'photo': roll.photo,
       'frames': <Object?>[
         for (final Frame frame in roll.frames)
@@ -97,6 +99,8 @@ abstract final class RollStore {
       number: (json['number'] as num?)?.toInt() ?? 1,
       stockId: json['stock'] as String? ?? '',
       stockLabel: json['label'] as String? ?? '',
+      paperId: json['paper'] as String?,
+      paperLabel: json['paper_label'] as String?,
       photo: json['photo'] as String?,
       frames: frames,
     );

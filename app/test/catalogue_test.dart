@@ -99,6 +99,8 @@ void main() {
     final Catalogue carried = await Catalogue.load(const Model(''));
     expect(carried.films, hasLength(1));
     expect(carried.films.single.id, Stocks.defaultId);
-    expect(carried.papers, isEmpty);
+    // The paper the app prints on is carried too: a roll still needs one.
+    expect(carried.papers.single.id, Stocks.paper);
+    expect(carried.papers.single.short, Stocks.paperShort);
   });
 }

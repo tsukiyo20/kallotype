@@ -34,6 +34,7 @@ void main() {
       model: model,
       photograph: photograph,
       stock: Stocks.vision,
+      paper: Stocks.crystal,
       times: <double>[3, 9],
       folder: folder,
     );
@@ -76,6 +77,57 @@ void main() {
     expect(stored.frames.last.clock, '9:00');
     expect(stored.frames.last.image!.width, benchWidth);
     expect(stored.stockId, Stocks.vision.id);
+    // The paper is part of the roll's record: the shelf chose it before the
+    // first frame went in, and a roll that printed on a different sheet would
+    // be a different roll.
+    expect(roll.paperId, Stocks.paper);
+    expect(stored.paperId, Stocks.paper);
+    expect(stored.paperName(Catalogue.carried), 'CRYSTAL ARCHIVE PEARL');
+  }, skip: ready ? false : 'no model or no photograph on this machine',
+      timeout: const Timeout(Duration(minutes: 3)));
+
+  test('the roll is printed on the paper the shelf chose', () async {
+    final Catalogue catalogue = await Catalogue.load(model);
+    final Stock paper = catalogue.paper('portra_endura') ?? Stocks.crystal;
+    final Directory folder =
+        await Directory.systemTemp.createTemp('kallotype-paper-');
+    addTearDown(() => folder.delete(recursive: true));
+
+    final Roll roll = await develop(
+      model: model,
+      photograph: photograph,
+      stock: Stocks.vision,
+      paper: paper,
+      times: <double>[9],
+      folder: folder,
+    );
+
+    // The paper goes to the model, comes back on the roll, and is read back out
+    // of the record: a choice that stopped at the shelf would be a label.
+    expect(roll.paperId, paper.id);
+    expect(roll.paperId, isNot(Stocks.paper));
+    expect(roll.paperName(catalogue), paper.short);
+
+    final Roll? stored = await RollStore.load(folder: folder);
+    expect(stored, isNotNull);
+    expect(stored!.paperName(catalogue), paper.short);
+
+    final Directory exports = Directory('${folder.path}/exports');
+    final File image = await printFrame(
+      roll: stored,
+      frame: stored.frames.first,
+      exports: exports,
+      paperName: stored.paperName(catalogue),
+      stock: Stocks.vision,
+      rollFolder: folder,
+    );
+    final Map<String, dynamic> record = jsonDecode(
+      File('${exports.path}/print-01-9min.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    expect(image.existsSync(), isTrue);
+    expect(record['paper'], paper.short);
+    // And the roll printed on the paper is still the roll's film.
+    expect(record['film'], 'VISION3 500T');
   }, skip: ready ? false : 'no model or no photograph on this machine',
       timeout: const Timeout(Duration(minutes: 3)));
 

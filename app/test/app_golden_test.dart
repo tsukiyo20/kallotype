@@ -199,6 +199,36 @@ const Catalogue _catalogue = Catalogue(
         page: '4',
         retrieved: '2026-11-09',
       ),
+      measured: <Measured>[
+        Measured(
+          field: 'curve',
+          claim: 'measured',
+          detail: 'chart 15, three layers averaged, rms 0.019',
+        ),
+        Measured(field: 'layers', claim: 'measured', detail: ''),
+        Measured(field: 'dyes', claim: 'measured', detail: ''),
+        Measured(
+          field: 'white',
+          claim: '',
+          detail: 'not stated on the sheet; the toe of the curves is the paper\'s '
+              'own density',
+        ),
+      ],
+    ),
+    Stock(
+      id: 'endura_premier',
+      short: 'ENDURA PREMIER',
+      label: 'KODAK PROFESSIONAL ENDURA Premier Paper, RA-4',
+    ),
+    Stock(
+      id: 'portra_endura',
+      short: 'PORTRA ENDURA',
+      label: 'KODAK PROFESSIONAL PORTRA ENDURA, RA-4',
+    ),
+    Stock(
+      id: 'polymax_ii_rc',
+      short: 'POLYMAX II RC',
+      label: 'KODAK PROFESSIONAL POLYMAX II RC Paper, F surface',
     ),
   ],
 );

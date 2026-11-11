@@ -98,7 +98,16 @@ class KalloStrings {
   String get openRoll => zh ? '打开' : 'Open';
 
   String get theShelf => zh ? '架上' : 'THE SHELF';
-  String shelfCount(int count) => zh ? '$count 支胶片' : '$count films';
+
+  /// What is on the shelf, counted. The papers are left out when there are
+  /// none, which is what a shelf behind a model that does not carry them is.
+  String shelfCount(int films, int papers) {
+    final String film = zh ? '$films 支胶片' : '$films films';
+    if (papers == 0) {
+      return film;
+    }
+    return zh ? '$film · $papers 张相纸' : '$film · $papers papers';
+  }
 
   /// Said when the model did not answer and the shelf holds its one film.
   String get shelfAlone => zh
@@ -143,7 +152,8 @@ class KalloStrings {
   String get binderNote =>
       zh ? '这一卷的来历，和模型量到的数。' : 'Where this roll came from, and the numbers the model measured.';
 
-  String get theStock => zh ? '胶片' : 'THE STOCK';
+  String get theFilm => zh ? '胶片' : 'THE FILM';
+  String get thePaper => zh ? '相纸' : 'THE PAPER';
   String get measuredAndBorrowed => zh ? '量到的和借来的' : 'MEASURED AND BORROWED';
   String get reference => zh ? '参考显影' : 'Reference';
   String get source => zh ? '出处' : 'Source';

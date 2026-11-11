@@ -172,10 +172,6 @@ class _KalloAppState extends State<KalloApp> {
     }
   }
 
-  /// What the print's paper is called. One paper, until a paper can be chosen.
-  String get _paperName =>
-      _catalogue?.paper(Stocks.paper)?.short ?? Stocks.paperShort;
-
   /// The roll you were carrying, or the model's own chart when there is none.
   ///
   /// A roll that has been developed is on disk, and it is the one place the app
@@ -215,7 +211,7 @@ class _KalloAppState extends State<KalloApp> {
         roll: roll,
         frame: frame,
         exports: exports,
-        paperName: _paperName,
+        paperName: roll.paperName(_catalogue ?? Catalogue.carried),
         stock: _catalogue?.film(roll.stockId),
       );
       await _reloadPrints();
@@ -370,7 +366,6 @@ class _KalloAppState extends State<KalloApp> {
           : Room(
               roll: _roll!,
               catalogue: _catalogue ?? Catalogue.carried,
-              paperName: _paperName,
               prints: _prints,
               exports: _folder,
               rollFolder: widget.rollFolder ?? RollStore.folder,

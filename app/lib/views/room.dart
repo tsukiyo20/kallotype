@@ -36,7 +36,6 @@ class Room extends StatefulWidget {
     super.key,
     required this.roll,
     required this.catalogue,
-    required this.paperName,
     this.prints = const <Print>[],
     this.onEnterExports,
     required this.onDeveloped,
@@ -63,9 +62,6 @@ class Room extends StatefulWidget {
   /// Every film and paper the model carries. The shelf is a shelf because of
   /// it, and the binder shows a roll's own film out of it.
   final Catalogue catalogue;
-
-  /// What the print's paper is called, resolved at the top of the app.
-  final String paperName;
 
   /// What has been exported, in the order it was printed. Nothing is a state
   /// the room can show: the gallery is a wall, and a wall can be empty.
@@ -216,13 +212,12 @@ class _RoomState extends State<Room> {
                           onSelect: (int index) =>
                               setState(() => _selected = index),
                           exports: widget.exports,
-                          paperName: widget.paperName,
+                          paperName: widget.roll.paperName(widget.catalogue),
                           onPrint: widget.onPrint,
                         ),
                       Place.binder => Binder(
                           roll: widget.roll,
                           catalogue: widget.catalogue,
-                          paperName: widget.paperName,
                           exports: widget.exports,
                           rollFolder: widget.rollFolder,
                         ),

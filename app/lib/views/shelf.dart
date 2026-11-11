@@ -56,6 +56,9 @@ class _ShelfState extends State<Shelf> {
   /// The box last taken off the shelf, if any.
   String? _taken;
 
+  /// The paper last taken off the shelf, if any.
+  String? _paperTaken;
+
   /// The film the next roll is developed as.
   ///
   /// The last box taken, or the stock with nothing borrowed in it, or whatever
@@ -67,6 +70,18 @@ class _ShelfState extends State<Shelf> {
     return catalogue.film(_taken ?? Stocks.defaultId) ??
         catalogue.film(widget.roll?.stockId ?? '') ??
         (catalogue.films.isEmpty ? Stocks.vision : catalogue.films.first);
+  }
+
+  /// The paper the next roll is printed on.
+  ///
+  /// The last sheet taken, or the one the app prints on, or the first on the
+  /// shelf. Every frame the bench shows is a print, so this is asked before the
+  /// roll is developed rather than when one is printed.
+  Stock? get _paper {
+    final Catalogue catalogue = widget.catalogue;
+    return catalogue.paper(_paperTaken ?? Stocks.paper) ??
+        catalogue.paper(widget.roll?.paperId ?? Stocks.paper) ??
+        (catalogue.papers.isEmpty ? Stocks.crystal : catalogue.papers.first);
   }
 
   Future<void> _choose() async {
@@ -90,7 +105,8 @@ class _ShelfState extends State<Shelf> {
   Future<void> _develop() async {
     final File? photo = _photo;
     final Stock? stock = _stock;
-    if (photo == null || stock == null || _developing) {
+    final Stock? paper = _paper;
+    if (photo == null || stock == null || paper == null || _developing) {
       return;
     }
     final KalloStrings s = KalloStrings.of(context);
@@ -110,6 +126,7 @@ class _ShelfState extends State<Shelf> {
         model: model,
         photograph: photo,
         stock: stock,
+        paper: paper,
         onProgress: (int done, int total) {
           if (mounted) {
             setState(() {
@@ -197,27 +214,11 @@ class _ShelfState extends State<Shelf> {
           const SizedBox(height: KalloSpace.step4),
           _label(s.film, colors),
           const SizedBox(height: KalloSpace.step1),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: <Widget>[
-              Text(
-                stock?.short ?? Stocks.vision.short,
-                style: KalloType.data.copyWith(color: colors.ink),
-              ),
-              if (stock != null) ...<Widget>[
-                const SizedBox(width: KalloSpace.step2),
-                Expanded(
-                  child: Text(
-                    stock.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KalloType.small.copyWith(color: colors.inkFaint),
-                  ),
-                ),
-              ],
-            ],
-          ),
+          _chosen(stock, colors),
+          const SizedBox(height: KalloSpace.step4),
+          _label(s.paper, colors),
+          const SizedBox(height: KalloSpace.step1),
+          _chosen(_paper, colors),
           const SizedBox(height: KalloSpace.step4),
           _label(s.developments, colors),
           const SizedBox(height: KalloSpace.step1),
@@ -240,7 +241,7 @@ class _ShelfState extends State<Shelf> {
     );
   }
 
-  /// Every film the model carries, as boxes on shelves.
+  /// Every film and paper the model carries, as boxes on shelves.
   Widget _shelf(KalloColors colors, KalloStrings s) {
     final Catalogue catalogue = widget.catalogue;
     final List<FilmProcess> processes = FilmProcess.values
@@ -260,7 +261,7 @@ class _ShelfState extends State<Shelf> {
             ),
             const Spacer(),
             Text(
-              s.shelfCount(catalogue.films.length),
+              s.shelfCount(catalogue.films.length, catalogue.papers.length),
               style: KalloType.small.copyWith(color: colors.inkFaint),
             ),
           ],
@@ -272,33 +273,55 @@ class _ShelfState extends State<Shelf> {
             style: KalloType.small.copyWith(color: colors.inkFaint),
           ),
         ],
-        for (final FilmProcess process in processes) ...<Widget>[
+        for (final FilmProcess process in processes)
+          _group(s.processName(process), catalogue.of(process), colors),
+        // Paper is the other material, and the shelf holds it the same way. The
+        // rule is here because a film and a paper are not two of the same thing:
+        // one is what the light was recorded on, the other is what it is printed
+        // onto, and the gap says so.
+        if (catalogue.papers.isNotEmpty) ...<Widget>[
+          const SizedBox(height: KalloSpace.step5),
+          Container(height: 1, color: colors.hairline),
           const SizedBox(height: KalloSpace.step4),
-          Text(
-            s.processName(process),
-            style: KalloType.caption.copyWith(
-              color: colors.inkFaint,
-              letterSpacing: 1.6,
-            ),
-          ),
-          const SizedBox(height: KalloSpace.step2),
-          Wrap(
-            spacing: KalloSpace.step1 + 2,
-            runSpacing: KalloSpace.step1 + 2,
-            children: <Widget>[
-              for (final Stock stock in catalogue.of(process))
-                _box(stock, colors),
-            ],
-          ),
+          _group(s.paper, catalogue.papers, colors),
         ],
       ],
     );
   }
 
-  /// One film, as a box on the shelf. Taken, it is the dark one: filled with
+  /// A shelf: a caption, and the boxes on it.
+  Widget _group(String title, List<Stock> stocks, KalloColors colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const SizedBox(height: KalloSpace.step4),
+        Text(
+          title,
+          style: KalloType.caption.copyWith(
+            color: colors.inkFaint,
+            letterSpacing: 1.6,
+          ),
+        ),
+        const SizedBox(height: KalloSpace.step2),
+        Wrap(
+          spacing: KalloSpace.step1 + 2,
+          runSpacing: KalloSpace.step1 + 2,
+          children: <Widget>[
+            for (final Stock stock in stocks) _box(stock, colors),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// One stock, as a box on the shelf. Taken, it is the dark one: filled with
   /// ink rather than outlined, the way the one action on a screen is.
+  ///
+  /// A box is a film or a paper, and the only thing that tells them apart here
+  /// is whether it has a process — a paper records what is on the negative and
+  /// has no chemistry of its own.
   Widget _box(Stock stock, KalloColors colors) {
-    final bool taken = stock.id == _stock?.id;
+    final bool taken = stock.id == _stock?.id || stock.id == _paper?.id;
     return Semantics(
       button: true,
       selected: taken,
@@ -307,7 +330,13 @@ class _ShelfState extends State<Shelf> {
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           onTap: () => setState(() {
-            _taken = stock.id;
+            // A box is a film or a paper; which shelf it came off decides what
+            // it was taken for.
+            if (stock.process != null) {
+              _taken = stock.id;
+            } else {
+              _paperTaken = stock.id;
+            }
             _error = null;
           }),
           behavior: HitTestBehavior.opaque,
@@ -333,6 +362,32 @@ class _ShelfState extends State<Shelf> {
           ),
         ),
       ),
+    );
+  }
+
+  /// What is in hand: the box's name in the record's type, and the sheet's
+  /// line behind it, small enough to be a footnote to it.
+  Widget _chosen(Stock? stock, KalloColors colors) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: <Widget>[
+        Text(
+          stock?.short ?? '',
+          style: KalloType.data.copyWith(color: colors.ink),
+        ),
+        if (stock != null) ...<Widget>[
+          const SizedBox(width: KalloSpace.step2),
+          Expanded(
+            child: Text(
+              stock.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: KalloType.small.copyWith(color: colors.inkFaint),
+            ),
+          ),
+        ],
+      ],
     );
   }
 

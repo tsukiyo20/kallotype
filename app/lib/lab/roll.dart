@@ -4,6 +4,7 @@ import 'dart:ui' show Color;
 
 import '../film/strip_data.dart';
 import 'clock.dart';
+import 'stock.dart';
 
 /// A roll: the thing you are carrying.
 ///
@@ -17,6 +18,8 @@ class Roll {
     required this.stockLabel,
     required this.frames,
     this.photo,
+    this.paperId,
+    this.paperLabel,
   });
 
   /// Which roll it is, from one. What it is called is the interface's business
@@ -32,6 +35,27 @@ class Roll {
   /// The photograph this roll was developed from, when the app developed it.
   /// A roll the model drew has none: it is a chart, not a picture.
   final String? photo;
+
+  /// The paper the frames were printed on, when the shelf chose one. A roll
+  /// from before the choice has none, and prints on the app's paper.
+  ///
+  /// It belongs to the roll rather than to the print because every frame on the
+  /// bench is already a print: the model renders each one through the paper,
+  /// so the paper is a fact about the roll and not a setting of the viewer.
+  final String? paperId;
+
+  /// The paper's label, for a catalogue that cannot name it.
+  final String? paperLabel;
+
+  /// The paper a print of this roll is made on.
+  String get paper => paperId ?? Stocks.paper;
+
+  /// What that paper is called on a wall label.
+  ///
+  /// Resolved against the shelf when it has the paper, and against the record
+  /// when it does not — a roll is allowed to be older than the app's catalogue.
+  String paperName(Catalogue catalogue) =>
+      catalogue.paper(paper)?.short ?? paperLabel ?? Stocks.paperShort;
 
   final List<Frame> frames;
 

@@ -61,7 +61,7 @@ Future<File> printFrame({
         await Model.find().develop(
           photograph: file,
           stock: roll.stockId,
-          paper: Stocks.paper,
+          paper: roll.paper,
           minutes: frame.minutes,
           tempC: frame.tempC,
           width: width > _largest ? _largest : width,

@@ -157,8 +157,12 @@ class Catalogue {
   final List<Stock> films;
   final List<Stock> papers;
 
-  /// The one film this build carries when the model does not answer.
-  static const Catalogue carried = Catalogue(films: <Stock>[Stocks.vision]);
+  /// What this build carries when the model does not answer: one film, and the
+  /// paper every print is made on.
+  static const Catalogue carried = Catalogue(
+    films: <Stock>[Stocks.vision],
+    papers: <Stock>[Stocks.crystal],
+  );
 
   /// Every film, grouped by chemistry in the order the shelf shows them.
   List<Stock> of(FilmProcess process) => <Stock>[
@@ -230,12 +234,16 @@ abstract final class Stocks {
   /// The film a new roll is developed as until a box is taken off the shelf.
   static const String defaultId = 'vision3_500t';
 
-  /// The paper every print is made on, until a paper can be chosen.
-  ///
-  /// One, because the app prints on one paper: the print stage solves a balance
-  /// against a paper's curve, and a second paper is a second balance.
+  /// The paper a roll is printed on when the shelf was not asked.
   static const String paper = 'fuji_crystal_archive_pearl';
 
-  /// What the paper is called on a wall label, until the catalogue says.
+  /// What that paper is called on a wall label, until the catalogue says.
   static const String paperShort = 'CRYSTAL ARCHIVE PEARL';
+
+  /// The paper itself, for a roll developed with no catalogue behind the shelf.
+  static const Stock crystal = Stock(
+    id: paper,
+    short: paperShort,
+    label: 'FUJICOLOR CRYSTAL ARCHIVE DIGITAL PEARL PAPER, RA-4',
+  );
 }

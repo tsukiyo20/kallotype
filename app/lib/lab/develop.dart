@@ -30,6 +30,7 @@ Future<Roll> develop({
   required Model model,
   required File photograph,
   required Stock stock,
+  required Stock paper,
   List<double> times = ladder,
   double tempC = 20,
   Directory? folder,
@@ -50,9 +51,9 @@ Future<Roll> develop({
     await model.develop(
       photograph: source,
       stock: stock.id,
-      // The paper is the app's policy, not the roll's: a print is balanced
-      // against one paper's curve, and the roll does not choose it.
-      paper: Stocks.paper,
+      // The paper is part of the roll: every frame the bench shows is already
+      // printed, and a print is balanced against the paper's own curve.
+      paper: paper.id,
       minutes: minutes,
       tempC: tempC,
       width: benchWidth,
@@ -73,6 +74,8 @@ Future<Roll> develop({
     number: 1,
     stockId: stock.id,
     stockLabel: stock.label,
+    paperId: paper.id,
+    paperLabel: paper.label,
     photo: source.path,
     frames: frames,
   );

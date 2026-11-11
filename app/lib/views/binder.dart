@@ -22,7 +22,6 @@ class Binder extends StatelessWidget {
     super.key,
     required this.roll,
     required this.catalogue,
-    required this.paperName,
     required this.exports,
     required this.rollFolder,
   });
@@ -32,9 +31,6 @@ class Binder extends StatelessWidget {
   /// Every stock the model carries: this roll's film is on it, with the sheet
   /// its numbers came from and what each field admits to.
   final Catalogue catalogue;
-
-  /// What the print's paper is called, resolved at the top of the app.
-  final String paperName;
 
   /// Where the prints are, and where the roll is, resolved at the top of the
   /// app: a record that cannot say where a file is is a memory.
@@ -48,6 +44,7 @@ class Binder extends StatelessWidget {
     final bool charted = roll.frames.every((Frame frame) => frame.isMeasured);
     final String? photo = roll.photo;
     final Stock? stock = catalogue.film(roll.stockId);
+    final Stock? paper = catalogue.paper(roll.paper);
 
     return ColoredBox(
       color: colors.content,
@@ -80,14 +77,18 @@ class Binder extends StatelessWidget {
                         if (photo != null)
                           (s.photograph, photo.split(Platform.pathSeparator).last),
                         (s.film, stock?.short ?? roll.stockLabel),
-                        (s.paper, paperName),
+                        (s.paper, roll.paperName(catalogue)),
                       ],
                     ),
                   ],
                 ),
                 if (stock != null && stock.measured.isNotEmpty) ...<Widget>[
                   const SizedBox(height: KalloSpace.step6),
-                  _stock(stock, colors, s),
+                  _stock(stock, s.theFilm, colors, s),
+                ],
+                if (paper != null && paper.measured.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: KalloSpace.step6),
+                  _stock(paper, s.thePaper, colors, s),
                 ],
                 const SizedBox(height: KalloSpace.step6),
                 _section(
@@ -158,13 +159,18 @@ class Binder extends StatelessWidget {
   /// This is the section the product is named after. A stock that borrowed its
   /// dyes is a different claim from one that measured them, and the difference
   /// belongs on the page a person keeps, not in a note nobody opens.
-  Widget _stock(Stock stock, KalloColors colors, KalloStrings s) {
+  Widget _stock(
+    Stock stock,
+    String title,
+    KalloColors colors,
+    KalloStrings s,
+  ) {
     final Provenance provenance = stock.provenance;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Text(
-          s.theStock,
+          title,
           style: KalloType.caption.copyWith(
             color: colors.inkFaint,
             letterSpacing: 1.6,
