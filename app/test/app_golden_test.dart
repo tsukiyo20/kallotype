@@ -449,6 +449,32 @@ void main() {
     );
   });
 
+  testWidgets('the shelf in a narrow window', (WidgetTester tester) async {
+    // The minimum window is 960 wide, and the content column is that minus the
+    // sidebar: not enough for a form and a shelf side by side, so the shelf goes
+    // under the bench instead of beside it.
+    tester.view.physicalSize = const Size(960, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: Roll.fromStrip(_strip()),
+      appearance: Brightness.light,
+      initialPlace: Place.shelf,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/shelf-narrow.png'),
+    );
+  });
+
   testWidgets('the workbench', (WidgetTester tester) async {
     _window(tester);
 

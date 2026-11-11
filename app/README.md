@@ -47,8 +47,8 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and ten goldens pin the language — one for each
-place, and the states a place can be in:
+`fvm flutter analyze` is clean, and eleven goldens pin the language — one for
+each place, the states a place can be in, and the shelf at the window's narrowest:
 
 | | | |
 |---|---|---|
@@ -58,8 +58,8 @@ place, and the states a place can be in:
 | **the shelf**, where a photograph enters | **the workbench**, one frame enlarged | **the gallery**, lit |
 | ![the line](test/goldens/line.png) | ![the binder](test/goldens/binder.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) |
 | **the line**, what has been printed | **the binder**, where the roll came from | **the drawer**, where the folder is set |
-| ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | | |
-| **the gallery**, with the lamp off | | |
+| ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the shelf in a narrow window](test/goldens/shelf-narrow.png) | |
+| **the gallery**, with the lamp off | **the shelf**, in the narrowest window | |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
