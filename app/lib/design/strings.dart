@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../lab/stock.dart';
+
 /// The words that are not the film's.
 ///
 /// The film's own vocabulary never translates: `EI`, `C-41`, `GOLD 200`, a
@@ -95,6 +97,32 @@ class KalloStrings {
   String get onTheTable => zh ? '在台面上' : 'on the table';
   String get openRoll => zh ? '打开' : 'Open';
 
+  String get theShelf => zh ? '架上' : 'THE SHELF';
+  String shelfCount(int count) => zh ? '$count 支胶片' : '$count films';
+
+  /// Said when the model did not answer and the shelf holds its one film.
+  String get shelfAlone => zh
+      ? '模型没有应答，架上只有 app 自己带着的这一支。'
+      : 'The model did not answer, so the shelf holds the one film this app carries.';
+
+  /// A group of boxes on the shelf, and the chemistry they share.
+  String processName(FilmProcess process) => switch (process) {
+        FilmProcess.negative => zh ? '彩色负片' : 'COLOUR NEGATIVE',
+        FilmProcess.reversal => zh ? '彩色反转片' : 'COLOUR REVERSAL',
+        FilmProcess.monochrome => zh ? '黑白' : 'MONOCHROME',
+      };
+
+  /// What the chemistry means for the stages a roll goes through. The model's
+  /// own sentence, in the app's words.
+  String processNote(FilmProcess process) => switch (process) {
+        FilmProcess.negative =>
+          zh ? '负片 —— 显影、印相、扫描' : 'negative — developed, printed, scanned',
+        FilmProcess.reversal =>
+          zh ? '反转片 —— 胶片自己就是照片，没有印相' : 'reversal — the film is the picture',
+        FilmProcess.monochrome =>
+          zh ? '黑白 —— 一个记录，没有染料' : 'monochrome — one record, no dyes',
+      };
+
   // -- the workbench --------------------------------------------------------
 
   String get printOut => zh ? '印' : 'Print';
@@ -114,6 +142,39 @@ class KalloStrings {
 
   String get binderNote =>
       zh ? '这一卷的来历，和模型量到的数。' : 'Where this roll came from, and the numbers the model measured.';
+
+  String get theStock => zh ? '胶片' : 'THE STOCK';
+  String get measuredAndBorrowed => zh ? '量到的和借来的' : 'MEASURED AND BORROWED';
+  String get reference => zh ? '参考显影' : 'Reference';
+  String get source => zh ? '出处' : 'Source';
+
+  /// Where in the sheet, and when it was read.
+  String page(String page) => zh ? '第 $page 页' : 'page $page';
+  String readOn(String date) => zh ? '取于 $date' : 'read $date';
+
+  /// What a `[measured]` line admits to. The four words the catalogue's
+  /// vocabulary has; an empty claim is a sentence the four cannot carry, and it
+  /// is shown as it stands.
+  String claim(String claim) => switch (claim) {
+        'measured' => zh ? '量到' : 'measured',
+        'borrowed' => zh ? '借来' : 'borrowed',
+        'placeholder' => zh ? '占位' : 'placeholder',
+        'none' => zh ? '没有' : 'none',
+        _ => '',
+      };
+
+  /// A field of a stock's record. Technical, so it translates only where the
+  /// Chinese has a word of its own for it.
+  String field(String field) => switch (field) {
+        'curves' => zh ? '曲线' : 'curves',
+        'layers' => zh ? '感光层' : 'layers',
+        'dyes' => zh ? '染料' : 'dyes',
+        'mask' => zh ? '遮罩' : 'mask',
+        'grain' => zh ? '颗粒' : 'grain',
+        'cl_layer' => zh ? '抑制层' : 'CL layer',
+        'white' => zh ? '白' : 'white',
+        _ => field,
+      };
 
   String get theRoll => zh ? '这一卷' : 'THE ROLL';
   String get theLadder => zh ? '显影梯度' : 'THE LADDER';

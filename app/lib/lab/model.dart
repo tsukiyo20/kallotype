@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'stock.dart';
+import 'package:flutter/foundation.dart';
 
 /// The model, as a process.
 ///
@@ -16,6 +16,12 @@ class Model {
   final String executable;
 
   bool get available => executable.isNotEmpty;
+
+  /// Something the model said that the app can live without.
+  ///
+  /// A missing catalogue is not a broken app: the shelf holds its one film and
+  /// says so. It is worth a line in the console and nothing more.
+  static void log(String message) => debugPrint(message);
 
   /// Find the model.
   ///
@@ -70,6 +76,7 @@ class Model {
   Future<void> develop({
     required File photograph,
     required String stock,
+    required String paper,
     required double minutes,
     required double tempC,
     required int width,
@@ -86,7 +93,7 @@ class Model {
       '--film',
       stock,
       '--paper',
-      Stocks.paper,
+      paper,
       '--dev',
       minutes.toStringAsFixed(2),
       '--temp',
@@ -108,6 +115,25 @@ class Model {
     if (result.exitCode != 0) {
       throw ModelFailed(result.stderr.toString().trim());
     }
+  }
+
+  /// Ask the model what stock it carries.
+  ///
+  /// One call, one document: every film and paper with its provenance, so that
+  /// the shelf and the binder show the model's own list rather than a list
+  /// about it.
+  Future<String> catalogue() async {
+    if (!available) {
+      throw const ModelMissing();
+    }
+    final ProcessResult result = await Process.run(executable, <String>[
+      'stocks',
+      '--json',
+    ]);
+    if (result.exitCode != 0) {
+      throw ModelFailed(result.stderr.toString().trim());
+    }
+    return result.stdout as String;
   }
 }
 

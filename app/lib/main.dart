@@ -14,8 +14,10 @@ import 'lab/settings.dart';
 import 'lab/fixture.dart';
 import 'lab/print.dart';
 import 'lab/print_out.dart';
+import 'lab/model.dart';
 import 'lab/roll.dart';
 import 'lab/roll_store.dart';
+import 'lab/stock.dart';
 import 'views/places.dart';
 import 'views/room.dart';
 
@@ -62,6 +64,7 @@ class KalloApp extends StatefulWidget {
   const KalloApp({
     super.key,
     this.roll,
+    this.catalogue,
     this.prints,
     this.jobs,
     this.exportsFolder,
@@ -84,6 +87,11 @@ class KalloApp extends StatefulWidget {
   /// A roll to open directly. The tests pass one; the app loads the committed
   /// strip, which is the only roll there is until the model is behind an FFI.
   final Roll? roll;
+
+  /// Every stock the model carries. The tests pin it, so that a golden is a
+  /// picture of the app rather than of the model binary on this machine; the app
+  /// asks `kalo stocks --json` once, at the start.
+  final Catalogue? catalogue;
 
   /// Prints to hang. The tests pass them; the app reads the export folder,
   /// which is empty until something has been printed.
@@ -123,6 +131,7 @@ class _KalloAppState extends State<KalloApp> {
   Brightness? _pinned;
   late bool _technical = widget.technicalTerms;
   Roll? _roll;
+  Catalogue? _catalogue;
   List<Print> _prints = const <Print>[];
   List<PrintJob> _jobs = const <PrintJob>[];
   Settings _settings = const Settings();
@@ -134,6 +143,10 @@ class _KalloAppState extends State<KalloApp> {
     _locale = widget.locale;
     _pinned = widget.appearance;
     _roll = widget.roll;
+    _catalogue = widget.catalogue;
+    if (_catalogue == null) {
+      unawaited(_openCatalogue());
+    }
     final List<Print>? prints = widget.prints;
     _jobs = widget.jobs ?? const <PrintJob>[];
     if (prints != null) {
@@ -145,6 +158,23 @@ class _KalloAppState extends State<KalloApp> {
       unawaited(_openRoll());
     }
   }
+
+  /// What the model carries: one call, and the shelf is a shelf.
+  ///
+  /// It is asked once and held. The catalogue is the model's, not the app's, so
+  /// it cannot be a constant in this file — and it is not worth re-reading,
+  /// because it changes when the model is rebuilt, which is when the app is
+  /// restarted.
+  Future<void> _openCatalogue() async {
+    final Catalogue catalogue = await Catalogue.load(Model.find());
+    if (mounted) {
+      setState(() => _catalogue = catalogue);
+    }
+  }
+
+  /// What the print's paper is called. One paper, until a paper can be chosen.
+  String get _paperName =>
+      _catalogue?.paper(Stocks.paper)?.short ?? Stocks.paperShort;
 
   /// The roll you were carrying, or the model's own chart when there is none.
   ///
@@ -181,7 +211,13 @@ class _KalloAppState extends State<KalloApp> {
     final PrintJob job = PrintJob(frame: frame, exports: exports);
     setState(() => _jobs = <PrintJob>[job, ..._jobs]);
     try {
-      await printFrame(roll: roll, frame: frame, exports: exports);
+      await printFrame(
+        roll: roll,
+        frame: frame,
+        exports: exports,
+        paperName: _paperName,
+        stock: _catalogue?.film(roll.stockId),
+      );
       await _reloadPrints();
     } finally {
       if (mounted) {
@@ -333,6 +369,8 @@ class _KalloAppState extends State<KalloApp> {
           ? const ColoredBox(color: Color(0xFFF6F5F2))
           : Room(
               roll: _roll!,
+              catalogue: _catalogue ?? Catalogue.carried,
+              paperName: _paperName,
               prints: _prints,
               exports: _folder,
               rollFolder: widget.rollFolder ?? RollStore.folder,

@@ -12,6 +12,7 @@ import '../lab/exports.dart';
 import '../lab/print.dart';
 import '../lab/print_out.dart';
 import '../lab/roll.dart';
+import '../lab/stock.dart';
 import '../sheets/contact_sheet.dart';
 import '../widgets/inspector.dart';
 import '../widgets/sidebar.dart';
@@ -34,6 +35,8 @@ class Room extends StatefulWidget {
   const Room({
     super.key,
     required this.roll,
+    required this.catalogue,
+    required this.paperName,
     this.prints = const <Print>[],
     this.onEnterExports,
     required this.onDeveloped,
@@ -56,6 +59,13 @@ class Room extends StatefulWidget {
   final VoidCallback? onDragWindow;
 
   final Roll roll;
+
+  /// Every film and paper the model carries. The shelf is a shelf because of
+  /// it, and the binder shows a roll's own film out of it.
+  final Catalogue catalogue;
+
+  /// What the print's paper is called, resolved at the top of the app.
+  final String paperName;
 
   /// What has been exported, in the order it was printed. Nothing is a state
   /// the room can show: the gallery is a wall, and a wall can be empty.
@@ -185,7 +195,8 @@ class _RoomState extends State<Room> {
                     onDrag: widget.onDragWindow,
                     title: s.rollName(widget.roll.number),
                     subtitle:
-                        '${s.frames(widget.roll.frames.length)}   ·   ${widget.roll.stockLabel}',
+                        '${s.frames(widget.roll.frames.length)}   ·   '
+                        '${widget.catalogue.film(widget.roll.stockId)?.short ?? widget.roll.stockLabel}',
                     onSettings: () => setState(() => _open = true),
                   ),
                   Expanded(
@@ -195,6 +206,7 @@ class _RoomState extends State<Room> {
                       // frame, which is a thing only the bench has.
                       Place.shelf => Shelf(
                           roll: widget.roll,
+                          catalogue: widget.catalogue,
                           onDeveloped: widget.onDeveloped,
                           onOpen: () => setState(() => _place = Place.table),
                         ),
@@ -204,10 +216,13 @@ class _RoomState extends State<Room> {
                           onSelect: (int index) =>
                               setState(() => _selected = index),
                           exports: widget.exports,
+                          paperName: widget.paperName,
                           onPrint: widget.onPrint,
                         ),
                       Place.binder => Binder(
                           roll: widget.roll,
+                          catalogue: widget.catalogue,
+                          paperName: widget.paperName,
                           exports: widget.exports,
                           rollFolder: widget.rollFolder,
                         ),

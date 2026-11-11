@@ -11,6 +11,7 @@ import 'package:kallo_ui/lab/fixture.dart';
 import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/print_out.dart';
 import 'package:kallo_ui/lab/roll.dart';
+import 'package:kallo_ui/lab/stock.dart';
 import 'package:kallo_ui/main.dart';
 import 'package:kallo_ui/views/places.dart';
 
@@ -96,6 +97,112 @@ Future<List<Print>> _fixturePrints() async {
   ];
 }
 
+/// The catalogue the goldens draw, pinned rather than asked for.
+///
+/// Eight films, because a shelf is about the fact that there are many: four
+/// colour negatives, two reversals and two silver films, so that the shelf's
+/// three groups are all on the page. The provenance is the model's, copied from
+/// `kalo stocks --json`; the list is the test's, so that a golden does not show
+/// the model binary on whatever machine ran it.
+const Catalogue _catalogue = Catalogue(
+  films: <Stock>[
+    Stock(
+      id: 'kodak_ektar_100',
+      short: 'EKTAR 100',
+      label: 'KODAK PROFESSIONAL EKTAR 100',
+      process: FilmProcess.negative,
+      referenceMinutes: 6.5,
+      referenceTempC: 20,
+      provenance: Provenance(
+        publication: 'E-4046',
+        page: '4',
+        retrieved: '2026-11-08',
+      ),
+      measured: <Measured>[
+        Measured(field: 'curves', claim: 'measured', detail: ''),
+        Measured(field: 'layers', claim: 'measured', detail: ''),
+        Measured(
+          field: 'dyes',
+          claim: 'borrowed',
+          detail: 'the VISION3 500T digitisation',
+        ),
+        Measured(field: 'mask', claim: 'measured', detail: ''),
+        Measured(field: 'mtf', claim: 'measured', detail: ''),
+        Measured(field: 'grain', claim: 'placeholder', detail: ''),
+      ],
+    ),
+    Stock(
+      id: 'kodak_gold200',
+      short: 'GOLD 200',
+      label: 'KODAK GOLD 200',
+      process: FilmProcess.negative,
+    ),
+    Stock(
+      id: 'kodak_portra_400',
+      short: 'PORTRA 400',
+      label: 'KODAK PROFESSIONAL PORTRA 400',
+      process: FilmProcess.negative,
+    ),
+    Stock(
+      id: 'vision3_500t',
+      short: 'VISION3 500T',
+      label: 'KODAK VISION3 500T 5219/7219, ECN-2',
+      process: FilmProcess.negative,
+      referenceMinutes: 6.5,
+      referenceTempC: 20,
+      provenance: Provenance(
+        publication: 'H-1-5219',
+        page: '3',
+        retrieved: '2026-11-08',
+      ),
+      measured: <Measured>[
+        Measured(field: 'curves', claim: 'measured', detail: ''),
+        Measured(field: 'layers', claim: 'measured', detail: ''),
+        Measured(field: 'dyes', claim: 'borrowed', detail: ''),
+        Measured(field: 'mask', claim: 'measured', detail: ''),
+        Measured(field: 'mtf', claim: 'borrowed', detail: ''),
+        Measured(field: 'grain', claim: 'placeholder', detail: ''),
+      ],
+    ),
+    Stock(
+      id: 'provia_100f',
+      short: 'PROVIA 100F',
+      label: 'FUJICHROME PROVIA 100F (RDP III), E-6',
+      process: FilmProcess.reversal,
+    ),
+    Stock(
+      id: 'velvia_50',
+      short: 'VELVIA 50',
+      label: 'FUJICHROME VELVIA 50 (RVP), E-6',
+      process: FilmProcess.reversal,
+    ),
+    Stock(
+      id: 'ilford_delta400',
+      short: 'DELTA 400',
+      label: 'ILFORD DELTA 400 PROFESSIONAL, ID-11 8 min 24 °C',
+      process: FilmProcess.monochrome,
+    ),
+    Stock(
+      id: 'kodak_trix400',
+      short: 'TRI-X 400',
+      label: 'KODAK TRI-X 400 PROFESSIONAL (400TX), D-76 6 min 20 °C',
+      process: FilmProcess.monochrome,
+    ),
+  ],
+  papers: <Stock>[
+    Stock(
+      id: 'fuji_crystal_archive_pearl',
+      short: 'CRYSTAL ARCHIVE PEARL',
+      label: 'FUJICOLOR CRYSTAL ARCHIVE DIGITAL PEARL PAPER, RA-4',
+      provenance: Provenance(
+        publication: 'AF3-0220E',
+        page: '4',
+        retrieved: '2026-11-09',
+      ),
+    ),
+  ],
+);
+
 /// Where prints come from, pinned rather than read: a golden that showed
 /// whoever ran it's home folder would be a golden of a person, not of the app.
 final Directory _prints = Directory('/prints');
@@ -149,6 +256,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: const <Print>[],
       exportsFolder: _prints,
       rollFolder: _roll,
@@ -168,6 +276,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: const <Print>[],
       exportsFolder: _prints,
       rollFolder: _roll,
@@ -188,6 +297,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: const <Print>[],
       exportsFolder: _prints,
       rollFolder: _roll,
@@ -209,6 +319,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       roll: Roll.fromStrip(_strip()),
       prints: hanging,
       exportsFolder: _prints,
@@ -229,6 +340,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       roll: Roll.fromStrip(_strip()),
       prints: hanging,
       exportsFolder: _prints,
@@ -252,6 +364,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: const <Print>[],
       exportsFolder: _prints,
       rollFolder: _roll,
@@ -272,6 +385,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: const <Print>[],
       exportsFolder: _prints,
       rollFolder: _roll,
@@ -296,6 +410,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: <Print>[hanging.last],
       exportsFolder: _prints,
       rollFolder: _roll,
@@ -317,6 +432,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: const <Print>[],
       exportsFolder: _prints,
       rollFolder: _roll,
@@ -337,6 +453,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: const <Print>[],
       exportsFolder: _prints,
       rollFolder: _roll,
@@ -357,6 +474,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: hanging,
       jobs: <PrintJob>[
         PrintJob(frame: developed.frames[3], exports: _prints),
@@ -380,6 +498,7 @@ void main() {
     _window(tester);
 
     await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
       prints: const <Print>[],
       exportsFolder: _prints,
       rollFolder: _roll,

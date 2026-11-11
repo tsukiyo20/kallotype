@@ -50,6 +50,9 @@ Future<Roll> develop({
     await model.develop(
       photograph: source,
       stock: stock.id,
+      // The paper is the app's policy, not the roll's: a print is balanced
+      // against one paper's curve, and the roll does not choose it.
+      paper: Stocks.paper,
       minutes: minutes,
       tempC: tempC,
       width: benchWidth,

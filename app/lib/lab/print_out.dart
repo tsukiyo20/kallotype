@@ -38,6 +38,8 @@ Future<File> printFrame({
   required Roll roll,
   required Frame frame,
   required Directory exports,
+  required String paperName,
+  Stock? stock,
   Directory? rollFolder,
 }) async {
   final Directory source = rollFolder ?? RollStore.folder!;
@@ -59,6 +61,7 @@ Future<File> printFrame({
         await Model.find().develop(
           photograph: file,
           stock: roll.stockId,
+          paper: Stocks.paper,
           minutes: frame.minutes,
           tempC: frame.tempC,
           width: width > _largest ? _largest : width,
@@ -75,13 +78,12 @@ Future<File> printFrame({
     await RollStore.frameFile(source, frame.number).copy(image.path);
   }
 
-  final Stock? stock = Stocks.byId(roll.stockId);
   final File record = File('${exports.path}${Platform.pathSeparator}$name.json');
   await record.writeAsString(
     const JsonEncoder.withIndent('  ').convert(<String, Object?>{
       'frame': frame.number,
       'film': stock?.short ?? roll.stockLabel,
-      'paper': Stocks.paperShort,
+      'paper': paperName,
       'minutes': frame.minutes,
       'temp_c': frame.tempC,
     }),

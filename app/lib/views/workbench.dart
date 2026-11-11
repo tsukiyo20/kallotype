@@ -8,7 +8,6 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/clock.dart';
 import '../lab/roll.dart';
-import '../lab/stock.dart';
 import '../widgets/button.dart';
 import '../widgets/patch_print.dart';
 import '../widgets/record.dart';
@@ -29,10 +28,14 @@ class Workbench extends StatefulWidget {
     required this.selected,
     required this.onSelect,
     required this.exports,
+    required this.paperName,
     required this.onPrint,
   });
 
   final Roll roll;
+
+  /// What the print's paper is called, resolved at the top of the app.
+  final String paperName;
   final int selected;
   final ValueChanged<int> onSelect;
 
@@ -214,7 +217,7 @@ class _WorkbenchState extends State<Workbench> {
             ),
             const SizedBox(height: KalloSpace.step1),
             Text(
-              Stocks.paperShort,
+              widget.paperName,
               style: KalloType.data.copyWith(color: colors.ink),
             ),
             const Spacer(),

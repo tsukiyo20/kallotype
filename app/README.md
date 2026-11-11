@@ -84,10 +84,11 @@ handle, a field, and — where the place has one — a record on the right.
 
 | | |
 |---|---|
-| **The shelf is the way in** | One photograph, into the developer five times, and a roll comes out: the same frame at 3, 6, 9, 12 and 15 minutes. That ladder is the product's whole argument, so the first roll is a comparison rather than a collection. |
+| **The shelf is the way in, and it is the model's** | One photograph, into the developer five times, and a roll comes out: the same frame at 3, 6, 9, 12 and 15 minutes. That ladder is the product's whole argument, so the first roll is a comparison rather than a collection. The stock the roll is made of is not a constant in the app: `kalo stocks --json` hands over every film the model carries, grouped by chemistry, so a roll is developed as the box you took off the shelf — and the shelf cannot show a film the model does not have. |
+| **The binder is where the roll came from** | The photograph, the film, the paper, the five times, and — under the film — the sheet it was read from and one line per field saying whether that field was measured, borrowed from another stock, or left as a compiled placeholder. A stock that borrowed its dyes is a different claim from one that measured them, and this is the page that says which is which. |
 | **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. |
 | **The line is what happened** | A string across the room with the work hanging from it, newest first, and a corner that says what is still being made. The gallery is the same files looked at properly, on a wall, in the dark. |
-| **The model is a process, for now** | `kalo` is asked for each frame — grain, halation and the DIR couplers, which are physics and cost nothing — and writes a PNG into the app's own folder; the app decodes them at the bench's width. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
+| **The model is a process, for now** | `kalo` is asked for each frame — grain, halation and the DIR couplers, which are physics and cost nothing — and writes a PNG into the app's own folder; the app decodes them at the bench's width. It is asked once more, at the start, for its catalogue. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |
 | **Six places, all six built** | Shelf, Table, Workbench, Binder, Line, Gallery. The order is the work's: what you have, what you compare, what you judge one frame on, what you keep, what you print, and where it hangs. |
 | **The table is the roll, unrolled** | A contact sheet is a print, so every frame on it is a positive printed for its own highlights. Longer development is visibly more contrast, and it is not a filter — the nine densities on each frame are the model's. |
 | **The gallery is a room with one light** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper, the wall label and the chrome all multiply by one number, and the switch is that number. Turn it off and the wall goes to black, the chrome goes to the dark set, and the print stays at a tenth — the eye adapting, not the bulb. |
@@ -192,8 +193,6 @@ translates.
   converted.
 - **Text input.** `EditableText`, selection, IME and accessibility are the
   framework's job. Do not rebuild them; rebuild everything you can see.
-- **The other three places.** Shelf, Binder and Line exist on the map and say
-  what they are for. They are the next two or three milestones, not bugs.
 
 ---
 

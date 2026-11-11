@@ -56,6 +56,7 @@ void main() {
       roll: roll,
       frame: roll.frames.first,
       exports: exports,
+      paperName: Stocks.paperShort,
       rollFolder: folder,
     );
     // A print is rendered again from the photograph, so it is the size of the
@@ -77,6 +78,33 @@ void main() {
     expect(stored.stockId, Stocks.vision.id);
   }, skip: ready ? false : 'no model or no photograph on this machine',
       timeout: const Timeout(Duration(minutes: 3)));
+
+  test('the shelf is the model\'s own list', () async {
+    final Catalogue catalogue = await Catalogue.load(model);
+
+    // Every film the model can render, and no film it cannot. Twenty is a floor
+    // rather than the number: a build that retired a stock is allowed to say so.
+    expect(catalogue.films.length, greaterThan(20));
+    expect(catalogue.papers, isNotEmpty);
+
+    final Stock vision = catalogue.film('vision3_500t')!;
+    expect(vision.short, 'VISION3 500T');
+    expect(vision.process, FilmProcess.negative);
+    expect(vision.provenance.publication, 'H-1-5219');
+    expect(vision.referenceMinutes, 6.5);
+    // The record is what the binder draws; a film with no fields would leave
+    // that section saying nothing.
+    expect(vision.measured, isNotEmpty);
+
+    for (final Stock film in catalogue.films) {
+      expect(film.process, isNotNull, reason: film.id);
+      expect(film.short, isNotEmpty, reason: film.id);
+      expect(film.measured, isNotEmpty, reason: film.id);
+      expect(film.provenance.publication, isNotEmpty, reason: film.id);
+    }
+    // The one paper the app prints on is on the shelf too, with a name.
+    expect(catalogue.paper(Stocks.paper)?.short, 'CRYSTAL ARCHIVE PEARL');
+  }, skip: model.available ? false : 'no model on this machine');
 
   test('a frame becomes a print, with the record that labels it', () async {
     final Directory folder =
@@ -111,6 +139,8 @@ void main() {
       roll: whole,
       frame: frame,
       exports: exports,
+      paperName: Stocks.paperShort,
+      stock: Stocks.vision,
       rollFolder: roll,
     );
     expect(print.existsSync(), isTrue);
