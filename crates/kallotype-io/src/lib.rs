@@ -210,7 +210,12 @@ mod tests {
         let image = Image {
             width: 4,
             height: 2,
-            pixels: [[[0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [0.0, 0.0, 0.0], [1.0, 1.0, 1.0]]; 2]
+            pixels: [[
+                [0.0, 0.0, 0.0],
+                [1.0, 1.0, 1.0],
+                [0.0, 0.0, 0.0],
+                [1.0, 1.0, 1.0],
+            ]; 2]
                 .concat(),
         };
         let half = resize_to_width(&image, 2);
