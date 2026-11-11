@@ -21,6 +21,7 @@
 use std::path::Path;
 
 use kallotype_core::CharacteristicCurve;
+use kallotype_core::Provenance;
 use kallotype_core::dye::InhibitorLayer;
 use kallotype_core::emulsion::{FilmProcess, FilmStock};
 
@@ -213,12 +214,23 @@ fn build(
         Ok(base.with_corners(toe, shoulder))
     };
     let sigma = numbers(table, "character.sigma_um")?;
+    // The header carries the sheet, and a file that cannot say where it came
+    // from is still a film — it is a film with nothing to cite, which the empty
+    // fields say better than a borrowed citation would.
+    let field = |key: &str| {
+        string(table, &format!("provenance.{key}"))
+            .map(leak_str)
+            .unwrap_or("")
+    };
+    let label = string(table, "label")?;
+    let short = string(table, "short").unwrap_or_else(|_| label.clone());
     Ok(Box::new(FilmStock {
         id: leak_str(string(table, "id")?),
+        short: leak_str(short),
         process,
         extra_cyan: None,
         cl_layer,
-        label: leak_str(string(table, "label")?),
+        label: leak_str(label),
         note: leak_str(string(table, "provenance.note")?),
         channels: [channel("red")?, channel("green")?, channel("blue")?],
         base_density: numbers(table, "character.base_density")?
@@ -244,7 +256,34 @@ fn build(
             .flatten(),
         reference_time_min: number(table, "development.reference_time_min").unwrap_or(6.5),
         reference_temp_c: number(table, "development.reference_temp_c").unwrap_or(20.0),
+        provenance: Provenance {
+            publication: field("publication"),
+            page: field("page"),
+            retrieved: field("retrieved"),
+            checksum: field("checksum"),
+        },
+        // The file's own order, which is alphabetical: the compiled table has a
+        // reading order the model chose, and a file read here shows what it
+        // says rather than the order the binary would have put it in.
+        measured: measured(table),
     }))
+}
+
+/// The `[measured]` section, one `(field, sentence)` per line, in file order.
+fn measured(
+    table: &std::collections::BTreeMap<String, Value>,
+) -> &'static [(&'static str, &'static str)] {
+    let entries: Vec<(&'static str, &'static str)> = table
+        .iter()
+        .filter_map(|(key, value)| {
+            let field = key.strip_prefix("measured.")?;
+            let Value::String(text) = value else {
+                return None;
+            };
+            Some((leak_str(field.to_owned()), leak_str(text.clone())))
+        })
+        .collect();
+    Box::leak(entries.into_boxed_slice())
 }
 
 fn strings(

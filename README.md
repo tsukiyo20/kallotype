@@ -120,6 +120,7 @@ Or install it:
 ```bash
 cargo install kallotype-cli
 kalo stocks                       # every film and paper, with what is measured
+kalo stocks --json                # the same, as one document a program can read
 kalo curve --dev 9 --sweep        # what a development does, before any render
 kalo render photo.png -o out.png --film vision3_500t --ev auto
 ```

@@ -30,8 +30,8 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
     match cli.command {
         Command::Render(args) => commands::render::run(args),
         Command::Curve(args) => commands::curve::run(args),
-        Command::Stocks => {
-            commands::stocks::run();
+        Command::Stocks { json } => {
+            commands::stocks::run(json);
             Ok(())
         }
         Command::Stock { command } => match command {

@@ -1,9 +1,13 @@
 //! Built-in film and paper stocks.
 //!
-//! Two of them are measured — the film `vision3_500t` and the paper
-//! `endura_premier_metallic`. Their curves are digitised from the manufacturer's
-//! data sheets. Everything else is a stand-in with realistic numbers, and the
-//! notes on each say which it is.
+//! Every film in `data/films/` and every paper in `data/papers/` is here, one
+//! entry each, generated at build time from the `.kalofilm` and `.kalopaper`
+//! files the renderer can also read one at a time. A stock is not a summary of
+//! its sheet: it carries what the fields below say it carries, and it carries
+//! what the sheet admitted to in [`FilmStock::measured`] — one line per field,
+//! saying whether that field was measured, borrowed from another stock, or left
+//! as a compiled placeholder. A product whose whole claim is that the numbers
+//! mean something has to be able to say where each one came from.
 //!
 //! ## A stock carries its own spectra
 //!
@@ -14,14 +18,13 @@
 //! different products, and they ride on the stock so that choosing a film
 //! changes the colour and not only the density.
 //!
-//! The placeholder stocks borrow the measured VISION3 spectra and say so in
-//! their notes. That is the honest version of a placeholder: the curve is
-//! invented, and the colour response is somebody else's.
+//! Not every sheet prints three dyes, so some stocks borrow the measured VISION3
+//! spectra — and [`FilmStock::measured`] says so, which is the honest version of
+//! a borrow: the number is real, it is simply not this film's.
 //!
-//! The ids of the stand-ins deliberately name no real product. A stock called
-//! `portra400` that is not Portra 400 would be a lie, and the whole point of this
-//! project is that the numbers mean something. The measured one names its own
-//! film, because it is that film.
+//! The ids name the real product. A stock called `portra400` that is not Portra
+//! 400 would be a lie, and the whole point of this project is that the numbers
+//! mean something.
 //!
 //! ## What `d_min` means, and why it is zero for film
 //!
@@ -58,12 +61,42 @@ pub enum FilmProcess {
     /// Silver image: one curve, one sensitivity, no dye, no mask.
     Monochrome,
 }
+/// Where a stock's numbers came from.
+///
+/// A data sheet, a printed page, a date, and the digest of the document itself.
+/// It is not decoration: a curve that cannot name its sheet is a curve someone
+/// drew, and the difference is the whole product.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Provenance {
+    /// The publication, as the manufacturer numbers it: `E-4050`, `AF3-865E`.
+    pub publication: &'static str,
+    /// The printed page the numbers were read on, as the sheet numbers it.
+    pub page: &'static str,
+    /// The date the sheet was read, ISO 8601.
+    pub retrieved: &'static str,
+    /// The digest of the document, `sha256:...`.
+    pub checksum: &'static str,
+}
+
+impl Provenance {
+    /// A stock with no sheet behind it: a test, or a file that did not say.
+    pub const UNKNOWN: Self = Self {
+        publication: "",
+        page: "",
+        retrieved: "",
+        checksum: "",
+    };
+}
+
 /// A film stock: one characteristic curve per colour layer.
 #[derive(Debug, Clone, Copy)]
 
 pub struct FilmStock {
     /// Stable identifier used on the command line.
     pub id: &'static str,
+    /// The name a box or a wall label would use, without the catalogue numbers:
+    /// `PORTRA 400`, not `KODAK PROFESSIONAL PORTRA 400, C-41`.
+    pub short: &'static str,
     /// The chemistry, and therefore which stages the render runs.
     pub process: FilmProcess,
     /// A second emulsion feeding the cyan dye, if the film has one.
@@ -133,6 +166,16 @@ pub struct FilmStock {
     pub reference_time_min: f64,
     /// The temperature the curve was measured at, in °C.
     pub reference_temp_c: f64,
+    /// The sheet this film was read from.
+    pub provenance: Provenance,
+    /// One line per field: what was measured, what was borrowed, what is a
+    /// placeholder, and what is absent.
+    ///
+    /// The order is the model's — the curve first, the grain last — rather than
+    /// the file's, because a person reading a film's record wants the film's
+    /// shape before its texture. Every sentence begins with its own verdict:
+    /// `measured: ...`, `borrowed: ...`, `placeholder: ...`, `none`.
+    pub measured: &'static [(&'static str, &'static str)],
 }
 
 /// A paper stock: one curve, because paper only has to record what is on the
@@ -141,6 +184,8 @@ pub struct FilmStock {
 pub struct PaperStock {
     /// Stable identifier used on the command line.
     pub id: &'static str,
+    /// The name a box or a wall label would use, without the catalogue numbers.
+    pub short: &'static str,
     /// Human-readable name.
     pub label: &'static str,
     /// What this paper is, and what it is not.
@@ -157,6 +202,10 @@ pub struct PaperStock {
     /// The paper's three layer sensitivities on one relative scale, 380–730 nm
     /// at 5 nm. What the spectral print integrates the enlarger's light against.
     pub layers: &'static [[f64; GRID_LEN]; 3],
+    /// The sheet this paper was read from.
+    pub provenance: Provenance,
+    /// One line per field, as a film's: measured, borrowed, placeholder or none.
+    pub measured: &'static [(&'static str, &'static str)],
 }
 
 const fn curve(d_min: f64, d_max: f64, gamma: f64, log_e0: f64) -> CharacteristicCurve {

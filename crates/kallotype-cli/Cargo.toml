@@ -39,6 +39,7 @@ kallotype-io = { path = "../kallotype-io", version = "0.1.0" }
 kallotype-raw = { path = "../kallotype-raw", version = "0.1.0", optional = true }
 kallotype-spectral = { path = "../kallotype-spectral", version = "0.1.0" }
 clap.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

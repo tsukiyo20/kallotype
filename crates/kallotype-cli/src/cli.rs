@@ -29,7 +29,11 @@ pub enum Command {
     /// Render an image through a film stock and a paper.
     Render(RenderArgs),
     /// List the built-in film and paper stocks.
-    Stocks,
+    Stocks {
+        /// Write the catalogue as JSON, for a program to read.
+        #[arg(long)]
+        json: bool,
+    },
     /// Work with a stock file: its provenance, its curves and its spectra.
     Stock {
         /// What to do with it.

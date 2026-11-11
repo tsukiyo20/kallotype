@@ -53,7 +53,8 @@ pub use couplers::{Couplers, fit_inhibition};
 pub use curve::CharacteristicCurve;
 pub use development::DevelopmentParams;
 pub use emulsion::{
-    FILM_STOCKS, FilmProcess, FilmStock, PAPER_STOCKS, PaperStock, film_stock, paper_stock,
+    FILM_STOCKS, FilmProcess, FilmStock, PAPER_STOCKS, PaperStock, Provenance, film_stock,
+    paper_stock,
 };
 pub use grain::GrainField;
 pub use halation::{Halation, Halo};
