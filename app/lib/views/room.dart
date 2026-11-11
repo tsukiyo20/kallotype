@@ -305,6 +305,13 @@ class _RoomState extends State<Room> {
   /// The bench: the sheet on the left, the record on the right, the status
   /// under it. The table's layout, and the only place that has one.
   Widget _bench(Frame frame, KalloStrings s) {
+    // The contact proof is on the paper the roll was printed on, so the sheet
+    // names it. A reversal has no print and so no sheet to name one on.
+    final FilmProcess? process =
+        widget.catalogue.film(widget.roll.stockId)?.process;
+    final String? paperName = process == FilmProcess.reversal
+        ? null
+        : widget.roll.paperName(widget.catalogue);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -317,6 +324,7 @@ class _RoomState extends State<Room> {
                   roll: widget.roll,
                   selected: _index,
                   onSelect: (int index) => setState(() => _selected = index),
+                  paperName: paperName,
                 ),
               ),
               _Status(

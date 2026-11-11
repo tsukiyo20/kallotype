@@ -266,6 +266,9 @@ Roll _developed(ui.Image image) => Roll(
       stockId: 'vision3_500t',
       stockLabel: 'KODAK VISION3 500T 5219/7219, ECN-2',
       photo: '/photographs/uji.jpg',
+      // What the shelf develops a negative onto, so that the record on every
+      // page is the roll's own and not the app's fallback.
+      paperId: 'fuji_crystal_archive_pearl',
       frames: <Frame>[
         for (int i = 0; i < 5; i++)
           Frame(
@@ -307,6 +310,30 @@ void main() {
     await expectLater(
       find.byType(KalloApp),
       matchesGoldenFile('goldens/sheet.png'),
+    );
+  });
+
+  testWidgets('the table, a roll from the shelf', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: developed,
+      appearance: Brightness.light,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    // One sheet of paper and not a grid of cards: the contact proof says what
+    // paper it is, which is the thing a preview of the prints cannot say.
+    expect(find.text('CRYSTAL ARCHIVE PEARL'), findsOneWidget);
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/table-roll.png'),
     );
   });
 

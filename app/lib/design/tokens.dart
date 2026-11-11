@@ -166,6 +166,29 @@ class KalloColors {
   }
 }
 
+/// What is written on a print's paper.
+///
+/// A sheet is a light surface in both appearances — the paper does not turn
+/// dark when the window does — so what is written on it is the light set's ink
+/// and it does not follow the window. The accent is the safelight at its light
+/// weight: a mark on a contact sheet is a pencil, and a pencil is warm.
+///
+/// It is a separate vocabulary from [`KalloColors`] for the same reason the
+/// wall's is: this is not a plane of the window but a material in the work.
+abstract final class KalloInk {
+  /// A frame's number: the one thing written on the sheet by hand.
+  static const Color ink = Color(0xFF1D1B18);
+
+  /// A time, a development, a note.
+  static const Color muted = Color(0xFF6E6A63);
+
+  /// The paper's name in the margin, and anything that is a caption.
+  static const Color faint = Color(0xFFA6A199);
+
+  /// The mark on the frame that was chosen.
+  static const Color accent = Color(0xFF9A4318);
+}
+
 /// The wall's own numbers.
 ///
 /// Not in the appearance sets, on purpose: a room with one lamp behind a sheet
