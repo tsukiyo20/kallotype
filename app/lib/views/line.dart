@@ -167,6 +167,9 @@ class _Pegged extends StatelessWidget {
     final KalloColors colors = KalloScope.colorsOf(context);
     final double border = width * 0.035;
     final double image = width - border * 2;
+    // The sheet is the picture's shape: a vertical frame hangs as a tall sheet,
+    // not as a landscape one with the middle of the photograph in it.
+    final double aspect = print.image.width / print.image.height;
     final String? at = print.at;
     return Padding(
       padding: const EdgeInsets.only(right: KalloSpace.step5),
@@ -189,7 +192,7 @@ class _Pegged extends StatelessWidget {
                 padding: EdgeInsets.fromLTRB(border, border, border, border * 2.2),
                 child: SizedBox(
                   width: image,
-                  height: image / 1.5,
+                  height: image / aspect,
                   child: RawImage(
                     image: print.image,
                     fit: BoxFit.cover,

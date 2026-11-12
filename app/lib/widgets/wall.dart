@@ -85,11 +85,18 @@ class PrintSheet extends StatelessWidget {
   /// The margin, as a fraction of the sheet's width.
   static const double _border = 0.030;
 
-  /// The sheet's height for a width: the picture, the margin and the deeper
-  /// one at the bottom. Somebody has to know it before the sheet is built —
-  /// the lens, which is a sheet at another size.
+  /// The sheet's height for a width of it: the picture, the margin and the
+  /// deeper one at the bottom.
+  ///
+  /// Somebody has to know it before the sheet is built — the lens, which is a
+  /// sheet at another size, and the room, which has to fit one — so the
+  /// arithmetic is here once rather than at each of them.
+  static double heightPerWidth({double aspect = 1.5}) =>
+      (1 - _border * 2) / aspect + _border * 3.2;
+
+  /// The sheet's height for a width.
   static double heightOf(double width, {double aspect = 1.5}) =>
-      width * ((1 - _border * 2) / aspect + _border * 3.2);
+      width * heightPerWidth(aspect: aspect);
 
   @override
   Widget build(BuildContext context) {

@@ -367,10 +367,14 @@ void main() {
   // complete it.
   late List<Print> hanging;
   late Roll developed;
+  late Roll portrait;
 
   setUpAll(() async {
     await _loadFonts();
     hanging = await _fixturePrints();
+    // The same roll as a vertical frame: the shape the model now hands back
+    // when a photograph was made on its side.
+    portrait = _developed(await _testCard(width: 600, height: 900));
     developed = _developed(
       hanging.first.image,
       contact: await _proof(hanging.first.image),
@@ -997,6 +1001,34 @@ void main() {
     await expectLater(
       find.byType(KalloApp),
       matchesGoldenFile('goldens/workbench.png'),
+    );
+  });
+
+  testWidgets('a vertical frame hangs as a tall sheet', (
+    WidgetTester tester,
+  ) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: portrait,
+      appearance: Brightness.light,
+      initialPlace: Place.workbench,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    // The paper is the picture's shape: a vertical frame is a tall sheet with
+    // the whole photograph on it, not a landscape sheet with its middle in it.
+    final Size picture = tester.getSize(find.byType(RawImage));
+    expect(picture.height / picture.width, closeTo(1.5, 0.01));
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/workbench-portrait.png'),
     );
   });
 

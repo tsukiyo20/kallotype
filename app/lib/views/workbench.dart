@@ -125,6 +125,10 @@ class _WorkbenchState extends State<Workbench> {
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloStrings s = KalloStrings.of(context);
+    // The paper is the picture's shape: a vertical frame is a tall sheet, not a
+    // landscape one with the photograph cropped into its middle.
+    final ui.Image? image = _frame.image;
+    final double aspect = image == null ? 1.5 : image.width / image.height;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -135,14 +139,15 @@ class _WorkbenchState extends State<Workbench> {
               builder: (BuildContext context, BoxConstraints room) {
                 final double width = math.min(
                   math.max(240, room.maxWidth - 80),
-                  (room.maxHeight - 150) / 0.72,
+                  (room.maxHeight - 150) /
+                      PrintSheet.heightPerWidth(aspect: aspect),
                 );
                 return Column(
                   children: <Widget>[
                     Expanded(
                       child: _proof && _printable
-                          ? _wall(s, KalloWall.of(colors.brightness))
-                          : Center(child: _easel(width, colors)),
+                          ? _wall(s, KalloWall.of(colors.brightness), aspect)
+                          : Center(child: _easel(width, colors, aspect)),
                     ),
                     KalloSegments(
                       options: <String>[
@@ -173,9 +178,10 @@ class _WorkbenchState extends State<Workbench> {
   ///
   /// The easel's paper is the window's, because the easel sits on a page that
   /// belongs to the room. The wall's is a constant; see [`PrintSheet`].
-  Widget _easel(double width, KalloColors colors) {
+  Widget _easel(double width, KalloColors colors, double aspect) {
     return PrintSheet(
       width: width,
+      aspect: aspect,
       paper: colors.print,
       outline: colors.hairline,
       child: _picture(colors.print),
@@ -203,12 +209,11 @@ class _WorkbenchState extends State<Workbench> {
   /// smaller gallery but the gallery's condition brought to the bench. The
   /// ladder stays under it: the time is still being chosen, and the label's
   /// loud word is the one it is being chosen at.
-  Widget _wall(KalloStrings s, KalloWall wall) {
-    // The sheet's height over its width: the picture at 3:2 inside a 3 % margin
-    // with a deeper one at the bottom. It is `PrintSheet`'s arithmetic, and the
-    // proof is the one place that has to know it before it builds the sheet.
-    const double border = 0.030;
-    final double perWidth = (1 / 1.5) * (1 - border * 2) + border * 3.2;
+  Widget _wall(KalloStrings s, KalloWall wall, double aspect) {
+    // The sheet's height over its width, from `PrintSheet`'s arithmetic: the
+    // wall piece is the one place that has to know it before it builds the
+    // sheet, because the sheet is centred in whatever height there is.
+    final double perWidth = PrintSheet.heightPerWidth(aspect: aspect);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints band) {
         final double sheet = math.max(
@@ -226,6 +231,7 @@ class _WorkbenchState extends State<Workbench> {
               children: <Widget>[
                 PrintSheet(
                   width: sheet,
+                  aspect: aspect,
                   paper: wall.paper,
                   child: _picture(wall.paper),
                 ),

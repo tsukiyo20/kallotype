@@ -47,7 +47,7 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and nineteen goldens pin the language — one for
+`fvm flutter analyze` is clean, and twenty goldens pin the language — one for
 each place, the states a place can be in, and the two shelves:
 
 | | | |
@@ -64,6 +64,8 @@ each place, the states a place can be in, and the two shelves:
 | **the gallery**, with the lamp off | **the shelf**, with a silver film taken | **the shelf**, in the narrowest window |
 | ![the gallery in a light appearance](test/goldens/gallery-light.png) | ![a loupe on the wall](test/goldens/gallery-lens.png) | ![a print, looked at closely](test/goldens/gallery-loupe.png) |
 | **the gallery**, in a light appearance | **the lens**, held over a print | **a print**, walked up to |
+| ![the workbench, a vertical frame](test/goldens/workbench-portrait.png) | | |
+| **the workbench**, a vertical frame | | |
 
 A proof is read through a loupe, so the table has one too — the same glass as
 the wall's, and the same object: a turned bezel, a reflection of the room, and a
@@ -104,7 +106,7 @@ handle, a field, and — where the place has one — a record on the right.
 |---|---|
 | **The shelf is the way in, and it is the model's** | One photograph, into the developer five times, and a roll comes out: the same frame at 3, 6, 9, 12 and 15 minutes. That ladder is the product's whole argument, so the first roll is a comparison rather than a collection. The materials are not constants in the app: `kalo stocks --json` hands over every film the model carries, grouped by chemistry, and every paper under a rule of its own, so a roll is developed as the two boxes you took off the shelf — and the shelf cannot show a film or a paper the model does not have. |
 | **The binder is where the roll came from** | The photograph, the film, the paper, the five times, and — under each material — the sheet it was read from and one line per field saying whether that field was measured, borrowed from another stock, or left as a compiled placeholder. A stock that borrowed its dyes is a different claim from one that measured them, and this is the page that says which is which. |
-| **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. The bench also has one lamp: *proof* takes the frame out of the room and hangs it the way the gallery will — the same wall, the same sheet, the same label, at the size a hanging is — so the time is chosen against the wall and not against a screen. The ladder stays under it: the label's loud word is the time in hand. |
+| **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. The bench also has one lamp: *proof* takes the frame out of the room and hangs it the way the gallery will — the same wall, the same sheet, the same label, at the size a hanging is — so the time is chosen against the wall and not against a screen. The ladder stays under it: the label's loud word is the time in hand. The paper is the picture's shape — a vertical frame is a tall sheet with the whole photograph on it, not a landscape sheet with a band through its middle — and the wall, the line and the lens all read the shape from the print they are given. |
 | **The line is what happened** | A string across the room with the work hanging from it, newest first, and a corner that says what is still being made. The gallery is the same files looked at properly, on a wall, in the dark. |
 | **The path is a choice** | Exposure, print and scan go through the spectrum — 71 wavelengths, reconstructed from the input and integrated against each layer's sensitivity — or through one number per channel. It is a setting because the model keeps it opt-in: the structure is physical end to end, and the data under it is mixed — the curves and layer sensitivities of twenty-one films are measured, the papers are, the illuminant is CIE D50, and fifteen films still borrow their dye shapes because their sheets print a neutral instead of three dyes. The binder says per film which is which. The two paths are different photographs, not different labels, and the roll remembers which made it: the binder says so under the film, and a print of that roll is made the same way. |
 | **The model is a process, for now** | `kalo` is asked for each frame — grain, halation and the DIR couplers, which are physics and cost nothing — and writes a PNG into the app's own folder; the app decodes them at the bench's width. It is asked once more, at the start, for its catalogue. An FFI will replace the middle of `lib/lab/model.dart` and nothing else: the shape a binding has is the shape a subprocess already has. |

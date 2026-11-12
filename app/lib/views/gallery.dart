@@ -180,15 +180,25 @@ class _GalleryState extends State<Gallery> {
         final int fitting =
             math.max(1, math.min(5, ((available + gap) / 328).floor()));
         final int columns = math.max(1, math.min(prints.length, fitting));
+        // A sheet is the shape of the picture on it. A roll is one photograph,
+        // so a wall of one roll is all one shape; a folder of prints from
+        // different rolls can mix them, and the tallest sheet sets the row.
+        final double aspect = prints.isEmpty
+            ? 1.5
+            : prints
+                .map((Print print) => print.image.width / print.image.height)
+                .reduce(math.min);
+        final double perWidth =
+            math.max(0.74, PrintSheet.heightPerWidth(aspect: aspect));
         final double paper = math.min(
           math.min(
             (available - gap * (columns - 1)) / columns,
-            (room.maxHeight - floor - 40) / 0.74,
+            (room.maxHeight - floor - 40) / perWidth,
           ),
           KalloWall.largest,
         );
         final int rows = (prints.length / columns).ceil();
-        final double height = paper * 0.74 + 30;
+        final double height = paper * perWidth + 30;
         final double content =
             rows * height + math.max(0, rows - 1) * gap;
         final double top = math.max(margin, (room.maxHeight - content) / 2);
@@ -203,6 +213,7 @@ class _GalleryState extends State<Gallery> {
                 padding: EdgeInsets.fromLTRB(margin, top, margin, floor),
                 child: Wrap(
                   alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: gap,
                   runSpacing: gap,
                   children: <Widget>[
@@ -713,6 +724,8 @@ class _Hung extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui.Image image = print.image;
+    final double aspect = image.width / image.height;
     return SizedBox(
       width: width,
       child: Column(
@@ -723,7 +736,7 @@ class _Hung extends StatelessWidget {
             cursor: cursor,
             onHover: (PointerHoverEvent event) => onHover(
               event.localPosition,
-              Size(width, PrintSheet.heightOf(width)),
+              Size(width, PrintSheet.heightOf(width, aspect: aspect)),
               event.position,
             ),
             onExit: (_) => onLeave(),
@@ -732,6 +745,7 @@ class _Hung extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               child: PrintSheet(
                 width: width,
+                aspect: aspect,
                 paper: wall.paper,
                 outline: wall.outline,
                 light: printed,
@@ -807,8 +821,9 @@ class _Lens extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double aspect = image.width / image.height;
     final double width = sheet.width * _magnification;
-    final double height = PrintSheet.heightOf(width);
+    final double height = sheet.height * _magnification;
     return KalloLens(
       at: at,
       radius: radius,
@@ -819,6 +834,7 @@ class _Lens extends StatelessWidget {
             top: radius - (point.dy / sheet.height) * height,
             child: PrintSheet(
               width: width,
+              aspect: aspect,
               paper: wall.paper,
               outline: wall.outline,
               child: RawImage(
