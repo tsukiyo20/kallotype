@@ -112,7 +112,16 @@ class _ShelfState extends State<Shelf> {
       acceptedTypeGroups: const <XTypeGroup>[
         XTypeGroup(
           label: 'photographs',
-          extensions: <String>['jpg', 'jpeg', 'png', 'tif', 'tiff'],
+          // Camera raws included: the model reads them as linear light, which
+          // is the input a film simulator actually wants. The list is the
+          // common formats, not every extension `kallotype-raw` claims — a
+          // dialog with thirty entries in it is a worse answer than one that
+          // opens the file someone actually shot.
+          extensions: <String>[
+            'jpg', 'jpeg', 'png', 'tif', 'tiff',
+            'arw', 'cr2', 'cr3', 'nef', 'raf', 'rw2', 'orf', 'dng', 'pef',
+            'srw', 'nrw', 'x3f', 'iiq', '3fr',
+          ],
         ),
       ],
     );
