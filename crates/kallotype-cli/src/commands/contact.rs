@@ -71,10 +71,28 @@ pub fn run(args: ContactArgs) -> Result<(), CliError> {
             path: args.input.clone(),
             source,
         })?;
-    // A 35 mm frame is 3:2 whatever the file is; a contact proof of a 4:5 file
-    // would be a proof of a frame the camera never exposed.
-    let cropped = crop(&source, 1.5);
-    let frame = sample(&cropped, geometry.frame.0, geometry.frame.1);
+    // A 35 mm frame is 3:2 whatever the file is, in whichever direction the
+    // camera was held: a contact proof of a 4:5 file would be a proof of a
+    // frame the camera never exposed. A portrait frame is turned rather than
+    // cropped away — on the strip it lies on its side, which is how the light
+    // reached the film, and the enlarger is what turns it back.
+    let turned = source.height > source.width;
+    let cropped = if turned {
+        crop(&source, 1.5f64.recip())
+    } else {
+        crop(&source, 1.5)
+    };
+    let (frame_width, frame_height) = if turned {
+        (geometry.frame.1, geometry.frame.0)
+    } else {
+        geometry.frame
+    };
+    let sampled = sample(&cropped, frame_width, frame_height);
+    let frame = if turned {
+        lay_on_its_side(&sampled)
+    } else {
+        sampled
+    };
 
     let (exposure_ev, metering) = match args.ev {
         Exposure::Stops(ev) => (ev, None),
@@ -254,6 +272,28 @@ fn crop(source: &Image, aspect: f64) -> Image {
     }
 }
 
+/// Turn a portrait frame onto its side, so it sits on the strip the way it
+/// reached the film.
+///
+/// The camera was held on its side, which puts the top of the photograph at the
+/// left of the frame. A contact proof is of the film and not of the print, so
+/// the frame is turned here and the enlarger is what turns it back.
+fn lay_on_its_side(image: &Image) -> Image {
+    let width = image.width as usize;
+    let height = image.height as usize;
+    let mut pixels = vec![[0.0f64; 3]; width * height];
+    for y in 0..width {
+        for x in 0..height {
+            pixels[y * height + x] = image.pixels[x * width + (width - 1 - y)];
+        }
+    }
+    Image {
+        width: height as u32,
+        height: width as u32,
+        pixels,
+    }
+}
+
 /// Sample the frame at exactly the sheet's frame size.
 ///
 /// Everything after this reads the photograph at the size the film sees it, so
@@ -306,4 +346,40 @@ fn ensure_parent(path: &Path) -> Result<(), CliError> {
         path: parent.to_path_buf(),
         source,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A portrait frame lies on the strip with its top to the left, which is
+    /// the way the light reached the film.
+    #[test]
+    fn a_portrait_frame_lies_on_its_side() {
+        // Two wide, four tall, each row one step brighter than the last.
+        let portrait = Image {
+            width: 2,
+            height: 4,
+            pixels: (0..4)
+                .flat_map(|row| {
+                    let row = row as f64;
+                    [[row, 0.0, 0.0]; 2]
+                })
+                .collect(),
+        };
+        let turned = lay_on_its_side(&portrait);
+        assert_eq!((turned.width, turned.height), (4, 2));
+        // The top of the photograph is the left of the strip, so the portrait's
+        // first row runs down the strip's left column and its last down the
+        // right one.
+        for y in 0..2 {
+            assert_eq!(turned.pixels[y * 4][0], 0.0);
+            assert_eq!(turned.pixels[y * 4 + 3][0], 3.0);
+        }
+        // Reading across a strip row walks down the portrait.
+        assert_eq!(
+            (0..4).map(|x| turned.pixels[x][0]).collect::<Vec<_>>(),
+            vec![0.0, 1.0, 2.0, 3.0]
+        );
+    }
 }
