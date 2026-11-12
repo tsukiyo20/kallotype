@@ -650,10 +650,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "kallotype-api"
+version = "0.1.0"
+dependencies = [
+ "kallotype-core",
+ "kallotype-gpu",
+ "kallotype-io",
+ "kallotype-raw",
+ "kallotype-spectral",
+ "serde_json",
+]
+
+[[package]]
 name = "kallotype-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "kallotype-api",
  "kallotype-core",
  "kallotype-gpu",
  "kallotype-io",

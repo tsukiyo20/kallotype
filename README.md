@@ -188,6 +188,7 @@ is there for when certain beats fast.
 | `kallotype-spectral` | Spectra, sensors, and the RGB → spectrum reconstruction. |
 | `kallotype-io` | Decoding and encoding. The only place that touches a file format. |
 | `kallotype-raw` | Camera raw to linear light, through FlashRaw. |
+| `kallotype-api` | The use case: read a photograph once, develop a roll, print a proof. |
 | `kallotype-cli` | The `kalo` binary, plus a library so the commands are testable. |
 | `kallotype-gpu` | The wgpu backend, feature-gated into the CLI. |
 

@@ -34,6 +34,7 @@ gpu = ["dep:kallotype-gpu"]
 raw = ["dep:kallotype-raw"]
 
 [dependencies]
+kallotype-api = { path = "../kallotype-api", version = "0.1.0" }
 kallotype-core = { path = "../kallotype-core", version = "0.1.0" }
 kallotype-gpu = { path = "../kallotype-gpu", version = "0.1.0", optional = true }
 kallotype-io = { path = "../kallotype-io", version = "0.1.0" }
