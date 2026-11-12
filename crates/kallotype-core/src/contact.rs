@@ -69,6 +69,23 @@ pub struct FrameRect {
     pub height: usize,
 }
 
+/// Which way the strips lie on the paper.
+///
+/// A 35 mm frame is 24 mm across the film and 36 mm along it, so a strip is a
+/// long rectangle with its perforations on the long edges — and a photograph
+/// made with the camera on its side lies sideways on it. The sheet is paper,
+/// and strips can be laid either way: a proof of a vertical frame lays them
+/// down so the pictures stand up, which is how a photographer lays out a proof
+/// sheet, because the point of one is to look at the pictures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Strips {
+    /// The film's own way: the frame is 36 mm along the strip.
+    Horizontal,
+    /// The strip turned a quarter turn: the frame is 36 mm down the strip and
+    /// the edge markings run down the sheet.
+    Vertical,
+}
+
 /// The sheet's physical arrangement, resolved to pixels.
 ///
 /// Kept separate from the render so that a caller can size the frame before
@@ -87,6 +104,8 @@ pub struct SheetGeometry {
     pub margin: usize,
     /// The frame's pixel size, which is the size a frame is developed at.
     pub frame: (usize, usize),
+    /// Which way the strips lie.
+    pub strips: Strips,
     /// One rect per development, in the order they were given.
     pub frames: Vec<FrameRect>,
 }
@@ -99,7 +118,7 @@ impl SheetGeometry {
     /// Cannot panic: `count` is clamped to at least one, and the dpi is clamped
     /// to a sane positive range.
     #[must_use]
-    pub fn new(count: usize, dpi: f64) -> Self {
+    pub fn new(count: usize, dpi: f64, strips: Strips) -> Self {
         let count = count.max(1);
         let dpi = if dpi.is_finite() && dpi > 0.0 {
             dpi.clamp(72.0, 2400.0)
@@ -109,12 +128,27 @@ impl SheetGeometry {
         let per_mm = dpi / 25.4;
         let px = |mm: f64| (mm * per_mm).round() as usize;
 
-        let frame = (px(FRAME_W_MM), px(FRAME_H_MM));
+        // The frame as the film carries it: 36 mm along the strip and 24 mm
+        // across it, whichever way the strip is laid on the paper.
+        let (long, short) = (px(FRAME_W_MM), px(FRAME_H_MM));
+        let frame = match strips {
+            Strips::Horizontal => (long, short),
+            Strips::Vertical => (short, long),
+        };
         let cut = px(CUT_MM);
         let rebate = px(REBATE_MM);
         let gap = px(GAP_MM);
         let margin = px(MARGIN_MM);
-        let strip = (frame.0 + cut * 2, frame.1 + rebate * 2);
+        // The strip: the frame, the cut ends at the ends of the strip, and the
+        // clear film along its sides.
+        let strip = match strips {
+            Strips::Horizontal => (frame.0 + cut * 2, frame.1 + rebate * 2),
+            Strips::Vertical => (frame.0 + rebate * 2, frame.1 + cut * 2),
+        };
+        let (across, along) = match strips {
+            Strips::Horizontal => (cut, rebate),
+            Strips::Vertical => (rebate, cut),
+        };
 
         let columns = COLUMNS.min(count);
         let rows = count.div_ceil(columns);
@@ -128,8 +162,8 @@ impl SheetGeometry {
             frames.push(FrameRect {
                 number: index + 1,
                 minutes: 0.0,
-                x: margin + column * (strip.0 + gap) + cut,
-                y: margin + row * (strip.1 + gap) + rebate,
+                x: margin + column * (strip.0 + gap) + across,
+                y: margin + row * (strip.1 + gap) + along,
                 width: frame.0,
                 height: frame.1,
             });
@@ -141,6 +175,7 @@ impl SheetGeometry {
             height,
             margin,
             frame,
+            strips,
             frames,
         }
     }
@@ -151,11 +186,17 @@ impl SheetGeometry {
         let per_mm = self.dpi / 25.4;
         let cut = (CUT_MM * per_mm).round() as usize;
         let rebate = (REBATE_MM * per_mm).round() as usize;
+        // Across the strip is the cut end when the strip lies along it, and the
+        // rebate when it does not.
+        let (across, along) = match self.strips {
+            Strips::Horizontal => (cut, rebate),
+            Strips::Vertical => (rebate, cut),
+        };
         (
-            frame.x - cut,
-            frame.y - rebate,
-            frame.width + cut * 2,
-            frame.height + rebate * 2,
+            frame.x - across,
+            frame.y - along,
+            frame.width + across * 2,
+            frame.height + along * 2,
         )
     }
 }
@@ -198,7 +239,9 @@ pub struct Contact {
 /// Develop one frame at every time, lay the strips on paper, and expose it once.
 ///
 /// `frame` is the photograph already sampled at `geometry.frame` — the caller
-/// crops and resizes, because that is I/O and this crate has none.
+/// crops and resizes, because that is I/O and this crate has none. It is the
+/// picture the way up the photographer made it; when the strips lie vertically
+/// the picture is the same picture, and the film under it is laid down turned.
 ///
 /// # Panics
 ///
@@ -220,12 +263,21 @@ pub fn print(frame: &[[f64; 3]], geometry: &SheetGeometry, spec: &ContactSpec) -
         "one strip per development, and one development per strip"
     );
     let per_mm = geometry.dpi / 25.4;
-    let pixel_um = FRAME_W_MM * 1000.0 / frame_w as f64;
+    let px = |mm: f64| (mm * per_mm).round() as usize;
+
+    // The strip is always drawn the film's own way — 36 mm along it — and then
+    // laid on the paper. A vertical strip is that drawing turned, not a second
+    // drawing, so the picture reaches it a quarter turn the other way.
+    let (laid_w, laid_h) = (px(FRAME_W_MM), px(FRAME_H_MM));
+    let stood = (geometry.strips == Strips::Vertical)
+        .then(|| turned_pixels(frame, frame_w, frame_h, Turn::Clockwise));
+    let frame = stood.as_deref().unwrap_or(frame);
 
     // One finishing chain, shared by every strip: the five strips are five
     // developments of one exposure, so they carry the same grain and the same
     // optics. A different seed per strip would say the strips were cut from
     // different negatives, and they were not.
+    let pixel_um = FRAME_W_MM * 1000.0 / laid_w as f64;
     let emulsion = spec
         .emulsion
         .then(|| crate::mtf::EmulsionBlur::for_stock(spec.film, pixel_um));
@@ -237,7 +289,7 @@ pub fn print(frame: &[[f64; 3]], geometry: &SheetGeometry, spec: &ContactSpec) -
         .then(|| crate::couplers::Couplers::typical(pixel_um));
     let grain = spec
         .grain
-        .then(|| crate::grain::GrainField::for_stock(frame_w, frame_h, FRAME_W_MM, 0, spec.film));
+        .then(|| crate::grain::GrainField::for_stock(laid_w, laid_h, FRAME_W_MM, 0, spec.film));
     let finishing = Finishing {
         emulsion: emulsion.as_ref(),
         halation: halation.as_ref(),
@@ -274,7 +326,7 @@ pub fn print(frame: &[[f64; 3]], geometry: &SheetGeometry, spec: &ContactSpec) -
             heat_glass: None,
         };
         let render = params.prepare();
-        negatives.push(render.develop(frame, frame_w, frame_h, &finishing));
+        negatives.push(render.develop(frame, laid_w, laid_h, &finishing));
         prepared.push(render);
     }
 
@@ -283,6 +335,29 @@ pub fn print(frame: &[[f64; 3]], geometry: &SheetGeometry, spec: &ContactSpec) -
     let printer = &prepared[prepared.len() / 2];
     let paper_white = printer.positive([12.0; 3]);
     let mut pixels = vec![paper_white; geometry.width * geometry.height];
+
+    // One strip on its own paper, drawn the film's way: the frame is 36 mm
+    // along it and the markings sit in the clear film above and below.
+    let cut = px(CUT_MM);
+    let clear = px(REBATE_MM);
+    let strip_size = (laid_w + cut * 2, laid_h + clear * 2);
+    let strip_rect = FrameRect {
+        number: 0,
+        minutes: 0.0,
+        x: cut,
+        y: clear,
+        width: laid_w,
+        height: laid_h,
+    };
+    let strip_geometry = SheetGeometry {
+        dpi: geometry.dpi,
+        width: strip_size.0,
+        height: strip_size.1,
+        margin: 0,
+        frame: (laid_w, laid_h),
+        strips: Strips::Horizontal,
+        frames: vec![strip_rect],
+    };
 
     let mut geometry = geometry.clone();
     for index in 0..geometry.frames.len() {
@@ -293,46 +368,84 @@ pub fn print(frame: &[[f64; 3]], geometry: &SheetGeometry, spec: &ContactSpec) -
         // The unexposed rebate: base, fog and mask, developed for this strip's
         // time. Fog grows with development, so each strip has its own.
         let rebate = prepared[index].develop(&[[0.0; 3]], 1, 1, &bare).densities[0];
-        let (sx, sy, sw, sh) = geometry.strip_of(&rect);
-        fill(
-            &mut pixels,
-            geometry.width,
-            (sx, sy, sw, sh),
-            printer.positive(rebate),
-        );
+        let mut strip = vec![printer.positive(rebate); strip_size.0 * strip_size.1];
         // Perforations are holes in the film, so they print as light: they
         // are drawn before the markings, which sit between them and the frame.
-        punch_holes(&mut pixels, &geometry, &rect, printer, per_mm);
+        punch_holes(&mut strip, &strip_geometry, &strip_rect, printer, per_mm);
         if spec.edge_codes {
-            stamp_strip(&mut pixels, &geometry, &rect, spec, printer, rebate);
+            stamp_strip(
+                &mut strip,
+                &strip_geometry,
+                &strip_rect,
+                spec,
+                printer,
+                rebate,
+            );
         }
         // The frame itself: the strip's printed image, laid over its rebate.
         blit(
-            &mut pixels,
-            geometry.width,
+            &mut strip,
+            strip_size.0,
             &printer.print(&negatives[index]),
-            frame_w,
-            frame_h,
-            rect.x,
-            rect.y,
+            laid_w,
+            laid_h,
+            cut,
+            clear,
         );
+
+        let (sx, sy, _, _) = geometry.strip_of(&rect);
+        match geometry.strips {
+            Strips::Horizontal => blit(
+                &mut pixels,
+                geometry.width,
+                &strip,
+                strip_size.0,
+                strip_size.1,
+                sx,
+                sy,
+            ),
+            Strips::Vertical => {
+                // The paper's strips lie down the sheet; the strip itself is
+                // the same print, turned.
+                let stood = turned_pixels(&strip, strip_size.0, strip_size.1, Turn::Anticlockwise);
+                blit(
+                    &mut pixels,
+                    geometry.width,
+                    &stood,
+                    strip_size.1,
+                    strip_size.0,
+                    sx,
+                    sy,
+                );
+            }
+        }
     }
 
     Contact { geometry, pixels }
 }
 
-/// Fill a rectangle, clipped to the canvas.
-fn fill(
-    canvas: &mut [[f64; 3]],
-    width: usize,
-    rect: (usize, usize, usize, usize),
-    colour: [f64; 3],
-) {
-    let (x, y, w, h) = rect;
-    for row in y..y + h {
-        let start = row * width + x;
-        canvas[start..start + w].fill(colour);
+/// Which way a quarter turn goes.
+#[derive(Debug, Clone, Copy)]
+enum Turn {
+    /// The picture's top edge goes to its left edge.
+    Anticlockwise,
+    /// The picture's top edge goes to its right edge.
+    Clockwise,
+}
+
+/// Turn a picture a quarter turn, without resampling a pixel.
+fn turned_pixels(pixels: &[[f64; 3]], width: usize, height: usize, turn: Turn) -> Vec<[f64; 3]> {
+    let mut out = vec![[0.0; 3]; pixels.len()];
+    // The turned picture is `height` wide and `width` tall.
+    for y in 0..width {
+        for x in 0..height {
+            out[y * height + x] = match turn {
+                Turn::Anticlockwise => pixels[x * width + (width - 1 - y)],
+                Turn::Clockwise => pixels[(height - 1 - x) * width + y],
+            };
+        }
     }
+    out
 }
 
 /// Copy a block into the canvas at `(x, y)`.
@@ -781,7 +894,7 @@ mod tests {
     fn spec(times: &[f64]) -> (ContactSpec, SheetGeometry, Vec<[f64; 3]>) {
         let film = film_stock("kodak_portra_400").expect("film");
         let paper = paper_stock("portra_endura").expect("paper");
-        let geometry = SheetGeometry::new(times.len(), 300.0);
+        let geometry = SheetGeometry::new(times.len(), 300.0, Strips::Horizontal);
         let pixels = frame(geometry.frame.0, geometry.frame.1);
         let developments = times
             .iter()
@@ -814,7 +927,7 @@ mod tests {
 
     #[test]
     fn the_sheet_is_five_strips_on_one_row_of_paper() {
-        let geometry = SheetGeometry::new(5, 300.0);
+        let geometry = SheetGeometry::new(5, 300.0, Strips::Horizontal);
         let per_mm: f64 = 300.0 / 25.4;
         let px = |mm: f64| (mm * per_mm).round() as usize;
         let strip_w = px(FRAME_W_MM) + px(CUT_MM) * 2;
@@ -826,6 +939,92 @@ mod tests {
         assert_eq!(geometry.frames.len(), 5);
         assert_eq!(geometry.frames[0].x, margin + px(CUT_MM));
         assert_eq!(geometry.frames[3].y, margin + strip_h + gap + px(REBATE_MM));
+    }
+
+    /// A vertical sheet turns every strip, and keeps the ladder's order.
+    ///
+    /// The strips are the film's own: 36 mm along and 24 across, so standing
+    /// them up swaps those, and the rows still read left to right and top to
+    /// bottom. A sheet that ran the ladder up a column instead would be a
+    /// picture of a proof, not a proof.
+    #[test]
+    fn a_vertical_sheet_stands_its_strips_up() {
+        let laid = SheetGeometry::new(5, 300.0, Strips::Horizontal);
+        let stood = SheetGeometry::new(5, 300.0, Strips::Vertical);
+        assert_eq!((stood.frame.0, stood.frame.1), (laid.frame.1, laid.frame.0));
+        let (_, _, strip_w, strip_h) = stood.strip_of(&stood.frames[0]);
+        assert!(
+            strip_h > strip_w,
+            "a vertical strip stands up: {strip_w} wide, {strip_h} tall"
+        );
+        for frame in &stood.frames {
+            assert!(frame.height > frame.width, "the frame stands up too");
+        }
+        // Three strips in the first row, left to right; the fourth starts the
+        // next one.
+        assert!(stood.frames[0].x < stood.frames[1].x);
+        assert_eq!(stood.frames[0].y, stood.frames[1].y);
+        assert!(stood.frames[3].y > stood.frames[0].y);
+    }
+
+    /// A picture that is bright at the top prints bright at the top of a
+    /// vertical frame.
+    ///
+    /// The frame is laid on the strip a quarter turn one way and the sheet is
+    /// turned back the other, and the test is that the two turns cancel: with
+    /// both going the same way the photograph would print upside down.
+    #[test]
+    fn a_vertical_frame_prints_the_way_up() {
+        let film = film_stock("kodak_portra_400").expect("film");
+        let paper = paper_stock("portra_endura").expect("paper");
+        let geometry = SheetGeometry::new(1, 300.0, Strips::Vertical);
+        let (width, height) = geometry.frame;
+        let mut frame_pixels = vec![[0.02; 3]; width * height];
+        for row in 0..height / 4 {
+            for x in 0..width {
+                frame_pixels[row * width + x] = [0.9; 3];
+            }
+        }
+        let spec = ContactSpec {
+            film,
+            paper,
+            developments: vec![DevelopmentParams {
+                time_min: 9.0,
+                temp_c: 20.0,
+                reference_time_min: film.reference_time_min,
+                reference_temp_c: film.reference_temp_c,
+                ..DevelopmentParams::default()
+            }],
+            exposure_ev: 0.0,
+            print_ev: 0.0,
+            spectral: false,
+            emulsion: false,
+            grain: false,
+            halation: false,
+            couplers: false,
+            edge_codes: false,
+        };
+        let contact = print(&frame_pixels, &geometry, &spec);
+        let frame = contact.geometry.frames[0];
+        let mean = |from: usize, to: usize| {
+            let mut sum = 0.0;
+            for row in from..to {
+                for x in frame.x..frame.x + frame.width {
+                    let pixel = contact.pixels[row * contact.geometry.width + x];
+                    sum += (pixel[0] + pixel[1] + pixel[2]) / 3.0;
+                }
+            }
+            sum / (frame.width * (to - from)) as f64
+        };
+        let top = mean(frame.y, frame.y + frame.height / 4);
+        let bottom = mean(
+            frame.y + frame.height - frame.height / 4,
+            frame.y + frame.height,
+        );
+        assert!(
+            top > bottom,
+            "the bright band must print at the top of the frame: {top} against {bottom}"
+        );
     }
 
     #[test]
