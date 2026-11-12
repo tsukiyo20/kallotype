@@ -33,7 +33,10 @@
 use std::path::Path;
 
 use kallotype_io::Image;
+use rawler::Orientation;
+use rawler::decoders::RawDecodeParams;
 use rawler::imgop::develop::{Intermediate, ProcessingStep, RawDevelop};
+use rawler::rawsource::RawSource;
 
 /// File extensions this crate claims.
 ///
@@ -112,9 +115,22 @@ impl std::error::Error for RawError {
 /// `SRgb` is deliberately **not** applied. The renderer wants linear light;
 /// applying the sRGB transfer curve here would put back exactly the tone
 /// mapping that reading raw is meant to avoid.
+///
+/// The file's Exif orientation is applied last, after the develop: the sensor is
+/// read the way it lies, and a camera held on its side writes a landscape
+/// mosaic with a tag saying which way up it was. The turn is a permutation of
+/// whole pixels, so nothing is resampled a second time.
 pub fn load(path: impl AsRef<Path>) -> Result<Image, RawError> {
     let path = path.as_ref();
-    let raw = rawler::decode_file(path).map_err(RawError::Decode)?;
+    // One file, read once: the decoder is asked for the metadata and then for
+    // the mosaic, because `rawler` keeps them apart and the orientation is only
+    // in the first.
+    let source = RawSource::new(path).map_err(|error| {
+        RawError::Decode(rawler::RawlerError::with_io_error("opening", path, error))
+    })?;
+    let params = RawDecodeParams::default();
+    let orientation = orientation(path, &source);
+    let raw = rawler::decode(&source, &params).map_err(RawError::Decode)?;
     let developed = RawDevelop::new_with(&[
         ProcessingStep::Rescale,
         ProcessingStep::Demosaic,
@@ -150,16 +166,165 @@ pub fn load(path: impl AsRef<Path>) -> Result<Image, RawError> {
         })
         .collect();
 
-    Ok(Image {
+    let mut image = Image {
         width: u32::try_from(width).map_err(|_| RawError::Buffer)?,
         height: u32::try_from(height).map_err(|_| RawError::Buffer)?,
         pixels,
-    })
+    };
+    turn(&mut image, orientation);
+    Ok(image)
+}
+
+/// How the camera was held, from the file's own Exif.
+///
+/// `rawler` hands over the sensor the way it lies: the decoders for the big
+/// camera formats leave the orientation tag in the metadata and do not carry it
+/// through to the image, so it is asked for separately. The answer is
+/// best-effort — a file whose metadata cannot be read is still a file, and the
+/// picture is worth more than the turn — and Sigma's X3F is skipped, because
+/// the only metadata path `rawler` has for it is `todo!()`, and a panic is not
+/// an orientation.
+fn orientation(path: &Path, source: &RawSource) -> Orientation {
+    let sigma = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("x3f"));
+    if sigma {
+        return Orientation::Normal;
+    }
+    let Ok(decoder) = rawler::get_decoder(source) else {
+        return Orientation::Normal;
+    };
+    let Ok(metadata) = decoder.raw_metadata(source, &RawDecodeParams::default()) else {
+        return Orientation::Normal;
+    };
+    metadata
+        .exif
+        .orientation
+        .map_or(Orientation::Normal, Orientation::from_u16)
+}
+
+/// Turn and flip the decoded picture to the way the camera was held.
+///
+/// The eight cases of Exif's orientation tag, and every one of them is a
+/// permutation of whole pixels: nothing is resampled. A raw is light, and light
+/// does not want interpolating twice.
+fn turn(image: &mut Image, orientation: Orientation) {
+    let (swap, horizontal, vertical) = orientation.to_flips();
+    // The order `rawler` documents: the mirrors first, the transpose last.
+    if horizontal {
+        mirror(image, true);
+    }
+    if vertical {
+        mirror(image, false);
+    }
+    if swap {
+        transpose(image);
+    }
+}
+
+/// Mirror the picture across its centre: left to right, or top to bottom.
+fn mirror(image: &mut Image, horizontal: bool) {
+    let width = image.width as usize;
+    let height = image.height as usize;
+    if horizontal {
+        for row in 0..height {
+            image.pixels[row * width..(row + 1) * width].reverse();
+        }
+    } else {
+        for row in 0..height / 2 {
+            let top = row * width;
+            let bottom = (height - 1 - row) * width;
+            for column in 0..width {
+                image.pixels.swap(top + column, bottom + column);
+            }
+        }
+    }
+}
+
+/// Turn the picture on its side: the rows become the columns.
+fn transpose(image: &mut Image) {
+    let width = image.width as usize;
+    let height = image.height as usize;
+    let mut pixels = vec![[0.0f64; 3]; width * height];
+    for row in 0..height {
+        for column in 0..width {
+            pixels[column * height + row] = image.pixels[row * width + column];
+        }
+    }
+    image.width = height as u32;
+    image.height = width as u32;
+    image.pixels = pixels;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every turn the tag can ask for, as a permutation of whole pixels.
+    #[test]
+    fn the_orientation_is_a_turn_of_whole_pixels() {
+        // Three wide and two tall, each pixel's index for a value: a portrait
+        // frame is that picture with the camera on its side.
+        let cases: &[(Orientation, (u32, u32), [f64; 6])] = &[
+            (Orientation::Normal, (3, 2), [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]),
+            (
+                Orientation::HorizontalFlip,
+                (3, 2),
+                [2.0, 1.0, 0.0, 5.0, 4.0, 3.0],
+            ),
+            (
+                Orientation::Rotate180,
+                (3, 2),
+                [5.0, 4.0, 3.0, 2.0, 1.0, 0.0],
+            ),
+            (
+                Orientation::VerticalFlip,
+                (3, 2),
+                [3.0, 4.0, 5.0, 0.0, 1.0, 2.0],
+            ),
+            (
+                Orientation::Transpose,
+                (2, 3),
+                [0.0, 3.0, 1.0, 4.0, 2.0, 5.0],
+            ),
+            (
+                Orientation::Rotate90,
+                (2, 3),
+                [3.0, 0.0, 4.0, 1.0, 5.0, 2.0],
+            ),
+            (
+                Orientation::Transverse,
+                (2, 3),
+                [5.0, 2.0, 4.0, 1.0, 3.0, 0.0],
+            ),
+            (
+                Orientation::Rotate270,
+                (2, 3),
+                [2.0, 5.0, 1.0, 4.0, 0.0, 3.0],
+            ),
+        ];
+        for &(orientation, (width, height), expected) in cases {
+            let mut image = Image {
+                width: 3,
+                height: 2,
+                pixels: (0..6)
+                    .map(|index| {
+                        let value = index as f64;
+                        [value; 3]
+                    })
+                    .collect(),
+            };
+            turn(&mut image, orientation);
+            assert_eq!(
+                (image.width, image.height),
+                (width, height),
+                "{orientation:?}"
+            );
+            let turned: Vec<f64> = image.pixels.iter().map(|pixel| pixel[0]).collect();
+            assert_eq!(turned, expected, "{orientation:?}");
+        }
+    }
 
     #[test]
     fn the_extensions_are_recognised_in_any_case() {
@@ -194,6 +359,25 @@ mod tests {
         assert!(
             image.pixels.iter().all(|p| p.iter().all(|c| c.is_finite())),
             "non-finite pixel"
+        );
+    }
+
+    /// A fixture the camera stored on its side comes out the way up.
+    ///
+    /// Set `KALLOTYPE_RAW_FIXTURE_TURNED` to a raw whose orientation tag is 6
+    /// or 8 — a copy of a fixture with that one tag rewritten is enough — and
+    /// the picture must be taller than it is wide.
+    #[test]
+    fn a_turned_fixture_is_read_the_way_up() {
+        let Ok(path) = std::env::var("KALLOTYPE_RAW_FIXTURE_TURNED") else {
+            return;
+        };
+        let image = load(&path).expect("decode");
+        assert!(
+            image.height > image.width,
+            "a file the camera held on its side must come out portrait: {}x{}",
+            image.width,
+            image.height
         );
     }
 }
