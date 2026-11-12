@@ -1,11 +1,15 @@
+import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import '../design/scope.dart';
 import '../design/tokens.dart';
 import '../lab/contact.dart';
 import '../lab/roll.dart';
+import '../widgets/lens.dart';
 import '../widgets/patch_print.dart';
 
 /// The roll, unrolled: the contact proof on the table.
@@ -134,8 +138,11 @@ class ContactSheet extends StatelessWidget {
 /// A contact proof is one sheet of paper, exposed once under the whole ladder.
 /// The table shows the print itself — not a redrawing of it — so the only thing
 /// the app adds is what a person adds to a print: a pencil box around the
-/// development being considered, and the paper's name in its own margin.
-class _ProofSheet extends StatelessWidget {
+/// development being considered, the paper's name in its own margin, and a
+/// loupe. A proof is read through one; at three times the sheet, a strip that
+/// is nearly black at arm's length is a picture again, and it is the same
+/// picture — the loupe magnifies the paper, not the enlarger's print.
+class _ProofSheet extends StatefulWidget {
   const _ProofSheet({
     required this.proof,
     required this.roll,
@@ -160,6 +167,94 @@ class _ProofSheet extends StatelessWidget {
   static const double _clearance = 4;
   static const double _mark = 1.5;
 
+  /// The glass: the same loupe the wall has, because it is the same tool.
+  static const double _radius = 90;
+  static const double _magnification = 3;
+
+  @override
+  State<_ProofSheet> createState() => _ProofSheetState();
+}
+
+class _ProofSheetState extends State<_ProofSheet> {
+  /// The sheet read at the loupe's size, when it has been read.
+  ui.Image? _sharp;
+
+  /// The pointer, in the sheet's coordinates. Null when it is elsewhere.
+  Offset? _at;
+
+  /// The proof whose file is being read, so that a move does not read it twice.
+  ContactProof? _reading;
+
+  ContactProof get proof => widget.proof;
+  Roll get roll => widget.roll;
+
+  @override
+  void didUpdateWidget(_ProofSheet old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.proof, proof)) {
+      _at = null;
+      _reading = null;
+      _dropSharp();
+    }
+  }
+
+  @override
+  void dispose() {
+    _sharp?.dispose();
+    super.dispose();
+  }
+
+  void _lookAt(Offset at) {
+    setState(() => _at = at);
+    if (_reading == proof) {
+      return;
+    }
+    _reading = proof;
+    unawaited(_read());
+  }
+
+  Future<void> _read() async {
+    final ContactProof reading = proof;
+    ui.Image? image;
+    try {
+      image = await reading.magnified();
+    } on Object {
+      image = null;
+    }
+    if (!mounted || !identical(reading, proof) || _reading != reading) {
+      image?.dispose();
+      return;
+    }
+    if (image == null) {
+      // No file — a proof a test built, or one whose file was moved. The loupe
+      // shows the table's own copy, which is all there is; it is still a loupe
+      // on the paper, only less sharp.
+      return;
+    }
+    setState(() => _sharp = image);
+  }
+
+  void _leave() {
+    if (_at == null) {
+      return;
+    }
+    setState(() {
+      _at = null;
+      _reading = null;
+      _dropSharp();
+    });
+  }
+
+  /// Free the sharp copy, but only after the frame that drew it: a texture
+  /// disposed while it is on screen draws as nothing.
+  void _dropSharp() {
+    final ui.Image? old = _sharp;
+    _sharp = null;
+    if (old != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
@@ -168,69 +263,112 @@ class _ProofSheet extends StatelessWidget {
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final double available =
-              math.max(240, constraints.maxWidth - _page * 2);
+              math.max(240, constraints.maxWidth - _ProofSheet._page * 2);
           final double scale = available / proof.pixels.width;
+          final double width = proof.pixels.width * scale;
+          final double height = proof.pixels.height * scale;
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(_page),
+            padding: const EdgeInsets.all(_ProofSheet._page),
             child: Center(
               child: SizedBox(
-                width: proof.pixels.width * scale,
-                height: proof.pixels.height * scale,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapUp: (TapUpDetails details) => _choose(details, scale),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: <Widget>[
-                      Positioned.fill(
-                        child: RawImage(
-                          image: proof.image,
-                          fit: BoxFit.fill,
+                width: width,
+                height: height,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  onHover: (PointerHoverEvent event) =>
+                      _lookAt(event.localPosition),
+                  onExit: (_) => _leave(),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (TapUpDetails details) => _choose(details, scale),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: <Widget>[
+                        Positioned.fill(
+                          child: RawImage(
+                            key: const Key('proof'),
+                            image: proof.image,
+                            fit: BoxFit.fill,
+                          ),
                         ),
-                      ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: colors.hairline),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: colors.hairline),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      for (final ContactFrame frame in proof.frames)
-                        if (roll.frames.length > selected &&
-                            roll.frames[selected].number == frame.number)
-                          Positioned.fromRect(
-                            rect: Rect.fromLTWH(
-                              frame.rect.left * scale - _clearance,
-                              frame.rect.top * scale - _clearance,
-                              frame.rect.width * scale + _clearance * 2,
-                              frame.rect.height * scale + _clearance * 2,
+                        for (final ContactFrame frame in proof.frames)
+                          if (roll.frames.length > widget.selected &&
+                              roll.frames[widget.selected].number ==
+                                  frame.number)
+                            Positioned.fromRect(
+                              rect: Rect.fromLTWH(
+                                frame.rect.left * scale -
+                                    _ProofSheet._clearance,
+                                frame.rect.top * scale -
+                                    _ProofSheet._clearance,
+                                frame.rect.width * scale +
+                                    _ProofSheet._clearance * 2,
+                                frame.rect.height * scale +
+                                    _ProofSheet._clearance * 2,
+                              ),
+                              child: IgnorePointer(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: KalloInk.accent,
+                                      width: _ProofSheet._mark,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
+                        if (widget.paperName != null)
+                          Positioned(
+                            right: proof.paperMargin * scale * 0.5,
+                            bottom: proof.paperMargin * scale * 0.45,
                             child: IgnorePointer(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  border:
-                                      Border.all(color: KalloInk.accent, width: _mark),
+                              child: Text(
+                                widget.paperName!,
+                                style: KalloType.caption.copyWith(
+                                  color: KalloInk.faint,
+                                  letterSpacing: 0.6,
                                 ),
                               ),
                             ),
                           ),
-                      if (paperName != null)
-                        Positioned(
-                          right: proof.paperMargin * scale * 0.5,
-                          bottom: proof.paperMargin * scale * 0.45,
-                          child: IgnorePointer(
-                            child: Text(
-                              paperName!,
-                              style: KalloType.caption.copyWith(
-                                color: KalloInk.faint,
-                                letterSpacing: 0.6,
-                              ),
+                        if (_at != null)
+                          KalloLens(
+                            key: const Key('lens'),
+                            at: _at!,
+                            radius: _ProofSheet._radius,
+                            rim: KalloInk.faint.withValues(alpha: 0.45),
+                            child: Stack(
+                              children: <Widget>[
+                                Positioned(
+                                  left: _ProofSheet._radius -
+                                      _at!.dx * _ProofSheet._magnification,
+                                  top: _ProofSheet._radius -
+                                      _at!.dy * _ProofSheet._magnification,
+                                  child: SizedBox(
+                                    width: width * _ProofSheet._magnification,
+                                    height:
+                                        height * _ProofSheet._magnification,
+                                    child: RawImage(
+                                      image: _sharp ?? proof.image,
+                                      fit: BoxFit.fill,
+                                      filterQuality: FilterQuality.high,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -248,10 +386,10 @@ class _ProofSheet extends StatelessWidget {
       if (!frame.rect.contains(at)) {
         continue;
       }
-      final int index =
-          roll.frames.indexWhere((Frame candidate) => candidate.number == frame.number);
+      final int index = roll.frames
+          .indexWhere((Frame candidate) => candidate.number == frame.number);
       if (index >= 0) {
-        onSelect(index);
+        widget.onSelect(index);
       }
       return;
     }

@@ -10,6 +10,7 @@ import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/print.dart';
+import '../widgets/lens.dart';
 import '../widgets/wall.dart';
 
 /// The gallery: the last place. One wall, every print, one lamp.
@@ -873,38 +874,27 @@ class _Lens extends StatelessWidget {
   Widget build(BuildContext context) {
     final double width = sheet.width * _magnification;
     final double height = PrintSheet.heightOf(width);
-    return Positioned(
-      left: at.dx - radius,
-      top: at.dy - radius,
-      child: IgnorePointer(
-        child: Container(
-          width: radius * 2,
-          height: radius * 2,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: wall.control.withValues(alpha: 0.35)),
-          ),
-          child: ClipOval(
-            child: Stack(
-              children: <Widget>[
-                Positioned(
-                  left: radius - (point.dx / sheet.width) * width,
-                  top: radius - (point.dy / sheet.height) * height,
-                  child: PrintSheet(
-                    width: width,
-                    paper: wall.paper,
-                    outline: wall.outline,
-                    child: RawImage(
-                      image: image,
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.high,
-                    ),
-                  ),
-                ),
-              ],
+    return KalloLens(
+      at: at,
+      radius: radius,
+      rim: wall.control.withValues(alpha: 0.35),
+      child: Stack(
+        children: <Widget>[
+          Positioned(
+            left: radius - (point.dx / sheet.width) * width,
+            top: radius - (point.dy / sheet.height) * height,
+            child: PrintSheet(
+              width: width,
+              paper: wall.paper,
+              outline: wall.outline,
+              child: RawImage(
+                image: image,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

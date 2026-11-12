@@ -47,7 +47,7 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and eighteen goldens pin the language — one for
+`fvm flutter analyze` is clean, and nineteen goldens pin the language — one for
 each place, the states a place can be in, and the two shelves:
 
 | | | |
@@ -64,6 +64,16 @@ each place, the states a place can be in, and the two shelves:
 | **the gallery**, with the lamp off | **the shelf**, with a silver film taken | **the shelf**, in the narrowest window |
 | ![the gallery in a light appearance](test/goldens/gallery-light.png) | ![a loupe on the wall](test/goldens/gallery-lens.png) | ![a print, looked at closely](test/goldens/gallery-loupe.png) |
 | **the gallery**, in a light appearance | **the lens**, held over a print | **a print**, walked up to |
+
+A proof is read through a loupe, so the table has one too — the same glass as
+the wall's, held over the paper. What it magnifies is the sheet, not the
+enlarger's print: a strip that a five-stop development difference prints nearly
+black is a picture again at three times the sheet, and it is the same picture.
+
+| |
+|---|
+| ![the table, under a loupe](test/goldens/table-lens.png) |
+| **the table**, the proof under the glass |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have

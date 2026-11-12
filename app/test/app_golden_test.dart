@@ -265,8 +265,11 @@ void _window(WidgetTester tester) {
 /// — with the test card where the photograph would be. It is a layout fixture,
 /// like the card itself: it is not model output and does not stand in for it.
 Future<ContactProof> _proof(ui.Image card) async {
-  const double width = 1320;
-  const double height = 810;
+  // Drawn at twice the sheet's display size, so that the loupe has more than
+  // the table's copy to magnify.
+  const double logicalWidth = 1320;
+  const double logicalHeight = 810;
+  const double scale = 2;
   const double margin = 60;
   const double stripWidth = 380;
   const double stripHeight = 330;
@@ -274,8 +277,9 @@ Future<ContactProof> _proof(ui.Image card) async {
   const double inset = 14;
   final ui.PictureRecorder recorder = ui.PictureRecorder();
   final Canvas canvas = Canvas(recorder);
+  canvas.scale(scale);
   canvas.drawRect(
-    const Rect.fromLTWH(0, 0, width, height),
+    const Rect.fromLTWH(0, 0, logicalWidth, logicalHeight),
     Paint()..color = const Color(0xFFF7F4EC),
   );
   final List<ContactFrame> frames = <ContactFrame>[];
@@ -293,22 +297,44 @@ Future<ContactProof> _proof(ui.Image card) async {
       (stripWidth - inset * 2) / 1.5,
     );
     frames.add(
-      ContactFrame(number: i + 1, minutes: 3.0 * (i + 1), rect: frame),
+      ContactFrame(
+        number: i + 1,
+        minutes: 3.0 * (i + 1),
+        rect: Rect.fromLTWH(
+          frame.left * scale,
+          frame.top * scale,
+          frame.width * scale,
+          frame.height * scale,
+        ),
+      ),
     );
+    // The ladder, drawn as a ladder: one exposure under five developments
+    // prints darker at the short end, and a proof whose strips all printed
+    // alike would be a picture of something else.
+    final double printed = 0.12 + 0.22 * i;
     canvas.drawImageRect(
       card,
       Rect.fromLTWH(0, 0, card.width.toDouble(), card.height.toDouble()),
       frame,
-      Paint()..filterQuality = FilterQuality.medium,
+      Paint()
+        ..filterQuality = FilterQuality.medium
+        ..colorFilter = ColorFilter.matrix(<double>[
+          printed, 0, 0, 0, 0,
+          0, printed, 0, 0, 0,
+          0, 0, printed, 0, 0,
+          0, 0, 0, 1, 0,
+        ]),
     );
   }
-  final ui.Image sheet =
-      await recorder.endRecording().toImage(width.toInt(), height.toInt());
+  final ui.Image sheet = await recorder.endRecording().toImage(
+        (logicalWidth * scale).toInt(),
+        (logicalHeight * scale).toInt(),
+      );
   return ContactProof(
     image: sheet,
-    pixels: const Size(width, height),
+    pixels: const Size(logicalWidth * scale, logicalHeight * scale),
     frames: frames,
-    paperMargin: margin,
+    paperMargin: margin * scale,
   );
 }
 
@@ -392,6 +418,53 @@ void main() {
       find.byType(KalloApp),
       matchesGoldenFile('goldens/table-roll.png'),
     );
+  });
+
+  testWidgets('the table, under the loupe', (WidgetTester tester) async {
+    _window(tester);
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: const <Print>[],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: developed,
+      appearance: Brightness.light,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    final ContactProof proof = developed.contact!;
+    final Rect sheet = tester.getRect(find.byKey(const Key('proof')));
+    final double scale = sheet.width / proof.pixels.width;
+    // The first strip, off its centre: at arm's length a five-stop-darker print
+    // is a black rectangle; through the glass it is a picture — and the same
+    // one, because the loupe magnifies the paper and not the enlarger's print.
+    final ContactFrame first = proof.frames.first;
+    final Offset at = sheet.topLeft +
+        Offset(
+              first.rect.left + first.rect.width * 0.62,
+              first.rect.top + first.rect.height * 0.5,
+            ) *
+            scale;
+
+    final TestGesture mouse =
+        await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(at);
+    await tester.pump();
+
+    expect(find.byKey(const Key('lens')), findsOneWidget);
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/table-lens.png'),
+    );
+
+    // Off the sheet, off the glass.
+    await mouse.moveTo(const Offset(4, 4));
+    await tester.pump();
+    expect(find.byKey(const Key('lens')), findsNothing);
   });
 
   testWidgets('the table, in Chinese', (WidgetTester tester) async {
