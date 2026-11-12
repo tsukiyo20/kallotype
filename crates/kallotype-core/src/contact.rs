@@ -341,7 +341,7 @@ pub fn print(frame: &[[f64; 3]], geometry: &SheetGeometry, spec: &ContactSpec) -
     let cut = px(CUT_MM);
     let clear = px(REBATE_MM);
     let strip_size = (laid_w + cut * 2, laid_h + clear * 2);
-    let strip_rect = FrameRect {
+    let mut strip_rect = FrameRect {
         number: 0,
         minutes: 0.0,
         x: cut,
@@ -364,6 +364,11 @@ pub fn print(frame: &[[f64; 3]], geometry: &SheetGeometry, spec: &ContactSpec) -
         let mut rect = geometry.frames[index];
         rect.minutes = spec.developments[index].time_min;
         geometry.frames[index] = rect;
+        // The strip is drawn on its own canvas, so the edge code is stamped
+        // with this canvas's rect — but the code has to name the development
+        // this strip came from, not the canvas's placeholder.
+        strip_rect.number = rect.number;
+        strip_rect.minutes = rect.minutes;
 
         // The unexposed rebate: base, fog and mask, developed for this strip's
         // time. Fog grows with development, so each strip has its own.
