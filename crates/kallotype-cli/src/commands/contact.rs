@@ -6,9 +6,10 @@ use kallotype_core::contact::{
     ContactSpec, LADDER_MINUTES, SheetGeometry, Strips, print, printable,
 };
 use kallotype_core::{DevelopmentParams, Metering, film_stock, paper_stock};
-use kallotype_io::{Image, load, resize_to_width, save};
+use kallotype_io::{Image, resize_to_width, save};
 
 use crate::cli::{ContactArgs, Exposure};
+use crate::commands::common::read_input;
 use crate::error::CliError;
 
 /// Run the subcommand.
@@ -64,11 +65,7 @@ pub fn run(args: ContactArgs) -> Result<(), CliError> {
         });
     }
 
-    let source =
-        load(&args.input, args.input_encoding.into()).map_err(|source| CliError::Read {
-            path: args.input.clone(),
-            source,
-        })?;
+    let source = read_input(&args.input, args.input_encoding.into())?;
     // A 35 mm frame is 3:2 whatever the file is, in whichever direction the
     // camera was held: a contact proof of a 4:5 file would be a proof of a
     // frame the camera never exposed. A frame made with the camera on its side

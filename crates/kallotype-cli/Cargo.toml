@@ -21,15 +21,16 @@ name = "kalo"
 path = "src/main.rs"
 
 [features]
-default = ["gpu"]
+default = ["gpu", "raw"]
 # On by default: the backend is a working implementation of the same model, and
 # a renderer that ignores the GPU on a machine that has one is leaving the
 # largest single speed-up on the table. It drags wgpu and about two hundred
 # crates into the build, which is the price of that.
 gpu = ["dep:kallotype-gpu"]
-# Camera raw decoding. Off by default because it links `kallotype-raw`, which
-# is LGPL-2.1 through `rawler`; a binary built without this feature carries no
-# copyleft code. `cargo deny` runs on the default graph and never sees it.
+# Camera raw decoding, through `kallotype-raw` and FlashRaw. On by default: the
+# decoder is MIT/Apache-2.0, and a photographer who is handed a film simulator
+# will point it at a raw. Build without default features for a binary that only
+# reads ordinary images.
 raw = ["dep:kallotype-raw"]
 
 [dependencies]

@@ -1,23 +1,20 @@
 //! Camera raw decoding for `kalo`.
 //!
-//! # Why this is a separate crate
+//! # The seam
 //!
 //! A camera raw file is not an image. It is a sensor mosaic plus a small pile
 //! of metadata — black level, white balance as shot, the camera's own colour
-//! matrix — and turning it into pixels means demosaicing and colour conversion.
-//! The rest of Kallotype is MIT or Apache-2.0; the only maintained Rust libraries that
-//! do that work (`rawler`, `rawloader`) are LGPL-2.1. Rather than relicense the
-//! whole project or hand-write thirty decoders, the decoder lives here, out of
-//! the workspace, and is linked only when someone asks for it:
+//! matrix, and a tag saying which way up the camera was held — and turning it
+//! into pixels means demosaicing and colour conversion. That work is a decoder,
+//! and this crate is where the decoder lives: the rest of the program sees an
+//! [`Image`] in scene-referred linear light, the same shape [`kallotype_io`]
+//! returns for a TIFF.
 //!
-//! ```text
-//! cargo build --release --bin kalo --features kallotype-cli/raw
-//! ```
-//!
-//! A binary built without that feature contains no LGPL code, and `cargo deny`
-//! on the workspace never sees `rawler` at all — this crate is excluded from
-//! it. A binary built *with* the feature is a combined work and carries
-//! LGPL-2.1 obligations.
+//! The engine is [`flashraw`] 0.2, which is MIT OR Apache-2.0. The previous
+//! engine, `rawler`, was LGPL-2.1 and kept this crate outside the workspace so
+//! that a default build carried no copyleft code; that fence is gone with the
+//! engine. Swapping decoders is a change to this file and its tests, not to the
+//! CLI or the renderer.
 //!
 //! # What comes out
 //!
@@ -32,17 +29,14 @@
 
 use std::path::Path;
 
+use flashraw::{DecodeOptions, Demosaic, FlashRaw, OutputFormat};
 use kallotype_io::Image;
-use rawler::Orientation;
-use rawler::decoders::RawDecodeParams;
-use rawler::imgop::develop::{Intermediate, ProcessingStep, RawDevelop};
-use rawler::rawsource::RawSource;
 
 /// File extensions this crate claims.
 ///
-/// The list is the set of formats `rawler` decodes, using the extensions those
-/// cameras actually write. It exists so the CLI can decide whether a file is a
-/// raw by name before trying anything expensive.
+/// The list is the set of formats the decoder handles, using the extensions
+/// those cameras actually write. It exists so the CLI can decide whether a file
+/// is a raw by name before trying anything expensive.
 pub const EXTENSIONS: &[&str] = &[
     "3fr", "ari", "arw", "cr2", "cr3", "crw", "dcr", "dcs", "dng", "erf", "iiq", "kdc", "mef",
     "mos", "mrw", "nef", "nkd", "nrw", "orf", "pef", "qtk", "raf", "raw", "rw2", "srw", "tfr",
@@ -67,14 +61,8 @@ pub fn handles(path: impl AsRef<Path>) -> bool {
 /// Things that can go wrong decoding a raw file.
 #[derive(Debug)]
 pub enum RawError {
-    /// The decoder could not open the file.
-    Decode(rawler::RawlerError),
-    /// The camera writes four colour channels, which this pipeline does not
-    /// demosaic.
-    FourColour {
-        /// The camera, as the file names it.
-        model: String,
-    },
+    /// The decoder could not open or develop the file.
+    Decode(flashraw::Error),
     /// The decoded pixels did not match the declared dimensions.
     Buffer,
 }
@@ -83,10 +71,6 @@ impl std::fmt::Display for RawError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Decode(error) => write!(f, "raw decode failed: {error}"),
-            Self::FourColour { model } => write!(
-                f,
-                "{model}: four-colour sensor, which this decoder does not demosaic"
-            ),
             Self::Buffer => write!(f, "decoded pixel count does not match the image size"),
         }
     }
@@ -96,7 +80,7 @@ impl std::error::Error for RawError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Decode(error) => Some(error),
-            Self::FourColour { .. } | Self::Buffer => None,
+            Self::Buffer => None,
         }
     }
 }
@@ -105,121 +89,122 @@ impl std::error::Error for RawError {
 ///
 /// The steps are the ones a raw developer takes and no more:
 ///
-/// * `Rescale` — black level off, white level to one;
-/// * `Demosaic` — the mosaic becomes three channels per pixel. `rawler` picks
-///   the right kernel for the sensor: Bayer, or X-Trans for Fujifilm;
-/// * `CropActiveArea` — the masked border off;
-/// * `WhiteBalance` — the as-shot coefficients in the file;
-/// * `Calibrate` — the camera's own colour matrix to sRGB primaries.
+/// * black level off and the samples normalised to the white level;
+/// * demosaic (adaptive on Bayer, so the interpolation follows the edges the
+///   sensor did not measure directly);
+/// * crop to the active area;
+/// * white balance with the as-shot coefficients in the file;
+/// * the camera's own colour matrix to sRGB primaries.
 ///
-/// `SRgb` is deliberately **not** applied. The renderer wants linear light;
-/// applying the sRGB transfer curve here would put back exactly the tone
+/// The sRGB transfer curve is deliberately **not** applied. The renderer wants
+/// linear light; applying the curve here would put back exactly the tone
 /// mapping that reading raw is meant to avoid.
 ///
 /// The file's Exif orientation is applied last, after the develop: the sensor is
 /// read the way it lies, and a camera held on its side writes a landscape
-/// mosaic with a tag saying which way up it was. The turn is a permutation of
-/// whole pixels, so nothing is resampled a second time.
+/// mosaic with a tag saying which way up it was. The decoder's linear output
+/// keeps the sensor orientation and reports it for exactly this reason; the
+/// turn is a permutation of whole pixels, so nothing is resampled a second time.
 pub fn load(path: impl AsRef<Path>) -> Result<Image, RawError> {
-    let path = path.as_ref();
-    // One file, read once: the decoder is asked for the metadata and then for
-    // the mosaic, because `rawler` keeps them apart and the orientation is only
-    // in the first.
-    let source = RawSource::new(path).map_err(|error| {
-        RawError::Decode(rawler::RawlerError::with_io_error("opening", path, error))
-    })?;
-    let params = RawDecodeParams::default();
-    let orientation = orientation(path, &source);
-    let raw = rawler::decode(&source, &params).map_err(RawError::Decode)?;
-    let developed = RawDevelop::new_with(&[
-        ProcessingStep::Rescale,
-        ProcessingStep::Demosaic,
-        ProcessingStep::CropActiveArea,
-        ProcessingStep::WhiteBalance,
-        ProcessingStep::Calibrate,
-    ])
-    .develop_intermediate(&raw)
-    .map_err(RawError::Decode)?;
+    let raw = FlashRaw::open_path(path).map_err(RawError::Decode)?;
+    let frame = raw
+        .decode(DecodeOptions {
+            output: OutputFormat::LinearRgbF32,
+            // `Auto` is adaptive interpolation on a Bayer mosaic. The cost over
+            // bilinear is a few tens of milliseconds on a 33 MP frame, and it
+            // is the difference between colour detail and zippers.
+            demosaic: Demosaic::Auto,
+            ..Default::default()
+        })
+        .map_err(RawError::Decode)?;
 
-    let rgb = match developed {
-        Intermediate::ThreeColor(image) => image,
-        Intermediate::Monochrome(_) | Intermediate::FourColor(_) => {
-            return Err(RawError::FourColour {
-                model: format!("{} {}", raw.clean_make, raw.clean_model),
-            });
-        }
-    };
-
-    let (width, height) = (rgb.width, rgb.height);
-    if width == 0 || height == 0 || rgb.pixels().len() != width * height {
+    let (width, height) = (frame.width, frame.height);
+    let samples = frame.as_f32().ok_or(RawError::Buffer)?;
+    if width == 0 || height == 0 || samples.len() != width as usize * height as usize * 3 {
         return Err(RawError::Buffer);
     }
-    let pixels = rgb
-        .pixels()
-        .iter()
+    let pixels = samples
+        .chunks_exact(3)
         .map(|pixel| {
             [
-                f64::from(pixel[0].max(0.0)),
-                f64::from(pixel[1].max(0.0)),
-                f64::from(pixel[2].max(0.0)),
+                f64::from(pixel[0]).max(0.0),
+                f64::from(pixel[1]).max(0.0),
+                f64::from(pixel[2]).max(0.0),
             ]
         })
         .collect();
 
     let mut image = Image {
-        width: u32::try_from(width).map_err(|_| RawError::Buffer)?,
-        height: u32::try_from(height).map_err(|_| RawError::Buffer)?,
+        width,
+        height,
         pixels,
     };
-    turn(&mut image, orientation);
+    turn(&mut image, Orientation::from_exif(frame.orientation));
     Ok(image)
 }
 
 /// How the camera was held, from the file's own Exif.
 ///
-/// `rawler` hands over the sensor the way it lies: the decoders for the big
-/// camera formats leave the orientation tag in the metadata and do not carry it
-/// through to the image, so it is asked for separately. The answer is
-/// best-effort — a file whose metadata cannot be read is still a file, and the
-/// picture is worth more than the turn — and Sigma's X3F is skipped, because
-/// the only metadata path `rawler` has for it is `todo!()`, and a panic is not
-/// an orientation.
-fn orientation(path: &Path, source: &RawSource) -> Orientation {
-    let sigma = path
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| extension.eq_ignore_ascii_case("x3f"));
-    if sigma {
-        return Orientation::Normal;
+/// The eight values the tag can take, kept here rather than borrowed from the
+/// decoder so that the turn is the crate's own rule and survives the next
+/// engine swap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Orientation {
+    Normal,
+    HorizontalFlip,
+    Rotate180,
+    VerticalFlip,
+    Transpose,
+    Rotate90,
+    Transverse,
+    Rotate270,
+}
+
+impl Orientation {
+    /// The Exif value, 1 through 8. Anything else means the file did not say.
+    fn from_exif(orientation: flashraw::Orientation) -> Self {
+        match orientation {
+            flashraw::Orientation::Normal => Self::Normal,
+            flashraw::Orientation::FlipH => Self::HorizontalFlip,
+            flashraw::Orientation::Rotate180 => Self::Rotate180,
+            flashraw::Orientation::FlipV => Self::VerticalFlip,
+            flashraw::Orientation::Transpose => Self::Transpose,
+            flashraw::Orientation::Rotate90 => Self::Rotate90,
+            flashraw::Orientation::Transverse => Self::Transverse,
+            flashraw::Orientation::Rotate270 => Self::Rotate270,
+        }
     }
-    let Ok(decoder) = rawler::get_decoder(source) else {
-        return Orientation::Normal;
-    };
-    let Ok(metadata) = decoder.raw_metadata(source, &RawDecodeParams::default()) else {
-        return Orientation::Normal;
-    };
-    metadata
-        .exif
-        .orientation
-        .map_or(Orientation::Normal, Orientation::from_u16)
 }
 
 /// Turn and flip the decoded picture to the way the camera was held.
 ///
-/// The eight cases of Exif's orientation tag, and every one of them is a
-/// permutation of whole pixels: nothing is resampled. A raw is light, and light
-/// does not want interpolating twice.
+/// Every case is a permutation of whole pixels: nothing is resampled. A raw is
+/// light, and light does not want interpolating twice.
 fn turn(image: &mut Image, orientation: Orientation) {
-    let (swap, horizontal, vertical) = orientation.to_flips();
-    // The order `rawler` documents: the mirrors first, the transpose last.
-    if horizontal {
-        mirror(image, true);
-    }
-    if vertical {
-        mirror(image, false);
-    }
-    if swap {
-        transpose(image);
+    match orientation {
+        Orientation::Normal => {}
+        Orientation::HorizontalFlip => mirror(image, true),
+        Orientation::Rotate180 => {
+            mirror(image, true);
+            mirror(image, false);
+        }
+        Orientation::VerticalFlip => mirror(image, false),
+        Orientation::Transpose => transpose(image),
+        // Rotate 90° clockwise to display: the stored rows become columns,
+        // then the result is mirrored.
+        Orientation::Rotate90 => {
+            transpose(image);
+            mirror(image, true);
+        }
+        Orientation::Transverse => {
+            transpose(image);
+            mirror(image, true);
+            mirror(image, false);
+        }
+        Orientation::Rotate270 => {
+            transpose(image);
+            mirror(image, false);
+        }
     }
 }
 

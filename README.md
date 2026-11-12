@@ -134,11 +134,10 @@ kalo render photo.png -o out.png --film vision3_500t --ev auto
 kalo contact photo.png -o out/proof.png --dev 3,6,9,12,15
 ```
 
-A camera raw file is read as linear light directly, if the build has the
-feature: `--features raw` handles ARW, NEF, CR2/CR3, RAF, ORF, RW2, PEF, DNG and
-about twenty more. It is **off by default and that is a licensing decision** —
-`rawler` is LGPL-2.1. Decode elsewhere and pass the file with
-`--input-encoding linear` if you would rather not.
+A camera raw file is read as linear light directly: ARW, NEF, CR2/CR3, RAF,
+ORF, RW2, PEF, DNG and the rest of what FlashRaw decodes, about thirty
+extensions in all. The decoder is on by default; build with
+`--no-default-features` for a binary that reads only ordinary images.
 
 > **macOS:** if `cargo build` fails with *"You have not agreed to the Xcode
 > license agreements"*, run `sudo xcodebuild -license accept` once.
@@ -188,6 +187,7 @@ is there for when certain beats fast.
 | `kallotype-core` | The model: curves, development kinetics, the built-in stocks, render. No I/O, no unsafe. |
 | `kallotype-spectral` | Spectra, sensors, and the RGB → spectrum reconstruction. |
 | `kallotype-io` | Decoding and encoding. The only place that touches a file format. |
+| `kallotype-raw` | Camera raw to linear light, through FlashRaw. |
 | `kallotype-cli` | The `kalo` binary, plus a library so the commands are testable. |
 | `kallotype-gpu` | The wgpu backend, feature-gated into the CLI. |
 
@@ -202,11 +202,6 @@ The boundary is a file read. `crates/kallotype-core/build.rs` reads the
 `.kalofilm` and `.kalopaper` files at build time and generates the stock tables
 from them, so the program text holds no measurements and a checkout without
 [`data/`](data/README.md) does not compile.
-
-One exception, fenced off on purpose: `crates/kallotype-raw` is **LGPL-2.1**,
-because camera raw decoding is built on `rawler`. It is outside the workspace
-and reachable only through `--features raw`, so nothing in a default build links
-it.
 
 ## Contributing
 

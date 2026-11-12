@@ -6,10 +6,10 @@ use kallotype_core::{
     Couplers, EmulsionBlur, Finishing, GrainField, Halation, InterImage, Metering, Scanner,
     render_pixels_finished,
 };
-use kallotype_io::{InputEncoding, load, save};
+use kallotype_io::save;
 
 use crate::cli::{Exposure, RenderArgs};
-use crate::commands::common::{Rendering, print_report, resolve};
+use crate::commands::common::{Rendering, print_report, read_input, resolve};
 use crate::error::CliError;
 
 /// Who did the work.
@@ -106,50 +106,6 @@ fn render_on_cpu(
 ) -> Backend {
     render_pixels_finished(pixels, prepared, width, height, finishing);
     Backend::Cpu
-}
-
-/// Read the input, from a camera raw when it is one and the feature is on.
-///
-/// A raw file is scene-referred linear by construction, so `--input-encoding`
-/// does not apply to it: the value is taken as the file's own, and a user who
-/// asked for `srgb` on a `.nef` is not obeyed, because obeying would apply a
-/// transfer curve to data that never had one.
-// A short list, and only for the error message: without the `raw` feature there
-// is no decoder to ask, and "unsupported image format" is a poor answer to
-// someone who passed a camera file.
-#[cfg(not(feature = "raw"))]
-const RAW_EXTENSIONS: &[&str] = &[
-    "3fr", "arw", "cr2", "cr3", "dng", "iiq", "nef", "nrw", "orf", "pef", "raf", "rw2", "srw",
-];
-
-#[cfg(not(feature = "raw"))]
-fn looks_like_raw(path: &Path) -> bool {
-    path.extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| RAW_EXTENSIONS.contains(&extension.to_ascii_lowercase().as_str()))
-}
-
-fn read_input(path: &Path, encoding: InputEncoding) -> Result<kallotype_io::Image, CliError> {
-    #[cfg(feature = "raw")]
-    if kallotype_raw::handles(path) {
-        return kallotype_raw::load(path).map_err(|source| CliError::Raw {
-            path: path.to_path_buf(),
-            message: source.to_string(),
-        });
-    }
-    #[cfg(not(feature = "raw"))]
-    if looks_like_raw(path) {
-        return Err(CliError::Raw {
-            path: path.to_path_buf(),
-            message: "this build has no raw decoder; rebuild with `--features raw`, or \
-                      convert the file and pass --input-encoding linear"
-                .to_string(),
-        });
-    }
-    load(path, encoding).map_err(|source| CliError::Read {
-        path: path.to_path_buf(),
-        source,
-    })
 }
 
 /// Run the subcommand.

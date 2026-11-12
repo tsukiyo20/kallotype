@@ -1,12 +1,6 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
-# `kallotype-raw` decodes camera raw files and links `rawler`, which is
-# LGPL-2.1. It is deliberately outside the workspace so that a default build,
-# `cargo test --workspace` and `cargo deny` are MIT/Apache-2.0 all the way down.
-# The CLI reaches it through an optional path dependency behind `--features
-# kallotype-cli/raw`; see the crate's own doc comment.
-exclude = ["crates/kallotype-raw"]
 
 [workspace.package]
 version = "0.1.0"
