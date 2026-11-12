@@ -274,9 +274,18 @@ class _ProofSheetState extends State<_ProofSheet> {
         children: <Widget>[
           LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
+          // The sheet has to fit the field in both directions: it is paper,
+          // and a proof that has to be scrolled to is not being read as one
+          // sheet. A portrait frame's sheet is nearly square and would
+          // overhang a width-only fit.
           final double available =
               math.max(240, constraints.maxWidth - _ProofSheet._page * 2);
-          final double scale = available / proof.pixels.width;
+          final double room =
+              math.max(200, constraints.maxHeight - _ProofSheet._page * 2);
+          final double scale = math.min(
+            available / proof.pixels.width,
+            room / proof.pixels.height,
+          );
           final double width = proof.pixels.width * scale;
           final double height = proof.pixels.height * scale;
           return SingleChildScrollView(
