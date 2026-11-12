@@ -55,7 +55,12 @@ class Line extends StatelessWidget {
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints room) {
           final List<Print> newest = prints.reversed.toList();
-          final double width = math.min(240, math.max(160, room.maxHeight * 0.36));
+          // The line hangs the wall's paper: the same area for every print, so
+          // a vertical frame is the same print turned and not a bigger one.
+          final double base =
+              math.min(240, math.max(160, room.maxHeight * 0.36));
+          final double area = base * base / 1.5;
+          double widthOf(Print print) => math.sqrt(area * print.aspect);
           return Stack(
             children: <Widget>[
               Positioned(
@@ -74,7 +79,7 @@ class Line extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       for (final Print print in newest)
-                        _Pegged(print: print, width: width),
+                        _Pegged(print: print, width: widthOf(print)),
                     ],
                   ),
                 ),
@@ -169,7 +174,7 @@ class _Pegged extends StatelessWidget {
     final double image = width - border * 2;
     // The sheet is the picture's shape: a vertical frame hangs as a tall sheet,
     // not as a landscape one with the middle of the photograph in it.
-    final double aspect = print.image.width / print.image.height;
+    final double aspect = print.aspect;
     final String? at = print.at;
     return Padding(
       padding: const EdgeInsets.only(right: KalloSpace.step5),

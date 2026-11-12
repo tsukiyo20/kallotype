@@ -65,6 +65,12 @@ class Print {
   final double? minutes;
   final double? tempC;
 
+  /// The picture's shape, width over height.
+  ///
+  /// A print is a sheet of paper cut to the picture, so this is the paper's
+  /// shape as well, and every wall that hangs one sizes it from here.
+  double get aspect => image.width / image.height;
+
   /// `9:00`.
   String? get clock {
     final double? minutes = this.minutes;

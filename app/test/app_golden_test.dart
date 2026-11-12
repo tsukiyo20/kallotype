@@ -368,13 +368,17 @@ void main() {
   late List<Print> hanging;
   late Roll developed;
   late Roll portrait;
+  late ui.Image card;
+  late ui.Image tallCard;
 
   setUpAll(() async {
     await _loadFonts();
     hanging = await _fixturePrints();
-    // The same roll as a vertical frame: the shape the model now hands back
+    card = await _testCard();
+    // The same picture as a vertical frame: the shape the model now hands back
     // when a photograph was made on its side.
-    portrait = _developed(await _testCard(width: 600, height: 900));
+    tallCard = await _testCard(width: 600, height: 900);
+    portrait = _developed(tallCard);
     developed = _developed(
       hanging.first.image,
       contact: await _proof(hanging.first.image),
@@ -665,6 +669,55 @@ void main() {
     await mouse.moveTo(const Offset(4, 4));
     await tester.pump();
     expect(find.byKey(const Key('lens')), findsNothing);
+  });
+
+  testWidgets('a vertical print is the same paper as a horizontal one', (
+    WidgetTester tester,
+  ) async {
+    _window(tester);
+
+    // The export folder holds prints of more than one shape. The wall hangs
+    // them on one paper, turned, so a vertical frame is not given the same
+    // width — which would make it two sheets of paper for one picture — but
+    // the same area.
+    Print print(ui.Image image, String name) => Print(
+          image: image,
+          name: name,
+          pixels: Size(image.width.toDouble(), image.height.toDouble()),
+          frame: 3,
+          film: 'VISION3 500T',
+          paper: 'CRYSTAL ARCHIVE PEARL',
+          minutes: 9,
+          tempC: 20,
+          printed: DateTime(2026, 10, 2, 21, 40),
+        );
+
+    await tester.pumpWidget(KalloApp(
+      catalogue: _catalogue,
+      prints: <Print>[print(card, 'wide'), print(tallCard, 'tall')],
+      exportsFolder: _prints,
+      rollFolder: _roll,
+      roll: Roll.fromStrip(_strip()),
+      appearance: Brightness.light,
+      initialPlace: Place.gallery,
+      chrome: WindowChrome.mac,
+    ));
+    await tester.pumpAndSettle();
+
+    final Size wide = tester.getSize(find.byType(RawImage).at(0));
+    final Size tall = tester.getSize(find.byType(RawImage).at(1));
+    expect(tall.width, lessThan(wide.width), reason: 'a vertical sheet is narrower');
+    expect(tall.height, greaterThan(wide.height), reason: 'and taller');
+    expect(
+      tall.width * tall.height,
+      closeTo(wide.width * wide.height, wide.width * 2),
+      reason: 'the same paper, turned',
+    );
+
+    await expectLater(
+      find.byType(KalloApp),
+      matchesGoldenFile('goldens/gallery-papers.png'),
+    );
   });
 
   testWidgets('the gallery with nothing printed', (WidgetTester tester) async {

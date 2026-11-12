@@ -180,16 +180,19 @@ class _GalleryState extends State<Gallery> {
         final int fitting =
             math.max(1, math.min(5, ((available + gap) / 328).floor()));
         final int columns = math.max(1, math.min(prints.length, fitting));
-        // A sheet is the shape of the picture on it. A roll is one photograph,
-        // so a wall of one roll is all one shape; a folder of prints from
-        // different rolls can mix them, and the tallest sheet sets the row.
-        final double aspect = prints.isEmpty
-            ? 1.5
+        // A wall hangs one paper. A sheet is the shape of the picture on it,
+        // so the sheets cannot all be the same width and also the same size: a
+        // vertical frame would be twice the paper of a horizontal one. They
+        // are given the same **area** instead — the same sheet, turned —
+        // and `paper` is the width a 3:2 sheet of that area would have.
+        final double perWidth = prints.isEmpty
+            ? 0.74
             : prints
-                .map((Print print) => print.image.width / print.image.height)
-                .reduce(math.min);
-        final double perWidth =
-            math.max(0.74, PrintSheet.heightPerWidth(aspect: aspect));
+                .map(
+                  (Print print) =>
+                      PrintSheet.heightPerWidth(aspect: print.aspect),
+                )
+                .fold(0.74, math.max);
         final double paper = math.min(
           math.min(
             (available - gap * (columns - 1)) / columns,
@@ -197,8 +200,14 @@ class _GalleryState extends State<Gallery> {
           ),
           KalloWall.largest,
         );
+        final double area = paper * paper / 1.5;
+        double widthOf(Print print) => math.sqrt(area * print.aspect);
+        double heightOf(Print print) =>
+            PrintSheet.heightOf(widthOf(print), aspect: print.aspect);
         final int rows = (prints.length / columns).ceil();
-        final double height = paper * perWidth + 30;
+        final double tallest =
+            prints.isEmpty ? 0.0 : prints.map(heightOf).reduce(math.max);
+        final double height = math.max(paper * 0.74, tallest) + 30;
         final double content =
             rows * height + math.max(0, rows - 1) * gap;
         final double top = math.max(margin, (room.maxHeight - content) / 2);
@@ -221,7 +230,7 @@ class _GalleryState extends State<Gallery> {
                       _Hung(
                         print: print,
                         wall: wall,
-                        width: paper,
+                        width: widthOf(print),
                         light: light,
                         printed: printed,
                         cursor: _lensFor == null
@@ -724,8 +733,7 @@ class _Hung extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ui.Image image = print.image;
-    final double aspect = image.width / image.height;
+    final double aspect = print.aspect;
     return SizedBox(
       width: width,
       child: Column(
