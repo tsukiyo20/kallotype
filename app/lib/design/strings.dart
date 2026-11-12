@@ -71,6 +71,9 @@ class KalloStrings {
   /// is expected to say.
   String get enlarge => zh ? '放大' : 'Enlarge';
 
+  /// The glass on the table: a proof is read through one.
+  String get loupe => zh ? '放大镜' : 'Loupe';
+
   // -- the shelf ------------------------------------------------------------
 
   String get newRoll => zh ? '新的一卷' : 'A new roll';

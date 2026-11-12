@@ -11,6 +11,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/print.dart';
 import '../widgets/lens.dart';
+import '../widgets/switch.dart';
 import '../widgets/wall.dart';
 
 /// The gallery: the last place. One wall, every print, one lamp.
@@ -212,6 +213,9 @@ class _GalleryState extends State<Gallery> {
                         width: paper,
                         light: light,
                         printed: printed,
+                        cursor: _lensFor == null
+                            ? SystemMouseCursors.click
+                            : SystemMouseCursors.none,
                         onHover: (Offset local, Size sheet, Offset global) =>
                             _lookAt(print, local, sheet, global),
                         onLeave: _leaveLens,
@@ -254,7 +258,8 @@ class _GalleryState extends State<Gallery> {
               right: 0,
               bottom: KalloSpace.step6,
               child: Center(
-                child: _LightSwitch(
+                child: KalloSwitch(
+                  key: const Key('light'),
                   label: s.roomLight,
                   control: wall.controlAt(light),
                   on: light > 0.5,
@@ -551,7 +556,7 @@ class _LoupeState extends State<_Loupe> {
                             ),
                           ),
                           const SizedBox(width: KalloSpace.step4),
-                          _LightSwitch(
+                          KalloSwitch(
                             label: s.roomLight,
                             control: widget.wall.controlAt(light),
                             on: widget.light > 0.5,
@@ -674,6 +679,7 @@ class _Hung extends StatelessWidget {
     required this.width,
     required this.light,
     required this.printed,
+    required this.cursor,
     required this.onHover,
     required this.onLeave,
     required this.onTap,
@@ -692,6 +698,11 @@ class _Hung extends StatelessWidget {
   /// The light on the print, which holds a little longer.
   final double printed;
 
+  /// What the pointer is over the print: a hand until the loupe is up, and
+  /// then nothing — the glass is where the pointer is, and a hand inside it is
+  /// a hand on the picture.
+  final MouseCursor cursor;
+
   /// The lens: the pointer over the sheet, its place on the sheet, the sheet's
   /// size, and where it is on the wall.
   final void Function(Offset local, Size sheet, Offset global) onHover;
@@ -709,7 +720,7 @@ class _Hung extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           MouseRegion(
-            cursor: SystemMouseCursors.click,
+            cursor: cursor,
             onHover: (PointerHoverEvent event) => onHover(
               event.localPosition,
               Size(width, PrintSheet.heightOf(width)),
@@ -761,88 +772,12 @@ class _Hung extends StatelessWidget {
 /// The switch on the wall, and the only thing in this room that is its own
 /// light: it does not dim, because a control you cannot find in the dark is a
 /// control that has been taken away.
-class _LightSwitch extends StatefulWidget {
-  const _LightSwitch({
-    required this.label,
-    required this.control,
-    required this.on,
-    required this.onTap,
-  });
-
-  final String label;
-
-  /// The wall's own light: a pale control on a dark wall, ink on a light one.
-  final Color control;
-
-  final bool on;
-  final VoidCallback onTap;
-
-  @override
-  State<_LightSwitch> createState() => _LightSwitchState();
-}
-
-class _LightSwitchState extends State<_LightSwitch> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color control = widget.control;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        key: const Key('light'),
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: KalloMotion.instant,
-          height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
-          decoration: BoxDecoration(
-            color: control.withValues(alpha: _hover ? 0.10 : 0.04),
-            borderRadius: BorderRadius.circular(KalloRadius.control),
-            border: Border.all(
-              color: control.withValues(alpha: _hover ? 0.28 : 0.16),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              AnimatedContainer(
-                duration: KalloMotion.instant,
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.on ? control : null,
-                  border: widget.on
-                      ? null
-                      : Border.all(color: control.withValues(alpha: 0.45)),
-                ),
-              ),
-              const SizedBox(width: KalloSpace.step2),
-              Text(
-                widget.label,
-                style: KalloType.small.copyWith(
-                  color: control.withValues(alpha: _hover ? 0.92 : 0.70),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// A loupe held over the wall.
 ///
 /// It is the print at three times the wall, from a decode wide enough that the
 /// glass has something to show: magnifying the wall's own copy would only
-/// magnify a screen image. The rim is a hairline, because the wall has no
-/// shadows to say where the circle ends.
+/// magnify a screen image. The glass is a real object — a bezel and a
+/// reflection — because a loupe is held, and a circle of nothing is not held.
 class _Lens extends StatelessWidget {
   const _Lens({
     super.key,
@@ -877,7 +812,6 @@ class _Lens extends StatelessWidget {
     return KalloLens(
       at: at,
       radius: radius,
-      rim: wall.control.withValues(alpha: 0.35),
       child: Stack(
         children: <Widget>[
           Positioned(

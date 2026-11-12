@@ -16,6 +16,7 @@ import 'package:kallo_ui/lab/roll.dart';
 import 'package:kallo_ui/lab/stock.dart';
 import 'package:kallo_ui/main.dart';
 import 'package:kallo_ui/views/places.dart';
+import 'package:kallo_ui/widgets/switch.dart';
 
 /// Load the bundled faces, so the golden is drawn in the product's type rather
 /// than in whatever the test runner has. The faces are read from disk: a test
@@ -452,9 +453,26 @@ void main() {
         await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     addTearDown(mouse.removePointer);
+
+    // The glass is a tool, and it is put away: a loupe that comes up under
+    // every pass of the pointer is in the way of choosing a strip.
     await mouse.moveTo(at);
     await tester.pump();
+    expect(find.byKey(const Key('lens')), findsNothing);
 
+    await tester.tap(find.byKey(const Key('loupe')));
+    // The dot fills in the app's instant, and a golden is a picture of the
+    // state, not of the transition: one pump to start it, one to finish it.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(
+      tester.widget<KalloSwitch>(find.byKey(const Key('loupe'))).on,
+      isTrue,
+    );
+
+    await mouse.moveTo(const Offset(4, 4));
+    await mouse.moveTo(at);
+    await tester.pump();
     expect(find.byKey(const Key('lens')), findsOneWidget);
     await expectLater(
       find.byType(KalloApp),

@@ -6,11 +6,13 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import '../design/scope.dart';
+import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/contact.dart';
 import '../lab/roll.dart';
 import '../widgets/lens.dart';
 import '../widgets/patch_print.dart';
+import '../widgets/switch.dart';
 
 /// The roll, unrolled: the contact proof on the table.
 ///
@@ -185,6 +187,11 @@ class _ProofSheetState extends State<_ProofSheet> {
   /// The proof whose file is being read, so that a move does not read it twice.
   ContactProof? _reading;
 
+  /// Whether the glass is on. Off is the default: a loupe that comes up on
+  /// every pass of the pointer is a loupe that gets in the way of choosing a
+  /// strip, and choosing is what the table is for.
+  bool _loupe = false;
+
   ContactProof get proof => widget.proof;
   Roll get roll => widget.roll;
 
@@ -205,6 +212,9 @@ class _ProofSheetState extends State<_ProofSheet> {
   }
 
   void _lookAt(Offset at) {
+    if (!_loupe) {
+      return;
+    }
     setState(() => _at = at);
     if (_reading == proof) {
       return;
@@ -260,7 +270,9 @@ class _ProofSheetState extends State<_ProofSheet> {
     final KalloColors colors = KalloScope.colorsOf(context);
     return ColoredBox(
       color: colors.content,
-      child: LayoutBuilder(
+      child: Stack(
+        children: <Widget>[
+          LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final double available =
               math.max(240, constraints.maxWidth - _ProofSheet._page * 2);
@@ -274,7 +286,9 @@ class _ProofSheetState extends State<_ProofSheet> {
                 width: width,
                 height: height,
                 child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
+                  cursor: _loupe && _at != null
+                      ? SystemMouseCursors.none
+                      : SystemMouseCursors.click,
                   onHover: (PointerHoverEvent event) =>
                       _lookAt(event.localPosition),
                   onExit: (_) => _leave(),
@@ -345,7 +359,6 @@ class _ProofSheetState extends State<_ProofSheet> {
                             key: const Key('lens'),
                             at: _at!,
                             radius: _ProofSheet._radius,
-                            rim: KalloInk.faint.withValues(alpha: 0.45),
                             child: Stack(
                               children: <Widget>[
                                 Positioned(
@@ -376,7 +389,34 @@ class _ProofSheetState extends State<_ProofSheet> {
           );
         },
       ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: KalloSpace.step4,
+            child: Center(
+              child: KalloSwitch(
+                key: const Key('loupe'),
+                label: KalloStrings.of(context).loupe,
+                control: colors.ink,
+                on: _loupe,
+                onTap: _toggleLoupe,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  void _toggleLoupe() {
+    setState(() {
+      _loupe = !_loupe;
+      if (!_loupe) {
+        _at = null;
+        _reading = null;
+        _dropSharp();
+      }
+    });
   }
 
   /// A tap picks the development it landed on, if it landed on one.

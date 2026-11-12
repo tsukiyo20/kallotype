@@ -66,9 +66,13 @@ each place, the states a place can be in, and the two shelves:
 | **the gallery**, in a light appearance | **the lens**, held over a print | **a print**, walked up to |
 
 A proof is read through a loupe, so the table has one too — the same glass as
-the wall's, held over the paper. What it magnifies is the sheet, not the
-enlarger's print: a strip that a five-stop development difference prints nearly
-black is a picture again at three times the sheet, and it is the same picture.
+the wall's, and the same object: a turned bezel, a reflection of the room, and a
+glass that darkens at its edge. It is on a switch, because a glass that comes up
+under every pass of the pointer is in the way of choosing a strip, and the
+pointer is hidden while it is up: the glass is where the pointer is. What it
+magnifies is the sheet, not the enlarger's print — a strip that a five-stop
+development difference prints nearly black is a picture again at three times the
+sheet, and it is the same picture.
 
 | |
 |---|
