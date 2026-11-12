@@ -1,0 +1,4 @@
+[toolchain]
+# native_toolchain_rust pins an exact channel for reproducible build hooks.
+channel = "1.99.0"
+targets = ["aarch64-apple-darwin"]

@@ -48,6 +48,15 @@ data:
 doc:
     cargo doc --workspace --no-deps
 
+# Check the app's binding crate.
+#
+# It is its own workspace because Flutter's native-assets hook builds it, not
+# `cargo build` at the root — and because flutter_rust_bridge rewrites
+# `src/frb_generated.rs` on every generation, which `cargo fmt --all` should
+# not touch.
+ffi:
+    cd app/rust && cargo check --all-targets
+
 # Everything CI checks.
 check: fmt-check lint test
 

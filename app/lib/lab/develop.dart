@@ -46,38 +46,9 @@ Future<Roll> develop({
   // not a record — it is a note to self that the work cannot be done again.
   final File source = await _keep(photograph, target);
 
-  final List<Frame> frames = <Frame>[];
-  for (int i = 0; i < times.length; i++) {
-    final double minutes = times[i];
-    final File output = RollStore.frameFile(target, i + 1);
-    await model.develop(
-      photograph: source,
-      stock: stock.id,
-      // The paper is part of the roll: every frame the bench shows is already
-      // printed, and a print is balanced against the paper's own curve. A
-      // reversal skips the print stage, and the model ignores this argument.
-      paper: paper?.id ?? Stocks.paper,
-      minutes: minutes,
-      tempC: tempC,
-      width: benchWidth,
-      output: output,
-      spectral: spectral,
-    );
-    frames.add(
-      Frame(
-        number: i + 1,
-        minutes: minutes,
-        tempC: tempC,
-        image: await decode(output, width: benchWidth),
-      ),
-    );
-    onProgress?.call(i + 1, times.length);
-  }
-
-  // The proof is printed from the same photograph and the same times as the
-  // frames, but as one exposure of the ladder rather than a corrected print of
-  // each frame — which is the one thing the bench cannot draw.
-  ContactProof? contact;
+  final List<File> outputs = <File>[
+    for (int i = 0; i < times.length; i++) RollStore.frameFile(target, i + 1),
+  ];
   // A proof from an earlier roll would be a proof of another photograph: the
   // folder is reused, so the old sheet goes before the new one is asked for.
   for (final File stale in <File>[
@@ -88,26 +59,51 @@ Future<Roll> develop({
       stale.deleteSync();
     }
   }
-  if (stock.process != FilmProcess.reversal) {
-    try {
-      await model.contact(
-        photograph: source,
-        stock: stock.id,
-        paper: paper?.id ?? Stocks.paper,
-        times: times,
+  final bool prints = stock.process != FilmProcess.reversal;
+  // One call, because the five frames are five developments of one negative:
+  // the photograph is read once and each print is made from that read, with
+  // the proof printed from the same read. The subprocess path does the same
+  // five calls it always did.
+  await model.roll(
+    photograph: source,
+    stock: stock.id,
+    // The paper is part of the roll: every frame the bench shows is already
+    // printed, and a print is balanced against the paper's own curve. A
+    // reversal skips the print stage, and the model ignores this argument.
+    paper: paper?.id ?? Stocks.paper,
+    times: times,
+    tempC: tempC,
+    width: benchWidth,
+    frames: outputs,
+    sheet: prints ? RollStore.contactFile(target) : null,
+    record: prints ? RollStore.contactRecord(target) : null,
+    spectral: spectral,
+    onProgress: onProgress,
+  );
+  final List<Frame> frames = <Frame>[
+    for (int i = 0; i < times.length; i++)
+      Frame(
+        number: i + 1,
+        minutes: times[i],
         tempC: tempC,
-        sheet: RollStore.contactFile(target),
-        record: RollStore.contactRecord(target),
-        spectral: spectral,
-      );
+        image: await decode(outputs[i], width: benchWidth),
+      ),
+  ];
+
+  // The proof is printed from the same photograph and the same times as the
+  // frames, but as one exposure of the ladder rather than a corrected print of
+  // each frame — which is the one thing the bench cannot draw.
+  ContactProof? contact;
+  if (prints) {
+    try {
       contact = await ContactProof.read(
         RollStore.contactFile(target),
         RollStore.contactRecord(target),
       );
     } catch (error) {
-      // A roll without its proof is still a roll: the table falls back to the
-      // chart it can draw, and the developer can say why in the console.
-      Model.log('the contact proof could not be printed: $error');
+      // A roll without its proof is still a roll, and the model already said
+      // why in the console.
+      Model.log('the contact proof could not be read: $error');
     }
   }
 

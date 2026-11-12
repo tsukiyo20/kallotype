@@ -5,7 +5,7 @@ Two build units, one tree.
 | | |
 |---|---|
 | `crates/` | the model, in Rust. A `cargo` workspace, published to crates.io. |
-| `app/` | the interface, in Flutter. Its `pubspec.yaml` lives in `app/`. |
+| `app/` | the interface, in Flutter; `app/rust/` is the binding crate that links the model into it. Its `pubspec.yaml` lives in `app/`. |
 
 ## The one law
 
@@ -40,6 +40,8 @@ checklist.
 just check                    # Rust: fmt, clippy, tests
 cd app && flutter analyze     # must say "No issues found!"
 cd app && flutter test        # goldens skip off Windows, on purpose
+cd app && flutter test integration_test/ffi_roll_test.dart -d macos
+                              # the linked model, in the app it ships in
 ```
 
 The goldens are drawn with the machine's own fonts, so their baseline is Windows

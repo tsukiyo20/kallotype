@@ -11,6 +11,7 @@ import 'design/tokens.dart';
 import 'film/strip_data.dart';
 import 'lab/exports.dart';
 import 'lab/settings.dart';
+import 'lab/ffi_model.dart';
 import 'lab/fixture.dart';
 import 'lab/print.dart';
 import 'lab/print_out.dart';
@@ -27,6 +28,9 @@ const bool _fixture = bool.fromEnvironment('fixture');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // The model is a library the app carries; if it cannot load, the subprocess
+  // path is still there and the app says so in the console.
+  await loadLinkedModel();
   final bool desktop =
       Platform.isMacOS || Platform.isWindows || Platform.isLinux;
   if (desktop) {

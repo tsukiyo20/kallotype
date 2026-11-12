@@ -137,7 +137,7 @@ void main() {
   });
 
   test('no model is no catalogue: the shelf keeps the film it carries', () async {
-    final Catalogue carried = await Catalogue.load(const Model(''));
+    final Catalogue carried = await Catalogue.load(const ProcessModel(''));
     expect(carried.films, hasLength(1));
     expect(carried.films.single.id, Stocks.defaultId);
     // The paper the app prints on is carried too: a roll still needs one.
