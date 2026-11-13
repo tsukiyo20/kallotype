@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
-/// Chart a stock at a ladder of development times.
+/// Measure a stock's strip at a ladder of development times.
 Future<List<ChartFrame>> makeChart({
   required String film,
   required List<double> times,
@@ -28,16 +28,16 @@ class ChartFrame {
   /// The developer's temperature.
   final double tempC;
 
-  /// Contrast in the red, green and blue records.
+  /// Contrast of the developed curve in the red, green and blue records.
   final Float64List gamma;
 
-  /// The dye's density floor, after fog.
+  /// The dye's density floor, after fog — above the base, like the curve.
   final Float64List dMin;
 
-  /// The dye's density ceiling.
+  /// The dye's density ceiling, above the base, like the curve.
   final Float64List dMax;
 
-  /// Dye density per patch, nine patches, before the base is counted in.
+  /// Status density per patch, nine patches, as the densitometer reads it.
   final List<Float64List> patches;
 
   const ChartFrame({

@@ -1,4 +1,8 @@
-//! The densitometry behind a print: the wedge, developed.
+//! The densitometry behind a print: the wedge, developed and read.
+//!
+//! The numbers are a densitometer's reading of the strip — the dye plus the
+//! base, fog and mask the instrument sees — not the curve evaluated at nine
+//! exposures.
 
 use kallotype_api::chart_for;
 
@@ -9,17 +13,17 @@ pub struct ChartFrame {
     pub minutes: f64,
     /// The developer's temperature.
     pub temp_c: f64,
-    /// Contrast in the red, green and blue records.
+    /// Contrast of the developed curve in the red, green and blue records.
     pub gamma: Vec<f64>,
-    /// The dye's density floor, after fog.
+    /// The dye's density floor, after fog — above the base, like the curve.
     pub d_min: Vec<f64>,
-    /// The dye's density ceiling.
+    /// The dye's density ceiling, above the base, like the curve.
     pub d_max: Vec<f64>,
-    /// Dye density per patch, nine patches, before the base is counted in.
+    /// Status density per patch, nine patches, as the densitometer reads it.
     pub patches: Vec<Vec<f64>>,
 }
 
-/// Chart a stock at a ladder of development times.
+/// Measure a stock's strip at a ladder of development times.
 pub fn make_chart(
     film: String,
     times: Vec<f64>,
