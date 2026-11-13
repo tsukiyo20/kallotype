@@ -42,8 +42,8 @@ class KalloChip extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           child: Container(
             padding: EdgeInsets.symmetric(
-              horizontal: compact ? 8 : 10,
-              vertical: compact ? 4 : 6,
+              horizontal: compact ? 7 : 10,
+              vertical: compact ? 3 : 6,
             ),
             decoration: BoxDecoration(
               color: selected
@@ -62,7 +62,7 @@ class KalloChip extends StatelessWidget {
             ),
             child: Text(
               label,
-              style: KalloType.data.copyWith(
+              style: (compact ? KalloType.small : KalloType.data).copyWith(
                 color: selected
                     ? colors.content
                     : enabled
