@@ -658,6 +658,7 @@ dependencies = [
  "kallotype-io",
  "kallotype-raw",
  "kallotype-spectral",
+ "kallotype-view",
  "serde_json",
 ]
 

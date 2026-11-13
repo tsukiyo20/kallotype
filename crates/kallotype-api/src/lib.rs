@@ -13,6 +13,7 @@
 //! is exactly the case where reading it once matters.
 
 pub mod catalogue;
+pub mod chart;
 pub mod contact;
 pub mod error;
 pub mod input;
@@ -20,6 +21,7 @@ pub mod render;
 pub mod roll;
 pub mod selection;
 
+pub use chart::{FrameChart, chart, chart_for};
 pub use contact::{ContactOptions, ContactOutcome, contact, ladder};
 pub use error::Error;
 pub use input::read_input;

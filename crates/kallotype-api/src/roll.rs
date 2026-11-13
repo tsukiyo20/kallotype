@@ -103,6 +103,8 @@ pub struct RollOutcome {
     pub frames: Vec<RenderOutcome>,
     /// The proof, if one was asked for.
     pub contact: Option<ContactOutcome>,
+    /// The chart: the same wedge through every development, for the interface.
+    pub chart: Vec<crate::chart::FrameChart>,
     /// The size of the photograph as it was read.
     pub source: (u32, u32),
 }
@@ -207,10 +209,20 @@ pub fn roll(
         None
     };
 
+    // The chart is the stock and the development, not the photograph: it is
+    // the same wedge the committed strip was drawn from, so a roll the app
+    // developed can be read against the one it ships with.
+    let chart = crate::chart::chart(
+        film.unwrap_or(selection.film),
+        &request.times,
+        selection.development.temp_c,
+    );
+
     progress(Progress::Done);
     Ok(RollOutcome {
         frames,
         contact: proof,
+        chart,
         source: source_size,
     })
 }
