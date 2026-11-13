@@ -42,6 +42,12 @@ class ContactJob {
   /// Extra print exposure in stops.
   final double printEv;
 
+  /// The enlarger's colour pack, in Kodak CC units.
+  final String filters;
+
+  /// A heat-absorbing glass in the light path, by name.
+  final String? heatGlass;
+
   /// Add grain.
   final bool grain;
 
@@ -70,6 +76,8 @@ class ContactJob {
     required this.evAuto,
     required this.evStops,
     required this.printEv,
+    required this.filters,
+    this.heatGlass,
     required this.grain,
     required this.halation,
     required this.couplers,
@@ -89,6 +97,8 @@ class ContactJob {
       evAuto.hashCode ^
       evStops.hashCode ^
       printEv.hashCode ^
+      filters.hashCode ^
+      heatGlass.hashCode ^
       grain.hashCode ^
       halation.hashCode ^
       couplers.hashCode ^
@@ -110,6 +120,8 @@ class ContactJob {
           evAuto == other.evAuto &&
           evStops == other.evStops &&
           printEv == other.printEv &&
+          filters == other.filters &&
+          heatGlass == other.heatGlass &&
           grain == other.grain &&
           halation == other.halation &&
           couplers == other.couplers &&

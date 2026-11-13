@@ -48,6 +48,18 @@ class PrintJob {
   /// Extra print exposure in stops.
   final double printEv;
 
+  /// Print on the balance solved for this development instead of this one.
+  ///
+  /// This is a test strip's one exposure: every print keeps the enlarger
+  /// where the first print set it.
+  final double? balanceFrom;
+
+  /// The enlarger's colour pack, in Kodak CC units: `30M`, `20Y+10M`.
+  final String filters;
+
+  /// A heat-absorbing glass in the light path, by name: `kg1` … `kg5`.
+  final String? heatGlass;
+
   /// Width of the film frame the image represents, in millimetres.
   final double frameMm;
 
@@ -80,6 +92,9 @@ class PrintJob {
     required this.evAuto,
     required this.evStops,
     required this.printEv,
+    this.balanceFrom,
+    required this.filters,
+    this.heatGlass,
     required this.frameMm,
     required this.grain,
     required this.grainSeed,
@@ -101,6 +116,9 @@ class PrintJob {
       evAuto.hashCode ^
       evStops.hashCode ^
       printEv.hashCode ^
+      balanceFrom.hashCode ^
+      filters.hashCode ^
+      heatGlass.hashCode ^
       frameMm.hashCode ^
       grain.hashCode ^
       grainSeed.hashCode ^
@@ -124,6 +142,9 @@ class PrintJob {
           evAuto == other.evAuto &&
           evStops == other.evStops &&
           printEv == other.printEv &&
+          balanceFrom == other.balanceFrom &&
+          filters == other.filters &&
+          heatGlass == other.heatGlass &&
           frameMm == other.frameMm &&
           grain == other.grain &&
           grainSeed == other.grainSeed &&

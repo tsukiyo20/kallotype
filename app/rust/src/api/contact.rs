@@ -23,6 +23,10 @@ pub struct ContactJob {
     pub ev_stops: f64,
     /// Extra print exposure in stops.
     pub print_ev: f64,
+    /// The enlarger's colour pack, in Kodak CC units.
+    pub filters: String,
+    /// A heat-absorbing glass in the light path, by name.
+    pub heat_glass: Option<String>,
     /// Add grain.
     pub grain: bool,
     /// Add halation.
@@ -54,6 +58,8 @@ pub fn make_contact(job: ContactJob) -> Result<ContactReport, String> {
         film: job.film,
         paper: job.paper,
         temp: Some(job.temp_c),
+        filters: job.filters,
+        heat_glass: job.heat_glass,
         spectral: job.spectral,
         ..StockChoice::default()
     };

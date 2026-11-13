@@ -18,30 +18,30 @@ class _Charting extends ProcessModel {
     required String stock,
     required List<double> times,
     required double tempC,
-  }) async =>
-      charts;
+  }) async => charts;
 }
 
 FilmChart _chart(double minutes) => FilmChart(
-      minutes: minutes,
-      tempC: 20,
-      gamma: <double>[0.5, 0.5 + minutes / 100, 0.5],
-      dMin: <double>[0.05, 0.05, 0.05],
-      dMax: <double>[3.0, 3.0, 3.0],
-      patches: <List<double>>[
-        for (int i = 0; i < 9; i++) <double>[0.1 * i, 0.1 * i, 0.1 * i],
-      ],
-    );
+  minutes: minutes,
+  tempC: 20,
+  gamma: <double>[0.5, 0.5 + minutes / 100, 0.5],
+  dMin: <double>[0.05, 0.05, 0.05],
+  dMax: <double>[3.0, 3.0, 3.0],
+  patches: <List<double>>[
+    for (int i = 0; i < 9; i++) <double>[0.1 * i, 0.1 * i, 0.1 * i],
+  ],
+  logE: <double>[for (int i = 0; i < 9; i++) -2.0 + i * 0.35],
+);
 
 Roll _roll() => Roll(
-      stockId: 'vision3_500t',
-      stockLabel: 'VISION3 500T',
-      photo: '/photographs/uji.jpg',
-      frames: const <Frame>[
-        Frame(number: 1, minutes: 3, tempC: 20),
-        Frame(number: 2, minutes: 9, tempC: 20),
-      ],
-    );
+  stockId: 'vision3_500t',
+  stockLabel: 'VISION3 500T',
+  photo: '/photographs/uji.jpg',
+  frames: const <Frame>[
+    Frame(number: 1, minutes: 3, tempC: 20),
+    Frame(number: 2, minutes: 9, tempC: 20),
+  ],
+);
 
 void main() {
   test('a roll developed before the chart existed gets one', () async {
@@ -85,13 +85,19 @@ void main() {
       _Charting(<FilmChart>[_chart(3)]),
     );
     expect(filled.frames.first.isMeasured, isTrue);
-    expect(filled.frames.first.patches, isNot(same(drawn.frames.first.patches)));
+    expect(
+      filled.frames.first.patches,
+      isNot(same(drawn.frames.first.patches)),
+    );
     expect(filled.frames.first.patches!.first.first, 0.0);
   });
 
   test('a model that cannot chart leaves the roll alone', () async {
     final Roll roll = _roll();
-    expect(identical(await fillChart(roll, const _Charting(null)), roll), isTrue);
+    expect(
+      identical(await fillChart(roll, const _Charting(null)), roll),
+      isTrue,
+    );
   });
 
   test('a charted roll is not charted twice', () async {
@@ -99,6 +105,9 @@ void main() {
       _roll(),
       _Charting(<FilmChart>[_chart(3), _chart(9)]),
     );
-    expect(identical(await fillChart(once, const _Charting(null)), once), isTrue);
+    expect(
+      identical(await fillChart(once, const _Charting(null)), once),
+      isTrue,
+    );
   });
 }

@@ -43,6 +43,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ContactJob dco_decode_box_autoadd_contact_job(dynamic raw);
 
   @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
   PrintJob dco_decode_box_autoadd_print_job(dynamic raw);
 
   @protected
@@ -59,6 +62,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double dco_decode_f_64(dynamic raw);
+
+  @protected
+  FilmCurveChart dco_decode_film_curve_chart(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
@@ -80,6 +86,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  PaperCurve dco_decode_paper_curve(dynamic raw);
+
+  @protected
+  PrintCurve dco_decode_print_curve(dynamic raw);
 
   @protected
   PrintJob dco_decode_print_job(dynamic raw);
@@ -123,6 +138,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ContactJob sse_decode_box_autoadd_contact_job(SseDeserializer deserializer);
 
   @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
   PrintJob sse_decode_box_autoadd_print_job(SseDeserializer deserializer);
 
   @protected
@@ -139,6 +157,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  FilmCurveChart sse_decode_film_curve_chart(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
@@ -162,6 +183,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  PaperCurve sse_decode_paper_curve(SseDeserializer deserializer);
+
+  @protected
+  PrintCurve sse_decode_print_curve(SseDeserializer deserializer);
 
   @protected
   PrintJob sse_decode_print_job(SseDeserializer deserializer);
@@ -215,6 +245,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_print_job(
     PrintJob self,
     SseSerializer serializer,
@@ -234,6 +267,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_film_curve_chart(
+    FilmCurveChart self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
@@ -270,6 +309,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_paper_curve(PaperCurve self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_print_curve(PrintCurve self, SseSerializer serializer);
 
   @protected
   void sse_encode_print_job(PrintJob self, SseSerializer serializer);

@@ -47,8 +47,22 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and twenty-one goldens pin the language — one for
-each place, the states a place can be in, and the two shelves:
+`fvm flutter analyze` is clean, and twenty-one goldens pin the language of the
+four-plane shell the product has left behind — the pictures that were the
+design's instrument before the two rooms. They still pass, and they are still
+drawn on Windows for the reason below.
+
+The two-room studio has smoke tests and a golden scaffold, but no baselines yet:
+they belong to the Windows pass, and `test/studio_golden_test.dart` is skipped
+everywhere else. It is drawn deliberately with
+
+```bash
+fvm flutter test --dart-define=studio-goldens=true --update-goldens \
+  test/studio_golden_test.dart
+```
+
+The pictures below are the old shell; they are the review instrument for the
+language, not a picture of the window the app opens.
 
 | | | |
 |---|---|---|
@@ -67,14 +81,10 @@ each place, the states a place can be in, and the two shelves:
 | ![the workbench, a vertical frame](test/goldens/workbench-portrait.png) | ![the gallery, two papers of one size](test/goldens/gallery-papers.png) | |
 | **the workbench**, a vertical frame | **the gallery**, two papers, one size | |
 
-A proof is read through a loupe, so the table has one too — the same glass as
-the wall's, and the same object: a turned bezel, a reflection of the room, and a
-glass that darkens at its edge. It is on a switch, because a glass that comes up
-under every pass of the pointer is in the way of choosing a strip, and the
-pointer is hidden while it is up: the glass is where the pointer is. What it
-magnifies is the sheet, not the enlarger's print — a strip that a five-stop
-development difference prints nearly black is a picture again at three times the
-sheet, and it is the same picture.
+The gallery's prints are read through a loupe: a turned bezel, a reflection of
+the room, and a glass that darkens at its edge. It is on a switch, because a
+glass that comes up under every pass of the pointer is in the way of looking,
+and the pointer is hidden while it is up: the glass is where the pointer is.
 
 | |
 |---|
@@ -99,24 +109,27 @@ may carry them: `fonts/OFL-Inter.txt`, `fonts/OFL-NotoSansSC.txt`.
 
 ## What you are looking at
 
-One window. A column of places on the left, a toolbar that is also the window's
-handle, a field, and — where the place has one — a record on the right.
+One window. Two rooms on the left — the darkroom and the gallery — and, in the
+darkroom, four steps on the top edge of the work: select, develop, print, dry.
+The steps are edge codes, not a tab bar: they change what is on the bench, not
+where the bench is. The instrument panel on the right belongs to the step, and
+the one action is at its bottom.
 
 | | |
 |---|---|
-| **The shelf is the way in, and it is the model's** | One photograph, into the developer five times, and a roll comes out: the same frame at 3, 6, 9, 12 and 15 minutes. That ladder is the product's whole argument, so the first roll is a comparison rather than a collection. The materials are not constants in the app: `kalo stocks --json` hands over every film the model carries, grouped by chemistry, and every paper under a rule of its own, so a roll is developed as the two boxes you took off the shelf — and the shelf cannot show a film or a paper the model does not have. |
-| **The binder is where the roll came from** | The photograph, the film, the paper, the five times, and — under each material — the sheet it was read from and one line per field saying whether that field was measured, borrowed from another stock, or left as a compiled placeholder. A stock that borrowed its dyes is a different claim from one that measured them, and this is the page that says which is which. |
-| **The workbench is one frame** | The enlarger's easel, lit, with the roll's ladder laid under it as a control: five times, five real prints, and the picture changes as you move along them. Nothing interpolates — every step is a render the model made at that time. The bench also has one lamp: *proof* takes the frame out of the room and hangs it the way the gallery will — the same wall, the same sheet, the same label, at the size a hanging is — so the time is chosen against the wall and not against a screen. The ladder stays under it: the label's loud word is the time in hand. The paper is the picture's shape — a vertical frame is a tall sheet with the whole photograph on it, not a landscape sheet with a band through its middle — and the wall, the line and the lens all read the shape from the print they are given. |
-| **The line is what happened** | A string across the room with the work hanging from it, newest first, and a corner that says what is still being made. The gallery is the same files looked at properly, on a wall, in the dark. |
-| **The path is a choice** | Exposure, print and scan go through the spectrum — 71 wavelengths, reconstructed from the input and integrated against each layer's sensitivity — or through one number per channel. It is a setting because the model keeps it opt-in: the structure is physical end to end, and the data under it is mixed — the curves and layer sensitivities of twenty-one films are measured, the papers are, the illuminant is CIE D50, and fifteen films still borrow their dye shapes because their sheets print a neutral instead of three dyes. The binder says per film which is which. The two paths are different photographs, not different labels, and the roll remembers which made it: the binder says so under the film, and a print of that roll is made the same way. |
-| **The model is the app's own library** | `kallo_ui` links `kallotype-api` through `flutter_rust_bridge`; a roll is one call that reads the photograph once, prints the five frames and the proof from that one read. The `kalo` binary is still underneath as the fallback when the library cannot load — tests run that way — and both answer the same `Model`, because the binding was written to the shape the subprocess already had. |
-| **Six places, all six built** | Shelf, Table, Workbench, Binder, Line, Gallery. The order is the work's: what you have, what you compare, what you judge one frame on, what you keep, what you print, and where it hangs. |
-| **The table is the model's proof** | A contact proof is the film laid on paper and exposed once, so the table shows the model's print of it and not a drawing: five strips on one sheet, the clear rebate printed black, and the stock, frame number and development printed on the film's edge. One exposure means the strips are a comparison — a development longer than the sheet's own prints denser, the shorter ones thinner — which is the one thing a print of each frame, corrected frame by frame, cannot say. The model's record beside the sheet says where the frames are; the app adds only the pencil: a box around the development being considered, in the safelight's colour, and the paper's name in its margin. A roll the model drew has no negative, so the table falls back to the chart it can draw. |
+| **The select step is the photograph, before the developer** | One photograph enters the darkroom, and the step shows it — the whole original, not a thumbnail — with the film and the paper in the column beside it. The materials are not constants in the app: `kalo stocks --json` hands over every film the model carries, grouped by chemistry, and every paper under a rule of its own, so the shelf cannot show a film or a paper the model does not have. The first picture is the original; the developing has not happened yet. |
+| **The develop step is one print at a time** | The print on the easel is the time in hand; the ruler under it moves the time; the strip below it is what has been printed. Dragging the ruler only changes the preview. Pressing *develop* renders one print at 1200 px and adds it to the strip. The first print fixes the enlarger's exposure, and every later print keeps it — the strip compares developments, not timers. The instrument panel draws the film's developed curve, the paper's, the strip's times together, and the densitometer's gamma and D-max. |
+| **The print step is the enlarger dialled** | The chosen development is printed again at the photograph's size, balanced on its own negative, with the timer, the CC pack and the heat glass. It is not a copy of the strip's print: the strip is one exposure; the finished print is the one dialled for this photograph. |
+| **The dry step is what happened** | A string across the room with the work hanging from it, newest first, and a corner that says what is still being made. The gallery is the same files looked at properly, on a wall, in the dark. |
+| **The path is a choice** | Exposure, print and scan go through the spectrum — 71 wavelengths, reconstructed from the input and integrated against each layer's sensitivity — or through one number per channel. It is a setting because the model keeps it opt-in: the structure is physical end to end, and the data under it is mixed — the curves and layer sensitivities of twenty-one films are measured, the papers are, the illuminant is CIE D50, and fifteen films still borrow their dye shapes because their sheets print a neutral instead of three dyes. The select panel and the catalogue say per film which is which. The two paths are different photographs, not different labels, and the strip remembers which made it: a print of that strip is made the same way. |
+| **The model is the app's own library** | `kallo_ui` links `kallotype-api` through `flutter_rust_bridge`; a strip print is one call, and a finished print is the same pipeline at the photograph's size. A roll and its contact proof are one call for the CLI and the legacy shell, from one read of the photograph. The `kalo` binary is still underneath as the fallback when the library cannot load — tests run that way — and both answer the same `Model`, because the binding was written to the shape the subprocess already had. |
+| **Two rooms, four steps** | The darkroom and the gallery. In the darkroom: select, develop, print, dry — the photograph, the strip, the finished print and the line. The gallery is the other room and has no steps: a wall is looked at. The old six places are gone from the product; the shelf's job is the select step, the bench's is develop and print, the line is dry. |
+| **The test strip is the proof, made one print at a time** | A proof is the film laid on paper and exposed once. The strip is that idea with the person's hand in it: one print per development, all on the first print's exposure, laid side by side. A longer development makes a denser negative, so on one exposure it prints lighter; the strip says that before the finished print is dialled. The prints are rendered, not drawn: each is a real 1200 px print, and the densitometer reads its chart. |
 | **A print can be looked through, then walked up to** | Hovering a print brings a loupe to the pointer: three times the wall, from the print's own file decoded wide enough to be sharp, with the sheet's paper still in the glass. The lens goes away when the pointer does. Clicking opens the print at the file's own size: the sheet keeps its size and shape — this is a loupe on paper, not a picture viewer — and the image is magnified *inside* it, clipped by its own margin, up to 1:1, one image pixel per device pixel, which is as far as the file goes. The label under it says the file's pixels and the scale; escape puts it back on the wall, and the lamp comes with you. |
 | **The gallery is a wall with one lamp** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper and the wall label multiply by one number, and the switch is that number. Turn it off and the wall goes black, the labels go with it, the print stays at a tenth — and the window around them does not move: the lamp is the gallery's, not the app's. In a light appearance the wall is a wall in daylight; the lamp still goes out. The wall hangs one paper: a sheet is the picture's shape, so a vertical print is the same sheet turned — it is given the same area, not the same width — and the line hangs it the same way. |
 | **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery hangs whatever is in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting, and on a phone it is the one place the system lets an app write. |
 | **The chrome is light, the print is paper** | The window is a tool, so its planes are one neutral ramp in both appearances. The only warm and saturated surfaces in the product are the paper a print sits on and the gallery wall behind it. |
-| **Time is a dimension** | The frames on the table are the same frame developed for longer, and the inspector draws the whole roll as an envelope with the selected frame inside it. The point is the difference between them. |
+| **Time is a ruler** | The develop step's ruler is continuous and the model accepts any positive time; 3/6/9/12/15 are the marks, not a limit. The strip's prints are the times actually tried, and the panel draws their curves together. The point is the difference between them. |
 | **Nothing is a default** | No ripple, no elevation, no Roboto, no colour roles, no 4 dp grid. |
 
 ---

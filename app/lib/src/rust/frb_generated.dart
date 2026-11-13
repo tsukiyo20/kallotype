@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1064491924;
+  int get rustContentHash => -1398444826;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -93,7 +93,22 @@ abstract class RustLibApi extends BaseApi {
 
   Future<ContactReport> crateApiContactMakeContact({required ContactJob job});
 
+  Future<FilmCurveChart> crateApiChartMakeFilmCurve({
+    required String film,
+    required double minutes,
+    required double tempC,
+  });
+
+  Future<PaperCurve> crateApiChartMakePaperCurve({required String paper});
+
   Future<PrintReport> crateApiPrintMakePrint({required PrintJob job});
+
+  Future<PrintCurve> crateApiChartMakePrintCurve({
+    required String film,
+    required String paper,
+    required double minutes,
+    required double tempC,
+  });
 
   Stream<RollProgress> crateApiRollMakeRoll({required RollJob job});
 }
@@ -198,6 +213,70 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "make_contact", argNames: ["job"]);
 
   @override
+  Future<FilmCurveChart> crateApiChartMakeFilmCurve({
+    required String film,
+    required double minutes,
+    required double tempC,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(film, serializer);
+          sse_encode_f_64(minutes, serializer);
+          sse_encode_f_64(tempC, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_film_curve_chart,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiChartMakeFilmCurveConstMeta,
+        argValues: [film, minutes, tempC],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiChartMakeFilmCurveConstMeta => const TaskConstMeta(
+    debugName: "make_film_curve",
+    argNames: ["film", "minutes", "tempC"],
+  );
+
+  @override
+  Future<PaperCurve> crateApiChartMakePaperCurve({required String paper}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(paper, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_paper_curve,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiChartMakePaperCurveConstMeta,
+        argValues: [paper],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiChartMakePaperCurveConstMeta =>
+      const TaskConstMeta(debugName: "make_paper_curve", argNames: ["paper"]);
+
+  @override
   Future<PrintReport> crateApiPrintMakePrint({required PrintJob job}) {
     return handler.executeNormal(
       NormalTask(
@@ -207,7 +286,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 6,
             port: port_,
           );
         },
@@ -226,6 +305,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "make_print", argNames: ["job"]);
 
   @override
+  Future<PrintCurve> crateApiChartMakePrintCurve({
+    required String film,
+    required String paper,
+    required double minutes,
+    required double tempC,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(film, serializer);
+          sse_encode_String(paper, serializer);
+          sse_encode_f_64(minutes, serializer);
+          sse_encode_f_64(tempC, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_print_curve,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiChartMakePrintCurveConstMeta,
+        argValues: [film, paper, minutes, tempC],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiChartMakePrintCurveConstMeta =>
+      const TaskConstMeta(
+        debugName: "make_print_curve",
+        argNames: ["film", "paper", "minutes", "tempC"],
+      );
+
+  @override
   Stream<RollProgress> crateApiRollMakeRoll({required RollJob job}) {
     final progress = RustStreamSink<RollProgress>();
     unawaited(
@@ -238,7 +356,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 5,
+              funcId: 8,
               port: port_,
             );
           },
@@ -293,6 +411,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
   PrintJob dco_decode_box_autoadd_print_job(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_print_job(raw);
@@ -308,8 +432,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ChartFrame dco_decode_chart_frame(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return ChartFrame(
       minutes: dco_decode_f_64(arr[0]),
       tempC: dco_decode_f_64(arr[1]),
@@ -317,6 +441,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       dMin: dco_decode_list_prim_f_64_strict(arr[3]),
       dMax: dco_decode_list_prim_f_64_strict(arr[4]),
       patches: dco_decode_list_list_prim_f_64_strict(arr[5]),
+      logE: dco_decode_list_prim_f_64_strict(arr[6]),
     );
   }
 
@@ -324,8 +449,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ContactJob dco_decode_contact_job(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 15)
-      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
+    if (arr.length != 17)
+      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
     return ContactJob(
       input: dco_decode_String(arr[0]),
       film: dco_decode_String(arr[1]),
@@ -336,12 +461,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       evAuto: dco_decode_bool(arr[6]),
       evStops: dco_decode_f_64(arr[7]),
       printEv: dco_decode_f_64(arr[8]),
-      grain: dco_decode_bool(arr[9]),
-      halation: dco_decode_bool(arr[10]),
-      couplers: dco_decode_bool(arr[11]),
-      dpi: dco_decode_f_64(arr[12]),
-      output: dco_decode_String(arr[13]),
-      record: dco_decode_opt_String(arr[14]),
+      filters: dco_decode_String(arr[9]),
+      heatGlass: dco_decode_opt_String(arr[10]),
+      grain: dco_decode_bool(arr[11]),
+      halation: dco_decode_bool(arr[12]),
+      couplers: dco_decode_bool(arr[13]),
+      dpi: dco_decode_f_64(arr[14]),
+      output: dco_decode_String(arr[15]),
+      record: dco_decode_opt_String(arr[16]),
     );
   }
 
@@ -362,6 +489,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  FilmCurveChart dco_decode_film_curve_chart(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return FilmCurveChart(
+      film: dco_decode_String(arr[0]),
+      minutes: dco_decode_f_64(arr[1]),
+      tempC: dco_decode_f_64(arr[2]),
+      gamma: dco_decode_list_prim_f_64_strict(arr[3]),
+      dMin: dco_decode_list_prim_f_64_strict(arr[4]),
+      dMax: dco_decode_list_prim_f_64_strict(arr[5]),
+      logE: dco_decode_list_prim_f_64_strict(arr[6]),
+      density: dco_decode_list_list_prim_f_64_strict(arr[7]),
+    );
   }
 
   @protected
@@ -409,11 +554,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
+  PaperCurve dco_decode_paper_curve(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return PaperCurve(
+      id: dco_decode_String(arr[0]),
+      short: dco_decode_String(arr[1]),
+      emulsion: dco_decode_String(arr[2]),
+      dMin: dco_decode_f_64(arr[3]),
+      dMax: dco_decode_f_64(arr[4]),
+      gamma: dco_decode_f_64(arr[5]),
+      logE0: dco_decode_f_64(arr[6]),
+      targetMidReflectance: dco_decode_f_64(arr[7]),
+      logE: dco_decode_list_prim_f_64_strict(arr[8]),
+      density: dco_decode_list_prim_f_64_strict(arr[9]),
+    );
+  }
+
+  @protected
+  PrintCurve dco_decode_print_curve(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return PrintCurve(
+      film: dco_decode_String(arr[0]),
+      paper: dco_decode_String(arr[1]),
+      minutes: dco_decode_f_64(arr[2]),
+      tempC: dco_decode_f_64(arr[3]),
+      shift: dco_decode_list_prim_f_64_strict(arr[4]),
+      logE: dco_decode_list_prim_f_64_strict(arr[5]),
+      density: dco_decode_list_list_prim_f_64_strict(arr[6]),
+    );
+  }
+
+  @protected
   PrintJob dco_decode_print_job(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 17)
-      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
     return PrintJob(
       input: dco_decode_String(arr[0]),
       film: dco_decode_String(arr[1]),
@@ -425,13 +613,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       evAuto: dco_decode_bool(arr[7]),
       evStops: dco_decode_f_64(arr[8]),
       printEv: dco_decode_f_64(arr[9]),
-      frameMm: dco_decode_f_64(arr[10]),
-      grain: dco_decode_bool(arr[11]),
-      grainSeed: dco_decode_u_64(arr[12]),
-      halation: dco_decode_bool(arr[13]),
-      couplers: dco_decode_bool(arr[14]),
-      gpu: dco_decode_bool(arr[15]),
-      output: dco_decode_String(arr[16]),
+      balanceFrom: dco_decode_opt_box_autoadd_f_64(arr[10]),
+      filters: dco_decode_String(arr[11]),
+      heatGlass: dco_decode_opt_String(arr[12]),
+      frameMm: dco_decode_f_64(arr[13]),
+      grain: dco_decode_bool(arr[14]),
+      grainSeed: dco_decode_u_64(arr[15]),
+      halation: dco_decode_bool(arr[16]),
+      couplers: dco_decode_bool(arr[17]),
+      gpu: dco_decode_bool(arr[18]),
+      output: dco_decode_String(arr[19]),
     );
   }
 
@@ -453,8 +644,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RollJob dco_decode_roll_job(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 20)
-      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
+    if (arr.length != 22)
+      throw Exception('unexpected arr length: expect 22 but see ${arr.length}');
     return RollJob(
       input: dco_decode_String(arr[0]),
       film: dco_decode_String(arr[1]),
@@ -466,16 +657,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       evAuto: dco_decode_bool(arr[7]),
       evStops: dco_decode_f_64(arr[8]),
       printEv: dco_decode_f_64(arr[9]),
-      frameMm: dco_decode_f_64(arr[10]),
-      grain: dco_decode_bool(arr[11]),
-      grainSeed: dco_decode_u_64(arr[12]),
-      halation: dco_decode_bool(arr[13]),
-      couplers: dco_decode_bool(arr[14]),
-      gpu: dco_decode_bool(arr[15]),
-      frames: dco_decode_list_String(arr[16]),
-      contact: dco_decode_opt_String(arr[17]),
-      record: dco_decode_opt_String(arr[18]),
-      dpi: dco_decode_f_64(arr[19]),
+      filters: dco_decode_String(arr[10]),
+      heatGlass: dco_decode_opt_String(arr[11]),
+      frameMm: dco_decode_f_64(arr[12]),
+      grain: dco_decode_bool(arr[13]),
+      grainSeed: dco_decode_u_64(arr[14]),
+      halation: dco_decode_bool(arr[15]),
+      couplers: dco_decode_bool(arr[16]),
+      gpu: dco_decode_bool(arr[17]),
+      frames: dco_decode_list_String(arr[18]),
+      contact: dco_decode_opt_String(arr[19]),
+      record: dco_decode_opt_String(arr[20]),
+      dpi: dco_decode_f_64(arr[21]),
     );
   }
 
@@ -551,6 +744,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
   PrintJob sse_decode_box_autoadd_print_job(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_print_job(deserializer));
@@ -571,6 +770,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     final var_dMin = sse_decode_list_prim_f_64_strict(deserializer);
     final var_dMax = sse_decode_list_prim_f_64_strict(deserializer);
     final var_patches = sse_decode_list_list_prim_f_64_strict(deserializer);
+    final var_logE = sse_decode_list_prim_f_64_strict(deserializer);
     return ChartFrame(
       minutes: var_minutes,
       tempC: var_tempC,
@@ -578,6 +778,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       dMin: var_dMin,
       dMax: var_dMax,
       patches: var_patches,
+      logE: var_logE,
     );
   }
 
@@ -593,6 +794,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     final var_evAuto = sse_decode_bool(deserializer);
     final var_evStops = sse_decode_f_64(deserializer);
     final var_printEv = sse_decode_f_64(deserializer);
+    final var_filters = sse_decode_String(deserializer);
+    final var_heatGlass = sse_decode_opt_String(deserializer);
     final var_grain = sse_decode_bool(deserializer);
     final var_halation = sse_decode_bool(deserializer);
     final var_couplers = sse_decode_bool(deserializer);
@@ -609,6 +812,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       evAuto: var_evAuto,
       evStops: var_evStops,
       printEv: var_printEv,
+      filters: var_filters,
+      heatGlass: var_heatGlass,
       grain: var_grain,
       halation: var_halation,
       couplers: var_couplers,
@@ -635,6 +840,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double sse_decode_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  FilmCurveChart sse_decode_film_curve_chart(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_film = sse_decode_String(deserializer);
+    final var_minutes = sse_decode_f_64(deserializer);
+    final var_tempC = sse_decode_f_64(deserializer);
+    final var_gamma = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_dMin = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_dMax = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_logE = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_density = sse_decode_list_list_prim_f_64_strict(deserializer);
+    return FilmCurveChart(
+      film: var_film,
+      minutes: var_minutes,
+      tempC: var_tempC,
+      gamma: var_gamma,
+      dMin: var_dMin,
+      dMax: var_dMax,
+      logE: var_logE,
+      density: var_density,
+    );
   }
 
   @protected
@@ -708,6 +936,65 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PaperCurve sse_decode_paper_curve(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_id = sse_decode_String(deserializer);
+    final var_short = sse_decode_String(deserializer);
+    final var_emulsion = sse_decode_String(deserializer);
+    final var_dMin = sse_decode_f_64(deserializer);
+    final var_dMax = sse_decode_f_64(deserializer);
+    final var_gamma = sse_decode_f_64(deserializer);
+    final var_logE0 = sse_decode_f_64(deserializer);
+    final var_targetMidReflectance = sse_decode_f_64(deserializer);
+    final var_logE = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_density = sse_decode_list_prim_f_64_strict(deserializer);
+    return PaperCurve(
+      id: var_id,
+      short: var_short,
+      emulsion: var_emulsion,
+      dMin: var_dMin,
+      dMax: var_dMax,
+      gamma: var_gamma,
+      logE0: var_logE0,
+      targetMidReflectance: var_targetMidReflectance,
+      logE: var_logE,
+      density: var_density,
+    );
+  }
+
+  @protected
+  PrintCurve sse_decode_print_curve(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_film = sse_decode_String(deserializer);
+    final var_paper = sse_decode_String(deserializer);
+    final var_minutes = sse_decode_f_64(deserializer);
+    final var_tempC = sse_decode_f_64(deserializer);
+    final var_shift = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_logE = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_density = sse_decode_list_list_prim_f_64_strict(deserializer);
+    return PrintCurve(
+      film: var_film,
+      paper: var_paper,
+      minutes: var_minutes,
+      tempC: var_tempC,
+      shift: var_shift,
+      logE: var_logE,
+      density: var_density,
+    );
+  }
+
+  @protected
   PrintJob sse_decode_print_job(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     final var_input = sse_decode_String(deserializer);
@@ -720,6 +1007,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     final var_evAuto = sse_decode_bool(deserializer);
     final var_evStops = sse_decode_f_64(deserializer);
     final var_printEv = sse_decode_f_64(deserializer);
+    final var_balanceFrom = sse_decode_opt_box_autoadd_f_64(deserializer);
+    final var_filters = sse_decode_String(deserializer);
+    final var_heatGlass = sse_decode_opt_String(deserializer);
     final var_frameMm = sse_decode_f_64(deserializer);
     final var_grain = sse_decode_bool(deserializer);
     final var_grainSeed = sse_decode_u_64(deserializer);
@@ -738,6 +1028,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       evAuto: var_evAuto,
       evStops: var_evStops,
       printEv: var_printEv,
+      balanceFrom: var_balanceFrom,
+      filters: var_filters,
+      heatGlass: var_heatGlass,
       frameMm: var_frameMm,
       grain: var_grain,
       grainSeed: var_grainSeed,
@@ -776,6 +1069,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     final var_evAuto = sse_decode_bool(deserializer);
     final var_evStops = sse_decode_f_64(deserializer);
     final var_printEv = sse_decode_f_64(deserializer);
+    final var_filters = sse_decode_String(deserializer);
+    final var_heatGlass = sse_decode_opt_String(deserializer);
     final var_frameMm = sse_decode_f_64(deserializer);
     final var_grain = sse_decode_bool(deserializer);
     final var_grainSeed = sse_decode_u_64(deserializer);
@@ -797,6 +1092,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       evAuto: var_evAuto,
       evStops: var_evStops,
       printEv: var_printEv,
+      filters: var_filters,
+      heatGlass: var_heatGlass,
       frameMm: var_frameMm,
       grain: var_grain,
       grainSeed: var_grainSeed,
@@ -896,6 +1193,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_print_job(
     PrintJob self,
     SseSerializer serializer,
@@ -919,6 +1222,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_prim_f_64_strict(self.dMin, serializer);
     sse_encode_list_prim_f_64_strict(self.dMax, serializer);
     sse_encode_list_list_prim_f_64_strict(self.patches, serializer);
+    sse_encode_list_prim_f_64_strict(self.logE, serializer);
   }
 
   @protected
@@ -933,6 +1237,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.evAuto, serializer);
     sse_encode_f_64(self.evStops, serializer);
     sse_encode_f_64(self.printEv, serializer);
+    sse_encode_String(self.filters, serializer);
+    sse_encode_opt_String(self.heatGlass, serializer);
     sse_encode_bool(self.grain, serializer);
     sse_encode_bool(self.halation, serializer);
     sse_encode_bool(self.couplers, serializer);
@@ -953,6 +1259,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_film_curve_chart(
+    FilmCurveChart self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.film, serializer);
+    sse_encode_f_64(self.minutes, serializer);
+    sse_encode_f_64(self.tempC, serializer);
+    sse_encode_list_prim_f_64_strict(self.gamma, serializer);
+    sse_encode_list_prim_f_64_strict(self.dMin, serializer);
+    sse_encode_list_prim_f_64_strict(self.dMax, serializer);
+    sse_encode_list_prim_f_64_strict(self.logE, serializer);
+    sse_encode_list_list_prim_f_64_strict(self.density, serializer);
   }
 
   @protected
@@ -1031,6 +1353,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_paper_curve(PaperCurve self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.short, serializer);
+    sse_encode_String(self.emulsion, serializer);
+    sse_encode_f_64(self.dMin, serializer);
+    sse_encode_f_64(self.dMax, serializer);
+    sse_encode_f_64(self.gamma, serializer);
+    sse_encode_f_64(self.logE0, serializer);
+    sse_encode_f_64(self.targetMidReflectance, serializer);
+    sse_encode_list_prim_f_64_strict(self.logE, serializer);
+    sse_encode_list_prim_f_64_strict(self.density, serializer);
+  }
+
+  @protected
+  void sse_encode_print_curve(PrintCurve self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.film, serializer);
+    sse_encode_String(self.paper, serializer);
+    sse_encode_f_64(self.minutes, serializer);
+    sse_encode_f_64(self.tempC, serializer);
+    sse_encode_list_prim_f_64_strict(self.shift, serializer);
+    sse_encode_list_prim_f_64_strict(self.logE, serializer);
+    sse_encode_list_list_prim_f_64_strict(self.density, serializer);
+  }
+
+  @protected
   void sse_encode_print_job(PrintJob self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.input, serializer);
@@ -1043,6 +1402,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.evAuto, serializer);
     sse_encode_f_64(self.evStops, serializer);
     sse_encode_f_64(self.printEv, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.balanceFrom, serializer);
+    sse_encode_String(self.filters, serializer);
+    sse_encode_opt_String(self.heatGlass, serializer);
     sse_encode_f_64(self.frameMm, serializer);
     sse_encode_bool(self.grain, serializer);
     sse_encode_u_64(self.grainSeed, serializer);
@@ -1074,6 +1436,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.evAuto, serializer);
     sse_encode_f_64(self.evStops, serializer);
     sse_encode_f_64(self.printEv, serializer);
+    sse_encode_String(self.filters, serializer);
+    sse_encode_opt_String(self.heatGlass, serializer);
     sse_encode_f_64(self.frameMm, serializer);
     sse_encode_bool(self.grain, serializer);
     sse_encode_u_64(self.grainSeed, serializer);

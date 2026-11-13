@@ -21,6 +21,9 @@ dependencies:
     sdk: flutter
   flutter_rust_bridge: 2.13.0
   flutter_rust_bridge_hooks: 2.13.0
+  # The window opens at a size the screen can hold. A 1280-point window on a
+  # 1080-point display is a window with its right panel off the screen.
+  screen_retriever: ^0.2.2
   window_manager: ^0.5.1
 
 dev_dependencies:

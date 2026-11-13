@@ -49,6 +49,12 @@ class RollJob {
   /// Extra print exposure in stops.
   final double printEv;
 
+  /// The enlarger's colour pack, in Kodak CC units.
+  final String filters;
+
+  /// A heat-absorbing glass in the light path, by name.
+  final String? heatGlass;
+
   /// Width of the film frame the image represents, in millimetres.
   final double frameMm;
 
@@ -90,6 +96,8 @@ class RollJob {
     required this.evAuto,
     required this.evStops,
     required this.printEv,
+    required this.filters,
+    this.heatGlass,
     required this.frameMm,
     required this.grain,
     required this.grainSeed,
@@ -114,6 +122,8 @@ class RollJob {
       evAuto.hashCode ^
       evStops.hashCode ^
       printEv.hashCode ^
+      filters.hashCode ^
+      heatGlass.hashCode ^
       frameMm.hashCode ^
       grain.hashCode ^
       grainSeed.hashCode ^
@@ -140,6 +150,8 @@ class RollJob {
           evAuto == other.evAuto &&
           evStops == other.evStops &&
           printEv == other.printEv &&
+          filters == other.filters &&
+          heatGlass == other.heatGlass &&
           frameMm == other.frameMm &&
           grain == other.grain &&
           grainSeed == other.grainSeed &&

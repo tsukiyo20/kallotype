@@ -26,6 +26,10 @@ pub struct RollJob {
     pub ev_stops: f64,
     /// Extra print exposure in stops.
     pub print_ev: f64,
+    /// The enlarger's colour pack, in Kodak CC units.
+    pub filters: String,
+    /// A heat-absorbing glass in the light path, by name.
+    pub heat_glass: Option<String>,
     /// Width of the film frame the image represents, in millimetres.
     pub frame_mm: f64,
     /// Add grain.
@@ -69,6 +73,8 @@ pub fn make_roll(job: RollJob, progress: StreamSink<RollProgress>) -> Result<(),
         film: job.film,
         paper: job.paper,
         temp: Some(job.temp_c),
+        filters: job.filters,
+        heat_glass: job.heat_glass,
         spectral: job.spectral,
         ..StockChoice::default()
     };

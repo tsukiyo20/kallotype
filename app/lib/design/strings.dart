@@ -27,15 +27,85 @@ class KalloStrings {
   // -- the places -----------------------------------------------------------
 
   String placeLabel(String name) => switch (name) {
-        'shelf' => zh ? '架子' : 'Shelf',
-        'table' => zh ? '台面' : 'Table',
-        'workbench' => zh ? '工作台' : 'Workbench',
-        'binder' => zh ? '活页夹' : 'Binder',
-        'line' => zh ? '晾片绳' : 'Line',
-        _ => zh ? '观景台' : 'Gallery',
-      };
+    'shelf' => zh ? '架子' : 'Shelf',
+    'table' => zh ? '台面' : 'Table',
+    'workbench' => zh ? '工作台' : 'Workbench',
+    'binder' => zh ? '活页夹' : 'Binder',
+    'line' => zh ? '晾片绳' : 'Line',
+    _ => zh ? '观景台' : 'Gallery',
+  };
 
   String get library => zh ? '资料库' : 'Library';
+
+  // -- the studio -----------------------------------------------------------
+
+  /// The two rooms. The darkroom is where the work is made; the gallery is
+  /// where it is looked at.
+  String get darkroom => zh ? '暗房' : 'Darkroom';
+  String get galleryRoom => zh ? '观景台' : 'Gallery';
+
+  /// The four steps of the darkroom, in the order the work goes.
+  String get selectStep => zh ? '选片' : 'Select';
+  String get developStep => zh ? '显影' : 'Develop';
+  String get printStep => zh ? '印相' : 'Print';
+  String get dryStep => zh ? '晾干' : 'Dry';
+
+  String get settings => zh ? '设置' : 'Settings';
+  String get thisStrip => zh ? '这一条' : 'THIS STRIP';
+  String get noPhotographChosen => zh ? '还没选片' : 'nothing chosen';
+  String get choosePhotoNote => zh
+      ? '选一张照片。它会留在暗房里，胶片和相纸随后决定。'
+      : 'Choose a photograph. It stays in the darkroom; the film and the paper come next.';
+  String get originalNote => zh
+      ? '照片还没有进显影液。先看它，再决定用什么胶片。'
+      : 'The photograph before the developer. Look at it, then choose a film.';
+  String get theOriginal => zh ? '原片' : 'ORIGINAL';
+  String get changePhoto => zh ? '换一张' : 'Change';
+  String get goDevelop => zh ? '去显影' : 'To the developer';
+  String get metered => zh ? '自动测光' : 'Metered';
+  String get exposure => zh ? '曝光' : 'EXPOSURE';
+
+  /// The strip, and the one exposure every print on it shares.
+  String get testStrip => zh ? '试片条' : 'TEST STRIP';
+  String get testStripNote => zh
+      ? '每按一次显影落一张，所有试片共用首张的相纸曝光。'
+      : 'One print per development, all on the first print\'s paper exposure.';
+  String get noTestPrints =>
+      zh ? '还没有试片。拉时间，按显影。' : 'No prints yet. Choose a time and develop.';
+  String get newStrip => zh ? '另起一条' : 'New strip';
+  String stripCount(int count) =>
+      zh ? '$count 张' : '$count print${count == 1 ? '' : 's'}';
+  String get firstPrint => zh ? '首张' : 'First print';
+  String get sameExposure => zh ? '同曝光' : 'One exposure';
+  String get firstPrintWaiting => zh ? '首张待定' : 'the first print decides';
+  String exposureOf(String clock) =>
+      zh ? '同曝光 · $clock' : 'one exposure · $clock';
+  String get removePrint => zh ? '移除这张' : 'Remove this print';
+  String get materialsNote =>
+      zh ? '换胶片或相纸会另起一条试片。' : 'A different film or paper starts a new strip.';
+
+  /// The instrument panel's curves.
+  String get filmCurve => zh ? '胶片' : 'FILM';
+  String get paperCurve => zh ? '相纸' : 'PAPER';
+  String get printCurve => zh ? '印相' : 'PRINT';
+  String get printExposure => zh ? '印相曝光' : 'PRINT EXPOSURE';
+  String get filters => zh ? '滤色片' : 'FILTERS';
+  String get heatGlass => zh ? '隔热玻璃' : 'HEAT GLASS';
+  String get noGlass => zh ? '无' : 'none';
+  String get developing => zh ? '显影中…' : 'Developing…';
+  String get redevelop => zh ? '重冲' : 'Re-develop';
+  String get printAction => zh ? '印相' : 'Print';
+  String get printNote => zh
+      ? '成品按这张底片单独平衡，不是试片上的那一张。'
+      : 'The finished print is balanced for this negative, not for the strip.';
+  String get chooseFirstPrint => zh
+      ? '先冲一张试片，再印成品。'
+      : 'Develop a test print first; the finished print follows.';
+  String get printQueued => zh ? '已印 · 去晾干看看' : 'printed · look at the line';
+  String get darkroomNote =>
+      zh ? '一条试片，一种胶片，一张照片。' : 'One strip, one film, one photograph.';
+  String get noPaperForFilm =>
+      zh ? '这支胶片没有相纸可选。' : 'This film has no paper to choose.';
 
   /// What a roll is called on the pages that name it.
   ///
@@ -46,12 +116,14 @@ class KalloStrings {
   String rollName(Roll roll) =>
       roll.name ?? (zh ? '模型的样片' : "The model's strip");
 
-  String frames(int count) => zh ? '$count 格' : '$count frame${count == 1 ? '' : 's'}';
+  String frames(int count) =>
+      zh ? '$count 格' : '$count frame${count == 1 ? '' : 's'}';
 
   // -- the toolbar and the status bar ---------------------------------------
 
-  String statusBar(int frame, String clock, String temp) =>
-      zh ? '第 $frame 格   ·   $clock   ·   $temp' : 'Frame $frame   ·   $clock   ·   $temp';
+  String statusBar(int frame, String clock, String temp) => zh
+      ? '第 $frame 格   ·   $clock   ·   $temp'
+      : 'Frame $frame   ·   $clock   ·   $temp';
 
   // -- the inspector --------------------------------------------------------
 
@@ -117,21 +189,21 @@ class KalloStrings {
 
   /// A group of boxes on the shelf, and the chemistry they share.
   String processName(FilmProcess process) => switch (process) {
-        FilmProcess.negative => zh ? '彩色负片' : 'COLOUR NEGATIVE',
-        FilmProcess.reversal => zh ? '彩色反转片' : 'COLOUR REVERSAL',
-        FilmProcess.monochrome => zh ? '黑白' : 'MONOCHROME',
-      };
+    FilmProcess.negative => zh ? '彩色负片' : 'COLOUR NEGATIVE',
+    FilmProcess.reversal => zh ? '彩色反转片' : 'COLOUR REVERSAL',
+    FilmProcess.monochrome => zh ? '黑白' : 'MONOCHROME',
+  };
 
   /// What the chemistry means for the stages a roll goes through. The model's
   /// own sentence, in the app's words.
   String processNote(FilmProcess process) => switch (process) {
-        FilmProcess.negative =>
-          zh ? '负片 —— 显影、印相、扫描' : 'negative — developed, printed, scanned',
-        FilmProcess.reversal =>
-          zh ? '反转片 —— 胶片自己就是照片，没有印相' : 'reversal — the film is the picture',
-        FilmProcess.monochrome =>
-          zh ? '黑白 —— 一个记录，没有染料' : 'monochrome — one record, no dyes',
-      };
+    FilmProcess.negative =>
+      zh ? '负片 —— 显影、印相、扫描' : 'negative — developed, printed, scanned',
+    FilmProcess.reversal =>
+      zh ? '反转片 —— 胶片自己就是照片，没有印相' : 'reversal — the film is the picture',
+    FilmProcess.monochrome =>
+      zh ? '黑白 —— 一个记录，没有染料' : 'monochrome — one record, no dyes',
+  };
 
   // -- the workbench --------------------------------------------------------
 
@@ -160,15 +232,18 @@ class KalloStrings {
 
   // -- the line -------------------------------------------------------------
 
-  String printCount(int count) => zh ? '$count 张' : '$count print${count == 1 ? '' : 's'}';
+  String printCount(int count) =>
+      zh ? '$count 张' : '$count print${count == 1 ? '' : 's'}';
   String get lineEmpty => zh ? '晾片绳是空的' : 'Nothing on the line';
-  String get lineEmptyNote =>
-      zh ? '在工作台上按印，印相会挂到这里，等干了再看。' : 'Print a frame on the workbench and it hangs here until you look at it.';
+  String get lineEmptyNote => zh
+      ? '在印相里按印，成品会挂到这里，等干了再看。'
+      : 'Print in the darkroom and it hangs here until you look at it.';
 
   // -- the binder -----------------------------------------------------------
 
-  String get binderNote =>
-      zh ? '这一卷的来历，和模型量到的数。' : 'Where this roll came from, and the numbers the model measured.';
+  String get binderNote => zh
+      ? '这一卷的来历，和模型量到的数。'
+      : 'Where this roll came from, and the numbers the model measured.';
 
   String get theFilm => zh ? '胶片' : 'THE FILM';
   String get thePaper => zh ? '相纸' : 'THE PAPER';
@@ -184,25 +259,25 @@ class KalloStrings {
   /// vocabulary has; an empty claim is a sentence the four cannot carry, and it
   /// is shown as it stands.
   String claim(String claim) => switch (claim) {
-        'measured' => zh ? '量到' : 'measured',
-        'borrowed' => zh ? '借来' : 'borrowed',
-        'placeholder' => zh ? '占位' : 'placeholder',
-        'none' => zh ? '没有' : 'none',
-        _ => '',
-      };
+    'measured' => zh ? '量到' : 'measured',
+    'borrowed' => zh ? '借来' : 'borrowed',
+    'placeholder' => zh ? '占位' : 'placeholder',
+    'none' => zh ? '没有' : 'none',
+    _ => '',
+  };
 
   /// A field of a stock's record. Technical, so it translates only where the
   /// Chinese has a word of its own for it.
   String field(String field) => switch (field) {
-        'curves' => zh ? '曲线' : 'curves',
-        'layers' => zh ? '感光层' : 'layers',
-        'dyes' => zh ? '染料' : 'dyes',
-        'mask' => zh ? '遮罩' : 'mask',
-        'grain' => zh ? '颗粒' : 'grain',
-        'cl_layer' => zh ? '抑制层' : 'CL layer',
-        'white' => zh ? '白' : 'white',
-        _ => field,
-      };
+    'curves' => zh ? '曲线' : 'curves',
+    'layers' => zh ? '感光层' : 'layers',
+    'dyes' => zh ? '染料' : 'dyes',
+    'mask' => zh ? '遮罩' : 'mask',
+    'grain' => zh ? '颗粒' : 'grain',
+    'cl_layer' => zh ? '抑制层' : 'CL layer',
+    'white' => zh ? '白' : 'white',
+    _ => field,
+  };
 
   String get theRoll => zh ? '这一卷' : 'THE ROLL';
   String get theLadder => zh ? '显影梯度' : 'THE LADDER';
@@ -304,8 +379,8 @@ class _KalloStringsDelegate extends LocalizationsDelegate<KalloStrings> {
 
   @override
   Future<KalloStrings> load(Locale locale) => SynchronousFuture<KalloStrings>(
-        KalloStrings(locale.languageCode == 'zh'),
-      );
+    KalloStrings(locale.languageCode == 'zh'),
+  );
 
   @override
   bool shouldReload(_KalloStringsDelegate old) => false;

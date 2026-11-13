@@ -26,6 +26,15 @@ pub struct PrintJob {
     pub ev_stops: f64,
     /// Extra print exposure in stops.
     pub print_ev: f64,
+    /// Print on the balance solved for this development instead of this one.
+    ///
+    /// This is a test strip's one exposure: every print keeps the enlarger
+    /// where the first print set it.
+    pub balance_from: Option<f64>,
+    /// The enlarger's colour pack, in Kodak CC units: `30M`, `20Y+10M`.
+    pub filters: String,
+    /// A heat-absorbing glass in the light path, by name: `kg1` … `kg5`.
+    pub heat_glass: Option<String>,
     /// Width of the film frame the image represents, in millimetres.
     pub frame_mm: f64,
     /// Add grain.
@@ -65,6 +74,8 @@ pub fn make_print(job: PrintJob) -> Result<PrintReport, String> {
         paper: job.paper,
         temp: Some(job.temp_c),
         dev_time: Some(job.minutes),
+        filters: job.filters,
+        heat_glass: job.heat_glass,
         spectral: job.spectral,
         ..StockChoice::default()
     };
@@ -84,6 +95,7 @@ pub fn make_print(job: PrintJob) -> Result<PrintReport, String> {
             Exposure::Stops(job.ev_stops)
         },
         print_ev: job.print_ev,
+        balance_from: job.balance_from,
         frame_mm: job.frame_mm,
         grain: job.grain,
         grain_seed: job.grain_seed,

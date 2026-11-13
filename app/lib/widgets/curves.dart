@@ -19,32 +19,46 @@ class KalloCurves extends StatelessWidget {
     required this.series,
     this.selected,
     this.height = 108,
+    this.xs,
   });
 
   final List<List<double>> series;
   final int? selected;
   final double height;
 
+  /// The x value of each point, when the curve is a function rather than a
+  /// strip of patches. The film chart's x is log exposure, and so is the
+  /// paper's; a curve drawn against its index would be a curve of the sampling.
+  final List<double>? xs;
+
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: height,
-        width: double.infinity,
-        child: CustomPaint(
-          painter: _CurvePainter(
-            series,
-            selected,
-            KalloScope.colorsOf(context).hairline,
-            KalloScope.colorsOf(context).accent,
-          ),
-        ),
-      );
+    height: height,
+    width: double.infinity,
+    child: CustomPaint(
+      painter: _CurvePainter(
+        series,
+        selected,
+        xs,
+        KalloScope.colorsOf(context).hairline,
+        KalloScope.colorsOf(context).accent,
+      ),
+    ),
+  );
 }
 
 class _CurvePainter extends CustomPainter {
-  const _CurvePainter(this.series, this.selected, this.hairline, this.accent);
+  const _CurvePainter(
+    this.series,
+    this.selected,
+    this.xs,
+    this.hairline,
+    this.accent,
+  );
 
   final List<List<double>> series;
   final int? selected;
+  final List<double>? xs;
   final Color hairline;
   final Color accent;
 
@@ -61,7 +75,13 @@ class _CurvePainter extends CustomPainter {
     }
     final double span = math.max(top - floor, 1e-6);
     final int patches = series.first.length;
-    double x(int i) => patches == 1 ? 0 : i / (patches - 1) * size.width;
+    final List<double>? xs = this.xs;
+    final double xMin = xs == null ? 0 : xs.reduce(math.min);
+    final double xMax = xs == null ? 0 : xs.reduce(math.max);
+    final double xSpan = math.max(xMax - xMin, 1e-9);
+    double x(int i) => xs == null
+        ? (patches == 1 ? 0 : i / (patches - 1) * size.width)
+        : (xs[i] - xMin) / xSpan * size.width;
     double y(double v) =>
         size.height - (v - floor) / span * (size.height - 10) - 4;
 
@@ -118,7 +138,11 @@ class _CurvePainter extends CustomPainter {
     );
   }
 
-  Path _path(List<double> values, double Function(int) x, double Function(double) y) {
+  Path _path(
+    List<double> values,
+    double Function(int) x,
+    double Function(double) y,
+  ) {
     final Path path = Path();
     for (int i = 0; i < values.length; i++) {
       if (i == 0) {
@@ -132,5 +156,5 @@ class _CurvePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CurvePainter old) =>
-      old.selected != selected || old.series != series;
+      old.selected != selected || old.series != series || old.xs != xs;
 }

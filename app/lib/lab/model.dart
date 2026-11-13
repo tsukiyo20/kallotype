@@ -34,6 +34,19 @@ abstract class Model {
     required int width,
     required File output,
     bool spectral = false,
+
+    /// Print on the balance solved for this development instead of `minutes`.
+    /// This is a test strip's one exposure.
+    double? balanceFrom,
+
+    /// Extra print exposure in stops, on top of the solved balance.
+    double printEv = 0,
+
+    /// The enlarger's colour pack, in Kodak CC units: `30M`, `20Y+10M`.
+    String filters = '',
+
+    /// A heat-absorbing glass in the light path, by name: `kg3`.
+    String? heatGlass,
   });
 
   /// Print the contact proof: the ladder on one sheet, exposed once.
@@ -79,6 +92,31 @@ abstract class Model {
   Future<List<FilmChart>?> chart({
     required String stock,
     required List<double> times,
+    required double tempC,
+  });
+
+  /// The film's developed characteristic curve, sampled by the model.
+  ///
+  /// Null when the model cannot be asked, as [paperCurve] is.
+  Future<FilmCurve?> filmCurve({
+    required String film,
+    required double minutes,
+    required double tempC,
+  });
+
+  /// The paper's characteristic curve, sampled by the model.
+  ///
+  /// Null when the model cannot be asked: the subprocess prints pixels and
+  /// does not hand over the curve behind them.
+  Future<PaperCurve?> paperCurve({required String paper});
+
+  /// The print's tone: the paper under one enlarger balance.
+  ///
+  /// Null when the model cannot be asked, as [paperCurve] is.
+  Future<PrintCurve?> printCurve({
+    required String film,
+    required String paper,
+    required double minutes,
     required double tempC,
   });
 
@@ -140,6 +178,10 @@ class ProcessModel implements Model {
     required int width,
     required File output,
     bool spectral = false,
+    double? balanceFrom,
+    double printEv = 0,
+    String filters = '',
+    String? heatGlass,
   }) async {
     if (!available) {
       throw const ModelMissing();
@@ -157,6 +199,13 @@ class ProcessModel implements Model {
       minutes.toStringAsFixed(2),
       '--temp',
       tempC.toStringAsFixed(1),
+      if (balanceFrom != null) ...<String>[
+        '--balance-from',
+        balanceFrom.toStringAsFixed(2),
+      ],
+      if (printEv != 0) ...<String>['--print-ev', printEv.toStringAsFixed(2)],
+      if (filters.isNotEmpty) ...<String>['--filters', filters],
+      if (heatGlass != null) ...<String>['--heat-glass', heatGlass],
       '--ev',
       'auto',
       '--grain',
@@ -290,8 +339,26 @@ class ProcessModel implements Model {
     required String stock,
     required List<double> times,
     required double tempC,
-  }) async =>
-      null;
+  }) async => null;
+
+  /// A curve is not a picture, and this path writes pictures.
+  @override
+  Future<PaperCurve?> paperCurve({required String paper}) async => null;
+
+  @override
+  Future<FilmCurve?> filmCurve({
+    required String film,
+    required double minutes,
+    required double tempC,
+  }) async => null;
+
+  @override
+  Future<PrintCurve?> printCurve({
+    required String film,
+    required String paper,
+    required double minutes,
+    required double tempC,
+  }) async => null;
 
   @override
   Future<String> catalogue() async {

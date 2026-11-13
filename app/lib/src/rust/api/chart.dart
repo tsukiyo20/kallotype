@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// Measure a stock's strip at a ladder of development times.
 Future<List<ChartFrame>> makeChart({
@@ -17,6 +17,34 @@ Future<List<ChartFrame>> makeChart({
 }) => RustLib.instance.api.crateApiChartMakeChart(
   film: film,
   times: times,
+  tempC: tempC,
+);
+
+/// The film's developed curve, by id.
+Future<FilmCurveChart> makeFilmCurve({
+  required String film,
+  required double minutes,
+  required double tempC,
+}) => RustLib.instance.api.crateApiChartMakeFilmCurve(
+  film: film,
+  minutes: minutes,
+  tempC: tempC,
+);
+
+/// The paper's curve, by id.
+Future<PaperCurve> makePaperCurve({required String paper}) =>
+    RustLib.instance.api.crateApiChartMakePaperCurve(paper: paper);
+
+/// The print curve, for a film, a paper and a development.
+Future<PrintCurve> makePrintCurve({
+  required String film,
+  required String paper,
+  required double minutes,
+  required double tempC,
+}) => RustLib.instance.api.crateApiChartMakePrintCurve(
+  film: film,
+  paper: paper,
+  minutes: minutes,
   tempC: tempC,
 );
 
@@ -40,6 +68,9 @@ class ChartFrame {
   /// Status density per patch, nine patches, as the densitometer reads it.
   final List<Float64List> patches;
 
+  /// The log10 exposure each patch received.
+  final Float64List logE;
+
   const ChartFrame({
     required this.minutes,
     required this.tempC,
@@ -47,6 +78,7 @@ class ChartFrame {
     required this.dMin,
     required this.dMax,
     required this.patches,
+    required this.logE,
   });
 
   @override
@@ -56,7 +88,8 @@ class ChartFrame {
       gamma.hashCode ^
       dMin.hashCode ^
       dMax.hashCode ^
-      patches.hashCode;
+      patches.hashCode ^
+      logE.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -68,5 +101,201 @@ class ChartFrame {
           gamma == other.gamma &&
           dMin == other.dMin &&
           dMax == other.dMax &&
-          patches == other.patches;
+          patches == other.patches &&
+          logE == other.logE;
+}
+
+/// A film's developed curve, for the instrument panel.
+class FilmCurveChart {
+  /// The film.
+  final String film;
+
+  /// The development.
+  final double minutes;
+
+  /// The developer's temperature.
+  final double tempC;
+
+  /// Contrast per layer.
+  final Float64List gamma;
+
+  /// Density floor per layer.
+  final Float64List dMin;
+
+  /// Density ceiling per layer.
+  final Float64List dMax;
+
+  /// The log10 exposures the curve was sampled at.
+  final Float64List logE;
+
+  /// The developed density per layer at each sample.
+  final List<Float64List> density;
+
+  const FilmCurveChart({
+    required this.film,
+    required this.minutes,
+    required this.tempC,
+    required this.gamma,
+    required this.dMin,
+    required this.dMax,
+    required this.logE,
+    required this.density,
+  });
+
+  @override
+  int get hashCode =>
+      film.hashCode ^
+      minutes.hashCode ^
+      tempC.hashCode ^
+      gamma.hashCode ^
+      dMin.hashCode ^
+      dMax.hashCode ^
+      logE.hashCode ^
+      density.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FilmCurveChart &&
+          runtimeType == other.runtimeType &&
+          film == other.film &&
+          minutes == other.minutes &&
+          tempC == other.tempC &&
+          gamma == other.gamma &&
+          dMin == other.dMin &&
+          dMax == other.dMax &&
+          logE == other.logE &&
+          density == other.density;
+}
+
+/// A paper's characteristic curve, for the instrument panel.
+class PaperCurve {
+  /// Stable id.
+  final String id;
+
+  /// The name on the box.
+  final String short;
+
+  /// `colour` or `silver`.
+  final String emulsion;
+
+  /// Density of the unexposed paper.
+  final double dMin;
+
+  /// Density at full exposure.
+  final double dMax;
+
+  /// The straight-line slope.
+  final double gamma;
+
+  /// log10 exposure at the middle of the straight line.
+  final double logE0;
+
+  /// Linear reflectance a balanced print reaches for an 18 % grey card.
+  final double targetMidReflectance;
+
+  /// The log10 exposures the curve was sampled at.
+  final Float64List logE;
+
+  /// The paper's density at each sample.
+  final Float64List density;
+
+  const PaperCurve({
+    required this.id,
+    required this.short,
+    required this.emulsion,
+    required this.dMin,
+    required this.dMax,
+    required this.gamma,
+    required this.logE0,
+    required this.targetMidReflectance,
+    required this.logE,
+    required this.density,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      short.hashCode ^
+      emulsion.hashCode ^
+      dMin.hashCode ^
+      dMax.hashCode ^
+      gamma.hashCode ^
+      logE0.hashCode ^
+      targetMidReflectance.hashCode ^
+      logE.hashCode ^
+      density.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PaperCurve &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          short == other.short &&
+          emulsion == other.emulsion &&
+          dMin == other.dMin &&
+          dMax == other.dMax &&
+          gamma == other.gamma &&
+          logE0 == other.logE0 &&
+          targetMidReflectance == other.targetMidReflectance &&
+          logE == other.logE &&
+          density == other.density;
+}
+
+/// The print's tone: the paper under one enlarger balance.
+class PrintCurve {
+  /// The film.
+  final String film;
+
+  /// The paper.
+  final String paper;
+
+  /// The development the print is made at.
+  final double minutes;
+
+  /// The developer's temperature.
+  final double tempC;
+
+  /// The enlarger's exposure per layer, in decades.
+  final Float64List shift;
+
+  /// The negative's log10 exposure, increasing to the right.
+  final Float64List logE;
+
+  /// The paper's density per channel at each sample.
+  final List<Float64List> density;
+
+  const PrintCurve({
+    required this.film,
+    required this.paper,
+    required this.minutes,
+    required this.tempC,
+    required this.shift,
+    required this.logE,
+    required this.density,
+  });
+
+  @override
+  int get hashCode =>
+      film.hashCode ^
+      paper.hashCode ^
+      minutes.hashCode ^
+      tempC.hashCode ^
+      shift.hashCode ^
+      logE.hashCode ^
+      density.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PrintCurve &&
+          runtimeType == other.runtimeType &&
+          film == other.film &&
+          paper == other.paper &&
+          minutes == other.minutes &&
+          tempC == other.tempC &&
+          shift == other.shift &&
+          logE == other.logE &&
+          density == other.density;
 }

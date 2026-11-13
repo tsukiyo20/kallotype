@@ -1,31 +1,36 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/widgets.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'design/chrome.dart';
 import 'design/scope.dart';
 import 'design/strings.dart';
 import 'design/tokens.dart';
-import 'film/strip_data.dart';
 import 'lab/exports.dart';
-import 'lab/settings.dart';
-import 'lab/chart_fill.dart';
 import 'lab/ffi_model.dart';
-import 'lab/fixture.dart';
+import 'lab/image_file.dart';
+import 'lab/model.dart';
 import 'lab/print.dart';
 import 'lab/print_out.dart';
-import 'lab/model.dart';
+import 'lab/print_request.dart';
 import 'lab/roll.dart';
 import 'lab/roll_store.dart';
+import 'lab/settings.dart';
 import 'lab/stock.dart';
+import 'lab/strip.dart';
+import 'lab/strip_develop.dart';
+import 'lab/strip_store.dart';
+import 'views/chambers.dart';
 import 'views/places.dart';
 import 'views/room.dart';
-
-/// Whether the app opens the forty-frame layout fixture instead of the roll the
-/// model drew. `fvm flutter run --dart-define=fixture`.
-const bool _fixture = bool.fromEnvironment('fixture');
+import 'views/steps.dart';
+import 'views/studio.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,21 +41,38 @@ Future<void> main() async {
       Platform.isMacOS || Platform.isWindows || Platform.isLinux;
   if (desktop) {
     await windowManager.ensureInitialized();
+    // A window that is wider than the screen loses its instrument panel off
+    // the right edge. 1280 by 820 is the size the design is drawn at; it is
+    // capped to the display it actually opens on.
+    Size size = const Size(1280, 820);
+    try {
+      final Display display = await screenRetriever.getPrimaryDisplay();
+      final Size visible = display.visibleSize ?? display.size;
+      size = Size(
+        math.max(960, math.min(1280, visible.width - 64)),
+        math.max(600, math.min(820, visible.height - 120)),
+      );
+    } on Object catch (error) {
+      debugPrint('no display size: $error');
+    }
     final WindowOptions options = WindowOptions(
-      size: Size(1280, 820),
+      size: size,
       minimumSize: Size(960, 600),
       center: true,
       title: 'Kallotype',
       // The Mac keeps its traffic lights and loses its bar; the other two keep
       // their frames until they have controls of their own, because a window
       // with no way to close it is a bug, not a style.
-      titleBarStyle:
-          Platform.isMacOS ? TitleBarStyle.hidden : TitleBarStyle.normal,
+      titleBarStyle: Platform.isMacOS
+          ? TitleBarStyle.hidden
+          : TitleBarStyle.normal,
     );
-    unawaited(windowManager.waitUntilReadyToShow(options, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    }));
+    unawaited(
+      windowManager.waitUntilReadyToShow(options, () async {
+        await windowManager.show();
+        await windowManager.focus();
+      }),
+    );
   }
   runApp(
     KalloApp(
@@ -69,6 +91,8 @@ class KalloApp extends StatefulWidget {
   const KalloApp({
     super.key,
     this.roll,
+    this.strip,
+    this.photograph,
     this.catalogue,
     this.prints,
     this.jobs,
@@ -79,6 +103,8 @@ class KalloApp extends StatefulWidget {
     this.spectral = false,
     this.drawerOpen = false,
     this.initialPlace = Place.table,
+    this.initialChamber = Chamber.darkroom,
+    this.initialStep = DarkroomStep.select,
     this.chrome = WindowChrome.plain,
     this.onDragWindow,
   });
@@ -89,9 +115,18 @@ class KalloApp extends StatefulWidget {
   /// Moves the window, when the chrome has no title bar of its own.
   final VoidCallback? onDragWindow;
 
-  /// A roll to open directly. The tests pass one; the app loads the committed
-  /// strip, which is the only roll there is until the model is behind an FFI.
+  /// A roll for the legacy four-plane shell, which the goldens still draw.
+  /// The product reads the strip on disk; a roll passed here is not seeded,
+  /// because its frames were balanced one by one and are not a strip.
   final Roll? roll;
+
+  /// A strip to open directly. The tests pass one; the app reads the strip on
+  /// disk, which is the one in the darkroom.
+  final TestStrip? strip;
+
+  /// The original photograph, already decoded. The tests pass it; the app
+  /// decodes the photograph the strip keeps.
+  final ui.Image? photograph;
 
   /// Every stock the model carries. The tests pin it, so that a golden is a
   /// picture of the app rather than of the model binary on this machine; the app
@@ -109,7 +144,7 @@ class KalloApp extends StatefulWidget {
   /// the folder of whoever ran it.
   final Directory? exportsFolder;
 
-  /// Where the roll lives. Pinned by the tests for the same reason.
+  /// Where the strip lives. Pinned by the tests for the same reason.
   final Directory? rollFolder;
 
   /// Pins the human language. Null follows the device, which is also what the
@@ -119,15 +154,19 @@ class KalloApp extends StatefulWidget {
   /// Pins the appearance. Null follows the system.
   final Brightness? appearance;
 
-  /// Whether a new roll is developed through the spectral path. The drawer's
+  /// Whether a new strip is exposed through the spectral path. The drawer's
   /// colour card sets it; the settings file remembers it.
   final bool spectral;
 
   /// Opens the drawer on the first frame, for the golden that shows it.
   final bool drawerOpen;
 
-  /// The place to open on. The app opens on the table; the goldens ask.
+  /// The old place argument, kept for the goldens that predate the two rooms.
+  /// The new ones ask for a chamber and a step.
   final Place initialPlace;
+
+  final Chamber initialChamber;
+  final DarkroomStep initialStep;
 
   @override
   State<KalloApp> createState() => _KalloAppState();
@@ -137,7 +176,9 @@ class _KalloAppState extends State<KalloApp> {
   Locale? _locale;
   Brightness? _pinned;
   late bool _spectral = widget.spectral;
-  Roll? _roll;
+  TestStrip? _strip;
+  ui.Image? _photograph;
+  bool _ownsPhotograph = false;
   Catalogue? _catalogue;
   List<Print> _prints = const <Print>[];
   List<PrintJob> _jobs = const <PrintJob>[];
@@ -149,7 +190,8 @@ class _KalloAppState extends State<KalloApp> {
     super.initState();
     _locale = widget.locale;
     _pinned = widget.appearance;
-    _roll = widget.roll;
+    _strip = widget.strip;
+    _photograph = widget.photograph;
     _catalogue = widget.catalogue;
     if (_catalogue == null) {
       unawaited(_openCatalogue());
@@ -161,17 +203,26 @@ class _KalloAppState extends State<KalloApp> {
     } else {
       unawaited(_openExports());
     }
-    if (_roll == null) {
-      unawaited(_openRoll());
+    // A roll passed to the constructor is the legacy shell's picture of the
+    // app. The strip is the product; the two do not share a launch.
+    if (widget.roll == null) {
+      if (_strip == null) {
+        unawaited(_openStrip());
+      } else if (_photograph == null) {
+        unawaited(_openPhotograph(_strip!));
+      }
     }
   }
 
+  @override
+  void dispose() {
+    if (_ownsPhotograph) {
+      _photograph?.dispose();
+    }
+    super.dispose();
+  }
+
   /// What the model carries: one call, and the shelf is a shelf.
-  ///
-  /// It is asked once and held. The catalogue is the model's, not the app's, so
-  /// it cannot be a constant in this file — and it is not worth re-reading,
-  /// because it changes when the model is rebuilt, which is when the app is
-  /// restarted.
   Future<void> _openCatalogue() async {
     final Catalogue catalogue = await Catalogue.load(Model.find());
     if (mounted) {
@@ -179,83 +230,306 @@ class _KalloAppState extends State<KalloApp> {
     }
   }
 
-  /// The roll you were carrying, or the model's own chart when there is none.
-  ///
-  /// A roll that has been developed is on disk, and it is the one place the app
-  /// is allowed to be full on purpose: a darkroom holds the roll you left in it.
-  Future<void> _openRoll() async {
-    final Roll? stored = await RollStore.load();
-    if (stored != null) {
-      // A roll developed before the library could measure it still has its
-      // stock and its times: the chart is those two things, so fill it in and
-      // write the record back rather than ask for the roll again.
-      final Roll charted = await fillChart(stored, Model.find());
-      if (charted != stored) {
-        await RollStore.save(charted);
-      }
-      if (mounted) {
-        setState(() => _roll = charted);
-      }
-      return;
+  /// The strip you were making, or the photograph the last roll kept.
+  Future<void> _openStrip() async {
+    TestStrip? stored;
+    try {
+      stored = await StripStore.load();
+    } on Object catch (error) {
+      Model.log('the strip could not be read: $error');
     }
-    final StripData strip = await StripData.load();
+    if (stored == null) {
+      final Roll? roll = widget.roll ?? await RollStore.load();
+      if (roll != null) {
+        stored = TestStrip(
+          photo: roll.photo,
+          stockId: roll.stockId,
+          stockLabel: roll.stockLabel,
+          paperId: roll.paperId,
+          paperLabel: roll.paperLabel,
+          spectral: roll.spectral,
+        );
+        await StripStore.save(stored);
+      }
+    }
+    stored ??= const TestStrip();
     if (!mounted) {
       return;
     }
-    setState(
-      () => _roll = _fixture ? interpolatedRoll(strip) : Roll.fromStrip(strip),
+    setState(() => _strip = stored);
+    await _openPhotograph(stored);
+  }
+
+  Future<void> _openPhotograph(TestStrip strip) async {
+    final String? path = strip.photo;
+    if (path == null) {
+      return;
+    }
+    final File file = File(path);
+    if (!file.existsSync()) {
+      return;
+    }
+    try {
+      final ui.Image image = await decode(file, width: 1600);
+      if (!mounted) {
+        image.dispose();
+        return;
+      }
+      final ui.Image? old = _ownsPhotograph ? _photograph : null;
+      setState(() {
+        _photograph = image;
+        _ownsPhotograph = true;
+      });
+      if (old != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+      }
+    } on Object catch (error) {
+      Model.log('the photograph could not be read: $error');
+    }
+  }
+
+  /// Choose a photograph: copy it into the strip's folder, decode it, and
+  /// start a strip on it. A different photograph is a different strip.
+  Future<void> _choosePhoto() async {
+    final XFile? file = await openFile(
+      acceptedTypeGroups: const <XTypeGroup>[
+        XTypeGroup(
+          label: 'photographs',
+          extensions: <String>[
+            'jpg',
+            'jpeg',
+            'png',
+            'tif',
+            'tiff',
+            'arw',
+            'cr2',
+            'cr3',
+            'nef',
+            'raf',
+            'rw2',
+            'orf',
+            'dng',
+            'pef',
+            'srw',
+            'nrw',
+            'x3f',
+            'iiq',
+            '3fr',
+          ],
+        ),
+      ],
+    );
+    if (file == null || !mounted) {
+      return;
+    }
+    try {
+      final File kept = await StripStore.keep(File(file.path));
+      final TestStrip current = _strip ?? const TestStrip();
+      if (current.photo == kept.path) {
+        return;
+      }
+      final ui.Image image = await decode(kept, width: 1600);
+      if (!mounted) {
+        image.dispose();
+        return;
+      }
+      final TestStrip next = current.withPhoto(kept.path);
+      final ui.Image? oldPhoto = _ownsPhotograph ? _photograph : null;
+      final List<TestPrint> oldPrints = current.prints;
+      setState(() {
+        _strip = next;
+        _photograph = image;
+        _ownsPhotograph = true;
+      });
+      for (final TestPrint print in oldPrints) {
+        final ui.Image? picture = print.image;
+        if (picture != null) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => picture.dispose(),
+          );
+        }
+      }
+      if (oldPhoto != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => oldPhoto.dispose());
+      }
+      await StripStore.clear();
+      await StripStore.save(next);
+    } on Object catch (error) {
+      Model.log('the photograph could not be kept: $error');
+    }
+  }
+
+  /// Replace the strip and forget the prints the old one had.
+  Future<void> _replaceStrip(TestStrip next) async {
+    final TestStrip? old = _strip;
+    setState(() => _strip = next);
+    for (final TestPrint print in old?.prints ?? const <TestPrint>[]) {
+      final ui.Image? picture = print.image;
+      if (picture != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => picture.dispose());
+      }
+    }
+    await StripStore.clear();
+    await StripStore.save(next);
+  }
+
+  Future<void> _chooseFilm(Stock film) async {
+    final Catalogue catalogue = _catalogue ?? Catalogue.carried;
+    final TestStrip strip = _strip ?? const TestStrip();
+    final List<Stock> papers = catalogue.papersFor(film.process);
+    Stock? paper;
+    for (final Stock candidate in papers) {
+      if (candidate.id == strip.paperId) {
+        paper = candidate;
+        break;
+      }
+    }
+    paper ??= papers.isEmpty ? null : papers.first;
+    await _replaceStrip(
+      TestStrip(
+        photo: strip.photo,
+        stockId: film.id,
+        stockLabel: film.label,
+        paperId: paper?.id,
+        paperLabel: paper?.label,
+        spectral: strip.spectral,
+        tempC: strip.tempC,
+      ),
     );
   }
 
-  /// Make a print: render the frame at the size a print is, then hang it.
-  ///
-  /// The job goes on the list before the render starts, because a print that
-  /// takes eight seconds is a print that is not finished, and the line is where
-  /// a darkroom says so.
-  Future<void> _print(Frame frame) async {
-    final Roll? roll = _roll;
-    final Directory? exports = _folder;
-    if (roll == null || exports == null) {
+  Future<void> _choosePaper(Stock? paper) async {
+    final TestStrip strip = _strip ?? const TestStrip();
+    await _replaceStrip(
+      TestStrip(
+        photo: strip.photo,
+        stockId: strip.stockId,
+        stockLabel: strip.stockLabel,
+        paperId: paper?.id,
+        paperLabel: paper?.label,
+        spectral: strip.spectral,
+        tempC: strip.tempC,
+      ),
+    );
+  }
+
+  /// Forget the prints and keep the photograph and the materials.
+  Future<void> _clearStrip() async {
+    final TestStrip? strip = _strip;
+    if (strip == null) {
       return;
     }
-    final PrintJob job = PrintJob(frame: frame, exports: exports);
+    await _replaceStrip(strip.withoutPrints());
+  }
+
+  /// Develop one print and add it to the strip.
+  Future<void> _develop(double minutes) async {
+    final TestStrip? strip = _strip;
+    if (strip == null || strip.photo == null) {
+      return;
+    }
+    TestPrint? replaced;
+    for (final TestPrint print in strip.prints) {
+      if (print.minutes == minutes) {
+        replaced = print;
+        break;
+      }
+    }
+    final TestStrip next = await developTestPrint(
+      model: Model.find(),
+      strip: strip,
+      minutes: minutes,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _strip = next);
+    final ui.Image? picture = replaced?.image;
+    if (picture != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => picture.dispose());
+    }
+  }
+
+  /// Take one print off the strip.
+  Future<void> _remove(double minutes) async {
+    final TestStrip? strip = _strip;
+    if (strip == null) {
+      return;
+    }
+    TestPrint? removed;
+    for (final TestPrint print in strip.prints) {
+      if (print.minutes == minutes) {
+        removed = print;
+        break;
+      }
+    }
+    if (removed == null) {
+      return;
+    }
+    final TestStrip next = strip.without(minutes);
+    setState(() => _strip = next);
+    await StripStore.save(next);
+    final File? file = removed.file;
+    if (file != null && file.existsSync()) {
+      await file.delete();
+    }
+    final ui.Image? picture = removed.image;
+    if (picture != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => picture.dispose());
+    }
+  }
+
+  /// Make a finished print and hang it.
+  Future<void> _print(PrintRequest request) async {
+    final TestStrip? strip = _strip;
+    final Directory? exports = _folder;
+    if (strip == null || exports == null || strip.photo == null) {
+      return;
+    }
+    int number = 0;
+    for (int i = 0; i < strip.prints.length; i++) {
+      if (strip.prints[i].minutes == request.minutes) {
+        number = i + 1;
+        break;
+      }
+    }
+    final PrintJob job = PrintJob(
+      frame: Frame(
+        number: number == 0 ? 1 : number,
+        minutes: request.minutes,
+        tempC: strip.tempC,
+      ),
+      exports: exports,
+    );
     setState(() => _jobs = <PrintJob>[job, ..._jobs]);
     try {
-      await printFrame(
-        roll: roll,
-        frame: frame,
+      await printTest(
+        model: Model.find(),
+        strip: strip,
+        minutes: request.minutes,
         exports: exports,
-        paperName: roll.paperName(_catalogue ?? Catalogue.carried),
-        stock: _catalogue?.film(roll.stockId),
+        paperName:
+            _catalogue?.paper(strip.paperId ?? '')?.short ??
+            strip.paperLabel ??
+            Stocks.paperShort,
+        printEv: request.printEv,
+        filters: request.filters,
+        heatGlass: request.heatGlass,
       );
       await _reloadPrints();
     } finally {
       if (mounted) {
-        setState(() => _jobs = <PrintJob>[
-              for (final PrintJob other in _jobs)
-                if (!identical(other, job)) other,
-            ]);
+        setState(
+          () => _jobs = <PrintJob>[
+            for (final PrintJob other in _jobs)
+              if (!identical(other, job)) other,
+          ],
+        );
       }
     }
-  }
-
-  void _developed(Roll roll) {
-    final Roll? previous = _roll;
-    setState(() => _roll = roll);
-    if (previous == null || identical(previous, roll)) {
-      return;
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (final Frame frame in previous.frames) {
-        frame.image?.dispose();
-      }
-    });
   }
 
   /// Read the folder the person chose, and the prints in it.
-  ///
-  /// One after the other rather than together: where the prints are is the
-  /// first question, and asking it twice at once would be two answers.
   Future<void> _openExports() async {
     _settings = await Settings.read();
     _exportPath = _settings.exportPath;
@@ -263,8 +537,8 @@ class _KalloAppState extends State<KalloApp> {
     await _reloadPrints();
   }
 
-  /// The path a roll is developed through. It is a new roll's setting, not a
-  /// switch on the roll in the table: a roll is made one way.
+  /// The path a new strip is exposed through. It is a new strip's setting, not
+  /// a switch on the strip in the darkroom: a strip is made one way.
   Future<void> _setSpectral(bool on) async {
     setState(() => _spectral = on);
     _settings = _settings.withSpectral(on);
@@ -284,9 +558,6 @@ class _KalloAppState extends State<KalloApp> {
     if (identical(previous, prints) || previous.isEmpty) {
       return;
     }
-    // The frame that shows the new prints has to be drawn before the old
-    // textures are freed: a picture that is disposed while it is on screen is
-    // a picture that draws as nothing.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       for (final Print print in previous) {
         print.dispose();
@@ -299,8 +570,6 @@ class _KalloAppState extends State<KalloApp> {
     try {
       chosen = await Exports.choose();
     } on Exception catch (error) {
-      // A panel that cannot open is a setting that cannot change. It is not
-      // worth taking the window down for.
       debugPrint('no folder panel: $error');
       return;
     }
@@ -329,19 +598,28 @@ class _KalloAppState extends State<KalloApp> {
     await _settings.write();
   }
 
-  /// The folder prints come from, resolved once: the one the person chose, or
-  /// the platform's own.
   Directory? get _folder =>
       widget.exportsFolder ?? Exports.directoryFor(_exportPath);
 
-  /// What the drawer says about it.
   ExportSetting get _exportSetting => ExportSetting(
-        label: Exports.display(_folder?.path),
-        canChoose: Exports.canChoose,
-        custom: _exportPath != null,
-        onChoose: _chooseExport,
-        onReset: _resetExport,
-      );
+    label: Exports.display(_folder?.path),
+    canChoose: Exports.canChoose,
+    custom: _exportPath != null,
+    onChoose: _chooseExport,
+    onReset: _resetExport,
+  );
+
+  /// The old single-place argument, read as the room and step it meant.
+  Chamber get _initialChamber => widget.initialPlace == Place.gallery
+      ? Chamber.gallery
+      : widget.initialChamber;
+
+  DarkroomStep get _initialStep => switch (widget.initialPlace) {
+    Place.workbench => DarkroomStep.develop,
+    Place.line => DarkroomStep.dry,
+    Place.gallery => DarkroomStep.select,
+    _ => widget.initialStep,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -355,22 +633,18 @@ class _KalloAppState extends State<KalloApp> {
         KalloStrings.delegate,
         DefaultWidgetsLocalizations.delegate,
       ],
-      // There are no page transitions in this product: you move between places
-      // by changing the light and moving the camera, never by pushing a route.
-      // The one route that exists comes and goes in no time.
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
           PageRouteBuilder<T>(
-        settings: settings,
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
-        pageBuilder: (BuildContext context, Animation<double> animation,
-                Animation<double> secondary) =>
-            builder(context),
-      ),
+            settings: settings,
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            pageBuilder: (
+              BuildContext context,
+              Animation<double> animation,
+              Animation<double> secondary,
+            ) => builder(context),
+          ),
       builder: (BuildContext context, Widget? child) {
-        // Following the system is read here and nowhere else: `MediaQuery`
-        // rebuilds when the platform changes its appearance, so pinning one in
-        // the drawer is the only other input.
         final Brightness resolved =
             _pinned ?? MediaQuery.platformBrightnessOf(context);
         final KalloColors colors = KalloColors.of(resolved);
@@ -384,29 +658,67 @@ class _KalloAppState extends State<KalloApp> {
           ),
         );
       },
-      home: _roll == null
+      home: widget.roll != null && widget.strip == null
+          ? _legacy(widget.roll!)
+          : _strip == null
           ? const ColoredBox(color: Color(0xFFF6F5F2))
-          : Room(
-              roll: _roll!,
+          : Studio(
+              strip: _strip!,
+              photograph: _photograph,
               catalogue: _catalogue ?? Catalogue.carried,
               prints: _prints,
               exports: _folder,
-              rollFolder: widget.rollFolder ?? RollStore.folder,
-              onDeveloped: _developed,
               jobs: _jobs,
+              onChoosePhoto: () => unawaited(_choosePhoto()),
+              onFilm: (Stock film) => unawaited(_chooseFilm(film)),
+              onPaper: (Stock? paper) => unawaited(_choosePaper(paper)),
+              onDevelop: _develop,
+              onRemove: _remove,
+              onClearStrip: () => unawaited(_clearStrip()),
               onPrint: _print,
-              onEnterExports:
-                  widget.prints == null ? () => unawaited(_reloadPrints()) : null,
+              onEnterExports: widget.prints == null
+                  ? () => unawaited(_reloadPrints())
+                  : null,
               export: _exportSetting,
               locale: _locale,
               onLocale: (Locale? next) => setState(() => _locale = next),
               spectral: _spectral,
               onSpectral: _setSpectral,
               initiallyOpen: widget.drawerOpen,
-              initialPlace: widget.initialPlace,
+              initialChamber: _initialChamber,
+              initialStep: _initialStep,
               chrome: widget.chrome,
               onDragWindow: widget.onDragWindow,
             ),
+    );
+  }
+
+  /// The four-plane shell, for the goldens that were drawn before the two
+  /// rooms. The product no longer opens this; the pictures are still the
+  /// instrument the old language is judged on, and they are regenerated on a
+  /// Windows machine rather than thrown away on a Mac.
+  Widget _legacy(Roll roll) {
+    return Room(
+      roll: roll,
+      catalogue: _catalogue ?? Catalogue.carried,
+      prints: _prints,
+      exports: _folder,
+      rollFolder: widget.rollFolder ?? RollStore.folder,
+      onDeveloped: (_) {},
+      jobs: _jobs,
+      onPrint: (_) async {},
+      onEnterExports: widget.prints == null
+          ? () => unawaited(_reloadPrints())
+          : null,
+      export: _exportSetting,
+      locale: _locale,
+      onLocale: (Locale? next) => setState(() => _locale = next),
+      spectral: _spectral,
+      onSpectral: _setSpectral,
+      initiallyOpen: widget.drawerOpen,
+      initialPlace: widget.initialPlace,
+      chrome: widget.chrome,
+      onDragWindow: widget.onDragWindow,
     );
   }
 }

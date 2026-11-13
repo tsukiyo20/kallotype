@@ -56,6 +56,10 @@ class FfiModel implements Model {
     required int width,
     required File output,
     bool spectral = false,
+    double? balanceFrom,
+    double printEv = 0,
+    String filters = '',
+    String? heatGlass,
   }) async {
     await print_api.makePrint(
       job: print_api.PrintJob(
@@ -68,7 +72,10 @@ class FfiModel implements Model {
         spectral: spectral,
         evAuto: true,
         evStops: 0,
-        printEv: 0,
+        printEv: printEv,
+        balanceFrom: balanceFrom,
+        filters: filters,
+        heatGlass: heatGlass,
         frameMm: 36,
         grain: true,
         grainSeed: BigInt.zero,
@@ -103,6 +110,8 @@ class FfiModel implements Model {
         evAuto: true,
         evStops: 0,
         printEv: 0,
+        filters: '',
+        heatGlass: null,
         grain: true,
         halation: true,
         couplers: true,
@@ -140,15 +149,15 @@ class FfiModel implements Model {
         evAuto: true,
         evStops: 0,
         printEv: 0,
+        filters: '',
+        heatGlass: null,
         frameMm: 36,
         grain: true,
         grainSeed: BigInt.zero,
         halation: true,
         couplers: true,
         gpu: true,
-        frames: frames
-            .map((File file) => file.path)
-            .toList(growable: false),
+        frames: frames.map((File file) => file.path).toList(growable: false),
         contact: sheet?.path,
         record: record?.path,
         dpi: dpi.toDouble(),
@@ -185,8 +194,81 @@ class FfiModel implements Model {
             for (final Float64List patch in frame.patches)
               patch.toList(growable: false),
           ],
+          logE: frame.logE.toList(growable: false),
         ),
     ];
+  }
+
+  @override
+  Future<FilmCurve?> filmCurve({
+    required String film,
+    required double minutes,
+    required double tempC,
+  }) async {
+    final chart_api.FilmCurveChart curve = await chart_api.makeFilmCurve(
+      film: film,
+      minutes: minutes,
+      tempC: tempC,
+    );
+    return FilmCurve(
+      film: curve.film,
+      minutes: curve.minutes,
+      tempC: curve.tempC,
+      gamma: curve.gamma.toList(growable: false),
+      dMin: curve.dMin.toList(growable: false),
+      dMax: curve.dMax.toList(growable: false),
+      logE: curve.logE.toList(growable: false),
+      density: <List<double>>[
+        for (final Float64List sample in curve.density)
+          sample.toList(growable: false),
+      ],
+    );
+  }
+
+  @override
+  Future<PaperCurve?> paperCurve({required String paper}) async {
+    final chart_api.PaperCurve curve = await chart_api.makePaperCurve(
+      paper: paper,
+    );
+    return PaperCurve(
+      id: curve.id,
+      short: curve.short,
+      emulsion: curve.emulsion,
+      dMin: curve.dMin,
+      dMax: curve.dMax,
+      gamma: curve.gamma,
+      logE0: curve.logE0,
+      targetMidReflectance: curve.targetMidReflectance,
+      logE: curve.logE.toList(growable: false),
+      density: curve.density.toList(growable: false),
+    );
+  }
+
+  @override
+  Future<PrintCurve?> printCurve({
+    required String film,
+    required String paper,
+    required double minutes,
+    required double tempC,
+  }) async {
+    final chart_api.PrintCurve curve = await chart_api.makePrintCurve(
+      film: film,
+      paper: paper,
+      minutes: minutes,
+      tempC: tempC,
+    );
+    return PrintCurve(
+      film: curve.film,
+      paper: curve.paper,
+      minutes: curve.minutes,
+      tempC: curve.tempC,
+      shift: curve.shift.toList(growable: false),
+      logE: curve.logE.toList(growable: false),
+      density: <List<double>>[
+        for (final Float64List sample in curve.density)
+          sample.toList(growable: false),
+      ],
+    );
   }
 
   @override
