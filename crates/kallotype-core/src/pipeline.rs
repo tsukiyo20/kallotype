@@ -47,6 +47,10 @@ pub struct RenderParams {
     /// Bake the spectral exposure into a `size^3` table. Zero disables it.
     pub lut_size: usize,
     /// Print through spectral dye absorption and paper layer sensitivities.
+    ///
+    /// A non-empty colour pack or a heat glass turns this on by itself: those
+    /// are spectra in the light path, and the scalar print has no wavelength
+    /// to put them in.
     pub spectral_print: bool,
     /// Scan through spectral reflectance, illuminant and observer.
     pub spectral_scan: bool,
@@ -170,7 +174,14 @@ impl RenderParams {
         // on a monochrome film would leave a constant — the image would vanish
         // into a flat grey — so the scalar print is what those films get, and
         // `is_spectral_print` says so.
-        let print = (self.spectral_print && !monochrome).then(|| {
+        //
+        // A colour pack or a heat glass is a thing in the light path, and the
+        // only model that can say what it does is the spectral one: filtering
+        // the scalar print would be a colour wheel with no spectrum behind it.
+        // Asking for either therefore turns the stage on, even when the caller
+        // did not ask for the spectral print by name.
+        let filtered = !self.filters.is_empty() || self.heat_glass.is_some();
+        let print = ((self.spectral_print || filtered) && !monochrome).then(|| {
             PrintContext::measured_with(
                 density_mid,
                 self.film.dyes,
@@ -961,6 +972,31 @@ mod tests {
         // print: the paper's curve stands between them, and it must not be
         // bypassed.
         assert!(darker[0] < solved[0] * 0.95);
+    }
+
+    /// A colour pack is a spectrum in the light path, so it turns on the stage
+    /// that can carry one — even when the caller did not ask for the spectral
+    /// print by name.
+    #[test]
+    fn a_colour_pack_engages_the_spectral_print() {
+        use crate::filters::{FilterPack, HeatGlass};
+
+        let plain = RenderParams::default().prepare();
+        assert!(!plain.is_spectral_print(), "no glass, no spectral print");
+
+        let filtered = RenderParams {
+            filters: FilterPack::new(0.0, 30.0, 0.0),
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(filtered.is_spectral_print());
+
+        let glass = RenderParams {
+            heat_glass: Some(HeatGlass::Kg3),
+            ..RenderParams::default()
+        }
+        .prepare();
+        assert!(glass.is_spectral_print());
     }
 
     /// A test strip is one exposure: every print keeps the first print's

@@ -77,6 +77,12 @@ pub fn make_print(job: PrintJob) -> Result<PrintReport, String> {
         filters: job.filters,
         heat_glass: job.heat_glass,
         spectral: job.spectral,
+        // The app's switch is the whole spectral path. The subprocess model
+        // spells the three stages out as three flags; the library says the same
+        // thing at once, or a preview and the print it stands for would be two
+        // different photographs.
+        spectral_print: job.spectral,
+        spectral_scan: job.spectral,
         ..StockChoice::default()
     };
     let selection = resolve(&choice).map_err(|error| error.to_string())?;
