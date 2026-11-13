@@ -29,6 +29,7 @@ pub mod color;
 pub mod contact;
 pub mod couplers;
 pub mod curve;
+pub mod densitometer;
 pub mod development;
 pub mod dye;
 pub mod emulsion;
@@ -54,6 +55,7 @@ pub use contact::print as contact_print;
 pub use contact::{Contact, ContactSpec, LADDER_MINUTES, SheetGeometry};
 pub use couplers::{Couplers, fit_inhibition};
 pub use curve::CharacteristicCurve;
+pub use densitometer::Densitometer;
 pub use development::DevelopmentParams;
 pub use emulsion::{
     FILM_STOCKS, FilmProcess, FilmStock, PAPER_STOCKS, PaperEmulsion, PaperStock, Provenance,
