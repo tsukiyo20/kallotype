@@ -47,63 +47,39 @@ There is no `MaterialApp` anywhere, and that is the point.
 
 ## What is verified
 
-`fvm flutter analyze` is clean, and twenty-one goldens pin the language of the
-four-plane shell the product has left behind — the pictures that were the
-design's instrument before the two rooms. They still pass, and they are still
-drawn on Windows for the reason below.
+`fvm flutter analyze` is clean, and the suite covers the strip, the two rooms,
+the catalogue, the contact sheet's data and the model's curves. The four studio
+goldens are the design's instrument: they pin the select, develop, print and
+gallery steps at 1280 by 820, with the bundled faces loaded from disk so the
+picture is in the product's own type rather than the runner's.
 
-The two-room studio has smoke tests and a golden scaffold, but no baselines yet:
-they belong to the Windows pass, and `test/studio_golden_test.dart` is skipped
-everywhere else. It is drawn deliberately with
+They are opt-in. A golden is local to the machine that drew it, so the test is
+skipped unless it is asked for, and it is never a way to turn a red test green:
 
 ```bash
-fvm flutter test --dart-define=studio-goldens=true --update-goldens \
-  test/studio_golden_test.dart
+fvm flutter test --dart-define=studio-goldens=true   test/studio_golden_test.dart
+
+fvm flutter test --dart-define=studio-goldens=true --update-goldens   test/studio_golden_test.dart
 ```
 
-The pictures below are the old shell; they are the review instrument for the
-language, not a picture of the window the app opens.
-
-| | | |
-|---|---|---|
-| ![the table](test/goldens/sheet.png) | ![the table in Chinese](test/goldens/sheet-zh.png) | ![the table, a proof the model printed](test/goldens/table-roll.png) |
-| **the table**, forty frames, light | **the same**, in Chinese | **the table**, the model's proof |
-| ![the shelf](test/goldens/shelf.png) | ![the workbench](test/goldens/workbench.png) | ![the workbench, proved](test/goldens/workbench-proof.png) |
-| **the shelf**, where a photograph enters | **the workbench**, one frame enlarged | **the workbench**, the frame proved |
-| ![the gallery](test/goldens/gallery.png) | ![the line](test/goldens/line.png) | ![the binder](test/goldens/binder.png) |
-| **the gallery**, lit | **the line**, what has been printed | **the binder**, where the roll came from |
-| ![the drawer](test/goldens/drawer.png) | ![the drawer, on prints](test/goldens/drawer-prints.png) | ![the drawer, on colour](test/goldens/drawer-colour.png) |
-| **the drawer**, in Chinese, dark | **the drawer**, where the folder is set | **the drawer**, where the path is chosen |
-| ![the gallery with the lamp off](test/goldens/gallery-unlit.png) | ![the shelf with a silver film taken](test/goldens/shelf-silver.png) | ![the shelf in a narrow window](test/goldens/shelf-narrow.png) |
-| **the gallery**, with the lamp off | **the shelf**, with a silver film taken | **the shelf**, in the narrowest window |
-| ![the gallery in a light appearance](test/goldens/gallery-light.png) | ![a loupe on the wall](test/goldens/gallery-lens.png) | ![a print, looked at closely](test/goldens/gallery-loupe.png) |
-| **the gallery**, in a light appearance | **the lens**, held over a print | **a print**, walked up to |
-| ![the workbench, a vertical frame](test/goldens/workbench-portrait.png) | ![the gallery, two papers of one size](test/goldens/gallery-papers.png) | |
-| **the workbench**, a vertical frame | **the gallery**, two papers, one size | |
-
-The gallery's prints are read through a loupe: a turned bezel, a reflection of
-the room, and a glass that darkens at its edge. It is on a switch, because a
-glass that comes up under every pass of the pointer is in the way of looking,
-and the pointer is hidden while it is up: the glass is where the pointer is.
-
-| |
-|---|
-| ![the table, under a loupe](test/goldens/table-lens.png) |
-| **the table**, the proof under the glass |
+| | |
+|---|---|
+| ![the select step](test/goldens/select.png) | ![the develop step](test/goldens/develop.png) |
+| **select**, the photograph before the developer | **develop**, one print at a time, on one exposure |
+| ![the print step](test/goldens/print.png) | ![the gallery](test/goldens/gallery.png) |
+| **print**, the enlarger dialled for this negative | **gallery**, the wall, newest first |
 
 The gallery's goldens hang a test card the test draws, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
 something on the wall to be about.
 
-```bash
-fvm flutter test                    # compares against the images
-fvm flutter test --update-goldens   # rewrites them, deliberately
-```
-
 The test loads the bundled faces from disk before it draws, so the picture is in
 the product's own type rather than the runner's. That is the reason the fonts are
 bundled — and both are under the SIL Open Font License, so a public repository
 may carry them: `fonts/OFL-Inter.txt`, `fonts/OFL-NotoSansSC.txt`.
+
+The four-plane shell and its twenty-one Windows goldens are gone. What is left
+is the window the product opens.
 
 ---
 
@@ -122,8 +98,8 @@ the one action is at its bottom.
 | **The print step is the enlarger dialled** | The chosen development is printed again at the photograph's size, balanced on its own negative, with the timer, the CC pack and the heat glass. It is not a copy of the strip's print: the strip is one exposure; the finished print is the one dialled for this photograph. |
 | **The dry step is what happened** | A string across the room with the work hanging from it, newest first, and a corner that says what is still being made. The gallery is the same files looked at properly, on a wall, in the dark. |
 | **The path is a choice** | Exposure, print and scan go through the spectrum — 71 wavelengths, reconstructed from the input and integrated against each layer's sensitivity — or through one number per channel. It is a setting because the model keeps it opt-in: the structure is physical end to end, and the data under it is mixed — the curves and layer sensitivities of twenty-one films are measured, the papers are, the illuminant is CIE D50, and fifteen films still borrow their dye shapes because their sheets print a neutral instead of three dyes. The select panel and the catalogue say per film which is which. The two paths are different photographs, not different labels, and the strip remembers which made it: a print of that strip is made the same way. |
-| **The model is the app's own library** | `kallo_ui` links `kallotype-api` through `flutter_rust_bridge`; a strip print is one call, and a finished print is the same pipeline at the photograph's size. A roll and its contact proof are one call for the CLI and the legacy shell, from one read of the photograph. The `kalo` binary is still underneath as the fallback when the library cannot load — tests run that way — and both answer the same `Model`, because the binding was written to the shape the subprocess already had. |
-| **Two rooms, four steps** | The darkroom and the gallery. In the darkroom: select, develop, print, dry — the photograph, the strip, the finished print and the line. The gallery is the other room and has no steps: a wall is looked at. The old six places are gone from the product; the shelf's job is the select step, the bench's is develop and print, the line is dry. |
+| **The model is the app's own library** | `kallo_ui` links `kallotype-api` through `flutter_rust_bridge`; a strip print is one call, and a finished print is the same pipeline at the photograph's size. A roll and its contact proof are one call for the CLI, from one read of the photograph. The `kalo` binary is still underneath as the fallback when the library cannot load — tests run that way — and both answer the same `Model`, because the binding was written to the shape the subprocess already had. |
+| **Two rooms, four steps** | The darkroom and the gallery. In the darkroom: select, develop, print, dry — the photograph, the strip, the finished print and the line. The gallery is the other room and has no steps: a wall is looked at. The old six places are gone; the shelf's job is the select step, the bench's is develop and print, the line is dry. |
 | **The test strip is the proof, made one print at a time** | A proof is the film laid on paper and exposed once. The strip is that idea with the person's hand in it: one print per development, all on the first print's exposure, laid side by side. A longer development makes a denser negative, so on one exposure it prints lighter; the strip says that before the finished print is dialled. The prints are rendered, not drawn: each is a real 1200 px print, and the densitometer reads its chart. |
 | **A print can be looked through, then walked up to** | Hovering a print brings a loupe to the pointer: three times the wall, from the print's own file decoded wide enough to be sharp, with the sheet's paper still in the glass. The lens goes away when the pointer does. Clicking opens the print at the file's own size: the sheet keeps its size and shape — this is a loupe on paper, not a picture viewer — and the image is magnified *inside* it, clipped by its own margin, up to 1:1, one image pixel per device pixel, which is as far as the file goes. The label under it says the file's pixels and the scale; escape puts it back on the wall, and the lamp comes with you. |
 | **The gallery is a wall with one lamp** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the paper and the wall label multiply by one number, and the switch is that number. Turn it off and the wall goes black, the labels go with it, the print stays at a tenth — and the window around them does not move: the lamp is the gallery's, not the app's. In a light appearance the wall is a wall in daylight; the lamp still goes out. The wall hangs one paper: a sheet is the picture's shape, so a vertical print is the same sheet turned — it is given the same area, not the same width — and the line hangs it the same way. |

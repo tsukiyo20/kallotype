@@ -27,8 +27,6 @@ import 'lab/strip.dart';
 import 'lab/strip_develop.dart';
 import 'lab/strip_store.dart';
 import 'views/chambers.dart';
-import 'views/places.dart';
-import 'views/room.dart';
 import 'views/steps.dart';
 import 'views/studio.dart';
 
@@ -90,19 +88,16 @@ Future<void> main() async {
 class KalloApp extends StatefulWidget {
   const KalloApp({
     super.key,
-    this.roll,
     this.strip,
     this.photograph,
     this.catalogue,
     this.prints,
     this.jobs,
     this.exportsFolder,
-    this.rollFolder,
     this.locale,
     this.appearance,
     this.spectral = false,
     this.drawerOpen = false,
-    this.initialPlace = Place.table,
     this.initialChamber = Chamber.darkroom,
     this.initialStep = DarkroomStep.select,
     this.chrome = WindowChrome.plain,
@@ -114,11 +109,6 @@ class KalloApp extends StatefulWidget {
 
   /// Moves the window, when the chrome has no title bar of its own.
   final VoidCallback? onDragWindow;
-
-  /// A roll for the legacy four-plane shell, which the goldens still draw.
-  /// The product reads the strip on disk; a roll passed here is not seeded,
-  /// because its frames were balanced one by one and are not a strip.
-  final Roll? roll;
 
   /// A strip to open directly. The tests pass one; the app reads the strip on
   /// disk, which is the one in the darkroom.
@@ -144,9 +134,6 @@ class KalloApp extends StatefulWidget {
   /// the folder of whoever ran it.
   final Directory? exportsFolder;
 
-  /// Where the strip lives. Pinned by the tests for the same reason.
-  final Directory? rollFolder;
-
   /// Pins the human language. Null follows the device, which is also what the
   /// drawer's first option does.
   final Locale? locale;
@@ -160,10 +147,6 @@ class KalloApp extends StatefulWidget {
 
   /// Opens the drawer on the first frame, for the golden that shows it.
   final bool drawerOpen;
-
-  /// The old place argument, kept for the goldens that predate the two rooms.
-  /// The new ones ask for a chamber and a step.
-  final Place initialPlace;
 
   final Chamber initialChamber;
   final DarkroomStep initialStep;
@@ -203,14 +186,10 @@ class _KalloAppState extends State<KalloApp> {
     } else {
       unawaited(_openExports());
     }
-    // A roll passed to the constructor is the legacy shell's picture of the
-    // app. The strip is the product; the two do not share a launch.
-    if (widget.roll == null) {
-      if (_strip == null) {
-        unawaited(_openStrip());
-      } else if (_photograph == null) {
-        unawaited(_openPhotograph(_strip!));
-      }
+    if (_strip == null) {
+      unawaited(_openStrip());
+    } else if (_photograph == null) {
+      unawaited(_openPhotograph(_strip!));
     }
   }
 
@@ -239,7 +218,7 @@ class _KalloAppState extends State<KalloApp> {
       Model.log('the strip could not be read: $error');
     }
     if (stored == null) {
-      final Roll? roll = widget.roll ?? await RollStore.load();
+      final Roll? roll = await RollStore.load();
       if (roll != null) {
         stored = TestStrip(
           photo: roll.photo,
@@ -609,18 +588,6 @@ class _KalloAppState extends State<KalloApp> {
     onReset: _resetExport,
   );
 
-  /// The old single-place argument, read as the room and step it meant.
-  Chamber get _initialChamber => widget.initialPlace == Place.gallery
-      ? Chamber.gallery
-      : widget.initialChamber;
-
-  DarkroomStep get _initialStep => switch (widget.initialPlace) {
-    Place.workbench => DarkroomStep.develop,
-    Place.line => DarkroomStep.dry,
-    Place.gallery => DarkroomStep.select,
-    _ => widget.initialStep,
-  };
-
   @override
   Widget build(BuildContext context) {
     return WidgetsApp(
@@ -658,9 +625,7 @@ class _KalloAppState extends State<KalloApp> {
           ),
         );
       },
-      home: widget.roll != null && widget.strip == null
-          ? _legacy(widget.roll!)
-          : _strip == null
+      home: _strip == null
           ? const ColoredBox(color: Color(0xFFF6F5F2))
           : Studio(
               strip: _strip!,
@@ -685,40 +650,11 @@ class _KalloAppState extends State<KalloApp> {
               spectral: _spectral,
               onSpectral: _setSpectral,
               initiallyOpen: widget.drawerOpen,
-              initialChamber: _initialChamber,
-              initialStep: _initialStep,
+              initialChamber: widget.initialChamber,
+              initialStep: widget.initialStep,
               chrome: widget.chrome,
               onDragWindow: widget.onDragWindow,
             ),
-    );
-  }
-
-  /// The four-plane shell, for the goldens that were drawn before the two
-  /// rooms. The product no longer opens this; the pictures are still the
-  /// instrument the old language is judged on, and they are regenerated on a
-  /// Windows machine rather than thrown away on a Mac.
-  Widget _legacy(Roll roll) {
-    return Room(
-      roll: roll,
-      catalogue: _catalogue ?? Catalogue.carried,
-      prints: _prints,
-      exports: _folder,
-      rollFolder: widget.rollFolder ?? RollStore.folder,
-      onDeveloped: (_) {},
-      jobs: _jobs,
-      onPrint: (_) async {},
-      onEnterExports: widget.prints == null
-          ? () => unawaited(_reloadPrints())
-          : null,
-      export: _exportSetting,
-      locale: _locale,
-      onLocale: (Locale? next) => setState(() => _locale = next),
-      spectral: _spectral,
-      onSpectral: _setSpectral,
-      initiallyOpen: widget.drawerOpen,
-      initialPlace: widget.initialPlace,
-      chrome: widget.chrome,
-      onDragWindow: widget.onDragWindow,
     );
   }
 }
