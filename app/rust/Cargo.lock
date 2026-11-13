@@ -873,6 +873,7 @@ dependencies = [
  "kallotype-io",
  "kallotype-raw",
  "kallotype-spectral",
+ "kallotype-view",
  "serde_json",
 ]
 
@@ -912,6 +913,15 @@ dependencies = [
 [[package]]
 name = "kallotype-spectral"
 version = "0.1.0"
+
+[[package]]
+name = "kallotype-view"
+version = "0.1.0"
+dependencies = [
+ "kallotype-core",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "khronos-egl"

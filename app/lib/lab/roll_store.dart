@@ -56,6 +56,12 @@ abstract final class RollStore {
             'number': frame.number,
             'minutes': frame.minutes,
             'temp_c': frame.tempC,
+            // The chart is the frame's measurement and cannot be re-derived
+            // from its PNG: a record without it would lose the curve on the
+            // next launch.
+            if (frame.gamma != null) 'gamma': frame.gamma,
+            if (frame.dMax != null) 'd_max': frame.dMax,
+            if (frame.patches != null) 'patches': frame.patches,
           },
       ],
     };
@@ -97,6 +103,9 @@ abstract final class RollStore {
           minutes: (frame['minutes'] as num).toDouble(),
           tempC: (frame['temp_c'] as num).toDouble(),
           image: await decode(image, width: width),
+          gamma: _numbers(frame['gamma']),
+          dMax: _numbers(frame['d_max']),
+          patches: _patches(frame['patches']),
         ),
       );
     }
@@ -119,3 +128,20 @@ abstract final class RollStore {
     );
   }
 }
+
+List<double>? _numbers(Object? value) => value == null
+    ? null
+    : <double>[
+        for (final Object? number in (value as List<Object?>))
+          (number! as num).toDouble(),
+      ];
+
+List<List<double>>? _patches(Object? value) => value == null
+    ? null
+    : <List<double>>[
+        for (final Object? patch in (value as List<Object?>))
+          <double>[
+            for (final Object? number in (patch! as List<Object?>))
+              (number! as num).toDouble(),
+          ],
+      ];

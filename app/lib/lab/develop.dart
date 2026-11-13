@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'chart.dart';
 import 'contact.dart';
 import 'image_file.dart';
 import 'model.dart';
@@ -80,6 +81,17 @@ Future<Roll> develop({
     spectral: spectral,
     onProgress: onProgress,
   );
+  // The chart is the stock and the development, not the photograph. The
+  // subprocess cannot measure it, so it is null and the frames stay
+  // chartless — the same roll the app had before the library.
+  List<FilmChart>? chart;
+  try {
+    chart = await model.chart(stock: stock.id, times: times, tempC: tempC);
+  } catch (error) {
+    // A roll without its chart is still a roll: the binder says so and shows
+    // the prints.
+    Model.log('the chart could not be read: $error');
+  }
   final List<Frame> frames = <Frame>[
     for (int i = 0; i < times.length; i++)
       Frame(
@@ -87,6 +99,9 @@ Future<Roll> develop({
         minutes: times[i],
         tempC: tempC,
         image: await decode(outputs[i], width: benchWidth),
+        gamma: chart != null && i < chart.length ? chart[i].gamma : null,
+        dMax: chart != null && i < chart.length ? chart[i].dMax : null,
+        patches: chart != null && i < chart.length ? chart[i].patches : null,
       ),
   ];
 

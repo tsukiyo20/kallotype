@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1569166545;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1064491924;
 
 // Section: executor
 
@@ -73,6 +73,41 @@ fn wire__crate__api__catalogue__catalogue_impl(
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Ok::<_, ()>(crate::api::catalogue::catalogue())?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__chart__make_chart_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "make_chart",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_film = <String>::sse_decode(&mut deserializer);
+            let api_times = <Vec<f64>>::sse_decode(&mut deserializer);
+            let api_temp_c = <f64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::chart::make_chart(api_film, api_times, api_temp_c)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -218,6 +253,26 @@ impl SseDecode for bool {
     }
 }
 
+impl SseDecode for crate::api::chart::ChartFrame {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_minutes = <f64>::sse_decode(deserializer);
+        let mut var_tempC = <f64>::sse_decode(deserializer);
+        let mut var_gamma = <Vec<f64>>::sse_decode(deserializer);
+        let mut var_dMin = <Vec<f64>>::sse_decode(deserializer);
+        let mut var_dMax = <Vec<f64>>::sse_decode(deserializer);
+        let mut var_patches = <Vec<Vec<f64>>>::sse_decode(deserializer);
+        return crate::api::chart::ChartFrame {
+            minutes: var_minutes,
+            temp_c: var_tempC,
+            gamma: var_gamma,
+            d_min: var_dMin,
+            d_max: var_dMax,
+            patches: var_patches,
+        };
+    }
+}
+
 impl SseDecode for crate::api::contact::ContactJob {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -284,6 +339,30 @@ impl SseDecode for Vec<String> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<String>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::chart::ChartFrame> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::chart::ChartFrame>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<Vec<f64>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<Vec<f64>>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -487,9 +566,10 @@ fn pde_ffi_dispatcher_primary_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         1 => wire__crate__api__catalogue__catalogue_impl(port, ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__contact__make_contact_impl(port, ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__print__make_print_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__roll__make_roll_impl(port, ptr, rust_vec_len, data_len),
+        2 => wire__crate__api__chart__make_chart_impl(port, ptr, rust_vec_len, data_len),
+        3 => wire__crate__api__contact__make_contact_impl(port, ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__print__make_print_impl(port, ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__roll__make_roll_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -508,6 +588,28 @@ fn pde_ffi_dispatcher_sync_impl(
 
 // Section: rust2dart
 
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chart::ChartFrame {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.minutes.into_into_dart().into_dart(),
+            self.temp_c.into_into_dart().into_dart(),
+            self.gamma.into_into_dart().into_dart(),
+            self.d_min.into_into_dart().into_dart(),
+            self.d_max.into_into_dart().into_dart(),
+            self.patches.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::chart::ChartFrame {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chart::ChartFrame>
+    for crate::api::chart::ChartFrame
+{
+    fn into_into_dart(self) -> crate::api::chart::ChartFrame {
+        self
+    }
+}
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::contact::ContactJob {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
@@ -707,6 +809,18 @@ impl SseEncode for bool {
     }
 }
 
+impl SseEncode for crate::api::chart::ChartFrame {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.minutes, serializer);
+        <f64>::sse_encode(self.temp_c, serializer);
+        <Vec<f64>>::sse_encode(self.gamma, serializer);
+        <Vec<f64>>::sse_encode(self.d_min, serializer);
+        <Vec<f64>>::sse_encode(self.d_max, serializer);
+        <Vec<Vec<f64>>>::sse_encode(self.patches, serializer);
+    }
+}
+
 impl SseEncode for crate::api::contact::ContactJob {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -750,6 +864,26 @@ impl SseEncode for Vec<String> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <String>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::chart::ChartFrame> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::chart::ChartFrame>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<Vec<f64>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <Vec<f64>>::sse_encode(item, serializer);
         }
     }
 }

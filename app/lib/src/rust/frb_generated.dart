@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/catalogue.dart';
+import 'api/chart.dart';
 import 'api/contact.dart';
 import 'api/print.dart';
 import 'api/roll.dart';
@@ -70,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1569166545;
+  int get rustContentHash => 1064491924;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -83,6 +84,12 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
 abstract class RustLibApi extends BaseApi {
   Future<String> crateApiCatalogueCatalogue();
+
+  Future<List<ChartFrame>> crateApiChartMakeChart({
+    required String film,
+    required List<double> times,
+    required double tempC,
+  });
 
   Future<ContactReport> crateApiContactMakeContact({required ContactJob job});
 
@@ -127,6 +134,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "catalogue", argNames: []);
 
   @override
+  Future<List<ChartFrame>> crateApiChartMakeChart({
+    required String film,
+    required List<double> times,
+    required double tempC,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(film, serializer);
+          sse_encode_list_prim_f_64_loose(times, serializer);
+          sse_encode_f_64(tempC, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_chart_frame,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiChartMakeChartConstMeta,
+        argValues: [film, times, tempC],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiChartMakeChartConstMeta => const TaskConstMeta(
+    debugName: "make_chart",
+    argNames: ["film", "times", "tempC"],
+  );
+
+  @override
   Future<ContactReport> crateApiContactMakeContact({required ContactJob job}) {
     return handler.executeNormal(
       NormalTask(
@@ -136,7 +179,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 3,
             port: port_,
           );
         },
@@ -164,7 +207,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 4,
             port: port_,
           );
         },
@@ -195,7 +238,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 4,
+              funcId: 5,
               port: port_,
             );
           },
@@ -262,6 +305,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ChartFrame dco_decode_chart_frame(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ChartFrame(
+      minutes: dco_decode_f_64(arr[0]),
+      tempC: dco_decode_f_64(arr[1]),
+      gamma: dco_decode_list_prim_f_64_strict(arr[2]),
+      dMin: dco_decode_list_prim_f_64_strict(arr[3]),
+      dMax: dco_decode_list_prim_f_64_strict(arr[4]),
+      patches: dco_decode_list_list_prim_f_64_strict(arr[5]),
+    );
+  }
+
+  @protected
   ContactJob dco_decode_contact_job(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -309,6 +368,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<ChartFrame> dco_decode_list_chart_frame(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_chart_frame).toList();
+  }
+
+  @protected
+  List<Float64List> dco_decode_list_list_prim_f_64_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_list_prim_f_64_strict)
+        .toList();
+  }
+
+  @protected
+  List<double> dco_decode_list_prim_f_64_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<double>;
   }
 
   @protected
@@ -484,6 +563,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ChartFrame sse_decode_chart_frame(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_minutes = sse_decode_f_64(deserializer);
+    final var_tempC = sse_decode_f_64(deserializer);
+    final var_gamma = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_dMin = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_dMax = sse_decode_list_prim_f_64_strict(deserializer);
+    final var_patches = sse_decode_list_list_prim_f_64_strict(deserializer);
+    return ChartFrame(
+      minutes: var_minutes,
+      tempC: var_tempC,
+      gamma: var_gamma,
+      dMin: var_dMin,
+      dMax: var_dMax,
+      patches: var_patches,
+    );
+  }
+
+  @protected
   ContactJob sse_decode_contact_job(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     final var_input = sse_decode_String(deserializer);
@@ -549,6 +647,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ans_.add(sse_decode_String(deserializer));
     }
     return ans_;
+  }
+
+  @protected
+  List<ChartFrame> sse_decode_list_chart_frame(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    final len_ = sse_decode_i_32(deserializer);
+    final ans_ = <ChartFrame>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_chart_frame(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<Float64List> sse_decode_list_list_prim_f_64_strict(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    final len_ = sse_decode_i_32(deserializer);
+    final ans_ = <Float64List>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_list_prim_f_64_strict(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<double> sse_decode_list_prim_f_64_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getFloat64List(len_);
   }
 
   @protected
@@ -780,6 +911,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_chart_frame(ChartFrame self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.minutes, serializer);
+    sse_encode_f_64(self.tempC, serializer);
+    sse_encode_list_prim_f_64_strict(self.gamma, serializer);
+    sse_encode_list_prim_f_64_strict(self.dMin, serializer);
+    sse_encode_list_prim_f_64_strict(self.dMax, serializer);
+    sse_encode_list_list_prim_f_64_strict(self.patches, serializer);
+  }
+
+  @protected
   void sse_encode_contact_job(ContactJob self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.input, serializer);
@@ -820,6 +962,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     for (final item in self) {
       sse_encode_String(item, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_list_chart_frame(
+    List<ChartFrame> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_chart_frame(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_list_prim_f_64_strict(
+    List<Float64List> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_list_prim_f_64_strict(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_f_64_loose(
+    List<double> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putFloat64List(
+      self is Float64List ? self : Float64List.fromList(self),
+    );
   }
 
   @protected

@@ -4,6 +4,7 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/catalogue.dart';
+import 'api/chart.dart';
 import 'api/contact.dart';
 import 'api/print.dart';
 import 'api/roll.dart';
@@ -48,6 +49,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RollJob dco_decode_box_autoadd_roll_job(dynamic raw);
 
   @protected
+  ChartFrame dco_decode_chart_frame(dynamic raw);
+
+  @protected
   ContactJob dco_decode_contact_job(dynamic raw);
 
   @protected
@@ -58,6 +62,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<ChartFrame> dco_decode_list_chart_frame(dynamic raw);
+
+  @protected
+  List<Float64List> dco_decode_list_list_prim_f_64_strict(dynamic raw);
+
+  @protected
+  List<double> dco_decode_list_prim_f_64_loose(dynamic raw);
 
   @protected
   Float64List dco_decode_list_prim_f_64_strict(dynamic raw);
@@ -116,6 +129,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RollJob sse_decode_box_autoadd_roll_job(SseDeserializer deserializer);
 
   @protected
+  ChartFrame sse_decode_chart_frame(SseDeserializer deserializer);
+
+  @protected
   ContactJob sse_decode_contact_job(SseDeserializer deserializer);
 
   @protected
@@ -126,6 +142,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<ChartFrame> sse_decode_list_chart_frame(SseDeserializer deserializer);
+
+  @protected
+  List<Float64List> sse_decode_list_list_prim_f_64_strict(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<double> sse_decode_list_prim_f_64_loose(SseDeserializer deserializer);
 
   @protected
   Float64List sse_decode_list_prim_f_64_strict(SseDeserializer deserializer);
@@ -197,6 +224,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_roll_job(RollJob self, SseSerializer serializer);
 
   @protected
+  void sse_encode_chart_frame(ChartFrame self, SseSerializer serializer);
+
+  @protected
   void sse_encode_contact_job(ContactJob self, SseSerializer serializer);
 
   @protected
@@ -207,6 +237,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_chart_frame(
+    List<ChartFrame> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_list_prim_f_64_strict(
+    List<Float64List> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_f_64_loose(
+    List<double> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_f_64_strict(

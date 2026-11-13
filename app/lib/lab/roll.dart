@@ -138,9 +138,10 @@ class Frame {
   /// Dye density per patch, three numbers each — the nine-step wedge the model
   /// put through the curve.
   ///
-  /// Null for a frame the app developed: `kalo render` writes pixels, and the
-  /// curves behind them are not a thing a command line prints. A chart with
-  /// four rows missing is better than a chart with four rows invented.
+  /// Null for a frame the app developed through the subprocess: `kalo render`
+  /// writes pixels, and the curves behind them are not a thing a command line
+  /// prints. A chart with four rows missing is better than a chart with four
+  /// rows invented.
   final List<List<double>>? patches;
 
   /// The print the model made of this frame, at the size the bench shows.
@@ -159,7 +160,8 @@ class Frame {
   String get clock => darkroomClock(minutes);
 
   /// Whether this frame can be charted: a roll the model drew has the wedge's
-  /// densities, and a roll the app developed has pictures instead.
+  /// densities, and so does a roll the app developed through the library. Only
+  /// the subprocess fallback leaves the chart missing.
   bool get isMeasured => patches != null;
 
   /// The print: nine patches, each a colour. Null when there is no chart.

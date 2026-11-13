@@ -2,8 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:kallo_ui/lab/develop.dart';
 import 'package:kallo_ui/lab/ffi_model.dart';
 import 'package:kallo_ui/lab/model.dart';
+import 'package:kallo_ui/lab/roll.dart';
+import 'package:kallo_ui/lab/roll_store.dart';
+import 'package:kallo_ui/lab/stock.dart';
 
 /// The linked model, exercised in the app it ships in.
 ///
@@ -119,5 +123,40 @@ void main() {
       expect(frame.existsSync(), isTrue);
     }
     expect(sheet.existsSync(), isTrue);
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
+  test('a developed roll carries its chart, and the record keeps it', () async {
+    final bool loaded = await loadLinkedModel();
+    expect(loaded, isTrue);
+    final Directory folder =
+        await Directory.systemTemp.createTemp('kallotype-chart-');
+    addTearDown(() => folder.delete(recursive: true));
+
+    final Roll roll = await develop(
+      model: Model.find(),
+      photograph: File('../../file-test/DSCF0989.JPG'),
+      stock: Stocks.vision,
+      paper: Stocks.crystal,
+      times: <double>[3, 9],
+      folder: folder,
+    );
+    for (final Frame frame in roll.frames) {
+      expect(frame.isMeasured, isTrue, reason: 'the library charts');
+      expect(frame.patches, hasLength(9));
+      expect(frame.toneCurve, hasLength(9));
+      expect(frame.gamma, hasLength(3));
+    }
+    // Longer development, more contrast.
+    expect(roll.frames.last.gamma![0], greaterThan(roll.frames.first.gamma![0]));
+
+    // The chart is not derivable from the PNG, so the record has to carry it.
+    final Roll? stored = await RollStore.load(folder: folder);
+    expect(stored, isNotNull);
+    expect(stored!.frames.first.isMeasured, isTrue);
+    expect(stored.frames.first.patches, hasLength(9));
+    expect(
+      stored.frames.first.toneCurve,
+      roll.frames.first.toneCurve,
+    );
   }, timeout: const Timeout(Duration(minutes: 5)));
 }

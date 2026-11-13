@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import 'chart.dart';
+
 /// The model, as this app sees it.
 ///
 /// There are two ways to reach the same Rust code today: a `kalo` binary run as
@@ -66,6 +68,17 @@ abstract class Model {
     int dpi = 600,
     bool spectral = false,
     void Function(int done, int total)? onProgress,
+  });
+
+  /// The densitometry behind the prints: the wedge through each development.
+  ///
+  /// Null when the model cannot be asked — the subprocess writes pixels and
+  /// no densities — so a roll developed that way has pictures and no chart,
+  /// which is what it had before there was a library.
+  Future<List<FilmChart>?> chart({
+    required String stock,
+    required List<double> times,
+    required double tempC,
   });
 
   /// Ask the model what stock it carries.
@@ -268,6 +281,16 @@ class ProcessModel implements Model {
       }
     }
   }
+
+  /// The subprocess writes pixels, not the densities behind them: a chart it
+  /// could not measure is a chart with rows invented, so it is null.
+  @override
+  Future<List<FilmChart>?> chart({
+    required String stock,
+    required List<double> times,
+    required double tempC,
+  }) async =>
+      null;
 
   @override
   Future<String> catalogue() async {

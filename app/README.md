@@ -203,11 +203,11 @@ translates.
   `assets/film_strip.json`, written by `just view` from `kallotype-view`. The
   roll is VISION3 500T developed five times, not a shape invented to look like
   one. Regenerate it; never edit it.
-- **A developed roll has no chart.** `kalo render` writes pixels and not the
-  densities behind them, so the tone curve and the gamma rows only appear for
-  the roll the model drew — the committed strip — and not for a roll the app
-  developed. The chart comes back when the bridge can return the densities
-  beside the print.
+- **A developed roll's chart is the film's, not the picture's.** The library
+  returns the stock's nine-step wedge at each development, so a roll the app
+  developed carries the same tone curve and gamma rows as the committed strip.
+  The subprocess fallback writes pixels and no densities, and a roll developed
+  that way stays chartless — which is what `flutter test` sees.
 - **A settings card with nothing to set.** The drawer is five cards: language,
   appearance, the print folder, the path, and what the app is. A card about a
   renderer the app cannot switch, or a sound it does not make, was the

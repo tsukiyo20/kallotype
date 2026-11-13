@@ -2,11 +2,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:kallo_ui/src/rust/api/catalogue.dart' as catalogue_api;
+import 'package:kallo_ui/src/rust/api/chart.dart' as chart_api;
 import 'package:kallo_ui/src/rust/api/contact.dart' as contact_api;
 import 'package:kallo_ui/src/rust/api/print.dart' as print_api;
 import 'package:kallo_ui/src/rust/api/roll.dart' as roll_api;
 import 'package:kallo_ui/src/rust/frb_generated.dart';
 
+import 'chart.dart';
 import 'model.dart';
 
 /// Load the model into this process.
@@ -158,6 +160,33 @@ class FfiModel implements Model {
         onProgress?.call(step.done, step.total);
       }
     }
+  }
+
+  @override
+  Future<List<FilmChart>?> chart({
+    required String stock,
+    required List<double> times,
+    required double tempC,
+  }) async {
+    final List<chart_api.ChartFrame> frames = await chart_api.makeChart(
+      film: stock,
+      times: times,
+      tempC: tempC,
+    );
+    return <FilmChart>[
+      for (final chart_api.ChartFrame frame in frames)
+        FilmChart(
+          minutes: frame.minutes,
+          tempC: frame.tempC,
+          gamma: frame.gamma.toList(growable: false),
+          dMin: frame.dMin.toList(growable: false),
+          dMax: frame.dMax.toList(growable: false),
+          patches: <List<double>>[
+            for (final Float64List patch in frame.patches)
+              patch.toList(growable: false),
+          ],
+        ),
+    ];
   }
 
   @override
