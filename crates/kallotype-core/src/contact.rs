@@ -57,7 +57,8 @@ pub const LADDER_MINUTES: [f64; 5] = [3.0, 6.0, 9.0, 12.0, 15.0];
 pub struct FrameRect {
     /// Which frame on the roll, counting from one.
     pub number: usize,
-    /// How long this frame was developed, in minutes. Filled in by [`print`].
+    /// How long this frame was developed, in minutes. Filled in by
+    /// [`print()`].
     pub minutes: f64,
     /// Left edge of the image area.
     pub x: usize,

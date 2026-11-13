@@ -8,9 +8,9 @@
 //! here now because the app reaches the same work through a function call, and
 //! two implementations of "develop a roll" would be one too many.
 //!
-//! The entry points are [`render`], [`contact`] and [`roll`]. The first two
-//! take a decoded image; the third reads the photograph itself, because a roll
-//! is exactly the case where reading it once matters.
+//! The entry points are [`render()`], [`contact()`] and [`roll()`]. The first
+//! two take a decoded image; the third reads the photograph itself, because a
+//! roll is exactly the case where reading it once matters.
 
 pub mod catalogue;
 pub mod chart;
