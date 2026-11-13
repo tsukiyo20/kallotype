@@ -195,7 +195,11 @@ class _StudioState extends State<Studio> {
                                   double light,
                                   Widget? child,
                                 ) => Gallery(
-                                  prints: widget.prints,
+                                  // A wall reads newest first, like the line:
+                                  // the print just made is the one worth seeing.
+                                  prints: widget.prints.reversed.toList(
+                                    growable: false,
+                                  ),
                                   light: light,
                                   onLight: _toggleLight,
                                 ),
