@@ -40,6 +40,13 @@ pub struct RenderOptions {
     pub ev: Exposure,
     /// Extra print exposure in stops.
     pub print_ev: f64,
+    /// Print on the balance solved for this development instead of this one.
+    ///
+    /// A test strip is one exposure: every print is made with the enlarger
+    /// where the first print set it, so that what changes between the prints is
+    /// the development and not the timer. The reference is a development time
+    /// of the same film and paper; the print keeps its own negative.
+    pub balance_from: Option<f64>,
     /// Width of the film frame the image represents, in millimetres.
     pub frame_mm: f64,
     /// Add the emulsion's own blur.
@@ -69,6 +76,7 @@ impl Default for RenderOptions {
         Self {
             ev: Exposure::Auto,
             print_ev: 0.0,
+            balance_from: None,
             frame_mm: 36.0,
             emulsion: true,
             halation: false,
@@ -185,6 +193,23 @@ pub fn render(
     // part of the model, not a pass over a finished density.
     let interimage = options.interimage && film.cl_layer.is_some();
     let prepared = selection.prepare_with_film(exposure_ev, options.print_ev, interimage, film)?;
+    let prepared = match options.balance_from {
+        Some(minutes) => {
+            if !(minutes.is_finite() && minutes > 0.0) {
+                return Err(Error::InvalidNumber {
+                    flag: "--balance-from",
+                    value: minutes,
+                    expected: "a positive number of minutes",
+                });
+            }
+            let mut reference = selection.clone();
+            reference.development.time_min = minutes;
+            let reference =
+                reference.prepare_with_film(exposure_ev, options.print_ev, interimage, film)?;
+            prepared.printed_like(&reference)
+        }
+        None => prepared,
+    };
     let params = selection.render_params(exposure_ev, options.print_ev, interimage, film);
 
     let pixel_um = options.frame_mm * 1000.0 / width.max(1) as f64;

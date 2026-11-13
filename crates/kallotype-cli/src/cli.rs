@@ -193,6 +193,14 @@ pub struct RenderArgs {
     )]
     pub print_ev: f64,
 
+    /// Print on the balance solved for this development, not the requested one.
+    ///
+    /// This is a test strip's one exposure: a print is made at each development
+    /// with the enlarger where the first print set it, so the comparison is the
+    /// development and not the timer.
+    #[arg(long, value_name = "MINUTES")]
+    pub balance_from: Option<f64>,
+
     /// How to interpret the values stored in the input file.
     #[arg(long, value_enum, default_value_t = EncodingArg::Srgb)]
     pub input_encoding: EncodingArg,

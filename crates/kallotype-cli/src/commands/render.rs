@@ -31,6 +31,7 @@ pub fn run(args: RenderArgs) -> Result<(), CliError> {
     let options = RenderOptions {
         ev: args.ev.into(),
         print_ev: args.print_ev,
+        balance_from: args.balance_from,
         frame_mm: args.frame_mm,
         emulsion: !args.no_emulsion,
         halation: args.halation,

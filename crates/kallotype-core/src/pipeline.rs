@@ -327,6 +327,23 @@ impl PreparedRender {
         self.print_shift
     }
 
+    /// The same negative and paper, printed on another development's balance.
+    ///
+    /// A test strip is one exposure: several developments of one negative,
+    /// every print made with the enlarger where the first print set it. The
+    /// curves stay this development's — each print is a negative of its own
+    /// time — while the paper, the enlarger's balance and the scan come from
+    /// the reference. [`crate::contact::print()`] is the same idea on one
+    /// sheet; this is the same idea for prints made one at a time.
+    #[must_use]
+    pub fn printed_like(mut self, reference: &Self) -> Self {
+        self.paper = reference.paper;
+        self.print_shift = reference.print_shift;
+        self.print = reference.print.clone();
+        self.scan = reference.scan.clone();
+        self
+    }
+
     /// The curve, the paper and the enlarger as plain numbers.
     ///
     /// Always available, because a spectral render runs the same three stages:
@@ -944,6 +961,48 @@ mod tests {
         // print: the paper's curve stands between them, and it must not be
         // bypassed.
         assert!(darker[0] < solved[0] * 0.95);
+    }
+
+    /// A test strip is one exposure: every print keeps the first print's
+    /// enlarger balance while carrying its own development.
+    #[test]
+    fn a_test_strip_keeps_the_first_prints_balance() {
+        let at = |minutes: f64| {
+            RenderParams {
+                development: DevelopmentParams {
+                    time_min: minutes,
+                    ..DevelopmentParams::default()
+                },
+                ..RenderParams::default()
+            }
+            .prepare()
+        };
+        let first = at(3.0);
+        let second = at(12.0);
+        let strip = second.clone().printed_like(&first);
+
+        assert_eq!(strip.print_shift(), first.print_shift());
+        assert_ne!(strip.print_shift(), second.print_shift());
+
+        // The negative is still the twelve-minute one: only the print is held.
+        let log_e = [-1.0, -1.0, -1.0];
+        assert_eq!(
+            strip.negative_density_with(log_e, None),
+            second.negative_density_with(log_e, None)
+        );
+        assert_ne!(
+            strip.negative_density_with(log_e, None),
+            first.negative_density_with(log_e, None)
+        );
+
+        // Printed on one exposure, the longer development is the denser
+        // negative — so it passes less light and prints lighter. That is the
+        // comparison a test strip exists to make.
+        let grey = [0.18, 0.18, 0.18];
+        assert!(
+            strip.render_pixel(grey)[0] > first.render_pixel(grey)[0],
+            "the strip's twelve-minute print should be lighter than its three"
+        );
     }
 
     /// One negative, two papers.
