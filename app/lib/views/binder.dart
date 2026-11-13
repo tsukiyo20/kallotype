@@ -41,7 +41,7 @@ class Binder extends StatelessWidget {
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloStrings s = KalloStrings.of(context);
-    final bool charted = roll.frames.every((Frame frame) => frame.isMeasured);
+    final bool charted = roll.frames.every((Frame frame) => frame.hasChart);
     final String? photo = roll.photo;
     final Stock? stock = catalogue.film(roll.stockId);
     // A reversal is its own picture: there is no print stage, so there is no

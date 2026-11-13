@@ -1,9 +1,9 @@
-/// The densitometry behind a print.
+/// The densitometer's reading of a developed strip.
 ///
 /// A print is a picture; the chart beside it is the measurement the picture
-/// came from: the same nine-step wedge through the developed curve. The model
-/// computes it from the stock and the development, not from the photograph, so
-/// a roll the app developed can carry the same chart the committed strip does.
+/// came from: the same nine-step wedge, read through the base, the fog and the
+/// mask. It depends on the stock and the development, not on the photograph, so
+/// a roll the app developed carries the same wedge the committed strip does.
 class FilmChart {
   const FilmChart({
     required this.minutes,
@@ -29,6 +29,7 @@ class FilmChart {
   /// The dye's density ceiling.
   final List<double> dMax;
 
-  /// Dye density per patch, three numbers each, before the base is counted in.
+  /// Status density per patch, three numbers each, as the instrument reads it:
+  /// the dye plus the strip's own base, fog and mask.
   final List<List<double>> patches;
 }

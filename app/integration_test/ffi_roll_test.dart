@@ -141,10 +141,16 @@ void main() {
       folder: folder,
     );
     for (final Frame frame in roll.frames) {
-      expect(frame.isMeasured, isTrue, reason: 'the library charts');
+      expect(frame.isMeasured, isTrue, reason: 'the library reads the strip');
       expect(frame.patches, hasLength(9));
       expect(frame.toneCurve, hasLength(9));
       expect(frame.gamma, hasLength(3));
+      // The reading is gross: on this negative the orange mask makes the clear
+      // strip denser in blue than in red by more than the dye does.
+      expect(
+        frame.patches!.first[2],
+        greaterThan(frame.patches!.first[0] + 0.3),
+      );
     }
     // Longer development, more contrast.
     expect(roll.frames.last.gamma![0], greaterThan(roll.frames.first.gamma![0]));

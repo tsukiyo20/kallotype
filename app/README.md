@@ -204,10 +204,12 @@ translates.
   roll is VISION3 500T developed five times, not a shape invented to look like
   one. Regenerate it; never edit it.
 - **A developed roll's chart is the film's, not the picture's.** The library
-  returns the stock's nine-step wedge at each development, so a roll the app
-  developed carries the same tone curve and gamma rows as the committed strip.
-  The subprocess fallback writes pixels and no densities, and a roll developed
-  that way stays chartless — which is what `flutter test` sees.
+  reads the stock's nine-step wedge at each development the way a densitometer
+  reads a strip: through the base, the fog and the orange mask, so the numbers
+  are a reading and not the curve redrawn. A roll the app developed carries a
+  measured chart; the committed strip is the model's drawing — charted, not
+  measured. The subprocess fallback writes pixels and no densities, and a roll
+  developed that way stays chartless — which is what `flutter test` sees.
 - **A settings card with nothing to set.** The drawer is five cards: language,
   appearance, the print folder, the path, and what the app is. A card about a
   renderer the app cannot switch, or a sound it does not make, was the

@@ -58,10 +58,12 @@ abstract final class RollStore {
             'temp_c': frame.tempC,
             // The chart is the frame's measurement and cannot be re-derived
             // from its PNG: a record without it would lose the curve on the
-            // next launch.
+            // next launch. `measured` says whether the numbers are a reading or
+            // a drawing, so that an old record can be read again.
             if (frame.gamma != null) 'gamma': frame.gamma,
             if (frame.dMax != null) 'd_max': frame.dMax,
             if (frame.patches != null) 'patches': frame.patches,
+            if (frame.measured) 'measured': true,
           },
       ],
     };
@@ -106,6 +108,7 @@ abstract final class RollStore {
           gamma: _numbers(frame['gamma']),
           dMax: _numbers(frame['d_max']),
           patches: _patches(frame['patches']),
+          measured: frame['measured'] == true,
         ),
       );
     }

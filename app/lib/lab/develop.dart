@@ -82,8 +82,10 @@ Future<Roll> develop({
     onProgress: onProgress,
   );
   // The chart is the stock and the development, not the photograph. The
-  // subprocess cannot measure it, so it is null and the frames stay
-  // chartless — the same roll the app had before the library.
+  // library reads it off the strip it developed alongside the frames — base,
+  // fog and mask included — so the frame carries a measurement. The subprocess
+  // cannot, and its frames stay chartless, the same roll the app had before
+  // the library.
   List<FilmChart>? chart;
   try {
     chart = await model.chart(stock: stock.id, times: times, tempC: tempC);
@@ -102,6 +104,7 @@ Future<Roll> develop({
         gamma: chart != null && i < chart.length ? chart[i].gamma : null,
         dMax: chart != null && i < chart.length ? chart[i].dMax : null,
         patches: chart != null && i < chart.length ? chart[i].patches : null,
+        measured: chart != null && i < chart.length,
       ),
   ];
 

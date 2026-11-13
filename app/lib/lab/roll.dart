@@ -117,6 +117,7 @@ class Frame {
     this.gamma,
     this.dMax,
     this.patches,
+    this.measured = false,
     this.image,
   });
 
@@ -135,14 +136,26 @@ class Frame {
   /// The dye's density ceiling, in the red, green and blue records.
   final List<double>? dMax;
 
-  /// Dye density per patch, three numbers each — the nine-step wedge the model
-  /// put through the curve.
+  /// Status density per patch, three numbers each — what the chart draws.
+  ///
+  /// A measured chart is a densitometer reading: the dye the development formed
+  /// plus the base, fog and mask the instrument sees. The committed strip's
+  /// numbers are the model's dye without the base, because the strip is a
+  /// drawing rather than a reading.
   ///
   /// Null for a frame the app developed through the subprocess: `kalo render`
   /// writes pixels, and the curves behind them are not a thing a command line
   /// prints. A chart with four rows missing is better than a chart with four
   /// rows invented.
   final List<List<double>>? patches;
+
+  /// Whether the chart was read off the developed strip by a densitometer.
+  ///
+  /// A roll the library developed carries a measurement. The committed strip is
+  /// a drawing of the model — charted, but not measured — and a record written
+  /// before the instrument existed comes back unmeasured until the library is
+  /// asked again.
+  final bool measured;
 
   /// The print the model made of this frame, at the size the bench shows.
   final ui.Image? image;
@@ -159,10 +172,18 @@ class Frame {
   /// `3:00`, `12:30` — the clock a darkroom timer would show.
   String get clock => darkroomClock(minutes);
 
-  /// Whether this frame can be charted: a roll the model drew has the wedge's
-  /// densities, and so does a roll the app developed through the library. Only
-  /// the subprocess fallback leaves the chart missing.
-  bool get isMeasured => patches != null;
+  /// Whether there is a chart to draw at all — measured or drawn.
+  ///
+  /// The committed strip is charted without being measured, so the interface
+  /// asks this question and not [isMeasured] when it decides to draw a curve.
+  bool get hasChart => patches != null;
+
+  /// Whether the chart is a measurement: a reading off the developed strip.
+  ///
+  /// Not the same question as [hasChart]. A chart with invented rows would be
+  /// worse than no chart, and so would a chart called measured that is the
+  /// curve sampled at nine exposures.
+  bool get isMeasured => measured && patches != null;
 
   /// The print: nine patches, each a colour. Null when there is no chart.
   ///

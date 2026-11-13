@@ -70,11 +70,12 @@ abstract class Model {
     void Function(int done, int total)? onProgress,
   });
 
-  /// The densitometry behind the prints: the wedge through each development.
+  /// The densitometer's reading of the strip: nine patches per development.
   ///
-  /// Null when the model cannot be asked — the subprocess writes pixels and
-  /// no densities — so a roll developed that way has pictures and no chart,
-  /// which is what it had before there was a library.
+  /// A non-null answer is a measurement — the dye plus the base, fog and mask
+  /// the instrument reads through — not the curves sampled at nine exposures.
+  /// Null when the model cannot be asked: the subprocess writes pixels and no
+  /// densities, so a roll developed that way has pictures and no chart.
   Future<List<FilmChart>?> chart({
     required String stock,
     required List<double> times,

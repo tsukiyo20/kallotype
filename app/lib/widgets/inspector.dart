@@ -30,11 +30,13 @@ class Inspector extends StatelessWidget {
   Frame get frame => roll.frames[selected];
   int get total => roll.frames.length;
 
-  /// Whether the roll has a chart in it. A roll developed through the library
-  /// has both the prints and the curves; the subprocess fallback writes pixels
-  /// and no densities, and a chart with invented rows would be worse than no
-  /// chart.
-  bool get charted => roll.frames.every((Frame frame) => frame.isMeasured);
+  /// Whether the roll has a chart in it.
+  ///
+  /// A drawn chart and a measured one both belong on the panel: the committed
+  /// strip is the model's drawing, and a roll the library developed carries a
+  /// densitometer reading. The subprocess fallback writes pixels and no
+  /// densities, and a chart with invented rows would be worse than no chart.
+  bool get charted => roll.frames.every((Frame frame) => frame.hasChart);
 
   @override
   Widget build(BuildContext context) {

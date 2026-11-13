@@ -58,6 +58,37 @@ void main() {
     expect(filled.frames.first.minutes, 3);
   });
 
+  test('a chart drawn before the instrument existed is read again', () async {
+    final Roll drawn = Roll(
+      stockId: 'vision3_500t',
+      stockLabel: 'VISION3 500T',
+      photo: '/photographs/uji.jpg',
+      frames: <Frame>[
+        Frame(
+          number: 1,
+          minutes: 3,
+          tempC: 20,
+          gamma: const <double>[0.5, 0.5, 0.5],
+          dMax: const <double>[3.0, 3.0, 3.0],
+          patches: <List<double>>[
+            for (int i = 0; i < 9; i++) <double>[9, 9, 9],
+          ],
+        ),
+      ],
+    );
+    // The old record has a chart; it does not have a measurement.
+    expect(drawn.frames.first.hasChart, isTrue);
+    expect(drawn.frames.first.isMeasured, isFalse);
+
+    final Roll filled = await fillChart(
+      drawn,
+      _Charting(<FilmChart>[_chart(3)]),
+    );
+    expect(filled.frames.first.isMeasured, isTrue);
+    expect(filled.frames.first.patches, isNot(same(drawn.frames.first.patches)));
+    expect(filled.frames.first.patches!.first.first, 0.0);
+  });
+
   test('a model that cannot chart leaves the roll alone', () async {
     final Roll roll = _roll();
     expect(identical(await fillChart(roll, const _Charting(null)), roll), isTrue);

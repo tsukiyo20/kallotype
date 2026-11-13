@@ -85,6 +85,10 @@ class StripFrame {
   final List<double> dMax;
 
   /// Dye density per patch, three numbers each, before the base is counted in.
+  ///
+  /// The strip is the model's drawing, not a densitometer reading; a roll the
+  /// library developed carries the base in its chart, because the instrument
+  /// sees it.
   final List<List<double>> patches;
 
   /// Read a frame from the JSON the binary writes.
