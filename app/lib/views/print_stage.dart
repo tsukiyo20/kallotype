@@ -10,7 +10,9 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/clock.dart';
 import '../lab/model.dart';
+import '../lab/preview_bench.dart';
 import '../lab/print_request.dart';
+import '../lab/stock.dart';
 import '../lab/strip.dart';
 import '../lab/strip_develop.dart';
 import '../widgets/button.dart';
@@ -59,11 +61,14 @@ class _PrintStageState extends State<PrintStage> {
 
   Timer? _timer;
   int _generation = 0;
+  PreviewBench? _previewBench;
+  String? _benchKey;
 
   @override
   void initState() {
     super.initState();
     _minutes = widget.strip.latest?.minutes ?? 9;
+    _openBench();
     if (widget.strip.hasPrints) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _previewNow());
     }
@@ -76,10 +81,17 @@ class _PrintStageState extends State<PrintStage> {
       if (!widget.strip.hasPrints) {
         _preview?.dispose();
         _preview = null;
+        _previewBench?.dispose();
+        _previewBench = null;
+        _benchKey = null;
         return;
       }
       if (!widget.strip.prints.any((TestPrint p) => p.minutes == _minutes)) {
         _minutes = widget.strip.latest!.minutes;
+      }
+      if (_benchKey != _benchKeyFor(widget.strip)) {
+        _generation++;
+        _openBench();
       }
       _schedule();
     }
@@ -90,7 +102,45 @@ class _PrintStageState extends State<PrintStage> {
     _timer?.cancel();
     _generation++;
     _preview?.dispose();
+    _previewBench?.dispose();
     super.dispose();
+  }
+
+  String _benchKeyFor(TestStrip strip) =>
+      '${strip.photo}|${strip.stockId}|${strip.paperId}|'
+      '${strip.tempC}|${strip.spectral}';
+
+  void _openBench() {
+    final String key = _benchKeyFor(widget.strip);
+    if (_benchKey == key) {
+      return;
+    }
+    _benchKey = key;
+    _previewBench?.dispose();
+    final TestStrip strip = widget.strip;
+    _previewBench = PreviewBench(open: () => _openPreview(strip));
+    _previewBench!.warm();
+  }
+
+  Future<PreviewSession?> _openPreview(TestStrip strip) async {
+    final String? photo = strip.photo;
+    final Model model = Model.find();
+    if (photo == null || !model.available) {
+      return null;
+    }
+    try {
+      return await model.openPreview(
+        photograph: File(photo),
+        stock: strip.stockId,
+        paper: strip.paperId ?? Stocks.paper,
+        tempC: strip.tempC,
+        width: 760,
+        spectral: strip.spectral,
+      );
+    } on Object catch (error) {
+      Model.log('the preview session could not be opened: $error');
+      return null;
+    }
   }
 
   String get _filters => <String>[
@@ -118,6 +168,10 @@ class _PrintStageState extends State<PrintStage> {
     }
     final Model model = Model.find();
     final int generation = ++_generation;
+    final double minutes = _minutes;
+    final double printEv = _printEv;
+    final String filters = _filters;
+    final String? glass = _glass;
     if (!model.available) {
       if (mounted) {
         setState(() => _error = KalloStrings.of(context).noModel);
@@ -125,20 +179,32 @@ class _PrintStageState extends State<PrintStage> {
       return;
     }
     try {
-      final ui.Image image = await previewFinalPrint(
-        model: model,
-        strip: widget.strip,
-        minutes: _minutes,
-        printEv: _printEv,
-        filters: _filters,
-        heatGlass: _glass,
+      ui.Image? image = await _previewBench?.frame(
+        minutes: minutes,
+        printEv: printEv,
+        filters: filters,
+        heatGlass: glass,
       );
+      if (image == null) {
+        if (!mounted || generation != _generation) {
+          return;
+        }
+        image = await previewFinalPrint(
+          model: model,
+          strip: widget.strip,
+          minutes: minutes,
+          printEv: printEv,
+          filters: filters,
+          heatGlass: glass,
+        );
+      }
+      final ui.Image rendered = image;
       if (!mounted || generation != _generation) {
-        image.dispose();
+        rendered.dispose();
         return;
       }
       final ui.Image? old = _preview;
-      setState(() => _preview = image);
+      setState(() => _preview = rendered);
       if (old != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
       }

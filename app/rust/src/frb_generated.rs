@@ -27,6 +27,7 @@
 
 // Section: imports
 
+use crate::api::preview::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
@@ -39,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1398444826;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1232128482;
 
 // Section: executor
 
@@ -47,6 +48,100 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
+fn wire__crate__api__preview__PreviewSession_frame_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "PreviewSession_frame",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_minutes = <f64>::sse_decode(&mut deserializer);
+            let api_print_ev = <f64>::sse_decode(&mut deserializer);
+            let api_balance_from = <Option<f64>>::sse_decode(&mut deserializer);
+            let api_filters = <String>::sse_decode(&mut deserializer);
+            let api_heat_glass = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::preview::PreviewSession::frame(
+                        &*api_that_guard,
+                        api_minutes,
+                        api_print_ev,
+                        api_balance_from,
+                        api_filters,
+                        api_heat_glass,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__preview__PreviewSession_open_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "PreviewSession_open",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_job = <crate::api::preview::PreviewJob>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::preview::PreviewSession::open(api_job)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__catalogue__catalogue_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -328,6 +423,12 @@ fn wire__crate__api__roll__make_roll_impl(
     )
 }
 
+// Section: related_funcs
+
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>
+);
+
 // Section: dart2rust
 
 impl SseDecode for flutter_rust_bridge::for_generated::anyhow::Error {
@@ -335,6 +436,26 @@ impl SseDecode for flutter_rust_bridge::for_generated::anyhow::Error {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <String>::sse_decode(deserializer);
         return flutter_rust_bridge::for_generated::anyhow::anyhow!("{}", inner);
+    }
+}
+
+impl SseDecode for PreviewSession {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
+impl SseDecode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
     }
 }
 
@@ -582,6 +703,50 @@ impl SseDecode for crate::api::chart::PaperCurve {
     }
 }
 
+impl SseDecode for crate::api::preview::PreviewFrame {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_width = <u32>::sse_decode(deserializer);
+        let mut var_height = <u32>::sse_decode(deserializer);
+        let mut var_rgba = <Vec<u8>>::sse_decode(deserializer);
+        return crate::api::preview::PreviewFrame {
+            width: var_width,
+            height: var_height,
+            rgba: var_rgba,
+        };
+    }
+}
+
+impl SseDecode for crate::api::preview::PreviewJob {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_input = <String>::sse_decode(deserializer);
+        let mut var_film = <String>::sse_decode(deserializer);
+        let mut var_paper = <String>::sse_decode(deserializer);
+        let mut var_tempC = <f64>::sse_decode(deserializer);
+        let mut var_width = <u32>::sse_decode(deserializer);
+        let mut var_spectral = <bool>::sse_decode(deserializer);
+        let mut var_frameMm = <f64>::sse_decode(deserializer);
+        let mut var_grain = <bool>::sse_decode(deserializer);
+        let mut var_halation = <bool>::sse_decode(deserializer);
+        let mut var_couplers = <bool>::sse_decode(deserializer);
+        let mut var_gpu = <bool>::sse_decode(deserializer);
+        return crate::api::preview::PreviewJob {
+            input: var_input,
+            film: var_film,
+            paper: var_paper,
+            temp_c: var_tempC,
+            width: var_width,
+            spectral: var_spectral,
+            frame_mm: var_frameMm,
+            grain: var_grain,
+            halation: var_halation,
+            couplers: var_couplers,
+            gpu: var_gpu,
+        };
+    }
+}
+
 impl SseDecode for crate::api::chart::PrintCurve {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -760,6 +925,13 @@ impl SseDecode for () {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
 }
 
+impl SseDecode for usize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u64::<NativeEndian>().unwrap() as _
+    }
+}
+
 impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -776,14 +948,18 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__api__catalogue__catalogue_impl(port, ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__chart__make_chart_impl(port, ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__contact__make_contact_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__chart__make_film_curve_impl(port, ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__chart__make_paper_curve_impl(port, ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__print__make_print_impl(port, ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__chart__make_print_curve_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__roll__make_roll_impl(port, ptr, rust_vec_len, data_len),
+        1 => {
+            wire__crate__api__preview__PreviewSession_frame_impl(port, ptr, rust_vec_len, data_len)
+        }
+        2 => wire__crate__api__preview__PreviewSession_open_impl(port, ptr, rust_vec_len, data_len),
+        3 => wire__crate__api__catalogue__catalogue_impl(port, ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__chart__make_chart_impl(port, ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__contact__make_contact_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__chart__make_film_curve_impl(port, ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__chart__make_paper_curve_impl(port, ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__print__make_print_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__chart__make_print_curve_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__roll__make_roll_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -801,6 +977,21 @@ fn pde_ffi_dispatcher_sync_impl(
 }
 
 // Section: rust2dart
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<PreviewSession> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<PreviewSession> {}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<PreviewSession>> for PreviewSession {
+    fn into_into_dart(self) -> FrbWrapper<PreviewSession> {
+        self.into()
+    }
+}
 
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::chart::ChartFrame {
@@ -933,6 +1124,58 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::chart::PaperCurve>
     for crate::api::chart::PaperCurve
 {
     fn into_into_dart(self) -> crate::api::chart::PaperCurve {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::preview::PreviewFrame {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.width.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.rgba.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::preview::PreviewFrame
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::preview::PreviewFrame>
+    for crate::api::preview::PreviewFrame
+{
+    fn into_into_dart(self) -> crate::api::preview::PreviewFrame {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::preview::PreviewJob {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.input.into_into_dart().into_dart(),
+            self.film.into_into_dart().into_dart(),
+            self.paper.into_into_dart().into_dart(),
+            self.temp_c.into_into_dart().into_dart(),
+            self.width.into_into_dart().into_dart(),
+            self.spectral.into_into_dart().into_dart(),
+            self.frame_mm.into_into_dart().into_dart(),
+            self.grain.into_into_dart().into_dart(),
+            self.halation.into_into_dart().into_dart(),
+            self.couplers.into_into_dart().into_dart(),
+            self.gpu.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::preview::PreviewJob
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::preview::PreviewJob>
+    for crate::api::preview::PreviewJob
+{
+    fn into_into_dart(self) -> crate::api::preview::PreviewJob {
         self
     }
 }
@@ -1081,6 +1324,24 @@ impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(format!("{:?}", self), serializer);
+    }
+}
+
+impl SseEncode for PreviewSession {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>>>::sse_encode(flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self), serializer);
+    }
+}
+
+impl SseEncode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
     }
 }
 
@@ -1259,6 +1520,32 @@ impl SseEncode for crate::api::chart::PaperCurve {
     }
 }
 
+impl SseEncode for crate::api::preview::PreviewFrame {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.width, serializer);
+        <u32>::sse_encode(self.height, serializer);
+        <Vec<u8>>::sse_encode(self.rgba, serializer);
+    }
+}
+
+impl SseEncode for crate::api::preview::PreviewJob {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.input, serializer);
+        <String>::sse_encode(self.film, serializer);
+        <String>::sse_encode(self.paper, serializer);
+        <f64>::sse_encode(self.temp_c, serializer);
+        <u32>::sse_encode(self.width, serializer);
+        <bool>::sse_encode(self.spectral, serializer);
+        <f64>::sse_encode(self.frame_mm, serializer);
+        <bool>::sse_encode(self.grain, serializer);
+        <bool>::sse_encode(self.halation, serializer);
+        <bool>::sse_encode(self.couplers, serializer);
+        <bool>::sse_encode(self.gpu, serializer);
+    }
+}
+
 impl SseEncode for crate::api::chart::PrintCurve {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1371,6 +1658,16 @@ impl SseEncode for () {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
 }
 
+impl SseEncode for usize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer
+            .cursor
+            .write_u64::<NativeEndian>(self as _)
+            .unwrap();
+    }
+}
+
 impl SseEncode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1386,6 +1683,7 @@ mod io {
     // Section: imports
 
     use super::*;
+    use crate::api::preview::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1395,6 +1693,20 @@ mod io {
     // Section: boilerplate
 
     flutter_rust_bridge::frb_generated_boilerplate_io!();
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_kallo_ui_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_kallo_ui_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>>::decrement_strong_count(ptr as _);
+    }
 }
 #[cfg(not(target_family = "wasm"))]
 pub use io::*;
@@ -1408,6 +1720,7 @@ mod web {
     // Section: imports
 
     use super::*;
+    use crate::api::preview::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1419,6 +1732,20 @@ mod web {
     // Section: boilerplate
 
     flutter_rust_bridge::frb_generated_boilerplate_web!();
+
+    #[wasm_bindgen]
+    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>>::increment_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreviewSession>>::decrement_strong_count(ptr as _);
+    }
 }
 #[cfg(target_family = "wasm")]
 pub use web::*;

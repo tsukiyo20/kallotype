@@ -204,11 +204,13 @@ pub fn resize_to_width(image: &Image, width: u32) -> Image {
     }
 }
 
-/// Encode linear-light pixels to sRGB and write them to disk.
+/// Encode linear-light pixels to packed sRGB, three channels per pixel.
 ///
-/// The container is chosen from the file extension, so `out.png` and
-/// `out.tiff` both work.
-pub fn save(path: impl AsRef<Path>, image: &Image) -> Result<(), IoError> {
+/// This is the same conversion [`save`] writes: a preview that hands pixels to
+/// a window and a print that writes a PNG must be the same colour, or the
+/// person is choosing a time from a picture the print will not match.
+#[must_use]
+pub fn to_rgb8(image: &Image) -> Vec<u8> {
     let mut buffer = Vec::with_capacity(image.pixels.len() * 3);
     for pixel in &image.pixels {
         for channel in pixel {
@@ -216,7 +218,30 @@ pub fn save(path: impl AsRef<Path>, image: &Image) -> Result<(), IoError> {
             buffer.push((encoded * 255.0).round().clamp(0.0, 255.0) as u8);
         }
     }
+    buffer
+}
 
+/// Encode linear-light pixels to sRGB with an opaque alpha channel.
+///
+/// A window's texture wants four channels; the model has three and no
+/// transparency, because a print is paper and there is nothing behind it.
+#[must_use]
+pub fn to_rgba8(image: &Image) -> Vec<u8> {
+    let rgb = to_rgb8(image);
+    let mut buffer = Vec::with_capacity(rgb.len() / 3 * 4);
+    for pixel in rgb.chunks_exact(3) {
+        buffer.extend_from_slice(pixel);
+        buffer.push(255);
+    }
+    buffer
+}
+
+/// Encode linear-light pixels to sRGB and write them to disk.
+///
+/// The container is chosen from the file extension, so `out.png` and
+/// `out.tiff` both work.
+pub fn save(path: impl AsRef<Path>, image: &Image) -> Result<(), IoError> {
+    let buffer = to_rgb8(image);
     let rgb = RgbImage::from_raw(image.width, image.height, buffer).ok_or(IoError::Buffer)?;
     rgb.save(path)?;
     Ok(())

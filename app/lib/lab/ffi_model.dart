@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:kallo_ui/src/rust/api/catalogue.dart' as catalogue_api;
 import 'package:kallo_ui/src/rust/api/chart.dart' as chart_api;
 import 'package:kallo_ui/src/rust/api/contact.dart' as contact_api;
+import 'package:kallo_ui/src/rust/api/preview.dart' as preview_api;
 import 'package:kallo_ui/src/rust/api/print.dart' as print_api;
 import 'package:kallo_ui/src/rust/api/roll.dart' as roll_api;
 import 'package:kallo_ui/src/rust/frb_generated.dart';
@@ -85,6 +88,34 @@ class FfiModel implements Model {
         output: output.path,
       ),
     );
+  }
+
+  @override
+  Future<PreviewSession?> openPreview({
+    required File photograph,
+    required String stock,
+    required String paper,
+    required double tempC,
+    required int width,
+    bool spectral = false,
+  }) async {
+    final preview_api.PreviewSession session =
+        await preview_api.PreviewSession.open(
+          job: preview_api.PreviewJob(
+            input: photograph.path,
+            film: stock,
+            paper: paper,
+            tempC: tempC,
+            width: width,
+            spectral: spectral,
+            frameMm: 36,
+            grain: true,
+            halation: true,
+            couplers: true,
+            gpu: true,
+          ),
+        );
+    return _FfiPreviewSession(session);
   }
 
   @override
@@ -273,4 +304,50 @@ class FfiModel implements Model {
 
   @override
   Future<String> catalogue() async => catalogue_api.catalogue();
+}
+
+/// A session the library holds open, beside the bench.
+class _FfiPreviewSession implements PreviewSession {
+  _FfiPreviewSession(this._session);
+
+  final preview_api.PreviewSession _session;
+  bool _closed = false;
+
+  @override
+  Future<ui.Image> frame({
+    required double minutes,
+    double? balanceFrom,
+    double printEv = 0,
+    String filters = '',
+    String? heatGlass,
+  }) async {
+    if (_closed) {
+      throw StateError('this preview session was closed');
+    }
+    final preview_api.PreviewFrame frame = await _session.frame(
+      minutes: minutes,
+      printEv: printEv,
+      balanceFrom: balanceFrom,
+      filters: filters,
+      heatGlass: heatGlass,
+    );
+    final Completer<ui.Image> image = Completer<ui.Image>();
+    ui.decodeImageFromPixels(
+      frame.rgba,
+      frame.width,
+      frame.height,
+      ui.PixelFormat.rgba8888,
+      image.complete,
+    );
+    return image.future;
+  }
+
+  @override
+  void dispose() {
+    if (_closed) {
+      return;
+    }
+    _closed = true;
+    _session.dispose();
+  }
 }

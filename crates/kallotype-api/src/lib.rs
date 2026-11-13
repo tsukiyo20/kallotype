@@ -10,13 +10,16 @@
 //!
 //! The entry points are [`render()`], [`contact()`] and [`roll()`]. The first
 //! two take a decoded image; the third reads the photograph itself, because a
-//! roll is exactly the case where reading it once matters.
+//! roll is exactly the case where reading it once matters. A bench session
+//! ([`PreviewSession`]) is the same idea for a window: read the photograph once,
+//! then print as many previews of it as the person drags past.
 
 pub mod catalogue;
 pub mod chart;
 pub mod contact;
 pub mod error;
 pub mod input;
+pub mod preview;
 pub mod render;
 pub mod roll;
 pub mod selection;
@@ -28,6 +31,9 @@ pub use chart::{
 pub use contact::{ContactOptions, ContactOutcome, contact, ladder};
 pub use error::Error;
 pub use input::read_input;
-pub use render::{Backend, Exposure, OwnedFinishing, RenderOptions, RenderOutcome, render};
+pub use preview::{PreviewFrame, PreviewRequest, PreviewSession};
+pub use render::{
+    Backend, Exposure, OwnedFinishing, RenderOptions, RenderOutcome, render, render_image,
+};
 pub use roll::{Progress, RollOutcome, RollRequest, roll};
 pub use selection::{Selection, StockChoice, camera_profile, check_model, resolve};

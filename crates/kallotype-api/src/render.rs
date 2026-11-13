@@ -175,6 +175,27 @@ pub fn render(
     options: &RenderOptions,
     output: &Path,
 ) -> Result<RenderOutcome, Error> {
+    let outcome = render_image(image, film, selection, options)?;
+    ensure_parent(output)?;
+    save(output, image).map_err(|source| Error::Write {
+        path: output.to_path_buf(),
+        source,
+    })?;
+    Ok(outcome)
+}
+
+/// Develop and print an image in place, without writing anything.
+///
+/// This is [`render`] minus the file: the pixels stay in memory for a caller
+/// that has a window to put them in. A preview session renders the same
+/// pixels the print would, so a preview and the print it stands for cannot
+/// drift apart.
+pub fn render_image(
+    image: &mut Image,
+    film: Option<&'static kallotype_core::FilmStock>,
+    selection: &Selection,
+    options: &RenderOptions,
+) -> Result<RenderOutcome, Error> {
     let film = film.unwrap_or(selection.film);
     let (width, height) = (image.width, image.height);
     let (width, height) = (width as usize, height as usize);
@@ -262,12 +283,6 @@ pub fn render(
     if let Some(scanner) = scanner.as_ref() {
         scanner.apply(&mut image.pixels, width, height, pixel_um);
     }
-
-    ensure_parent(output)?;
-    save(output, image).map_err(|source| Error::Write {
-        path: output.to_path_buf(),
-        source,
-    })?;
 
     Ok(RenderOutcome {
         width: width as u32,

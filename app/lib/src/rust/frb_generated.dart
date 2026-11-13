@@ -6,6 +6,7 @@
 import 'api/catalogue.dart';
 import 'api/chart.dart';
 import 'api/contact.dart';
+import 'api/preview.dart';
 import 'api/print.dart';
 import 'api/roll.dart';
 
@@ -71,7 +72,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1398444826;
+  int get rustContentHash => -1232128482;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -83,6 +84,19 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<PreviewFrame> crateApiPreviewPreviewSessionFrame({
+    required PreviewSession that,
+    required double minutes,
+    required double printEv,
+    double? balanceFrom,
+    required String filters,
+    String? heatGlass,
+  });
+
+  Future<PreviewSession> crateApiPreviewPreviewSessionOpen({
+    required PreviewJob job,
+  });
+
   Future<String> crateApiCatalogueCatalogue();
 
   Future<List<ChartFrame>> crateApiChartMakeChart({
@@ -111,6 +125,15 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Stream<RollProgress> crateApiRollMakeRoll({required RollJob job});
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PreviewSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PreviewSession;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_PreviewSessionPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -122,6 +145,90 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<PreviewFrame> crateApiPreviewPreviewSessionFrame({
+    required PreviewSession that,
+    required double minutes,
+    required double printEv,
+    double? balanceFrom,
+    required String filters,
+    String? heatGlass,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+            that,
+            serializer,
+          );
+          sse_encode_f_64(minutes, serializer);
+          sse_encode_f_64(printEv, serializer);
+          sse_encode_opt_box_autoadd_f_64(balanceFrom, serializer);
+          sse_encode_String(filters, serializer);
+          sse_encode_opt_String(heatGlass, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_preview_frame,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPreviewPreviewSessionFrameConstMeta,
+        argValues: [that, minutes, printEv, balanceFrom, filters, heatGlass],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPreviewPreviewSessionFrameConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreviewSession_frame",
+        argNames: [
+          "that",
+          "minutes",
+          "printEv",
+          "balanceFrom",
+          "filters",
+          "heatGlass",
+        ],
+      );
+
+  @override
+  Future<PreviewSession> crateApiPreviewPreviewSessionOpen({
+    required PreviewJob job,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_preview_job(job, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPreviewPreviewSessionOpenConstMeta,
+        argValues: [job],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPreviewPreviewSessionOpenConstMeta =>
+      const TaskConstMeta(debugName: "PreviewSession_open", argNames: ["job"]);
+
+  @override
   Future<String> crateApiCatalogueCatalogue() {
     return handler.executeNormal(
       NormalTask(
@@ -130,7 +237,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 3,
             port: port_,
           );
         },
@@ -164,7 +271,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 4,
             port: port_,
           );
         },
@@ -194,7 +301,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 5,
             port: port_,
           );
         },
@@ -228,7 +335,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 6,
             port: port_,
           );
         },
@@ -258,7 +365,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 7,
             port: port_,
           );
         },
@@ -286,7 +393,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 8,
             port: port_,
           );
         },
@@ -322,7 +429,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 9,
             port: port_,
           );
         },
@@ -356,7 +463,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 8,
+              funcId: 10,
               port: port_,
             );
           },
@@ -378,10 +485,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     argNames: ["job", "progress"],
   );
 
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PreviewSession => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PreviewSession => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return AnyhowException(raw as String);
+  }
+
+  @protected
+  PreviewSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreviewSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  PreviewSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreviewSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  PreviewSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreviewSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -414,6 +556,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double dco_decode_box_autoadd_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  PreviewJob dco_decode_box_autoadd_preview_job(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_preview_job(raw);
   }
 
   @protected
@@ -580,6 +728,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PreviewFrame dco_decode_preview_frame(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PreviewFrame(
+      width: dco_decode_u_32(arr[0]),
+      height: dco_decode_u_32(arr[1]),
+      rgba: dco_decode_list_prim_u_8_strict(arr[2]),
+    );
+  }
+
+  @protected
+  PreviewJob dco_decode_preview_job(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return PreviewJob(
+      input: dco_decode_String(arr[0]),
+      film: dco_decode_String(arr[1]),
+      paper: dco_decode_String(arr[2]),
+      tempC: dco_decode_f_64(arr[3]),
+      width: dco_decode_u_32(arr[4]),
+      spectral: dco_decode_bool(arr[5]),
+      frameMm: dco_decode_f_64(arr[6]),
+      grain: dco_decode_bool(arr[7]),
+      halation: dco_decode_bool(arr[8]),
+      couplers: dco_decode_bool(arr[9]),
+      gpu: dco_decode_bool(arr[10]),
+    );
+  }
+
+  @protected
   PrintCurve dco_decode_print_curve(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -710,10 +892,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     final inner = sse_decode_String(deserializer);
     return AnyhowException(inner);
+  }
+
+  @protected
+  PreviewSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreviewSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PreviewSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreviewSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PreviewSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreviewSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
   }
 
   @protected
@@ -747,6 +971,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  PreviewJob sse_decode_box_autoadd_preview_job(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_preview_job(deserializer));
   }
 
   @protected
@@ -974,6 +1204,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PreviewFrame sse_decode_preview_frame(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_width = sse_decode_u_32(deserializer);
+    final var_height = sse_decode_u_32(deserializer);
+    final var_rgba = sse_decode_list_prim_u_8_strict(deserializer);
+    return PreviewFrame(width: var_width, height: var_height, rgba: var_rgba);
+  }
+
+  @protected
+  PreviewJob sse_decode_preview_job(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_input = sse_decode_String(deserializer);
+    final var_film = sse_decode_String(deserializer);
+    final var_paper = sse_decode_String(deserializer);
+    final var_tempC = sse_decode_f_64(deserializer);
+    final var_width = sse_decode_u_32(deserializer);
+    final var_spectral = sse_decode_bool(deserializer);
+    final var_frameMm = sse_decode_f_64(deserializer);
+    final var_grain = sse_decode_bool(deserializer);
+    final var_halation = sse_decode_bool(deserializer);
+    final var_couplers = sse_decode_bool(deserializer);
+    final var_gpu = sse_decode_bool(deserializer);
+    return PreviewJob(
+      input: var_input,
+      film: var_film,
+      paper: var_paper,
+      tempC: var_tempC,
+      width: var_width,
+      spectral: var_spectral,
+      frameMm: var_frameMm,
+      grain: var_grain,
+      halation: var_halation,
+      couplers: var_couplers,
+      gpu: var_gpu,
+    );
+  }
+
+  @protected
   PrintCurve sse_decode_print_curve(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     final var_film = sse_decode_String(deserializer);
@@ -1140,6 +1408,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
@@ -1152,6 +1426,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    PreviewSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreviewSessionImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    PreviewSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreviewSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    PreviewSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreviewSessionImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
   }
 
   @protected
@@ -1196,6 +1509,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_preview_job(
+    PreviewJob self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_preview_job(self, serializer);
   }
 
   @protected
@@ -1378,6 +1700,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_preview_frame(PreviewFrame self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.width, serializer);
+    sse_encode_u_32(self.height, serializer);
+    sse_encode_list_prim_u_8_strict(self.rgba, serializer);
+  }
+
+  @protected
+  void sse_encode_preview_job(PreviewJob self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.input, serializer);
+    sse_encode_String(self.film, serializer);
+    sse_encode_String(self.paper, serializer);
+    sse_encode_f_64(self.tempC, serializer);
+    sse_encode_u_32(self.width, serializer);
+    sse_encode_bool(self.spectral, serializer);
+    sse_encode_f_64(self.frameMm, serializer);
+    sse_encode_bool(self.grain, serializer);
+    sse_encode_bool(self.halation, serializer);
+    sse_encode_bool(self.couplers, serializer);
+    sse_encode_bool(self.gpu, serializer);
+  }
+
+  @protected
   void sse_encode_print_curve(PrintCurve self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.film, serializer);
@@ -1482,8 +1828,53 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
   }
+}
+
+@sealed
+class PreviewSessionImpl extends RustOpaque implements PreviewSession {
+  // Not to be used by end users
+  PreviewSessionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  PreviewSessionImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_PreviewSession,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_PreviewSession,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_PreviewSessionPtr,
+  );
+
+  /// The print this session would make at one setting.
+  ///
+  /// `balance_from` is the strip's one exposure: the enlarger is borrowed
+  /// from that development and only the negative is this frame's.
+  Future<PreviewFrame> frame({
+    required double minutes,
+    required double printEv,
+    double? balanceFrom,
+    required String filters,
+    String? heatGlass,
+  }) => RustLib.instance.api.crateApiPreviewPreviewSessionFrame(
+    that: this,
+    minutes: minutes,
+    printEv: printEv,
+    balanceFrom: balanceFrom,
+    filters: filters,
+    heatGlass: heatGlass,
+  );
 }

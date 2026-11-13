@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -10,6 +11,7 @@ import '../design/tokens.dart';
 import '../lab/chart.dart';
 import '../lab/clock.dart';
 import '../lab/model.dart';
+import '../lab/preview_bench.dart';
 import '../lab/stock.dart';
 import '../lab/strip.dart';
 import '../lab/strip_develop.dart';
@@ -52,6 +54,7 @@ class _DevelopStageState extends State<DevelopStage> {
   bool _ownsPreview = false;
   FilmChart? _chart;
   final Map<double, FilmCurve> _curves = <double, FilmCurve>{};
+  final Map<double, FilmChart> _chartCache = <double, FilmChart>{};
   PaperCurve? _paper;
 
   bool _busy = false;
@@ -59,6 +62,8 @@ class _DevelopStageState extends State<DevelopStage> {
 
   Timer? _timer;
   int _generation = 0;
+  PreviewBench? _previewBench;
+  String? _benchKey;
   final Map<double, GlobalKey> _stripKeys = <double, GlobalKey>{};
 
   @override
@@ -66,6 +71,7 @@ class _DevelopStageState extends State<DevelopStage> {
     super.initState();
     _minutes = widget.strip.latest?.minutes ?? 9;
     _showPrint(_minutes);
+    _openBench();
     if (_preview == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _previewNow());
     }
@@ -109,13 +115,26 @@ class _DevelopStageState extends State<DevelopStage> {
     if (old.strip.paperId != widget.strip.paperId) {
       _loadPaper();
     }
-    if (old.strip.photo != widget.strip.photo) {
+    if (_benchKey != _benchKeyFor(widget.strip)) {
       _generation++;
+      final ui.Image? oldImage = _preview;
+      final bool owned = _ownsPreview;
       _preview = null;
+      _ownsPreview = false;
       _chart = null;
       _curves.clear();
+      _chartCache.clear();
       _minutes = widget.strip.latest?.minutes ?? 9;
       _showPrint(_minutes);
+      _openBench();
+      _schedule();
+      if (owned) {
+        _disposeAfterFrame(oldImage);
+      }
+    } else if (old.strip.balanceFrom != widget.strip.balanceFrom &&
+        _printAt(_minutes) == null) {
+      // The first print fixed the enlarger's exposure; a preview that was
+      // already on the easel was metered on the old balance.
       _schedule();
     }
     unawaited(_loadFilmCurves());
@@ -128,7 +147,47 @@ class _DevelopStageState extends State<DevelopStage> {
     if (_ownsPreview) {
       _preview?.dispose();
     }
+    _previewBench?.dispose();
     super.dispose();
+  }
+
+  String _benchKeyFor(TestStrip strip) =>
+      '${strip.photo}|${strip.stockId}|${strip.paperId}|'
+      '${strip.tempC}|${strip.spectral}';
+
+  /// The session is the strip's, not the time's: changing the ruler does not
+  /// touch it. A material or a photograph is a different session.
+  void _openBench() {
+    final String key = _benchKeyFor(widget.strip);
+    if (_benchKey == key) {
+      return;
+    }
+    _benchKey = key;
+    _previewBench?.dispose();
+    final TestStrip strip = widget.strip;
+    _previewBench = PreviewBench(open: () => _openPreview(strip));
+    _previewBench!.warm();
+  }
+
+  Future<PreviewSession?> _openPreview(TestStrip strip) async {
+    final String? photo = strip.photo;
+    final Model model = Model.find();
+    if (photo == null || !model.available) {
+      return null;
+    }
+    try {
+      return await model.openPreview(
+        photograph: File(photo),
+        stock: strip.stockId,
+        paper: strip.paperId ?? Stocks.paper,
+        tempC: strip.tempC,
+        width: 760,
+        spectral: strip.spectral,
+      );
+    } on Object catch (error) {
+      Model.log('the preview session could not be opened: $error');
+      return null;
+    }
   }
 
   TestPrint? _printAt(double minutes) {
@@ -256,13 +315,23 @@ class _DevelopStageState extends State<DevelopStage> {
   }
 
   Future<FilmChart?> _readChart(double minutes) async {
+    final FilmChart? cached = _chartCache[minutes];
+    if (cached != null) {
+      return cached;
+    }
     try {
       final List<FilmChart>? charts = await Model.find().chart(
         stock: widget.strip.stockId,
         times: <double>[minutes],
         tempC: widget.strip.tempC,
       );
-      return charts == null || charts.isEmpty ? null : charts.first;
+      final FilmChart? chart = charts == null || charts.isEmpty
+          ? null
+          : charts.first;
+      if (chart != null) {
+        _chartCache[minutes] = chart;
+      }
+      return chart;
     } on Object catch (error) {
       Model.log('the strip could not be charted: $error');
       return null;
@@ -282,6 +351,7 @@ class _DevelopStageState extends State<DevelopStage> {
     }
     final Model model = Model.find();
     final int generation = ++_generation;
+    final double minutes = _minutes;
     if (!model.available) {
       if (mounted) {
         setState(() => _error = KalloStrings.of(context).noModel);
@@ -289,22 +359,40 @@ class _DevelopStageState extends State<DevelopStage> {
       return;
     }
     try {
-      final ui.Image image = await previewTestPrint(
-        model: model,
-        strip: widget.strip,
-        minutes: _minutes,
+      // The session is the whole point: the photograph is already decoded, so
+      // this is a render and not a read. A model without a session falls back
+      // to the subprocess's one render per preview.
+      ui.Image? image = await _previewBench?.frame(
+        minutes: minutes,
+        balanceFrom: widget.strip.balanceFrom,
       );
-      final FilmChart? chart = await _readChart(_minutes);
+      if (image == null) {
+        if (!mounted || generation != _generation) {
+          return;
+        }
+        image = await previewTestPrint(
+          model: model,
+          strip: widget.strip,
+          minutes: minutes,
+        );
+      }
+      final ui.Image rendered = image;
       if (!mounted || generation != _generation) {
-        image.dispose();
+        rendered.dispose();
         return;
       }
-      _setPreview(image, owned: true);
+      _setPreview(rendered, owned: true);
+      // The picture is on the easel before the densitometer answers: the chart
+      // is about the development, not about waiting for it.
+      final FilmChart? chart = await _readChart(minutes);
+      if (!mounted || generation != _generation) {
+        return;
+      }
       setState(() {
         _chart = chart ?? _chart;
         _error = null;
       });
-      await _loadFilmCurves();
+      unawaited(_loadFilmCurves());
     } on Object catch (error) {
       if (mounted && generation == _generation) {
         setState(() => _error = error.toString());

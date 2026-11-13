@@ -9,6 +9,7 @@
 import 'api/catalogue.dart';
 import 'api/chart.dart';
 import 'api/contact.dart';
+import 'api/preview.dart';
 import 'api/print.dart';
 import 'api/roll.dart';
 
@@ -27,8 +28,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     required super.portManager,
   });
 
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_PreviewSessionPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  PreviewSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    dynamic raw,
+  );
+
+  @protected
+  PreviewSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    dynamic raw,
+  );
+
+  @protected
+  PreviewSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    dynamic raw,
+  );
 
   @protected
   RustStreamSink<RollProgress> dco_decode_StreamSink_roll_progress_Sse(
@@ -46,6 +69,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  PreviewJob dco_decode_box_autoadd_preview_job(dynamic raw);
 
   @protected
   PrintJob dco_decode_box_autoadd_print_job(dynamic raw);
@@ -96,6 +122,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PaperCurve dco_decode_paper_curve(dynamic raw);
 
   @protected
+  PreviewFrame dco_decode_preview_frame(dynamic raw);
+
+  @protected
+  PreviewJob dco_decode_preview_job(dynamic raw);
+
+  @protected
   PrintCurve dco_decode_print_curve(dynamic raw);
 
   @protected
@@ -123,7 +155,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  BigInt dco_decode_usize(dynamic raw);
+
+  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  PreviewSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreviewSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreviewSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    SseDeserializer deserializer,
+  );
 
   @protected
   RustStreamSink<RollProgress> sse_decode_StreamSink_roll_progress_Sse(
@@ -141,6 +194,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  PreviewJob sse_decode_box_autoadd_preview_job(SseDeserializer deserializer);
 
   @protected
   PrintJob sse_decode_box_autoadd_print_job(SseDeserializer deserializer);
@@ -193,6 +249,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PaperCurve sse_decode_paper_curve(SseDeserializer deserializer);
 
   @protected
+  PreviewFrame sse_decode_preview_frame(SseDeserializer deserializer);
+
+  @protected
+  PreviewJob sse_decode_preview_job(SseDeserializer deserializer);
+
+  @protected
   PrintCurve sse_decode_print_curve(SseDeserializer deserializer);
 
   @protected
@@ -220,11 +282,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    PreviewSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    PreviewSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    PreviewSession self,
     SseSerializer serializer,
   );
 
@@ -248,6 +334,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_preview_job(
+    PreviewJob self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_print_job(
@@ -319,6 +411,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_paper_curve(PaperCurve self, SseSerializer serializer);
 
   @protected
+  void sse_encode_preview_frame(PreviewFrame self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_preview_job(PreviewJob self, SseSerializer serializer);
+
+  @protected
   void sse_encode_print_curve(PrintCurve self, SseSerializer serializer);
 
   @protected
@@ -346,6 +444,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
@@ -353,6 +454,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
 class RustLibWire implements BaseWire {
   RustLibWire.fromExternalLibrary(ExternalLibrary lib);
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+        ptr,
+      );
 }
 
 @JS('wasm_bindgen')
@@ -360,4 +477,14 @@ external RustLibWasmModule get wasmModule;
 
 @JS()
 @anonymous
-extension type RustLibWasmModule._(JSObject _) implements JSObject {}
+extension type RustLibWasmModule._(JSObject _) implements JSObject {
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreviewSession(
+    int ptr,
+  );
+}

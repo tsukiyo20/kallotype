@@ -1,8 +1,33 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 
 import 'chart.dart';
+
+/// One photograph held on the bench, ready to be printed at any setting.
+///
+/// The session is the difference between a slider and a slideshow: the
+/// photograph is decoded and metered once, and every preview after that is a
+/// render of the pixels already in hand. A model that cannot keep state — the
+/// subprocess — answers `null` and the caller falls back to rendering each
+/// preview from the file.
+abstract class PreviewSession {
+  /// The print the model would make at one setting.
+  ///
+  /// `balanceFrom` is the strip's one exposure: when set, the enlarger is
+  /// borrowed from that development and only the negative is this frame's.
+  Future<ui.Image> frame({
+    required double minutes,
+    double? balanceFrom,
+    double printEv = 0,
+    String filters = '',
+    String? heatGlass,
+  });
+
+  /// Let the model free the decoded photograph and the frames it kept.
+  void dispose();
+}
 
 /// The model, as this app sees it.
 ///
@@ -48,6 +73,19 @@ abstract class Model {
     /// A heat-absorbing glass in the light path, by name: `kg3`.
     String? heatGlass,
   });
+
+  /// Open a bench session on this photograph.
+  ///
+  /// Null when the model cannot hold one: the subprocess has no memory between
+  /// calls, so its previews are made the old way, one render at a time.
+  Future<PreviewSession?> openPreview({
+    required File photograph,
+    required String stock,
+    required String paper,
+    required double tempC,
+    required int width,
+    bool spectral = false,
+  }) async => null;
 
   /// Print the contact proof: the ladder on one sheet, exposed once.
   Future<void> contact({
@@ -235,6 +273,20 @@ class ProcessModel implements Model {
       throw ModelFailed(result.stderr.toString().trim());
     }
   }
+
+  /// A process has no memory between calls, and nothing to hold a decode in.
+  ///
+  /// Its previews are still correct — they are renders — they are only made
+  /// the old way, from the file, every time.
+  @override
+  Future<PreviewSession?> openPreview({
+    required File photograph,
+    required String stock,
+    required String paper,
+    required double tempC,
+    required int width,
+    bool spectral = false,
+  }) async => null;
 
   @override
   Future<void> contact({
