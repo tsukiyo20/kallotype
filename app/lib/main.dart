@@ -11,6 +11,7 @@ import 'design/tokens.dart';
 import 'film/strip_data.dart';
 import 'lab/exports.dart';
 import 'lab/settings.dart';
+import 'lab/chart_fill.dart';
 import 'lab/ffi_model.dart';
 import 'lab/fixture.dart';
 import 'lab/print.dart';
@@ -185,8 +186,15 @@ class _KalloAppState extends State<KalloApp> {
   Future<void> _openRoll() async {
     final Roll? stored = await RollStore.load();
     if (stored != null) {
+      // A roll developed before the library could measure it still has its
+      // stock and its times: the chart is those two things, so fill it in and
+      // write the record back rather than ask for the roll again.
+      final Roll charted = await fillChart(stored, Model.find());
+      if (charted != stored) {
+        await RollStore.save(charted);
+      }
       if (mounted) {
-        setState(() => _roll = stored);
+        setState(() => _roll = charted);
       }
       return;
     }
