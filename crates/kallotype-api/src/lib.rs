@@ -21,7 +21,10 @@ pub mod render;
 pub mod roll;
 pub mod selection;
 
-pub use chart::{FrameChart, chart, chart_for};
+pub use chart::{
+    FilmCurve, FrameChart, PaperChart, PrintChart, chart, chart_for, film_curve, paper_chart,
+    print_chart,
+};
 pub use contact::{ContactOptions, ContactOutcome, contact, ladder};
 pub use error::Error;
 pub use input::read_input;
