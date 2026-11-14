@@ -507,6 +507,7 @@ class _KalloAppState extends State<KalloApp> {
         strip: strip,
         minutes: request.minutes,
         exports: exports,
+        width: request.width,
         printEv: request.printEv,
         filters: request.filters,
         heatGlass: request.heatGlass,

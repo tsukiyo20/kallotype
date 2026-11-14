@@ -11,13 +11,6 @@ import 'exports.dart';
 import 'model.dart';
 import 'print.dart';
 
-/// The longest edge of a finished frame, in pixels.
-///
-/// A print is rendered at the photograph's size, but a frame with a rebate is
-/// for looking at, not for another print. Four thousand pixels on the long edge
-/// is more than any screen and keeps the file in the low megabytes.
-const int _largestEdge = 4096;
-
 /// Write the print as a finished 35 mm frame: the picture, the black rebate,
 /// the sprocket holes and the edge printing.
 ///
@@ -28,12 +21,14 @@ const int _largestEdge = 4096;
 ///
 /// The frame is drawn by the same painter the gallery uses, then encoded as a
 /// JPEG. The export is flat — the loupe's distortion is a property of looking
-/// through glass, not of the negative — and capped at [_largestEdge], because
-/// a lossless full-resolution frame is a 100 MB file and nobody wants that.
+/// through glass, not of the negative. A null [maxEdge] keeps the print's own
+/// pixel size; a value caps the frame's long edge, because a lossless
+/// full-resolution frame was a 100 MB file and not every export needs one.
 Future<File> exportFilmFrame({
   required Print print,
   int? printNumber,
   ui.Image? image,
+  int? maxEdge,
 }) async {
   final String? path = print.path;
   if (path == null) {
@@ -53,8 +48,8 @@ Future<File> exportFilmFrame({
       full.width.toDouble(),
       aspect: aspect,
     );
-    final double scale = whole.outer.width > _largestEdge
-        ? _largestEdge / whole.outer.width
+    final double scale = maxEdge != null && whole.outer.width > maxEdge
+        ? maxEdge / whole.outer.width
         : 1;
     final int width = (whole.outer.width * scale).round();
     final int height = (whole.outer.height * scale).round();

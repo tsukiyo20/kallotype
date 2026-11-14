@@ -793,12 +793,17 @@ class _DevelopStageState extends State<DevelopStage> {
                           letterSpacing: 1.4,
                         ),
                       ),
-                      const Spacer(),
-                      Text(
-                        _paper?.short ?? (widget.strip.paperLabel ?? ''),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: KalloType.folio.copyWith(color: colors.inkFaint),
+                      const SizedBox(width: KalloSpace.step2),
+                      Expanded(
+                        child: Text(
+                          _paper?.short ?? (widget.strip.paperLabel ?? ''),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: KalloType.folio.copyWith(
+                            color: colors.inkFaint,
+                          ),
+                        ),
                       ),
                     ],
                   ),

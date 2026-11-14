@@ -403,6 +403,9 @@ class _LoupeState extends State<_Loupe> {
   /// Where the picture is held, in points, from the centre of its aperture.
   Offset _pan = Offset.zero;
 
+  /// Null exports at the print's own pixel size; 4096 caps the long edge.
+  int? _maxEdge;
+
   bool _exporting = false;
   bool _exported = false;
   bool _exportFailed = false;
@@ -486,6 +489,7 @@ class _LoupeState extends State<_Loupe> {
         print: widget.print,
         printNumber: widget.printNumber,
         image: _full,
+        maxEdge: _maxEdge,
       );
       if (!mounted) {
         return;
@@ -714,6 +718,18 @@ class _LoupeState extends State<_Loupe> {
                             control: widget.wall.controlAt(light),
                             on: widget.light > 0.5,
                             onTap: widget.onLight,
+                          ),
+                          const SizedBox(width: KalloSpace.step3),
+                          _Pill(
+                            key: const Key('export-size'),
+                            label: _maxEdge == null ? s.originalSize : '4096',
+                            control: widget.wall.controlAt(light),
+                            onTap: () => setState(() {
+                              _maxEdge = _maxEdge == null ? 4096 : null;
+                              _exported = false;
+                              _exportFailed = false;
+                            }),
+                            enabled: !_exporting,
                           ),
                           const SizedBox(width: KalloSpace.step3),
                           _Pill(

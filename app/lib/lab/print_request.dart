@@ -9,9 +9,13 @@ class PrintRequest {
     this.printEv = 0,
     this.filters = '',
     this.heatGlass,
+    this.width,
   });
 
   final double minutes;
+
+  /// The finished print's width in pixels; null keeps the photograph's own.
+  final int? width;
 
   /// The enlarger's timer, in stops, on top of the solved balance.
   final double printEv;

@@ -170,7 +170,7 @@ Future<File> printTest({
   double printEv = 0,
   String filters = '',
   String? heatGlass,
-  int width = printWidth,
+  int? width,
 }) async {
   final String? photo = strip.photo;
   if (photo == null) {
@@ -182,7 +182,10 @@ Future<File> printTest({
   }
   await exports.create(recursive: true);
   final int own = await _width(photograph);
-  final int asked = own > 0 ? math.min(own, width) : width;
+  final int? requested = width != null && width > 0 ? width : null;
+  final int asked = requested == null
+      ? (own > 0 ? own : printWidth)
+      : (own > 0 ? math.min(own, requested) : requested);
   final String stem =
       'print-${minutes.toStringAsFixed(1).replaceAll('.', '-')}min';
   final File output = File('${exports.path}${Platform.pathSeparator}$stem.png');

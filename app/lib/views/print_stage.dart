@@ -52,6 +52,7 @@ class PrintStage extends StatefulWidget {
 
 class _PrintStageState extends State<PrintStage> {
   late double _minutes;
+  int? _width;
   double _printEv = 0;
   int _yellow = 0;
   int _magenta = 0;
@@ -281,6 +282,14 @@ class _PrintStageState extends State<PrintStage> {
     }
   }
 
+  void _size(int? width) {
+    setState(() {
+      _width = width;
+      _printed = false;
+      _error = null;
+    });
+  }
+
   Future<void> _print() async {
     if (_busy || widget.exports == null || !widget.strip.hasPrints) {
       return;
@@ -297,6 +306,7 @@ class _PrintStageState extends State<PrintStage> {
           printEv: _printEv,
           filters: _filters,
           heatGlass: _glass,
+          width: _width,
         ),
       );
       if (mounted) {
@@ -600,6 +610,39 @@ class _PrintStageState extends State<PrintStage> {
                       style: KalloType.small.copyWith(color: colors.inkFaint),
                     ),
                   ),
+                Text(
+                  s.size,
+                  style: KalloType.caption.copyWith(
+                    color: colors.inkFaint,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+                const SizedBox(height: KalloSpace.step2),
+                Wrap(
+                  spacing: KalloSpace.step1 + 2,
+                  runSpacing: KalloSpace.step1 + 2,
+                  children: <Widget>[
+                    KalloChip(
+                      label: s.originalSize,
+                      selected: _width == null,
+                      compact: true,
+                      onTap: () => _size(null),
+                    ),
+                    KalloChip(
+                      label: '6000 px',
+                      selected: _width == 6000,
+                      compact: true,
+                      onTap: () => _size(6000),
+                    ),
+                    KalloChip(
+                      label: '4000 px',
+                      selected: _width == 4000,
+                      compact: true,
+                      onTap: () => _size(4000),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: KalloSpace.step3),
                 KalloButton(
                   label: _busy ? s.printing : s.printAction,
                   onTap: printable && !_busy ? _print : null,

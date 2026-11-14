@@ -99,6 +99,8 @@ class KalloStrings {
   String get developing => zh ? '显影中…' : 'Developing…';
   String get redevelop => zh ? '重冲' : 'Re-develop';
   String get printAction => zh ? '印相' : 'Print';
+  String get size => zh ? '尺寸' : 'SIZE';
+  String get originalSize => zh ? '原尺寸' : 'Original';
   String get printNote => zh
       ? '成品按这张底片单独平衡，不是试片上的那一张。'
       : 'The finished print is balanced for this negative, not for the strip.';

@@ -102,6 +102,15 @@ void main() {
       reason: 'the glass distorts what it magnifies',
     );
 
+    expect(find.byKey(const Key('export-size')), findsOneWidget);
+    expect(find.text('原尺寸'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('export-size')));
+    await tester.pump();
+    expect(find.text('4096'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('export-size')));
+    await tester.pump();
+    expect(find.text('原尺寸'), findsOneWidget);
+
     await tester.tap(find.byKey(const Key('back')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('back')), findsNothing);

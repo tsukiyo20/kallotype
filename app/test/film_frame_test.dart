@@ -165,7 +165,7 @@ void main() {
         tempC: 20,
       );
 
-      final File framed = await exportFilmFrame(print: print);
+      final File framed = await exportFilmFrame(print: print, maxEdge: 4096);
       final ui.Codec codec = await ui.instantiateImageCodec(
         await framed.readAsBytes(),
       );
