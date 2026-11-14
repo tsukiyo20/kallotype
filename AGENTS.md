@@ -32,7 +32,8 @@ checklist.
 - `app/lib/design/scope.dart` — the two environments, and the `emissive` value
   the transition interpolates.
 - `app/lib/film/film.dart` — 35 mm geometry and the strip painter.
-- `app/test/goldens/` — the four studio pictures the design is held against.
+- `app/test/goldens/<platform>/` — the studio pictures the design is held
+  against; macOS has four, Windows draws its own.
 
 ## Verifying
 
@@ -41,15 +42,15 @@ just check                    # Rust: fmt, clippy, tests
 cd app && flutter analyze     # must say "No issues found!"
 cd app && flutter test        # the studio goldens are opt-in
 cd app && flutter test --dart-define=studio-goldens=true test/studio_golden_test.dart
-                              # the four pictures, on the machine that drew them
+                              # the four pictures, from this platform's folder
 cd app && flutter test integration_test/ffi_strip_test.dart -d macos
                               # the linked model, in the app it ships in
 ```
 
 The studio goldens are drawn with the bundled faces and belong to the machine
-that drew them; they are opt-in and CI never runs them. `flutter test
---update-goldens` rewrites them deliberately — never as a way to turn a red
-test green.
+that drew them; each platform keeps its own folder under `app/test/goldens/`.
+They are opt-in and CI never runs them. `flutter test --update-goldens`
+rewrites them deliberately — never as a way to turn a red test green.
 
 ## Commits
 

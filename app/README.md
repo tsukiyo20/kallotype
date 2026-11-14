@@ -53,8 +53,11 @@ goldens are the design's instrument: they pin the select, develop, print and
 gallery steps at 1280 by 820, with the bundled faces loaded from disk so the
 picture is in the product's own type rather than the runner's.
 
-They are opt-in. A golden is local to the machine that drew it, so the test is
-skipped unless it is asked for, and it is never a way to turn a red test green:
+They are opt-in and per platform. A golden is local to the renderer that drew
+it, so the baselines live in `test/goldens/<platform>/`: the four committed
+today are macOS's, and `test/goldens/windows/` is where a Windows pass draws its
+own. The test is skipped unless it is asked for, and it is never a way to turn a
+red test green:
 
 ```bash
 fvm flutter test --dart-define=studio-goldens=true   test/studio_golden_test.dart
@@ -64,9 +67,9 @@ fvm flutter test --dart-define=studio-goldens=true --update-goldens   test/studi
 
 | | |
 |---|---|
-| ![the select step](test/goldens/select.png) | ![the develop step](test/goldens/develop.png) |
+| ![the select step](test/goldens/macos/select.png) | ![the develop step](test/goldens/macos/develop.png) |
 | **select**, the photograph before the developer | **develop**, one print at a time, on one exposure |
-| ![the print step](test/goldens/print.png) | ![the gallery](test/goldens/gallery.png) |
+| ![the print step](test/goldens/macos/print.png) | ![the gallery](test/goldens/macos/gallery.png) |
 | **print**, the enlarger dialled for this negative | **gallery**, the wall, newest first |
 
 The gallery's goldens hang a test card the test draws, because the app ships no

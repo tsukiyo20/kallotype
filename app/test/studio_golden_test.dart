@@ -17,16 +17,19 @@ import 'package:kallo_ui/views/steps.dart';
 
 /// The studio's pictures.
 ///
-/// They are drawn with the bundled faces and belong to the machine that drew
-/// them; the four in `test/goldens/` were drawn on this Mac. The test is
-/// opt-in, because a golden belongs to the renderer that made it and CI must
-/// not compare against a picture from another machine. Ask for it:
+/// They are drawn with the bundled faces and belong to the renderer that made
+/// them, so the baselines live under a platform folder: `goldens/macos/` was
+/// drawn on this Mac, `goldens/windows/` is where a Windows pass draws its own.
+/// The test is opt-in, because CI must not compare against another machine's
+/// pixels. Ask for it:
 ///
 /// ```bash
 /// flutter test --dart-define=studio-goldens=true \
 ///   test/studio_golden_test.dart
 /// ```
 const bool _paint = bool.fromEnvironment('studio-goldens');
+final bool _paintHere = _paint && (Platform.isMacOS || Platform.isWindows);
+final String _platform = Platform.isWindows ? 'windows' : 'macos';
 
 Future<void> _loadFonts() async {
   const Map<String, List<String>> faces = <String, List<String>>{
@@ -273,7 +276,7 @@ void main() {
       await tester.pumpAndSettle();
       await expectLater(
         find.byType(KalloApp),
-        matchesGoldenFile('goldens/select.png'),
+        matchesGoldenFile('goldens/$_platform/select.png'),
       );
     });
 
@@ -314,7 +317,7 @@ void main() {
       await tester.pumpAndSettle();
       await expectLater(
         find.byType(KalloApp),
-        matchesGoldenFile('goldens/develop.png'),
+        matchesGoldenFile('goldens/$_platform/develop.png'),
       );
     });
 
@@ -352,7 +355,7 @@ void main() {
       }
       await expectLater(
         find.byType(KalloApp),
-        matchesGoldenFile('goldens/print.png'),
+        matchesGoldenFile('goldens/$_platform/print.png'),
       );
     });
 
@@ -386,7 +389,7 @@ void main() {
       await tester.pumpAndSettle();
       await expectLater(
         find.byType(KalloApp),
-        matchesGoldenFile('goldens/gallery.png'),
+        matchesGoldenFile('goldens/$_platform/gallery.png'),
       );
     });
   });
