@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kallo_ui/lab/export_codec.dart';
+import 'package:kallo_ui/lab/export_format.dart';
 import 'package:kallo_ui/lab/exports.dart';
 import 'package:kallo_ui/lab/film_export.dart';
 import 'package:kallo_ui/lab/print.dart';
@@ -175,6 +177,69 @@ void main() {
       expect(framed.lengthSync(), lessThan(8 * 1024 * 1024));
     },
   );
+
+  test('a PNG becomes JPEG or TIFF, and a JPEG print reads back', () async {
+    final ui.Image card = await _card();
+    addTearDown(card.dispose);
+    final Uint8List png = (await card.toByteData(
+      format: ui.ImageByteFormat.png,
+    ))!.buffer.asUint8List();
+
+    final Uint8List jpeg = await encodePngAs(png, ExportFormat.jpeg);
+    expect(jpeg[0], 0xFF);
+    expect(jpeg[1], 0xD8);
+    final Uint8List tiff = await encodePngAs(png, ExportFormat.tiff);
+    expect(tiff[0], anyOf(0x49, 0x4D));
+
+    final Directory folder = await Directory.systemTemp.createTemp(
+      'kallotype-jpeg-print-',
+    );
+    addTearDown(() => folder.delete(recursive: true));
+    final File file = File('${folder.path}/print-01.jpg');
+    await file.writeAsBytes(jpeg);
+    final Print? print = await Print.read(file);
+    addTearDown(() => print?.dispose());
+    expect(print, isNotNull);
+    expect(print!.pixels, const Size(300, 200));
+    expect(print.printNumber, 1);
+  });
+
+  test('the frame can be written as PNG or TIFF', () async {
+    final Directory folder = await Directory.systemTemp.createTemp(
+      'kallotype-frame-formats-',
+    );
+    addTearDown(() => folder.delete(recursive: true));
+    final ui.Image card = await _card();
+    addTearDown(card.dispose);
+    final File printFile = File('${folder.path}/print-01.png');
+    final ByteData? png = await card.toByteData(format: ui.ImageByteFormat.png);
+    await printFile.writeAsBytes(png!.buffer.asUint8List(), flush: true);
+    final Print print = Print(
+      image: card,
+      name: 'print-01',
+      path: printFile.path,
+      pixels: const Size(300, 200),
+      process: FilmProcess.monochrome,
+      film: 'T-MAX 400',
+      minutes: 9,
+      tempC: 20,
+    );
+
+    final File asPng = await exportFilmFrame(
+      print: print,
+      format: ExportFormat.png,
+    );
+    expect(asPng.path, endsWith('.png'));
+    expect((await asPng.readAsBytes()).sublist(0, 4), <int>[137, 80, 78, 71]);
+
+    final File asTiff = await exportFilmFrame(
+      print: print,
+      format: ExportFormat.tiff,
+    );
+    expect(asTiff.path, endsWith('.tiff'));
+    final Uint8List tiff = await asTiff.readAsBytes();
+    expect(tiff[0], anyOf(0x49, 0x4D));
+  });
 
   test('the finished frame is written beside the print, in Frames', () async {
     final Directory folder = await Directory.systemTemp.createTemp(

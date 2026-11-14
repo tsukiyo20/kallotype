@@ -101,6 +101,12 @@ class KalloStrings {
   String get printAction => zh ? '印相' : 'Print';
   String get size => zh ? '尺寸' : 'SIZE';
   String get originalSize => zh ? '原尺寸' : 'Original';
+  String get noUpscale => zh ? '只缩不放' : 'Never upscales';
+  String get format => zh ? '格式' : 'FORMAT';
+  String get cancel => zh ? '取消' : 'Cancel';
+  String get export => zh ? '导出' : 'Export';
+  String get lossyNote => zh ? 'JPEG · 有损 · 文件更小' : 'JPEG · lossy · smaller';
+  String get losslessNote => zh ? '无损 · 文件更大' : 'Lossless · larger';
   String get printNote => zh
       ? '成品按这张底片单独平衡，不是试片上的那一张。'
       : 'The finished print is balanced for this negative, not for the strip.';

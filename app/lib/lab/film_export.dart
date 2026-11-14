@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:image/image.dart' as img;
 
 import '../widgets/film_frame.dart';
+import 'export_format.dart';
 import 'exports.dart';
 import 'model.dart';
 import 'print.dart';
@@ -19,16 +20,17 @@ import 'print.dart';
 /// someone. It goes in `Frames/` inside the export folder, so the gallery does
 /// not hang the same picture twice.
 ///
-/// The frame is drawn by the same painter the gallery uses, then encoded as a
-/// JPEG. The export is flat — the loupe's distortion is a property of looking
-/// through glass, not of the negative. A null [maxEdge] keeps the print's own
-/// pixel size; a value caps the frame's long edge, because a lossless
-/// full-resolution frame was a 100 MB file and not every export needs one.
+/// The frame is drawn by the same painter the gallery uses, then encoded in
+/// [format]. The export is flat — the loupe's distortion is a property of
+/// looking through glass, not of the negative. A null [maxEdge] keeps the
+/// print's own pixel size; a value caps the frame's long edge. JPEG is the
+/// default because a lossless full-resolution frame was a 100 MB file.
 Future<File> exportFilmFrame({
   required Print print,
   int? printNumber,
   ui.Image? image,
   int? maxEdge,
+  ExportFormat format = ExportFormat.jpeg,
 }) async {
   final String? path = print.path;
   if (path == null) {
@@ -84,7 +86,7 @@ Future<File> exportFilmFrame({
       raw.offsetInBytes,
       raw.lengthInBytes,
     );
-    final Uint8List jpeg = await Isolate.run(() {
+    final Uint8List encoded = await Isolate.run(() {
       final img.Image picture = img.Image.fromBytes(
         width: width,
         height: height,
@@ -93,15 +95,43 @@ Future<File> exportFilmFrame({
         numChannels: 4,
         order: img.ChannelOrder.rgba,
       );
-      return img.encodeJpg(picture, quality: 92, chroma: img.JpegChroma.yuv420);
+      return switch (format) {
+        ExportFormat.jpeg => img.encodeJpg(
+          picture,
+          quality: 92,
+          chroma: img.JpegChroma.yuv420,
+        ),
+        ExportFormat.png => img.encodePng(picture),
+        ExportFormat.tiff => img.encodeTiff(picture),
+      };
     });
 
     final Directory folder = Exports.framesFolder(File(path).parent);
     await folder.create(recursive: true);
     final File file = File(
-      '${folder.path}${Platform.pathSeparator}${print.name}-frame.jpg',
+      '${folder.path}${Platform.pathSeparator}${print.name}-frame.'
+      '${format.extension}',
     );
-    await file.writeAsBytes(jpeg, flush: true);
+    await file.writeAsBytes(encoded, flush: true);
+
+    // One frame, one file: choosing TIFF today should not leave yesterday's
+    // JPEG beside it.
+    for (final String extension in <String>['jpg', 'png', 'tiff']) {
+      if (extension == format.extension) {
+        continue;
+      }
+      final File old = File(
+        '${folder.path}${Platform.pathSeparator}${print.name}-frame.'
+        '$extension',
+      );
+      if (old.existsSync()) {
+        try {
+          await old.delete();
+        } on FileSystemException {
+          // A file in use is not a reason to lose the new export.
+        }
+      }
+    }
     return file;
   } on FileSystemException {
     rethrow;

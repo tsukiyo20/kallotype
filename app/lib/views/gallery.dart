@@ -9,10 +9,12 @@ import 'package:flutter/widgets.dart';
 import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
+import '../lab/export_format.dart';
 import '../lab/film_export.dart';
 import '../lab/model.dart';
 import '../lab/print.dart';
 import '../lab/stock.dart';
+import '../widgets/export_sheet.dart';
 import '../widgets/film_frame.dart';
 import '../widgets/lens.dart';
 import '../widgets/switch.dart';
@@ -403,9 +405,6 @@ class _LoupeState extends State<_Loupe> {
   /// Where the picture is held, in points, from the centre of its aperture.
   Offset _pan = Offset.zero;
 
-  /// Null exports at the print's own pixel size; 4096 caps the long edge.
-  int? _maxEdge;
-
   bool _exporting = false;
   bool _exported = false;
   bool _exportFailed = false;
@@ -474,7 +473,33 @@ class _LoupeState extends State<_Loupe> {
   /// One image pixel per device pixel, as a magnification over the fit.
   double _ceiling(double fit) => fit >= 1 ? 1 : 1 / fit;
 
-  Future<void> _export() async {
+  Future<void> _chooseExport() async {
+    if (_exporting || !_canExport) {
+      return;
+    }
+    final KalloStrings s = KalloStrings.of(context);
+    final ExportOptions? options = await showExportSheet(
+      context,
+      title: s.exportFrame,
+      confirm: s.export,
+      sizes: <ExportSize>[
+        ExportSize(s.originalSize, null),
+        const ExportSize('4096 px', 4096),
+      ],
+      formats: const <ExportFormat>[
+        ExportFormat.jpeg,
+        ExportFormat.png,
+        ExportFormat.tiff,
+      ],
+      initialFormat: ExportFormat.jpeg,
+    );
+    if (options == null || !mounted) {
+      return;
+    }
+    await _export(options);
+  }
+
+  Future<void> _export(ExportOptions options) async {
     if (_exporting || !_canExport) {
       return;
     }
@@ -489,7 +514,8 @@ class _LoupeState extends State<_Loupe> {
         print: widget.print,
         printNumber: widget.printNumber,
         image: _full,
-        maxEdge: _maxEdge,
+        maxEdge: options.size,
+        format: options.format,
       );
       if (!mounted) {
         return;
@@ -526,7 +552,7 @@ class _LoupeState extends State<_Loupe> {
         const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
         if (_canExport)
           const SingleActivator(LogicalKeyboardKey.keyE): () =>
-              unawaited(_export()),
+              unawaited(_chooseExport()),
       },
       child: Focus(
         focusNode: _keys,
@@ -721,23 +747,11 @@ class _LoupeState extends State<_Loupe> {
                           ),
                           const SizedBox(width: KalloSpace.step3),
                           _Pill(
-                            key: const Key('export-size'),
-                            label: _maxEdge == null ? s.originalSize : '4096',
-                            control: widget.wall.controlAt(light),
-                            onTap: () => setState(() {
-                              _maxEdge = _maxEdge == null ? 4096 : null;
-                              _exported = false;
-                              _exportFailed = false;
-                            }),
-                            enabled: !_exporting,
-                          ),
-                          const SizedBox(width: KalloSpace.step3),
-                          _Pill(
                             key: const Key('export'),
                             label: exportLabel,
                             control: widget.wall.controlAt(light),
                             onTap: _canExport
-                                ? () => unawaited(_export())
+                                ? () => unawaited(_chooseExport())
                                 : null,
                             enabled: _canExport && !_exporting,
                           ),

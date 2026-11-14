@@ -10,6 +10,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/chart.dart';
 import '../lab/clock.dart';
+import '../lab/export_format.dart';
 import '../lab/model.dart';
 import '../lab/preview_bench.dart';
 import '../lab/print_request.dart';
@@ -19,6 +20,7 @@ import '../lab/strip_develop.dart';
 import '../widgets/button.dart';
 import '../widgets/chip.dart';
 import '../widgets/curves.dart';
+import '../widgets/export_sheet.dart';
 import '../widgets/stepper.dart';
 import '../widgets/wall.dart';
 
@@ -52,7 +54,6 @@ class PrintStage extends StatefulWidget {
 
 class _PrintStageState extends State<PrintStage> {
   late double _minutes;
-  int? _width;
   double _printEv = 0;
   int _yellow = 0;
   int _magenta = 0;
@@ -282,15 +283,30 @@ class _PrintStageState extends State<PrintStage> {
     }
   }
 
-  void _size(int? width) {
-    setState(() {
-      _width = width;
-      _printed = false;
-      _error = null;
-    });
+  Future<void> _choosePrint() async {
+    if (_busy || widget.exports == null || !widget.strip.hasPrints) {
+      return;
+    }
+    final KalloStrings s = KalloStrings.of(context);
+    final ExportOptions? options = await showExportSheet(
+      context,
+      title: s.printAction,
+      confirm: s.printAction,
+      sizes: <ExportSize>[
+        ExportSize(s.originalSize, null),
+        const ExportSize('6000 px', 6000),
+        const ExportSize('4000 px', 4000),
+      ],
+      formats: const <ExportFormat>[ExportFormat.png, ExportFormat.jpeg],
+      initialFormat: ExportFormat.png,
+    );
+    if (options == null || !mounted) {
+      return;
+    }
+    await _print(options);
   }
 
-  Future<void> _print() async {
+  Future<void> _print(ExportOptions options) async {
     if (_busy || widget.exports == null || !widget.strip.hasPrints) {
       return;
     }
@@ -306,7 +322,8 @@ class _PrintStageState extends State<PrintStage> {
           printEv: _printEv,
           filters: _filters,
           heatGlass: _glass,
-          width: _width,
+          width: options.size,
+          format: options.format,
         ),
       );
       if (mounted) {
@@ -610,42 +627,9 @@ class _PrintStageState extends State<PrintStage> {
                       style: KalloType.small.copyWith(color: colors.inkFaint),
                     ),
                   ),
-                Text(
-                  s.size,
-                  style: KalloType.caption.copyWith(
-                    color: colors.inkFaint,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-                const SizedBox(height: KalloSpace.step2),
-                Wrap(
-                  spacing: KalloSpace.step1 + 2,
-                  runSpacing: KalloSpace.step1 + 2,
-                  children: <Widget>[
-                    KalloChip(
-                      label: s.originalSize,
-                      selected: _width == null,
-                      compact: true,
-                      onTap: () => _size(null),
-                    ),
-                    KalloChip(
-                      label: '6000 px',
-                      selected: _width == 6000,
-                      compact: true,
-                      onTap: () => _size(6000),
-                    ),
-                    KalloChip(
-                      label: '4000 px',
-                      selected: _width == 4000,
-                      compact: true,
-                      onTap: () => _size(4000),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: KalloSpace.step3),
                 KalloButton(
                   label: _busy ? s.printing : s.printAction,
-                  onTap: printable && !_busy ? _print : null,
+                  onTap: printable && !_busy ? () => _choosePrint() : null,
                   filled: true,
                   height: 36,
                 ),

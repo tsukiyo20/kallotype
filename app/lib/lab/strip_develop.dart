@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'chart.dart';
+import 'export_codec.dart';
+import 'export_format.dart';
 import 'image_file.dart';
 import 'model.dart';
 import 'stock.dart';
@@ -171,6 +174,7 @@ Future<File> printTest({
   String filters = '',
   String? heatGlass,
   int? width,
+  ExportFormat format = ExportFormat.png,
 }) async {
   final String? photo = strip.photo;
   if (photo == null) {
@@ -202,7 +206,43 @@ Future<File> printTest({
     filters: filters,
     heatGlass: heatGlass,
   );
-  return output;
+  if (format == ExportFormat.png) {
+    await _dropOtherFormats(exports, stem, format);
+    return output;
+  }
+  final Uint8List png = await output.readAsBytes();
+  final Uint8List encoded = await encodePngAs(png, format);
+  final File finalFile = File(
+    '${exports.path}${Platform.pathSeparator}$stem.${format.extension}',
+  );
+  await finalFile.writeAsBytes(encoded, flush: true);
+  await output.delete();
+  await _dropOtherFormats(exports, stem, format);
+  return finalFile;
+}
+
+/// A print at one development is one file: changing its format must not leave
+/// yesterday's PNG next to today's JPEG in the folder.
+Future<void> _dropOtherFormats(
+  Directory exports,
+  String stem,
+  ExportFormat keep,
+) async {
+  for (final String extension in <String>['png', 'jpg', 'jpeg', 'tiff']) {
+    if (extension == keep.extension) {
+      continue;
+    }
+    final File old = File(
+      '${exports.path}${Platform.pathSeparator}$stem.$extension',
+    );
+    if (old.existsSync()) {
+      try {
+        await old.delete();
+      } on FileSystemException {
+        // A file in use is not a reason to lose the print.
+      }
+    }
+  }
 }
 
 /// A file's width, read from its header rather than by decoding it.

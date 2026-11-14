@@ -297,7 +297,7 @@ class Print {
     PrintRecord? record,
   }) async {
     final Uint8List bytes = await image.readAsBytes();
-    final Size? pixels = _pngSize(bytes);
+    final Size? pixels = _pngSize(bytes) ?? await _encodedSize(bytes);
     final int source = pixels?.width.toInt() ?? 0;
     final ui.Codec codec = await ui.instantiateImageCodec(
       bytes,
@@ -334,10 +334,40 @@ class Print {
     );
   }
 
+  /// The size any encoded image says it is, for a format whose header is not
+  /// read by [_pngSize] — JPEG, today.
+  static Future<Size?> _encodedSize(Uint8List bytes) async {
+    try {
+      final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(
+        bytes,
+      );
+      final ui.ImageDescriptor descriptor = await ui.ImageDescriptor.encoded(
+        buffer,
+      );
+      final Size size = Size(
+        descriptor.width.toDouble(),
+        descriptor.height.toDouble(),
+      );
+      descriptor.dispose();
+      buffer.dispose();
+      return size;
+    } on Object {
+      return null;
+    }
+  }
+
   /// The size a PNG says it is. Position 16 is where the first chunk's data
   /// begins, and it is the only part of a decode that costs nothing.
   static Size? _pngSize(Uint8List bytes) {
-    if (bytes.length < 24) {
+    if (bytes.length < 24 ||
+        bytes[0] != 137 ||
+        bytes[1] != 80 ||
+        bytes[2] != 78 ||
+        bytes[3] != 71 ||
+        bytes[4] != 13 ||
+        bytes[5] != 10 ||
+        bytes[6] != 26 ||
+        bytes[7] != 10) {
       return null;
     }
     final int width =

@@ -103,6 +103,13 @@ abstract final class Exports {
     return getDirectoryPath(confirmButtonText: 'Choose');
   }
 
+  static bool _isImage(String path) {
+    final String lower = path.toLowerCase();
+    return lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg');
+  }
+
   /// Every exported print, oldest first, so that the last one is the one that
   /// would be hanging.
   ///
@@ -115,8 +122,7 @@ abstract final class Exports {
     final List<File> images =
         <File>[
           for (final FileSystemEntity entity in folder.listSync())
-            if (entity is File && entity.path.toLowerCase().endsWith('.png'))
-              entity,
+            if (entity is File && _isImage(entity.path)) entity,
         ]..sort((File a, File b) {
           final DateTime left = a.statSync().modified;
           final DateTime right = b.statSync().modified;

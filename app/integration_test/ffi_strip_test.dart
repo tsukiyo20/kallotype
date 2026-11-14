@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kallo_ui/lab/ffi_model.dart';
 import 'package:kallo_ui/lab/chart.dart';
+import 'package:kallo_ui/lab/export_format.dart';
 import 'package:kallo_ui/lab/model.dart';
 import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/strip.dart';
@@ -108,6 +109,25 @@ void main() {
       isFalse,
       reason: 'the export folder holds images, not sidecars',
     );
+
+    final File jpeg = await printTest(
+      model: model,
+      strip: strip,
+      minutes: 6,
+      exports: exports,
+      format: ExportFormat.jpeg,
+      width: 800,
+    );
+    expect(jpeg.path, endsWith('.jpg'));
+    expect(
+      File(jpeg.path.replaceFirst('.jpg', '.png')).existsSync(),
+      isFalse,
+      reason: 'the temporary PNG is removed',
+    );
+    final Print? jpegPrint = await Print.read(jpeg);
+    expect(jpegPrint, isNotNull);
+    expect(jpegPrint!.pixels?.width, 800);
+    jpegPrint.dispose();
   }, timeout: const Timeout(Duration(minutes: 5)));
 
   test('a bench session is one decode, then renders', () async {

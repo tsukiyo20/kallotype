@@ -1,3 +1,5 @@
+import 'export_format.dart';
+
 /// What the print stage asks the model for.
 ///
 /// A finished print is not the test strip's print: it is balanced for its own
@@ -10,12 +12,16 @@ class PrintRequest {
     this.filters = '',
     this.heatGlass,
     this.width,
+    this.format = ExportFormat.png,
   });
 
   final double minutes;
 
   /// The finished print's width in pixels; null keeps the photograph's own.
   final int? width;
+
+  /// What the finished file is written as.
+  final ExportFormat format;
 
   /// The enlarger's timer, in stops, on top of the solved balance.
   final double printEv;
