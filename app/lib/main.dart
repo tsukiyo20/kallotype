@@ -58,7 +58,7 @@ Future<void> main() async {
       size: size,
       minimumSize: Size(960, 600),
       center: true,
-      title: 'Kallotype',
+      title: 'Kallo',
       // The Mac keeps its traffic lights and loses its bar; the other two keep
       // their frames until they have controls of their own, because a window
       // with no way to close it is a bug, not a style.
@@ -620,7 +620,7 @@ class _KalloAppState extends State<KalloApp> {
   @override
   Widget build(BuildContext context) {
     return WidgetsApp(
-      title: 'Kallotype',
+      title: 'Kallo',
       color: KalloColors.light.ground,
       debugShowCheckedModeBanner: false,
       locale: _locale,

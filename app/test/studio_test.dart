@@ -71,6 +71,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(StudioSidebar), findsOneWidget);
+    expect(find.text('KALLO'), findsOneWidget);
     expect(find.byType(StageTabs), findsOneWidget);
     expect(find.byType(SelectStage), findsOneWidget);
     expect(find.text('暗房'), findsOneWidget);

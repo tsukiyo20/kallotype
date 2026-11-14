@@ -384,8 +384,8 @@ class KalloStrings {
 
   String get about => zh ? '关于' : 'About';
   String get aboutNote => zh
-      ? 'Kallotype。字体是 Inter 和 Noto Sans SC。模型在 Rust 里，这里是它的脸。'
-      : 'Kallotype. Type is Inter and Noto Sans SC. The model is in Rust; this is its face.';
+      ? 'Kallo，Kallotype 的界面。字体是 Inter 和 Noto Sans SC。模型在 Rust 里，这里是它的脸。'
+      : 'Kallo, the interface of Kallotype. Type is Inter and Noto Sans SC. The model is in Rust; this is its face.';
 
   String get applyAtOnce =>
       zh ? '设置立即生效，不重启。' : 'Settings apply at once. Nothing restarts.';

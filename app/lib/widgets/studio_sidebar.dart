@@ -45,7 +45,7 @@ class StudioSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 2, 16, 18),
             child: Text(
-              'KALLOTYPE',
+              'KALLO',
               style: KalloType.caption.copyWith(
                 color: colors.inkFaint,
                 letterSpacing: 2.0,

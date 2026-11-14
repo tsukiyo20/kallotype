@@ -1,8 +1,8 @@
 name: kallo_ui
 description: >-
-  The interface of Kallotype: a design language, a handful of primitives, and
-  the places a roll of film passes through. Not a widget library — this is the
-  app's vocabulary.
+  Kallo, the interface of Kallotype: a design language, a handful of primitives,
+  and the places a roll of film passes through. Not a widget library — this is
+  the app's vocabulary.
 publish_to: none
 version: 0.1.0
 

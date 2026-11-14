@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="ground" cx="512" cy="520" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#21150C"/>
+      <stop offset="0.55" stop-color="#0F0C0A"/>
+      <stop offset="1" stop-color="#08090A"/>
+    </radialGradient>
+    <linearGradient id="cream" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8EEDC"/>
+      <stop offset="0.55" stop-color="#F2E6D1"/>
+      <stop offset="1" stop-color="#E5D5BC"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFC24A"/>
+      <stop offset="0.52" stop-color="#FFA018"/>
+      <stop offset="1" stop-color="#EF8407"/>
+    </linearGradient>
+    <linearGradient id="rust" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D96024"/>
+      <stop offset="0.55" stop-color="#C24A18"/>
+      <stop offset="1" stop-color="#99300B"/>
+    </linearGradient>
+    <filter id="soft-ground" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="90"/>
+    </filter>
+    <filter id="k-shadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="20"/>
+      <feOffset dy="18" result="offset"/>
+      <feComponentTransfer in="offset" result="shadow">
+        <feFuncA type="linear" slope="0.55"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <mask id="stem-mask" maskUnits="userSpaceOnUse" x="290" y="240" width="160" height="544">
+      <rect x="300" y="250" width="138" height="524" rx="30" fill="#FFFFFF"/>
+      <rect x="321" y="325" width="96" height="14" rx="7" fill="#000000"/>
+      <rect x="321" y="417" width="96" height="14" rx="7" fill="#000000"/>
+      <rect x="321" y="593" width="96" height="14" rx="7" fill="#000000"/>
+      <rect x="321" y="685" width="96" height="14" rx="7" fill="#000000"/>
+    </mask>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#ground)"/>
+  <ellipse cx="512" cy="510" rx="360" ry="330" fill="#FF8E18" opacity="0.06" filter="url(#soft-ground)"/>
+
+  <g transform="translate(-8 0)" filter="url(#k-shadow)">
+    <line x1="415" y1="512" x2="704" y2="270" stroke="url(#amber)" stroke-width="132" stroke-linecap="round"/>
+    <line x1="415" y1="512" x2="704" y2="754" stroke="url(#rust)" stroke-width="132" stroke-linecap="round"/>
+    <rect x="300" y="250" width="138" height="524" rx="30" fill="url(#cream)" mask="url(#stem-mask)"/>
+    <rect x="312" y="258" width="114" height="8" rx="4" fill="#FFFFFF" opacity="0.10"/>
+    <rect x="300" y="250" width="138" height="524" rx="30" fill="none" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="1.5"/>
+  </g>
+</svg>
