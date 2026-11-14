@@ -226,6 +226,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  glob:
+    dependency: transitive
+    description:
+      name: glob
+      sha256: "218aeb56050c714f62a3182775320dfa04602b55074873e24e31bbd39bda96fb"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.2.0"
   hooks:
     dependency: transitive
     description:
@@ -335,6 +343,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.19.0"
+  native_toolchain_c:
+    dependency: transitive
+    description:
+      name: native_toolchain_c
+      sha256: "120b6fc66acd8a5ddeaeb1e59b78836bb3ec9919bd9d9dfb1e2401985710c2c0"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.19.6"
   native_toolchain_rust:
     dependency: transitive
     description:
@@ -460,6 +476,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.10.2"
+  sqlite3:
+    dependency: "direct main"
+    description:
+      name: sqlite3
+      sha256: "8765980411f9b6733534efe9d014fad0750fa649590598772c04692deb34886b"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.9.1"
   stack_trace:
     dependency: transitive
     description:
@@ -628,6 +652,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.5.2"
+  xml:
+    dependency: "direct main"
+    description:
+      name: xml
+      sha256: "0fe8cc98946def31cbcbc8734aa4067031e6f65ea3a78a508060bfed2200bfeb"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "7.1.0"
   yaml:
     dependency: transitive
     description:

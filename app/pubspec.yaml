@@ -30,8 +30,10 @@ dependencies:
   screen_retriever: ^0.2.2
   # The one outbound link in the interface. Opening the project page in the
   # system browser belongs to the platform, not to a platform branch here.
+  sqlite3: ^3.9.1
   url_launcher: ^6.3.2
   window_manager: ^0.5.1
+  xml: ^7.1.0
 
 dev_dependencies:
   flutter_test:
