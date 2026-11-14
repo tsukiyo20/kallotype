@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'catalog.dart';
 import 'exports.dart';
 import 'print.dart';
@@ -191,6 +193,10 @@ class PrintLibrary {
     final List<CatalogPrint> rows = catalog.printsInLibrary(library.id);
     final List<({CatalogPrint row, File source, File target})> copied =
         <({CatalogPrint row, File source, File target})>[];
+    final List<({File source, File target})> frames =
+        <({File source, File target})>[];
+    final Directory sourceFrames = Exports.framesFolder(folder);
+    final Directory targetFrames = Exports.framesFolder(destination);
 
     try {
       for (final CatalogPrint row in rows) {
@@ -210,6 +216,34 @@ class PrintLibrary {
           );
         }
         copied.add((row: row, source: source, target: target));
+        if (sourceFrames.existsSync()) {
+          final String sourceStem = _stem(source.path);
+          final String targetStem = _stem(target.path);
+          for (final FileSystemEntity entity in sourceFrames.listSync()) {
+            if (entity is! File) {
+              continue;
+            }
+            final String name = _basename(entity.path);
+            if (!name.startsWith('$sourceStem-frame.')) {
+              continue;
+            }
+            final String extension = name.substring(sourceStem.length);
+            frames.add((
+              source: entity,
+              target: File(
+                '${targetFrames.path}${Platform.pathSeparator}'
+                '$targetStem$extension',
+              ),
+            ));
+          }
+        }
+      }
+
+      if (frames.isNotEmpty) {
+        await targetFrames.create(recursive: true);
+      }
+      for (final ({File source, File target}) frame in frames) {
+        await frame.source.copy(frame.target.path);
       }
 
       for (final ({CatalogPrint row, File source, File target}) item
@@ -243,6 +277,15 @@ class PrintLibrary {
           // A partial copy is a cache of nothing; leave the error visible.
         }
       }
+      for (final ({File source, File target}) frame in frames) {
+        try {
+          if (await frame.target.exists()) {
+            await frame.target.delete();
+          }
+        } on FileSystemException {
+          // The next move can replace an orphaned frame.
+        }
+      }
       rethrow;
     }
 
@@ -254,6 +297,13 @@ class PrintLibrary {
         // duplicate for the person to remove, not a reason to fail the move.
       }
     }
+    for (final ({File source, File target}) frame in frames) {
+      try {
+        await frame.source.delete();
+      } on FileSystemException {
+        // A frame is a derived export; an old copy is harmless.
+      }
+    }
 
     return PrintLibrary._(
       catalog,
@@ -261,6 +311,50 @@ class PrintLibrary {
       destination,
       ownsCatalog: ownsCatalog,
     );
+  }
+
+  /// Rewrite the marker for every print whose catalog record says it is
+  /// missing or stale and whose file still exists.
+  ///
+  /// A missing file has no marker to write; its row stays in the catalog and
+  /// the person can locate it. This is a repair, not a discovery.
+  Future<int> repairMarkers() async {
+    final List<CatalogPrint> rows = catalog.printsInLibrary(
+      library.id,
+      includeMissing: true,
+    );
+    int repaired = 0;
+    for (final CatalogPrint row in rows) {
+      if (row.xmpState != XmpState.missing && row.xmpState != XmpState.stale) {
+        continue;
+      }
+      final File file = File(row.locator);
+      if (!file.existsSync()) {
+        continue;
+      }
+      try {
+        await PrintMarker.finalize(file, file, row.meta);
+        final ScannedPrint? scan = await PrintMarker.read(file);
+        if (scan == null) {
+          continue;
+        }
+        final FileStat stat = await file.stat();
+        catalog.touch(
+          printId: row.id,
+          libraryId: library.id,
+          locator: file.path,
+          width: scan.pixels.width.round(),
+          height: scan.pixels.height.round(),
+          fileSize: stat.size,
+          fileMtimeUs: stat.modified.microsecondsSinceEpoch,
+          xmpState: XmpState.ok,
+        );
+        repaired++;
+      } on Object catch (error) {
+        debugPrint('the marker for ${file.path} could not be repaired: $error');
+      }
+    }
+    return repaired;
   }
 
   /// Attach a library to [destination] without moving any files.
@@ -412,6 +506,11 @@ class PrintLibrary {
     return lower.endsWith('.png') ||
         lower.endsWith('.jpg') ||
         lower.endsWith('.jpeg');
+  }
+
+  static String _basename(String path) {
+    final int slash = path.lastIndexOf(Platform.pathSeparator);
+    return slash < 0 ? path : path.substring(slash + 1);
   }
 
   static String _stem(String path) {

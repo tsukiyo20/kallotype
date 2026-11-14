@@ -391,6 +391,25 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             child: KalloButton(label: s.importImages, onTap: export.onImport),
           ),
         ],
+        if (export.missingPrints > 0 ||
+            export.repairablePrints > 0) ...<Widget>[
+          const SizedBox(height: KalloSpace.step3),
+          Text(
+            s.catalogIssues(export.missingPrints, export.repairablePrints),
+            style: KalloType.small.copyWith(color: colors.inkMuted),
+          ),
+          if (export.onRepair != null &&
+              export.repairablePrints > 0) ...<Widget>[
+            const SizedBox(height: KalloSpace.step2),
+            Align(
+              alignment: Alignment.centerRight,
+              child: KalloButton(
+                label: s.repairMarkers,
+                onTap: export.onRepair,
+              ),
+            ),
+          ],
+        ],
         if (export.custom && export.onReset != null) ...<Widget>[
           const SizedBox(height: KalloSpace.step2),
           Align(

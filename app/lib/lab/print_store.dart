@@ -4,17 +4,16 @@ import 'dart:io';
 import 'print.dart';
 import 'settings.dart';
 
-/// Print metadata, kept in the app's own support folder.
+/// The old `prints.json` store, kept only for the one-time migration.
 ///
 /// A JSON sidecar beside every PNG made the export folder a directory of
-/// pictures and records. The records still have to exist — the gallery needs
-/// the stock, the paper, the development and the print number — but they
-/// belong to the app, not to the person's folder. One file, keyed by the
-/// print's path.
+/// pictures and records. This store replaced those sidecars; the catalog and
+/// the XMP marker now replace this store. The runtime must not read it: it is
+/// here so an existing `prints.json` can be adopted once and renamed.
 ///
-/// On the first read after this change, old sidecars are imported and then
-/// deleted. The file names and the record shape are the app's own; a JSON that
-/// is not one of those is left alone.
+/// On the one migration, old sidecars are imported and then deleted. The file
+/// names and the record shape are the app's own; a JSON that is not one of
+/// those is left alone.
 abstract final class PrintStore {
   static const String _name = 'prints.json';
 
@@ -190,12 +189,11 @@ abstract final class PrintStore {
     }
     try {
       await file.parent.create(recursive: true);
-      final String text = const JsonEncoder.withIndent('  ').convert(
-        <String, Object?>{
-          for (final MapEntry<String, PrintRecord> entry in records.entries)
-            entry.key: entry.value.toJson(),
-        },
-      );
+      final String text = const JsonEncoder.withIndent('  ')
+          .convert(<String, Object?>{
+            for (final MapEntry<String, PrintRecord> entry in records.entries)
+              entry.key: entry.value.toJson(),
+          });
       final RandomAccessFile out = await temp.open(mode: FileMode.write);
       try {
         await out.writeString(text);

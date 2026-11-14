@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:kallo/lab/catalog.dart';
+import 'package:kallo/lab/exports.dart';
 import 'package:kallo/lab/print.dart';
 import 'package:kallo/lab/print_library.dart';
 import 'package:kallo/lab/print_marker.dart';
@@ -96,6 +97,24 @@ void main() {
     expect(catalog.printById(record.id)?.xmpState, XmpState.missing);
   });
 
+  test('a stripped marker can be repaired', () async {
+    final File file = await png('print.png');
+    final PrintMeta record = meta();
+    await PrintMarker.finalize(file, file, record);
+    await library.read();
+
+    final File unmarked = await png('replacement.png');
+    await unmarked.copy(file.path);
+    await unmarked.delete();
+    await library.read();
+    expect(catalog.printById(record.id)?.xmpState, XmpState.missing);
+
+    final int repaired = await library.repairMarkers();
+    expect(repaired, 1);
+    expect((await PrintMarker.readMeta(file))?.id, record.id);
+    expect(catalog.printById(record.id)?.xmpState, XmpState.ok);
+  });
+
   test('a missing file is retained but not hung', () async {
     final File file = await png('print.png');
     final PrintMeta record = meta();
@@ -123,6 +142,8 @@ void main() {
     final File file = await png('print.png');
     final PrintMeta record = meta();
     await PrintMarker.finalize(file, file, record);
+    final Directory frames = Exports.framesFolder(folder)..createSync();
+    await File('${frames.path}/print-frame.jpg').writeAsString('frame');
     await library.read();
 
     final Directory destination = Directory('${root.path}/Moved');
@@ -131,6 +152,11 @@ void main() {
     expect(moved.folder.path, destination.path);
     expect(File('${destination.path}/print.png').existsSync(), isTrue);
     expect(file.existsSync(), isFalse);
+    expect(
+      File('${destination.path}/Frames/print-frame.jpg').existsSync(),
+      isTrue,
+    );
+    expect(File('${frames.path}/print-frame.jpg').existsSync(), isFalse);
     expect(
       catalog.printById(record.id)?.locator,
       '${destination.path}/print.png',

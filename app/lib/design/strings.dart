@@ -359,6 +359,13 @@ class KalloStrings {
   String get choose => zh ? '选择…' : 'Choose…';
   String get importImages => zh ? '导入图片…' : 'Import images…';
 
+  String get importingImages => zh ? '正在导入图片' : 'Importing pictures';
+
+  String importProgress(int done, int total) =>
+      zh ? '已完成 $done / $total' : '$done of $total';
+
+  String get cancelling => zh ? '正在停止…' : 'Stopping…';
+
   String get movePrintsTitle => zh ? '移动 Kallo 印相？' : 'Move Kallo prints?';
 
   String movePrintsNote(int count, String destination) => zh
@@ -368,6 +375,17 @@ class KalloStrings {
   String get movePrintsAction => zh ? '移动印相' : 'Move prints';
 
   String get useNewFolderAction => zh ? '只切换文件夹' : 'Use new folder only';
+
+  String catalogIssues(int missing, int repairable) {
+    final List<String> parts = <String>[
+      if (missing > 0) zh ? '$missing 张印相找不到文件' : '$missing prints are missing',
+      if (repairable > 0)
+        zh ? '$repairable 张印相的标记需要修复' : '$repairable markers need repair',
+    ];
+    return parts.join(' · ');
+  }
+
+  String get repairMarkers => zh ? '修复标记' : 'Repair markers';
   String get useDefault => zh ? '用回默认位置' : 'Use the default';
   String get noFolder => zh ? '这台设备上还没有位置' : 'No folder on this device yet';
 

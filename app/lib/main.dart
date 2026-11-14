@@ -12,6 +12,7 @@ import 'design/chrome.dart';
 import 'design/scope.dart';
 import 'design/strings.dart';
 import 'design/tokens.dart';
+import 'lab/catalog.dart';
 import 'lab/exports.dart';
 import 'lab/ffi_model.dart';
 import 'lab/image_file.dart';
@@ -21,7 +22,6 @@ import 'lab/print_library.dart';
 import 'lab/print_marker.dart';
 import 'lab/print_meta.dart';
 import 'lab/print_out.dart';
-import 'lab/print_store.dart';
 import 'lab/print_request.dart';
 import 'lab/roll.dart';
 import 'lab/roll_store.dart';
@@ -34,6 +34,7 @@ import 'views/chambers.dart';
 import 'views/steps.dart';
 import 'views/studio.dart';
 import 'widgets/folder_move_sheet.dart';
+import 'widgets/import_progress_sheet.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -178,6 +179,11 @@ class _KalloAppState extends State<KalloApp> {
   bool _printsLoaded = false;
   List<PrintJob> _jobs = const <PrintJob>[];
   PrintLibrary? _library;
+  int _missingPrints = 0;
+  int _repairablePrints = 0;
+  bool _repairing = false;
+  StreamSubscription<FileSystemEvent>? _watch;
+  Timer? _watchDebounce;
   Settings _settings = const Settings();
   String? _exportPath;
 
@@ -209,6 +215,8 @@ class _KalloAppState extends State<KalloApp> {
 
   @override
   void dispose() {
+    _watchDebounce?.cancel();
+    unawaited(_watch?.cancel());
     _library?.close();
     if (_ownsPhotograph) {
       _photograph?.dispose();
@@ -543,11 +551,11 @@ class _KalloAppState extends State<KalloApp> {
         tempC: strip.tempC,
       );
       final PrintLibrary? library = _library;
-      if (library != null) {
-        await library.addFile(output, meta);
-      } else {
-        await PrintStore.remember(output, meta.record);
+      if (library == null) {
+        debugPrint('the print has no catalog: ${output.path}');
+        return;
       }
+      await library.addFile(output, meta);
       await _reloadPrints();
     } finally {
       if (mounted) {
@@ -568,6 +576,47 @@ class _KalloAppState extends State<KalloApp> {
     _spectral = _settings.spectral;
     await _openLibrary();
     await _reloadPrints();
+    _startWatching();
+  }
+
+  /// Reload when the folder changes behind the app.
+  ///
+  /// The marker and the catalog are the truth, so a file dropped in Finder or
+  /// removed by another app should reach the wall without a relaunch. Events
+  /// are debounced: a copy is many writes, and one reload is enough.
+  void _startWatching() {
+    _watchDebounce?.cancel();
+    unawaited(_watch?.cancel());
+    _watch = null;
+    final Directory? folder = _folder;
+    if (folder == null || !folder.existsSync()) {
+      return;
+    }
+    try {
+      _watch = folder
+          .watch(
+            events:
+                FileSystemEvent.create |
+                FileSystemEvent.modify |
+                FileSystemEvent.delete |
+                FileSystemEvent.move,
+          )
+          .listen(
+            (FileSystemEvent event) {
+              _watchDebounce?.cancel();
+              _watchDebounce = Timer(const Duration(milliseconds: 300), () {
+                if (mounted) {
+                  unawaited(_reloadPrints());
+                }
+              });
+            },
+            onError: (Object error) {
+              debugPrint('the folder could not be watched: $error');
+            },
+          );
+    } on Object catch (error) {
+      debugPrint('the folder could not be watched: $error');
+    }
   }
 
   /// Open the catalog and let it adopt the old print store once.
@@ -614,9 +663,9 @@ class _KalloAppState extends State<KalloApp> {
   Future<void> _reloadPrints() async {
     _printsLoaded = true;
     final PrintLibrary? library = _library;
-    final List<Print> prints = library != null
-        ? await library.read()
-        : await Exports.read(folder: _folder);
+    final List<Print> prints = library == null
+        ? const <Print>[]
+        : await library.read();
     if (!mounted) {
       for (final Print print in prints) {
         print.dispose();
@@ -624,7 +673,12 @@ class _KalloAppState extends State<KalloApp> {
       return;
     }
     final List<Print> previous = _prints;
-    setState(() => _prints = prints);
+    final (int missing, int repairable) = _issueCounts();
+    setState(() {
+      _prints = prints;
+      _missingPrints = missing;
+      _repairablePrints = repairable;
+    });
     if (identical(previous, prints) || previous.isEmpty) {
       return;
     }
@@ -677,6 +731,7 @@ class _KalloAppState extends State<KalloApp> {
     _exportPath = chosen;
     await _remember(chosen);
     await _reloadPrints();
+    _startWatching();
   }
 
   Future<void> _resetExport() async {
@@ -696,6 +751,7 @@ class _KalloAppState extends State<KalloApp> {
     setState(() => _exportPath = null);
     await _remember(null);
     await _reloadPrints();
+    _startWatching();
   }
 
   /// Copy selected pictures into the library. The source files never change.
@@ -719,44 +775,102 @@ class _KalloAppState extends State<KalloApp> {
       debugPrint('no import panel: $error');
       return;
     }
-    for (final XFile picked in files) {
-      final File source = File(picked.path);
-      try {
-        if (source.parent.path == library.folder.path) {
-          continue;
+    if (!mounted) {
+      return;
+    }
+    final ImportProgress progress = showImportProgressSheet(
+      context,
+      total: files.length,
+    );
+    await progress.ready;
+    int done = 0;
+    try {
+      for (final XFile picked in files) {
+        if (progress.canceled) {
+          break;
         }
-        final ScannedPrint? scan = await PrintMarker.read(source);
-        if (scan == null) {
-          continue;
+        final File source = File(picked.path);
+        progress.current.value = _basename(source.path);
+        try {
+          if (source.parent.path == library.folder.path) {
+            continue;
+          }
+          final ScannedPrint? scan = await PrintMarker.read(source);
+          if (scan == null) {
+            continue;
+          }
+          final PrintMeta? existing = scan.meta;
+          if (existing != null &&
+              library.catalog.printById(existing.id) != null) {
+            continue;
+          }
+          final FileStat stat = await source.stat();
+          final File target = File(
+            _uniqueImportPath(library.folder, source.path),
+          );
+          await source.copy(target.path);
+          final DateTime now = DateTime.now().toUtc();
+          final PrintMeta meta =
+              existing ??
+              PrintMeta(
+                id: PrintMeta.newId(),
+                title: _stem(source.path),
+                kind: PrintKind.import,
+                printed: stat.modified.toUtc(),
+                added: now,
+                updated: now,
+                sourceName: _basename(source.path),
+              );
+          await library.addFile(target, meta);
+        } on Object catch (error) {
+          debugPrint('the import of ${source.path} failed: $error');
         }
-        final PrintMeta? existing = scan.meta;
-        if (existing != null &&
-            library.catalog.printById(existing.id) != null) {
-          continue;
-        }
-        final FileStat stat = await source.stat();
-        final File target = File(
-          _uniqueImportPath(library.folder, source.path),
-        );
-        await source.copy(target.path);
-        final DateTime now = DateTime.now().toUtc();
-        final PrintMeta meta =
-            existing ??
-            PrintMeta(
-              id: PrintMeta.newId(),
-              title: _stem(source.path),
-              kind: PrintKind.import,
-              printed: stat.modified.toUtc(),
-              added: now,
-              updated: now,
-              sourceName: _basename(source.path),
-            );
-        await library.addFile(target, meta);
-      } on Object catch (error) {
-        debugPrint('the import of ${source.path} failed: $error');
+        progress.done.value = ++done;
       }
+    } finally {
+      progress.close();
     }
     await _reloadPrints();
+  }
+
+  (int, int) _issueCounts() {
+    final PrintLibrary? library = _library;
+    if (library == null) {
+      return (0, 0);
+    }
+    int missing = 0;
+    int repairable = 0;
+    for (final CatalogPrint row in library.catalog.printsInLibrary(
+      library.library.id,
+      includeMissing: true,
+    )) {
+      if (row.missing) {
+        missing++;
+        continue;
+      }
+      if ((row.xmpState == XmpState.missing ||
+              row.xmpState == XmpState.stale) &&
+          File(row.locator).existsSync()) {
+        repairable++;
+      }
+    }
+    return (missing, repairable);
+  }
+
+  Future<void> _repairMarkers() async {
+    final PrintLibrary? library = _library;
+    if (library == null || _repairing) {
+      return;
+    }
+    setState(() => _repairing = true);
+    try {
+      await library.repairMarkers();
+      await _reloadPrints();
+    } finally {
+      if (mounted) {
+        setState(() => _repairing = false);
+      }
+    }
   }
 
   Future<void> _remember(String? path) async {
@@ -803,6 +917,9 @@ class _KalloAppState extends State<KalloApp> {
     onChoose: _chooseExport,
     onReset: _resetExport,
     onImport: _library == null ? null : _importImages,
+    missingPrints: _missingPrints,
+    repairablePrints: _repairablePrints,
+    onRepair: _repairing ? null : _repairMarkers,
   );
 
   @override

@@ -171,6 +171,9 @@ class ExportSetting {
     this.onChoose,
     this.onReset,
     this.onImport,
+    this.missingPrints = 0,
+    this.repairablePrints = 0,
+    this.onRepair,
   });
 
   /// The folder as a person reads it: `~/Pictures/Kallo`.
@@ -187,4 +190,13 @@ class ExportSetting {
 
   /// Import pictures into the library, when there is a library to import into.
   final VoidCallback? onImport;
+
+  /// Prints whose file is gone. The catalog keeps them; the wall does not.
+  final int missingPrints;
+
+  /// Prints whose marker is missing or behind the catalog, and whose file is
+  /// still there.
+  final int repairablePrints;
+
+  final VoidCallback? onRepair;
 }
