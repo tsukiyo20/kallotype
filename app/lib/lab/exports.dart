@@ -139,9 +139,7 @@ abstract final class Exports {
         // A file that vanished between list and stat is not a print.
       }
     }
-    images.sort(
-      (a, b) => a.stat.modified.compareTo(b.stat.modified),
-    );
+    images.sort((a, b) => a.stat.modified.compareTo(b.stat.modified));
 
     final Map<String, PrintRecord> metadata = await PrintStore.load(
       exports: folder,
@@ -172,6 +170,7 @@ class ExportSetting {
     required this.custom,
     this.onChoose,
     this.onReset,
+    this.onImport,
   });
 
   /// The folder as a person reads it: `~/Pictures/Kallo`.
@@ -185,4 +184,7 @@ class ExportSetting {
 
   final VoidCallback? onChoose;
   final VoidCallback? onReset;
+
+  /// Import pictures into the library, when there is a library to import into.
+  final VoidCallback? onImport;
 }

@@ -17,6 +17,9 @@ import 'lab/ffi_model.dart';
 import 'lab/image_file.dart';
 import 'lab/model.dart';
 import 'lab/print.dart';
+import 'lab/print_library.dart';
+import 'lab/print_marker.dart';
+import 'lab/print_meta.dart';
 import 'lab/print_out.dart';
 import 'lab/print_store.dart';
 import 'lab/print_request.dart';
@@ -30,6 +33,7 @@ import 'lab/strip_store.dart';
 import 'views/chambers.dart';
 import 'views/steps.dart';
 import 'views/studio.dart';
+import 'widgets/folder_move_sheet.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -173,6 +177,7 @@ class _KalloAppState extends State<KalloApp> {
   /// time. A print changes the list; walking into a room does not.
   bool _printsLoaded = false;
   List<PrintJob> _jobs = const <PrintJob>[];
+  PrintLibrary? _library;
   Settings _settings = const Settings();
   String? _exportPath;
 
@@ -204,6 +209,7 @@ class _KalloAppState extends State<KalloApp> {
 
   @override
   void dispose() {
+    _library?.close();
     if (_ownsPhotograph) {
       _photograph?.dispose();
     }
@@ -521,17 +527,27 @@ class _KalloAppState extends State<KalloApp> {
         filters: request.filters,
         heatGlass: request.heatGlass,
       );
-      await PrintStore.remember(
-        output,
-        PrintRecord(
-          printNumber: 1,
-          process: _catalogue?.film(strip.stockId)?.process,
-          film: filmName,
-          paper: paperName,
-          minutes: request.minutes,
-          tempC: strip.tempC,
-        ),
+      final DateTime now = DateTime.now().toUtc();
+      final PrintMeta meta = PrintMeta(
+        id: PrintMeta.newId(),
+        title: _stem(output.path),
+        kind: PrintKind.print,
+        printed: now,
+        added: now,
+        updated: now,
+        printNumber: 1,
+        process: _catalogue?.film(strip.stockId)?.process,
+        film: filmName,
+        paper: paperName,
+        minutes: request.minutes,
+        tempC: strip.tempC,
       );
+      final PrintLibrary? library = _library;
+      if (library != null) {
+        await library.addFile(output, meta);
+      } else {
+        await PrintStore.remember(output, meta.record);
+      }
       await _reloadPrints();
     } finally {
       if (mounted) {
@@ -550,7 +566,30 @@ class _KalloAppState extends State<KalloApp> {
     _settings = await Settings.read();
     _exportPath = _settings.exportPath;
     _spectral = _settings.spectral;
+    await _openLibrary();
     await _reloadPrints();
+  }
+
+  /// Open the catalog and let it adopt the old print store once.
+  Future<void> _openLibrary() async {
+    final Directory? folder = _folder;
+    if (folder == null) {
+      return;
+    }
+    try {
+      final PrintLibrary library = PrintLibrary.open(folder: folder);
+      try {
+        await library.migrateLegacy();
+      } on Object {
+        library.close();
+        rethrow;
+      }
+      _library = library;
+    } on Object catch (error) {
+      debugPrint('the catalog could not be opened: $error');
+      _library?.close();
+      _library = null;
+    }
   }
 
   /// The path a new strip is exposed through. It is a new strip's setting, not
@@ -574,7 +613,10 @@ class _KalloAppState extends State<KalloApp> {
 
   Future<void> _reloadPrints() async {
     _printsLoaded = true;
-    final List<Print> prints = await Exports.read(folder: _folder);
+    final PrintLibrary? library = _library;
+    final List<Print> prints = library != null
+        ? await library.read()
+        : await Exports.read(folder: _folder);
     if (!mounted) {
       for (final Print print in prints) {
         print.dispose();
@@ -604,6 +646,34 @@ class _KalloAppState extends State<KalloApp> {
     if (chosen == null || !mounted) {
       return;
     }
+    final PrintLibrary? library = _library;
+    if (library != null) {
+      final int count = library.catalog
+          .printsInLibrary(library.library.id)
+          .length;
+      if (count > 0) {
+        final FolderMoveChoice? choice = await showFolderMoveSheet(
+          context,
+          count: count,
+          destination: Exports.display(chosen),
+        );
+        if (!mounted || choice == null || choice == FolderMoveChoice.cancel) {
+          return;
+        }
+        if (choice == FolderMoveChoice.useNew) {
+          _library = library.switchTo(Directory(chosen));
+        } else {
+          try {
+            _library = await library.moveTo(Directory(chosen));
+          } on Object catch (error) {
+            debugPrint('the prints could not be moved: $error');
+            return;
+          }
+        }
+      } else {
+        _library = library.switchTo(Directory(chosen));
+      }
+    }
     _exportPath = chosen;
     await _remember(chosen);
     await _reloadPrints();
@@ -613,8 +683,79 @@ class _KalloAppState extends State<KalloApp> {
     if (!mounted) {
       return;
     }
+    final PrintLibrary? library = _library;
+    final Directory? target = Exports.defaultDirectory;
+    if (library != null && target != null) {
+      try {
+        _library = await library.moveTo(target);
+      } on Object catch (error) {
+        debugPrint('the prints could not be moved back: $error');
+        return;
+      }
+    }
     setState(() => _exportPath = null);
     await _remember(null);
+    await _reloadPrints();
+  }
+
+  /// Copy selected pictures into the library. The source files never change.
+  Future<void> _importImages() async {
+    final PrintLibrary? library = _library;
+    if (library == null) {
+      return;
+    }
+    final List<XFile> files;
+    try {
+      files = await openFiles(
+        acceptedTypeGroups: <XTypeGroup>[
+          const XTypeGroup(
+            label: 'Images',
+            extensions: <String>['png', 'jpg', 'jpeg'],
+          ),
+        ],
+        confirmButtonText: 'Import',
+      );
+    } on Exception catch (error) {
+      debugPrint('no import panel: $error');
+      return;
+    }
+    for (final XFile picked in files) {
+      final File source = File(picked.path);
+      try {
+        if (source.parent.path == library.folder.path) {
+          continue;
+        }
+        final ScannedPrint? scan = await PrintMarker.read(source);
+        if (scan == null) {
+          continue;
+        }
+        final PrintMeta? existing = scan.meta;
+        if (existing != null &&
+            library.catalog.printById(existing.id) != null) {
+          continue;
+        }
+        final FileStat stat = await source.stat();
+        final File target = File(
+          _uniqueImportPath(library.folder, source.path),
+        );
+        await source.copy(target.path);
+        final DateTime now = DateTime.now().toUtc();
+        final PrintMeta meta =
+            existing ??
+            PrintMeta(
+              id: PrintMeta.newId(),
+              title: _stem(source.path),
+              kind: PrintKind.import,
+              printed: stat.modified.toUtc(),
+              added: now,
+              updated: now,
+              sourceName: _basename(source.path),
+            );
+        await library.addFile(target, meta);
+      } on Object catch (error) {
+        debugPrint('the import of ${source.path} failed: $error');
+      }
+    }
     await _reloadPrints();
   }
 
@@ -629,12 +770,39 @@ class _KalloAppState extends State<KalloApp> {
   Directory? get _folder =>
       widget.exportsFolder ?? Exports.directoryFor(_exportPath);
 
+  String _uniqueImportPath(Directory folder, String sourcePath) {
+    final String separator = Platform.pathSeparator;
+    final String base = _basename(sourcePath);
+    final String stem = _stem(sourcePath);
+    final int dot = base.lastIndexOf('.');
+    final String extension = dot < 0 ? '' : base.substring(dot);
+    int index = 1;
+    File candidate = File('${folder.path}$separator$base');
+    while (candidate.existsSync()) {
+      index++;
+      candidate = File('${folder.path}$separator$stem-$index$extension');
+    }
+    return candidate.path;
+  }
+
+  static String _basename(String path) {
+    final int slash = path.lastIndexOf(Platform.pathSeparator);
+    return slash < 0 ? path : path.substring(slash + 1);
+  }
+
+  static String _stem(String path) {
+    final String base = _basename(path);
+    final int dot = base.lastIndexOf('.');
+    return dot <= 0 ? base : base.substring(0, dot);
+  }
+
   ExportSetting get _exportSetting => ExportSetting(
     label: Exports.display(_folder?.path),
     canChoose: Exports.canChoose,
     custom: _exportPath != null,
     onChoose: _chooseExport,
     onReset: _resetExport,
+    onImport: _library == null ? null : _importImages,
   );
 
   @override

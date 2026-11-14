@@ -384,6 +384,13 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             ],
           ),
         ),
+        if (export.onImport != null) ...<Widget>[
+          const SizedBox(height: KalloSpace.step2),
+          Align(
+            alignment: Alignment.centerRight,
+            child: KalloButton(label: s.importImages, onTap: export.onImport),
+          ),
+        ],
         if (export.custom && export.onReset != null) ...<Widget>[
           const SizedBox(height: KalloSpace.step2),
           Align(

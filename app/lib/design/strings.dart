@@ -357,6 +357,17 @@ class KalloStrings {
 
   String get folder => zh ? '文件夹' : 'Folder';
   String get choose => zh ? '选择…' : 'Choose…';
+  String get importImages => zh ? '导入图片…' : 'Import images…';
+
+  String get movePrintsTitle => zh ? '移动 Kallo 印相？' : 'Move Kallo prints?';
+
+  String movePrintsNote(int count, String destination) => zh
+      ? '把 $count 张带标记的印相移动到 $destination？其它图片留在原处。'
+      : 'Move $count marked prints to $destination? Other images stay where they are.';
+
+  String get movePrintsAction => zh ? '移动印相' : 'Move prints';
+
+  String get useNewFolderAction => zh ? '只切换文件夹' : 'Use new folder only';
   String get useDefault => zh ? '用回默认位置' : 'Use the default';
   String get noFolder => zh ? '这台设备上还没有位置' : 'No folder on this device yet';
 

@@ -119,6 +119,27 @@ void main() {
     expect(catalog.printById(record.id)?.title, 'new print');
   });
 
+  test('a folder move re-homes files and rows', () async {
+    final File file = await png('print.png');
+    final PrintMeta record = meta();
+    await PrintMarker.finalize(file, file, record);
+    await library.read();
+
+    final Directory destination = Directory('${root.path}/Moved');
+    final PrintLibrary moved = await library.moveTo(destination);
+
+    expect(moved.folder.path, destination.path);
+    expect(File('${destination.path}/print.png').existsSync(), isTrue);
+    expect(file.existsSync(), isFalse);
+    expect(
+      catalog.printById(record.id)?.locator,
+      '${destination.path}/print.png',
+    );
+    expect(catalog.printById(record.id)?.libraryId, moved.library.id);
+    final List<Print> prints = await moved.read();
+    expect(prints.single.path, '${destination.path}/print.png');
+  });
+
   test('legacy prints.json becomes markers and rows', () async {
     final Directory support = Directory('${root.path}/support')..createSync();
     final File file = await png('legacy.png');

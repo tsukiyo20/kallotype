@@ -162,6 +162,117 @@ class PrintLibrary {
     return _print(row, scan, file.path);
   }
 
+  /// Move every existing print to [destination] and return a library attached
+  /// there.
+  ///
+  /// Files are copied with their marker first, the catalog rows are re-homed
+  /// second, and the old files are deleted last. A failure before the catalog
+  /// step leaves the old folder untouched; a failure after it can be repaired
+  /// by the next scan because every new file carries the same `kallo:id`.
+  Future<PrintLibrary> moveTo(Directory destination) async {
+    if (destination.path == folder.path) {
+      return this;
+    }
+    await destination.create(recursive: true);
+
+    final String separator = Platform.pathSeparator;
+    if (destination.path.startsWith('${folder.path}$separator')) {
+      throw FileSystemException(
+        'the new folder is inside the old one',
+        destination.path,
+      );
+    }
+
+    final CatalogLibrary newLibrary = catalog.ensureLibrary(
+      kind: LibraryKind.folder,
+      root: destination.path,
+      displayName: Exports.display(destination.path),
+    );
+    final List<CatalogPrint> rows = catalog.printsInLibrary(library.id);
+    final List<({CatalogPrint row, File source, File target})> copied =
+        <({CatalogPrint row, File source, File target})>[];
+
+    try {
+      for (final CatalogPrint row in rows) {
+        final File source = File(row.locator);
+        if (!source.existsSync()) {
+          continue;
+        }
+        final File target = File(
+          _uniquePath(destination, source.path, separator),
+        );
+        await PrintMarker.write(source, target, row.meta);
+        final ScannedPrint? check = await PrintMarker.read(target);
+        if (check?.meta?.id != row.id) {
+          throw FileSystemException(
+            'the moved print did not keep its id',
+            target.path,
+          );
+        }
+        copied.add((row: row, source: source, target: target));
+      }
+
+      for (final ({CatalogPrint row, File source, File target}) item
+          in copied) {
+        final FileStat stat = await item.target.stat();
+        final ScannedPrint? scan = await PrintMarker.read(item.target);
+        if (scan == null) {
+          throw FileSystemException(
+            'the moved print is not readable',
+            item.target.path,
+          );
+        }
+        catalog.upsert(
+          libraryId: newLibrary.id,
+          meta: item.row.meta,
+          locator: item.target.path,
+          width: scan.pixels.width.round(),
+          height: scan.pixels.height.round(),
+          fileSize: stat.size,
+          fileMtimeUs: stat.modified.microsecondsSinceEpoch,
+        );
+      }
+    } on Object {
+      for (final ({CatalogPrint row, File source, File target}) item
+          in copied) {
+        try {
+          if (await item.target.exists()) {
+            await item.target.delete();
+          }
+        } on FileSystemException {
+          // A partial copy is a cache of nothing; leave the error visible.
+        }
+      }
+      rethrow;
+    }
+
+    for (final ({CatalogPrint row, File source, File target}) item in copied) {
+      try {
+        await item.source.delete();
+      } on FileSystemException {
+        // The catalog already points at the new copy; an old copy is a
+        // duplicate for the person to remove, not a reason to fail the move.
+      }
+    }
+
+    return PrintLibrary._(
+      catalog,
+      newLibrary,
+      destination,
+      ownsCatalog: ownsCatalog,
+    );
+  }
+
+  /// Attach a library to [destination] without moving any files.
+  PrintLibrary switchTo(Directory destination) {
+    final CatalogLibrary next = catalog.ensureLibrary(
+      kind: LibraryKind.folder,
+      root: destination.path,
+      displayName: Exports.display(destination.path),
+    );
+    return PrintLibrary._(catalog, next, destination, ownsCatalog: ownsCatalog);
+  }
+
   /// Import the old `prints.json` and the old sidecars once.
   ///
   /// A file gets its marker before its row, so a failure leaves the legacy
@@ -275,6 +386,26 @@ class PrintLibrary {
         minutes: row.minutes,
         tempC: row.tempC,
       );
+
+  static String _uniquePath(
+    Directory folder,
+    String sourcePath,
+    String separator,
+  ) {
+    final String base = sourcePath.substring(
+      sourcePath.lastIndexOf(separator) + 1,
+    );
+    final int dot = base.lastIndexOf('.');
+    final String stem = dot <= 0 ? base : base.substring(0, dot);
+    final String extension = dot <= 0 ? '' : base.substring(dot);
+    int index = 1;
+    File candidate = File('${folder.path}$separator$base');
+    while (candidate.existsSync()) {
+      index++;
+      candidate = File('${folder.path}$separator$stem-$index$extension');
+    }
+    return candidate.path;
+  }
 
   static bool _isImage(String path) {
     final String lower = path.toLowerCase();
