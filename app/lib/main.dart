@@ -165,6 +165,13 @@ class _KalloAppState extends State<KalloApp> {
   bool _ownsPhotograph = false;
   Catalogue? _catalogue;
   List<Print> _prints = const <Print>[];
+
+  /// Whether the export folder has been read into [_prints].
+  ///
+  /// Entering the rack or the gallery used to read and decode every print
+  /// again, which left a little more of the last set in the allocator each
+  /// time. A print changes the list; walking into a room does not.
+  bool _printsLoaded = false;
   List<PrintJob> _jobs = const <PrintJob>[];
   Settings _settings = const Settings();
   String? _exportPath;
@@ -184,6 +191,7 @@ class _KalloAppState extends State<KalloApp> {
     _jobs = widget.jobs ?? const <PrintJob>[];
     if (prints != null) {
       _prints = prints;
+      _printsLoaded = true;
     } else {
       unawaited(_openExports());
     }
@@ -553,7 +561,19 @@ class _KalloAppState extends State<KalloApp> {
     await _settings.write();
   }
 
+  /// Read the export folder only when it has not been read yet.
+  ///
+  /// A room asks for the prints each time it is entered; the app already has
+  /// them unless this is the first ask, or a print has just changed the list.
+  Future<void> _ensurePrints() async {
+    if (_printsLoaded) {
+      return;
+    }
+    await _reloadPrints();
+  }
+
   Future<void> _reloadPrints() async {
+    _printsLoaded = true;
     final List<Print> prints = await Exports.read(folder: _folder);
     if (!mounted) {
       for (final Print print in prints) {
@@ -673,7 +693,7 @@ class _KalloAppState extends State<KalloApp> {
               onClearStrip: () => unawaited(_clearStrip()),
               onPrint: _print,
               onEnterExports: widget.prints == null
-                  ? () => unawaited(_reloadPrints())
+                  ? () => unawaited(_ensurePrints())
                   : null,
               export: _exportSetting,
               locale: _locale,
