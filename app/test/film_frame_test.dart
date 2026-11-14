@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kallo_ui/lab/exports.dart';
 import 'package:kallo_ui/lab/film_export.dart';
 import 'package:kallo_ui/lab/print.dart';
+import 'package:kallo_ui/lab/stock.dart';
 import 'package:kallo_ui/widgets/film_frame.dart';
 
 Future<ui.Image> _card({int width = 300, int height = 200}) async {
@@ -35,7 +36,17 @@ void main() {
     expect(filmEdgeName('KODAK ULTRA MAX 400'), 'ULTRA MAX 400');
     expect(filmEdgeName('FUJIFILM 200'), 'FUJIFILM 200');
     expect(filmEdgeName('ILFORD DELTA 400 PROFESSIONAL, ID-11'), 'DELTA 400');
-    expect(filmEdgeName(null), 'KALLOTYPE');
+    expect(filmEdgeName(null), '');
+    expect(
+      filmProcessFromName('KODAK PROFESSIONAL T-MAX 400, D-76 8 min 20 °C'),
+      FilmProcess.monochrome,
+    );
+    expect(filmProcessFromName('KODAK ULTRA MAX 400'), FilmProcess.negative);
+    expect(
+      filmProcessFromName('FUJICHROME PROVIA 100F (RDP III), E-6'),
+      FilmProcess.reversal,
+    );
+    expect(filmProcessFromName(null), isNull);
   });
 
   test('a landscape frame is a 3:2 aperture in a 35 mm rebate', () {
@@ -78,7 +89,7 @@ void main() {
     );
   });
 
-  test('an old print gets its place in the folder for the edge', () async {
+  test('a print without a record is print 01, not its folder place', () async {
     final Directory folder = await Directory.systemTemp.createTemp(
       'kallotype-order-',
     );
@@ -98,8 +109,33 @@ void main() {
       }
     });
     expect(prints, hasLength(2));
-    expect(prints[0].frame, 1);
-    expect(prints[1].frame, 2);
+    expect(prints[0].printNumber, 1);
+    expect(prints[1].printNumber, 1);
+  });
+
+  test('a batch record carries its print number and chemistry', () async {
+    final Directory folder = await Directory.systemTemp.createTemp(
+      'kallotype-batch-',
+    );
+    addTearDown(() => folder.delete(recursive: true));
+    final ui.Image card = await _card();
+    addTearDown(card.dispose);
+    final File file = File('${folder.path}/print-02.png');
+    final Uint8List png = (await card.toByteData(
+      format: ui.ImageByteFormat.png,
+    ))!.buffer.asUint8List();
+    await file.writeAsBytes(png);
+    await File('${folder.path}/print-02.json').writeAsString(
+      '{"print": 2, "process": "monochrome", "film": "T-MAX 400", '
+      '"minutes": 9}',
+    );
+
+    final Print? print = await Print.read(file);
+    addTearDown(() => print?.dispose());
+    expect(print, isNotNull);
+    expect(print!.printNumber, 2);
+    expect(print.process, FilmProcess.monochrome);
+    expect(print.folio, startsWith('02'));
   });
 
   test('the finished frame is written beside the print, in Frames', () async {
@@ -119,14 +155,15 @@ void main() {
       name: 'print-01',
       path: printFile.path,
       pixels: const Size(300, 200),
-      frame: 1,
+      printNumber: 1,
+      process: FilmProcess.negative,
       film: 'ULTRA MAX 400',
       paper: 'PORTRA ENDURA',
       minutes: 9,
       tempC: 20,
     );
 
-    final File framed = await exportFilmFrame(print: print, frame: 1);
+    final File framed = await exportFilmFrame(print: print, printNumber: 1);
     expect(framed.existsSync(), isTrue);
     expect(framed.path, contains('${Platform.pathSeparator}Frames'));
     expect(framed.lengthSync(), greaterThan(0));
@@ -144,7 +181,8 @@ void main() {
     final Map<String, dynamic> json =
         jsonDecode(await record.readAsString()) as Map<String, dynamic>;
     expect(json['border'], '35mm');
-    expect(json['frame'], 1);
+    expect(json['print'], 1);
+    expect(json['process'], 'negative');
     expect(json['film'], 'ULTRA MAX 400');
   });
 }

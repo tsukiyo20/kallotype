@@ -163,7 +163,7 @@ void main() {
     final Print print = Print(
       image: card,
       name: 'uji',
-      frame: 1,
+      printNumber: 1,
       film: 'ULTRA MAX 400',
       paper: 'PORTRA ENDURA',
       minutes: 9,
@@ -198,7 +198,7 @@ void main() {
     final Print print = Print(
       image: card,
       name: 'uji',
-      frame: 1,
+      printNumber: 1,
       film: 'ULTRA MAX 400',
       paper: 'PORTRA ENDURA',
       minutes: 9,

@@ -123,8 +123,19 @@ abstract final class KalloFilm {
   /// The exposed rebate: black, because it was never in the gate.
   static const Color rebate = Color(0xFF0B0A09);
 
-  /// The edge printing: a developed silver-grey, never white.
+  /// The film's outer edge, for the one hairline around the rebate.
   static const Color edge = Color(0xFFA69D90);
+
+  /// The edge printing of a silver film: warm ivory, the positive view of the
+  /// dark letters on a negative.
+  static const Color edgeMono = Color(0xFFF1E8D8);
+
+  /// The edge printing of a colour negative: the amber of its base and mask.
+  static const Color edgeNegative = Color(0xFFD8AE72);
+
+  /// The edge printing of a reversal: white on black, because the rebate is
+  /// the unexposed film and the letters are the developed image.
+  static const Color edgeReversal = Color(0xFFF7F3EA);
 
   /// A sprocket hole: clear film, and what is behind it.
   static const Color clear = Color(0xFFE9E2D5);

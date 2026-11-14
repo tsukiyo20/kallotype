@@ -8,6 +8,61 @@ import 'package:flutter/foundation.dart';
 
 import 'clock.dart';
 import 'model.dart';
+import 'stock.dart';
+
+/// The chemistry a film's name implies, for a print written before the record
+/// carried `process`.
+///
+/// This is a reading of the label, not a second catalogue: a new print writes
+/// the exact process. The names are the ones the model carries; an unknown
+/// label stays null and the edge keeps the neutral ivory ink.
+FilmProcess? filmProcessFromName(String? film) {
+  if (film == null || film.isEmpty) {
+    return null;
+  }
+  final String name = film.toUpperCase();
+  const List<String> reversal = <String>[
+    'PROVIA',
+    'VELVIA',
+    'EKTACHROME',
+    'FUJICHROME',
+    'E-6',
+  ];
+  const List<String> monochrome = <String>[
+    'T-MAX',
+    'TRI-X',
+    'DELTA',
+    'HP5',
+    'FP4',
+    'ACROS',
+    'XP2',
+    'PAN F',
+    'MONOCHROME',
+  ];
+  const List<String> negative = <String>[
+    'PORTRA',
+    'ULTRA MAX',
+    'FUJIFILM',
+    'SUPERIA',
+    'GOLD',
+    'VISION3',
+    'EKTAR',
+    'PRO 400H',
+    'C200',
+    'C-41',
+    'NEGATIVE',
+  ];
+  if (reversal.any(name.contains)) {
+    return FilmProcess.reversal;
+  }
+  if (monochrome.any(name.contains)) {
+    return FilmProcess.monochrome;
+  }
+  if (negative.any(name.contains)) {
+    return FilmProcess.negative;
+  }
+  return null;
+}
 
 /// A print: a photograph, developed and printed, on paper.
 ///
@@ -25,7 +80,8 @@ class Print {
     required this.name,
     this.path,
     this.pixels,
-    this.frame,
+    this.printNumber = 1,
+    this.process,
     this.film,
     this.paper,
     this.minutes,
@@ -48,9 +104,16 @@ class Print {
   /// name is what a picture remains when everything else about it was lost.
   final String name;
 
-  /// Which frame on the roll it came from, when the record says. A print of a
-  /// frame is that frame; a print whose record was lost is only a picture.
-  final int? frame;
+  /// The print's number in the batch that made it. A single print is `01`; a
+  /// batch of selected frames counts `02`, `03`. It is not a film frame number:
+  /// the app does not have the roll's frame yet.
+  final int printNumber;
+
+  /// Which chemistry the film is. The edge printing's colour follows it: warm
+  /// ivory for a silver film, amber for a colour negative, white for a
+  /// reversal. Null when an export came without a record; the edge is then
+  /// neutral.
+  final FilmProcess? process;
 
   /// When the file was written, which is when the print was made.
   final DateTime? printed;
@@ -77,14 +140,11 @@ class Print {
     return minutes == null ? null : darkroomClock(minutes);
   }
 
-  /// `03 · 9:00` — the frame, and how long it was in the developer.
+  /// `01 · 9:00` — the print, and how long it was in the developer.
   String get folio {
+    final String number = printNumber.toString().padLeft(2, '0');
     final String? clock = this.clock;
-    final int? frame = this.frame;
-    if (frame != null && clock != null) {
-      return '${frame.toString().padLeft(2, '0')}   ·   $clock';
-    }
-    return frame?.toString().padLeft(2, '0') ?? clock ?? name;
+    return clock == null ? name : '$number   ·   $clock';
   }
 
   /// `21:40` — when it came off the line.
@@ -161,14 +221,10 @@ class Print {
   /// holding the difference would cost a hundred megabytes to throw away. The
   /// header is read first so that a small export is never upscaled.
   ///
-  /// [number] is the file's place in its folder. A print written before the
-  /// record carried a frame number still gets a number on the film edge; a
-  /// print with a record keeps what the enlarger wrote.
-  static Future<Print?> read(
-    File image, {
-    int width = 1600,
-    int? number,
-  }) async {
+  /// A print written before the record carried a print number is print `01`;
+  /// the old `frame` field was the strip's order, not a print number, so it is
+  /// deliberately not read.
+  static Future<Print?> read(File image, {int width = 1600}) async {
     final Uint8List bytes = await image.readAsBytes();
     final Size? pixels = _pngSize(bytes);
     final int source = pixels?.width.toInt() ?? 0;
@@ -177,14 +233,26 @@ class Print {
       targetWidth: source > width ? width : null,
     );
     final ui.FrameInfo frame = await codec.getNextFrame();
+    final String? film = _record(image, 'film') as String?;
+    final Object? processRecord = _record(image, 'process');
+    final FilmProcess? process = switch (processRecord) {
+      'negative' => FilmProcess.negative,
+      'reversal' => FilmProcess.reversal,
+      'monochrome' => FilmProcess.monochrome,
+      _ => filmProcessFromName(film),
+    };
     return Print(
       image: frame.image,
       name: _name(image.path),
       path: image.path,
       pixels: pixels,
-      frame: (_record(image, 'frame') as num?)?.toInt() ?? number,
+      printNumber:
+          (_record(image, 'print') as num?)?.toInt() ??
+          (_record(image, 'print_number') as num?)?.toInt() ??
+          1,
+      process: process,
       printed: image.statSync().modified,
-      film: _record(image, 'film') as String?,
+      film: film,
       paper: _record(image, 'paper') as String?,
       minutes: (_record(image, 'minutes') as num?)?.toDouble(),
       tempC: (_record(image, 'temp_c') as num?)?.toDouble(),

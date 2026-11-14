@@ -12,6 +12,7 @@ import '../design/tokens.dart';
 import '../lab/film_export.dart';
 import '../lab/model.dart';
 import '../lab/print.dart';
+import '../lab/stock.dart';
 import '../widgets/film_frame.dart';
 import '../widgets/lens.dart';
 import '../widgets/switch.dart';
@@ -66,7 +67,7 @@ class Gallery extends StatefulWidget {
 class _GalleryState extends State<Gallery> {
   /// The print being looked at closely, if one is.
   Print? _near;
-  int _nearNumber = 1;
+  int _nearPrintNumber = 1;
 
   /// The print under the lens, and where the lens is.
   ///
@@ -79,14 +80,14 @@ class _GalleryState extends State<Gallery> {
   Offset _lensAt = Offset.zero;
   Offset _lensPoint = Offset.zero;
   double _lensWidth = 0;
-  int _lensNumber = 1;
+  int _lensPrintNumber = 1;
 
   /// The wall's box, which is where the lens is placed.
   final GlobalKey _field = GlobalKey(debugLabel: 'wall');
 
   void _lookAt(
     Print print,
-    int number,
+    int printNumber,
     Offset local,
     double width,
     Offset global,
@@ -98,11 +99,11 @@ class _GalleryState extends State<Gallery> {
     }
     if (!identical(print, _lensFor)) {
       _lensFor = print;
-      _lensNumber = number;
+      _lensPrintNumber = printNumber;
       _dropLens();
       unawaited(_loadLens(print));
     } else {
-      _lensNumber = number;
+      _lensPrintNumber = printNumber;
     }
     setState(() {
       _lensAt = box.globalToLocal(global);
@@ -181,7 +182,7 @@ class _GalleryState extends State<Gallery> {
     if (near != null) {
       return _Loupe(
         print: near,
-        number: _nearNumber,
+        printNumber: _nearPrintNumber,
         wall: wall,
         light: light,
         printed: printed,
@@ -261,7 +262,7 @@ class _GalleryState extends State<Gallery> {
                     for (int i = 0; i < prints.length; i++)
                       _Hung(
                         print: prints[i],
-                        number: prints[i].frame ?? i + 1,
+                        printNumber: prints[i].printNumber,
                         wall: wall,
                         width: widthOf(prints[i]),
                         light: light,
@@ -271,7 +272,7 @@ class _GalleryState extends State<Gallery> {
                             : SystemMouseCursors.none,
                         onHover: (Offset local, Offset global) => _lookAt(
                           prints[i],
-                          prints[i].frame ?? i + 1,
+                          prints[i].printNumber,
                           local,
                           widthOf(prints[i]),
                           global,
@@ -279,7 +280,7 @@ class _GalleryState extends State<Gallery> {
                         onLeave: _leaveLens,
                         onTap: () => setState(() {
                           _near = prints[i];
-                          _nearNumber = prints[i].frame ?? i + 1;
+                          _nearPrintNumber = prints[i].printNumber;
                         }),
                       ),
                   ],
@@ -293,8 +294,8 @@ class _GalleryState extends State<Gallery> {
                 point: _lensPoint,
                 image: _lens ?? _lensFor!.image,
                 film: _lensFor!.film,
-                number: _lensNumber,
-                clock: _lensFor!.clock,
+                printNumber: _lensPrintNumber,
+                process: _lensFor!.process,
                 light: printed,
               ),
             Positioned(
@@ -360,7 +361,7 @@ class _GalleryState extends State<Gallery> {
 class _Loupe extends StatefulWidget {
   const _Loupe({
     required this.print,
-    required this.number,
+    required this.printNumber,
     required this.wall,
     required this.light,
     required this.printed,
@@ -369,7 +370,7 @@ class _Loupe extends StatefulWidget {
   });
 
   final Print print;
-  final int number;
+  final int printNumber;
 
   /// Which wall: the one the print was hanging on.
   final KalloWall wall;
@@ -483,7 +484,7 @@ class _LoupeState extends State<_Loupe> {
     try {
       await exportFilmFrame(
         print: widget.print,
-        frame: widget.number,
+        printNumber: widget.printNumber,
         image: _full,
       );
       if (!mounted) {
@@ -612,8 +613,8 @@ class _LoupeState extends State<_Loupe> {
                               width: metrics.outer.width,
                               source: source,
                               film: widget.print.film,
-                              frame: widget.number,
-                              clock: widget.print.clock,
+                              printNumber: widget.printNumber,
+                              process: widget.print.process,
                               light: widget.printed,
                               barrel: barrel,
                             ),
@@ -847,7 +848,7 @@ class _PillState extends State<_Pill> {
 class _Hung extends StatelessWidget {
   const _Hung({
     required this.print,
-    required this.number,
+    required this.printNumber,
     required this.wall,
     required this.width,
     required this.light,
@@ -859,7 +860,7 @@ class _Hung extends StatelessWidget {
   });
 
   final Print print;
-  final int number;
+  final int printNumber;
 
   /// Which wall: the light one in a light appearance, the dark one after dark.
   final KalloWall wall;
@@ -905,11 +906,13 @@ class _Hung extends StatelessWidget {
                 image: print.image,
                 width: width,
                 film: print.film,
-                frame: number,
-                clock: print.clock,
+                printNumber: printNumber,
+                process: print.process,
                 light: printed,
-                semanticLabel:
-                    '${filmEdgeName(print.film)} · ${print.clock ?? print.folio}',
+                semanticLabel: filmEdgeName(print.film).isEmpty
+                    ? '${print.name} · ${printNumber.toString().padLeft(2, '0')}'
+                    : '${filmEdgeName(print.film)} · '
+                          '${printNumber.toString().padLeft(2, '0')}',
               ),
             ),
           ),
@@ -955,8 +958,8 @@ class _Lens extends StatelessWidget {
     required this.point,
     required this.image,
     required this.film,
-    required this.number,
-    required this.clock,
+    required this.printNumber,
+    required this.process,
     required this.light,
   });
 
@@ -973,8 +976,8 @@ class _Lens extends StatelessWidget {
   final ui.Image image;
 
   final String? film;
-  final int number;
-  final String? clock;
+  final int printNumber;
+  final FilmProcess? process;
   final double light;
 
   static const double radius = 90;
@@ -995,8 +998,8 @@ class _Lens extends StatelessWidget {
               image: image,
               width: filmWidth,
               film: film,
-              frame: number,
-              clock: clock,
+              printNumber: printNumber,
+              process: process,
               light: light,
               barrel: 0.075,
             ),

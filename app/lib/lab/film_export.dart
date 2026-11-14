@@ -24,7 +24,7 @@ import 'print.dart';
 /// screen is a preview of an idea.
 Future<File> exportFilmFrame({
   required Print print,
-  int? frame,
+  int? printNumber,
   ui.Image? image,
 }) async {
   final String? path = print.path;
@@ -58,8 +58,8 @@ Future<File> exportFilmFrame({
       image: full,
       source: source,
       film: print.film,
-      frame: frame ?? print.frame,
-      clock: print.clock,
+      printNumber: printNumber ?? print.printNumber,
+      process: print.process,
       light: 1,
     ).paint(canvas, metrics.outer.size);
     final ui.Picture picture = recorder.endRecording();
@@ -91,7 +91,8 @@ Future<File> exportFilmFrame({
         'paper': ?print.paper,
         'minutes': ?print.minutes,
         'temp_c': ?print.tempC,
-        'frame': ?(frame ?? print.frame),
+        'print': printNumber ?? print.printNumber,
+        'process': ?print.process?.name,
         'border': '35mm',
       }),
     );

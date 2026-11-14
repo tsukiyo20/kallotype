@@ -123,12 +123,8 @@ abstract final class Exports {
         });
 
     final List<Print> prints = <Print>[];
-    for (int i = 0; i < images.length; i++) {
-      final Print? print = await Print.read(
-        images[i],
-        width: width,
-        number: i + 1,
-      );
+    for (final File image in images) {
+      final Print? print = await Print.read(image, width: width);
       if (print != null) {
         prints.add(print);
       }

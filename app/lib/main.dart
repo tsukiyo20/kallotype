@@ -505,7 +505,8 @@ class _KalloAppState extends State<KalloApp> {
             strip.paperLabel ??
             Stocks.paperShort,
         filmName: _catalogue?.film(strip.stockId)?.short ?? strip.stockLabel,
-        frame: number == 0 ? 1 : number,
+        process: _catalogue?.film(strip.stockId)?.process,
+        printNumber: 1,
         printEv: request.printEv,
         filters: request.filters,
         heatGlass: request.heatGlass,

@@ -170,7 +170,8 @@ Future<File> printTest({
   required Directory exports,
   required String paperName,
   String? filmName,
-  int? frame,
+  int printNumber = 1,
+  FilmProcess? process,
   double printEv = 0,
   String filters = '',
   String? heatGlass,
@@ -208,7 +209,8 @@ Future<File> printTest({
   );
   await record.writeAsString(
     const JsonEncoder.withIndent('  ').convert(<String, Object?>{
-      'frame': ?frame,
+      'print': printNumber,
+      'process': ?process?.name,
       'film': filmName ?? strip.stockLabel,
       'paper': paperName,
       'minutes': minutes,

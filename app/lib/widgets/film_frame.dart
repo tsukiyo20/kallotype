@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 
 import '../design/tokens.dart';
+import '../lab/stock.dart';
 
 /// The shape of a 35 mm frame around a print.
 ///
@@ -131,8 +132,8 @@ class FilmFrame extends StatelessWidget {
     required this.width,
     this.source,
     this.film,
-    this.frame,
-    this.clock,
+    this.printNumber = 1,
+    this.process,
     this.light = 1,
     this.barrel = 0,
     this.semanticLabel,
@@ -154,11 +155,12 @@ class FilmFrame extends StatelessWidget {
   /// translate.
   final String? film;
 
-  /// The frame number, when the record knows it.
-  final int? frame;
+  /// The print's number in its batch: `01` for a single print, `02`, `03` in
+  /// a batch. It is not a film frame number.
+  final int printNumber;
 
-  /// The development, as the edge would carry it.
-  final String? clock;
+  /// The film's chemistry, which decides the edge ink: ivory, amber or white.
+  final FilmProcess? process;
 
   /// The light on the film, from nothing to all of it.
   final double light;
@@ -190,8 +192,8 @@ class FilmFrame extends StatelessWidget {
           image: image,
           source: source ?? full,
           film: film,
-          frame: frame,
-          clock: clock,
+          printNumber: printNumber,
+          process: process,
           light: light,
           barrel: barrel,
         ),
@@ -209,7 +211,7 @@ class FilmFrame extends StatelessWidget {
 /// the name a printer says out loud, and so does a caption under a frame.
 String filmEdgeName(String? film) {
   if (film == null || film.isEmpty) {
-    return 'KALLOTYPE';
+    return '';
   }
   String name = film.split(',').first.trim();
   for (final String prefix in <String>[
@@ -232,8 +234,8 @@ class FilmFramePainter extends CustomPainter {
     required this.image,
     required this.source,
     this.film,
-    this.frame,
-    this.clock,
+    this.printNumber = 1,
+    this.process,
     this.light = 1,
     this.barrel = 0,
   });
@@ -244,8 +246,8 @@ class FilmFramePainter extends CustomPainter {
   final Rect source;
 
   final String? film;
-  final int? frame;
-  final String? clock;
+  final int printNumber;
+  final FilmProcess? process;
   final double light;
   final double barrel;
 
@@ -265,7 +267,7 @@ class FilmFramePainter extends CustomPainter {
   void _paint(Canvas canvas, FilmFrameMetrics m) {
     final Color rebate = _lit(KalloFilm.rebate);
     final Color hole = _lit(KalloFilm.clear.withValues(alpha: 0.72));
-    final Color edge = _lit(KalloFilm.edge.withValues(alpha: 0.82));
+    final Color edge = _lit(_edgeColour.withValues(alpha: 0.92));
     final Color gate = _lit(KalloFilm.gate.withValues(alpha: 0.92));
 
     canvas.drawRect(m.outer, Paint()..color = rebate);
@@ -453,8 +455,9 @@ class FilmFramePainter extends CustomPainter {
     }
   }
 
-  /// The edge printing: the stock on one edge, the frame and the development
-  /// on the other. It is the film's own vocabulary and does not translate.
+  /// The edge printing: the stock and the print number on one edge, the
+  /// process and the format on the other. It is the film's own vocabulary and
+  /// does not translate.
   void _edgeInk(Canvas canvas, FilmFrameMetrics m, Color colour) {
     final double size = math.max(6.0, m.outer.width * 0.016);
     final TextStyle style = KalloType.folio.copyWith(
@@ -465,9 +468,9 @@ class FilmFramePainter extends CustomPainter {
     );
     final double pad = math.max(2.0, size * 0.36);
     final String stock = filmEdgeName(film);
-    final String number = frame?.toString().padLeft(2, '0') ?? '';
-    final String development = clock ?? '';
-    final String brand = 'KALLOTYPE  35MM';
+    final String number = printNumber.toString().padLeft(2, '0');
+    final String chemical = _processLabel();
+    final String format = '135';
     final double half = math.max(
       1,
       (m.horizontal ? m.aperture.width : m.aperture.height) / 2 - pad * 2,
@@ -485,8 +488,8 @@ class FilmFramePainter extends CustomPainter {
       final double bottom = m.outer.bottom - m.band * 0.74;
       _left(canvas, ink(stock), m.aperture.left + pad, top);
       _right(canvas, ink(number), m.aperture.right - pad, top);
-      _left(canvas, ink(brand), m.aperture.left + pad, bottom);
-      _right(canvas, ink(development), m.aperture.right - pad, bottom);
+      _left(canvas, ink(chemical), m.aperture.left + pad, bottom);
+      _right(canvas, ink(format), m.aperture.right - pad, bottom);
       return;
     }
 
@@ -496,8 +499,8 @@ class FilmFramePainter extends CustomPainter {
     final double middle = m.aperture.top + m.aperture.height / 2;
     _down(canvas, ink(stock), left, top);
     _down(canvas, ink(number), left, middle);
-    _down(canvas, ink(brand), right, top);
-    _down(canvas, ink(development), right, middle);
+    _down(canvas, ink(chemical), right, top);
+    _down(canvas, ink(format), right, middle);
   }
 
   void _left(Canvas canvas, TextPainter text, double x, double centre) =>
@@ -516,6 +519,29 @@ class FilmFramePainter extends CustomPainter {
     canvas.restore();
   }
 
+  /// The ink of the edge, by the film's chemistry.
+  Color get _edgeColour => switch (process) {
+    FilmProcess.monochrome => KalloFilm.edgeMono,
+    FilmProcess.negative => KalloFilm.edgeNegative,
+    FilmProcess.reversal => KalloFilm.edgeReversal,
+    null => KalloFilm.edgeMono,
+  };
+
+  /// The process mark. Motion-picture negative is ECN-2, not C-41; the name is
+  /// the only place the app has to tell them apart.
+  String _processLabel() {
+    if (process == null) {
+      return '';
+    }
+    final String name = (film ?? '').toUpperCase();
+    return switch (process) {
+      FilmProcess.monochrome => 'B&W',
+      FilmProcess.reversal => 'E-6',
+      FilmProcess.negative => name.contains('VISION3') ? 'ECN-2' : 'C-41',
+      null => '',
+    };
+  }
+
   Color _lit(Color colour) => KalloColors.under(colour, light);
 
   @override
@@ -523,8 +549,8 @@ class FilmFramePainter extends CustomPainter {
       old.image != image ||
       old.source != source ||
       old.film != film ||
-      old.frame != frame ||
-      old.clock != clock ||
+      old.printNumber != printNumber ||
+      old.process != process ||
       old.light != light ||
       old.barrel != barrel;
 }

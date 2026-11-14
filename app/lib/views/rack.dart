@@ -163,7 +163,7 @@ class _Running extends StatelessWidget {
           ),
           const SizedBox(width: KalloSpace.step2),
           Text(
-            '${s.printing}   ${job.frame.number.toString().padLeft(2, '0')}   ·   ${job.frame.clock}',
+            '${s.printing}   ·   ${job.frame.clock}',
             style: KalloType.small.copyWith(color: colors.inkMuted),
           ),
         ],

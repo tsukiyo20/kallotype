@@ -54,7 +54,7 @@ void main() {
         format: ui.ImageByteFormat.png,
       );
       await file.writeAsBytes(png!.buffer.asUint8List(), flush: true);
-      final Print? print = await Print.read(file, width: 1600, number: 1);
+      final Print? print = await Print.read(file, width: 1600);
       shot = print!;
       return folder;
     }))!;
