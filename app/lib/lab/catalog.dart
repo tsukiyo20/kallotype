@@ -374,6 +374,15 @@ class Catalog {
     return rows.isEmpty ? null : _print(rows.first);
   }
 
+  CatalogPrint? printByLocator(String libraryId, String locator) {
+    final ResultSet rows = db.select(
+      'SELECT * FROM prints '
+      'WHERE library_id = ? AND locator = ? AND missing = 0',
+      <Object?>[libraryId, locator],
+    );
+    return rows.isEmpty ? null : _print(rows.first);
+  }
+
   /// Prints in one library, oldest first by the time they entered it.
   List<CatalogPrint> printsInLibrary(
     String libraryId, {
@@ -386,6 +395,39 @@ class Catalog {
       <Object?>[libraryId],
     );
     return <CatalogPrint>[for (final Row row in rows) _print(row)];
+  }
+
+  /// Update only the file-side facts for an existing print, without touching
+  /// the record's metadata or its `updated_at`.
+  void touch({
+    required String printId,
+    required String libraryId,
+    required String locator,
+    int? width,
+    int? height,
+    int? fileSize,
+    int? fileMtimeUs,
+    XmpState? xmpState,
+    bool missing = false,
+  }) {
+    db.execute(
+      'UPDATE prints SET library_id = ?, locator = ?, width = ?, height = ?, '
+      'file_size = ?, file_mtime_us = ?, xmp_state = COALESCE(?, xmp_state), '
+      'missing = ?, '
+      'missing_since = ? WHERE id = ?',
+      <Object?>[
+        libraryId,
+        locator,
+        width,
+        height,
+        fileSize,
+        fileMtimeUs,
+        xmpState?.name,
+        missing ? 1 : 0,
+        missing ? _date(DateTime.now().toUtc()) : null,
+        printId,
+      ],
+    );
   }
 
   void markMissing(String printId, {DateTime? now}) {

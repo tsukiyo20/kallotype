@@ -77,6 +77,11 @@ abstract final class PrintMarker {
     File destination,
     PrintMeta meta,
   ) async {
+    if (source.path == destination.path) {
+      throw ArgumentError(
+        'write needs a temporary destination; use finalize for an in-place write',
+      );
+    }
     final ScannedPrint? scanned = await read(source);
     if (scanned == null) {
       throw const FormatException('the print is not a PNG or JPEG');
