@@ -15,9 +15,11 @@ ship.
 
 The app is **Kallo**; the model, the CLI and the repository are **Kallotype**.
 The window titles, the sidebar wordmark and every platform's display name say
-Kallo. The Dart package is `kallo`, the bundle identifier is `com.kallo.app`,
-and the export folder is `Kallo`. The app has not been published, so these are
-the first addresses it has, not a migration away from old ones.
+Kallo. The Dart package is `kallo`; the iOS bundle identifier is
+`io.github.tsukiyo20.kallo`, and the other platforms still use `com.kallo.app`
+because that ID is available to them. The export folder is `Kallo`. The app
+has not been published, so these are the first addresses it has, not a
+migration away from old ones.
 
 The icon is one 35 mm sprocket edge folded into a K. `icon/kallo-icon.svg` is
 the source, `icon/kallo-icon-1024.png` is the rendered master, and
@@ -48,9 +50,10 @@ All five platforms are checked in: `macos`, `windows`, `linux`, `ios`, `android`
 A window narrower than 700 points takes the phone shell: one column, a bottom
 bar for the three places and settings, and no side panes. The rooms are the
 same; only the furniture moves.
-They share one identity, `com.kallo.app`, and three floors — macOS 13,
-iOS 15, and Android API 29, which is where Impeller takes the Vulkan path
-instead of falling back to its OpenGL ES backend.
+They share one codebase: iOS is `io.github.tsukiyo20.kallo`, the other
+platforms are `com.kallo.app`, and the floors are macOS 13, iOS 15, and
+Android API 29, which is where Impeller takes the Vulkan path instead of
+falling back to its OpenGL ES backend.
 
 The Mac build is **not sandboxed**, and that is a decision rather than an
 omission. A sandboxed app's home directory *is* its container, so the export
