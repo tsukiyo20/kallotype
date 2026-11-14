@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/widgets.dart';
 
 import '../design/scope.dart';
@@ -57,20 +55,14 @@ class _PaneButtonState extends State<PaneButton> {
                 color: colors.hairline.withValues(alpha: _hover ? 0.9 : 0.55),
               ),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(KalloRadius.pill),
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                child: Center(
-                  child: CustomPaint(
-                    size: const Size(18, 18),
-                    painter: _PanePainter(
-                      side: widget.side,
-                      open: widget.open,
-                      ink: ink,
-                      accent: colors.accent,
-                    ),
-                  ),
+            child: Center(
+              child: CustomPaint(
+                size: const Size(18, 18),
+                painter: _PanePainter(
+                  side: widget.side,
+                  open: widget.open,
+                  ink: ink,
+                  accent: colors.accent,
                 ),
               ),
             ),

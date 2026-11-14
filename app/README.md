@@ -118,9 +118,14 @@ file is made by ImageIO, which never asks the app to hold the 26-megapixel
 source; other platforms fall back to the model's image reader and then to the
 engine. A synthetic thousand-print library stays around 200 MB with the rack
 open in Release, and the first visit to a card writes the thumbnail the next
-visit reads. Opening one takes a 1600-pixel copy from the cache; the 4000-pixel
-detail is read only when the print is zoomed, and the preview is dropped when
-the viewer closes. Opening ten prints no longer leaves ten originals decoded.
+visit reads. Opening one asks the cache for a copy as wide as the paper on
+screen (1600 at a small window, in 256-pixel steps up to 4096 at 4K), and the
+original file is read only when the print is magnified past 1.5. The preview is
+dropped when the viewer closes, and the room underneath is not painted while
+the viewer is opaque. A 4K viewer settles around 420 MB rather than the old
+600 MB; the remaining weight is the 4K window surface and the viewer's own
+layers, not the print. Opening ten prints no longer leaves ten originals
+decoded.
 
 The test loads the bundled faces from disk before it draws, so the picture is in
 the product's own type rather than the runner's. That is the reason the fonts are
@@ -160,7 +165,7 @@ are the settings themselves, with the one sentence each needs.
 | **The select step is the photograph, before the developer** | One photograph enters the darkroom, and the step shows it — the whole original, not a thumbnail — with the film and the paper in the column beside it. The materials are not constants in the app: `kalo stocks --json` hands over every film the model carries, grouped by chemistry and then by manufacturer, and every paper under a rule of its own, so the shelf cannot show a film or a paper the model does not have. A maker is a heading, not a prefix repeated on every box: `KODAK` over `GOLD 200`, `FUJIFILM` over `PROVIA 100F`. The first picture is the original; the developing has not happened yet. |
 | **The develop step is one print at a time** | The print on the easel is the time in hand; the ruler under it moves the time; the strip below it is what has been printed. Dragging the ruler only changes the preview. Pressing *develop* renders one print at 1200 px and adds it to the strip. The first print fixes the enlarger's exposure, and every later print keeps it — the strip compares developments, not timers. The temperature is a dial in the panel; it belongs to the strip, so changing it starts a new strip and keeps the photograph and materials. The panel names both materials with their manufacturers, then draws the film's developed curve, the paper's, the strip's times together, and the densitometer's gamma and D-max. |
 | **The print step is the enlarger dialled** | The chosen development is printed again at the photograph's size, balanced on its own negative, with the timer, the CC pack and the heat glass. It is not a copy of the strip's print: the strip is one exposure; the finished print is the one dialled for this photograph. The panel draws the paper's curve under those settings — the timer, the pack and the glass move it — so the picture and the instrument are the same enlarger. Pressing *print* opens a sheet for the size (original, 6000 or 4000 pixels) and the file format (PNG or JPEG). |
-| **The drying rack is what came out** | A place beside the darkroom, not a fourth step: lines of wire across the room, each print held by a clip, newest first, wrapping into as many columns as the window holds and scrolling down to the next line. The paper has a shadow because it is in the air; clicking one takes it into the room's own viewer, where it can be pinched or scrolled. The sidebars are the window's and keep their own switches; the viewer sits on the rack's ground in the current appearance, not in a fixed black room. Closing is a short fade with the rack still underneath, so the line and its scroll position are where they were. A corner says what is still being made. The gallery is the same files looked at properly, as film. |
+| **The drying rack is what came out** | A place beside the darkroom, not a fourth step: lines of wire across the room, each print held by a clip, newest first, wrapping into as many columns as the window holds and scrolling down to the next line. The paper has a shadow because it is in the air; clicking one takes it into the room's own viewer, where it can be pinched or scrolled. The sidebars are the window's and keep their own switches; the viewer sits on the rack's ground in the current appearance, not in a fixed black room. The print fades up; closing fades it away and puts the same line back, with its scroll position kept. A corner says what is still being made. The gallery is the same files looked at properly, as film. |
 | **The path is a choice** | Exposure, print and scan go through the spectrum — 71 wavelengths, reconstructed from the input and integrated against each layer's sensitivity — or through one number per channel. It is a setting because the model keeps it opt-in: the structure is physical end to end, and the data under it is mixed — the curves and layer sensitivities of twenty-one films are measured, the papers are, the illuminant is CIE D50, and fifteen films still borrow their dye shapes because their sheets print a neutral instead of three dyes. The select panel and the catalogue say per film which is which. The two paths are different photographs, not different labels, and the strip remembers which made it: a print of that strip is made the same way. |
 | **The model is the app's own library** | The app's Dart package (`kallo`) links `kallotype-api` through `flutter_rust_bridge`; a strip print is one call, and a finished print is the same pipeline at the photograph's size. A roll and its contact proof are one call for the CLI, from one read of the photograph. The `kalo` binary is still underneath as the fallback when the library cannot load — tests run that way — and both answer the same `Model`, because the binding was written to the shape the subprocess already had. |
 | **Two rooms, a rack, three steps** | The darkroom and the gallery are rooms; the drying rack is the place between them. In the darkroom: select, develop, print — the photograph, the strip and the finished print. The rack has no steps and neither does the gallery: a line is hung, a wall is looked at. The old six places are gone; the shelf's job is the select step, the bench's is develop and print, the rack's is the paper. |
@@ -246,8 +251,9 @@ These are the ones worth enforcing in review.
 - **Space** — 2, 4, 8, 12, 16, 24, 32.
 - **Radius** — 8 for a control, 14 for a card, 20 for a sheet, and a capsule
   for a tab track or a toolbar control.
-- **Shadow** — one for a sheet over the window, one for paper hanging in air,
-  and one pixel of lift under a chosen segment. No layout shadow.
+- **Shadow** — one baked sheet over the window and one baked paper hanging in
+  air; a chosen segment is a fill and a hairline. No layout shadow, and no blur
+  pass for a shadow.
 - **Motion** — 90 / 160 / 240 / 460 ms, three curves, one stagger. A lamp comes
   up faster than a room goes dark: the one direction is the filament, the other
   is the eye.

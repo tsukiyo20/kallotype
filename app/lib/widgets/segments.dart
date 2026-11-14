@@ -51,8 +51,10 @@ class KalloSegments extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: i == selected && !quiet ? colors.elevated : null,
                   borderRadius: BorderRadius.circular(KalloRadius.control - 2),
-                  boxShadow: i == selected && !quiet
-                      ? KalloShadow.control
+                  border: i == selected && !quiet
+                      ? Border.all(
+                          color: colors.hairline.withValues(alpha: 0.12),
+                        )
                       : null,
                 ),
                 child: Text(

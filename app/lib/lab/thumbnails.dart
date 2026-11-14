@@ -59,10 +59,15 @@ class PrintThumbnailCache {
   /// points; the gallery's are larger, and the near view reads the file again.
   static const int thumbnailWidth = 512;
 
-  /// The width of the copy a print viewer opens. It is wide enough for the
-  /// window at a device pixel ratio of two, and small enough that opening ten
-  /// prints does not decode ten 26-megapixel files. Deep zoom asks for 4000.
+  /// The smallest width of the copy a print viewer opens. The viewer asks for
+  /// the width the print actually occupies on screen, so a 4K window gets a
+  /// sharper preview than a laptop window; this floor keeps a small window
+  /// from asking for a new copy for every layout change.
   static const int previewWidth = 1600;
+
+  /// The largest preview the viewer asks for. Beyond this the detail pass
+  /// takes over; a preview is for looking at the whole print, not for zoom.
+  static const int previewMaxWidth = 4096;
 
   /// The decoded images the cache may keep. A 512-pixel print is roughly two
   /// to four megabytes in the engine's wide-gamut form; this is enough for the
@@ -257,13 +262,12 @@ class PrintThumbnailCache {
       try {
         await cached.parent.create(recursive: true);
         if (Platform.isMacOS) {
-          await const MethodChannel(
-            'com.kallo.app/thumbnails',
-          ).invokeMethod<void>('make', <String, Object>{
-            'input': source.path,
-            'output': cached.path,
-            'width': maxWidth,
-          });
+          await const MethodChannel('com.kallo.app/thumbnails')
+              .invokeMethod<void>('make', <String, Object>{
+                'input': source.path,
+                'output': cached.path,
+                'width': maxWidth,
+              });
         } else {
           await thumbnail_api.makeThumbnail(
             input: source.path,

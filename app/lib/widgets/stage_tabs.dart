@@ -101,7 +101,9 @@ class _StepMarkState extends State<_StepMark> {
                   ? colors.fillStrong
                   : colors.fill,
               borderRadius: BorderRadius.circular(KalloRadius.pill),
-              boxShadow: lifted ? KalloShadow.control : null,
+              border: lifted
+                  ? Border.all(color: colors.hairline.withValues(alpha: 0.12))
+                  : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

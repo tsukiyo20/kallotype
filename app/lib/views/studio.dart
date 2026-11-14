@@ -15,6 +15,7 @@ import '../lab/print_out.dart';
 import '../lab/print_request.dart';
 import '../lab/stock.dart';
 import '../lab/strip.dart';
+import '../widgets/shadow_box.dart';
 import '../widgets/stage_tabs.dart';
 import '../widgets/switch.dart';
 import '../widgets/studio_top_bar.dart';
@@ -253,36 +254,60 @@ class _StudioState extends State<Studio> {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: AnimatedSlide(
+                child: AnimatedSwitcher(
                   duration: KalloMotion.settle,
-                  curve: KalloMotion.enter,
-                  offset: Offset(0, _open ? 0 : 1),
-                  child: LayoutBuilder(
-                    builder:
-                        (BuildContext context, BoxConstraints constraints) {
-                          return SizedBox(
-                            height: math.min(600, constraints.maxHeight * 0.9),
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(KalloRadius.sheet),
-                              ),
-                              child: DecoratedBox(
-                                decoration: const BoxDecoration(
-                                  boxShadow: KalloShadow.sheet,
-                                ),
-                                child: SettingsDrawer(
-                                  export: widget.export,
-                                  locale: widget.locale,
-                                  onLocale: widget.onLocale,
-                                  spectral: widget.spectral,
-                                  onSpectral: widget.onSpectral,
-                                  onClose: _closeDrawer,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                  ),
+                  switchInCurve: KalloMotion.enter,
+                  switchOutCurve: KalloMotion.enter,
+                  layoutBuilder: (Widget? current, List<Widget> previous) =>
+                      Stack(
+                        alignment: Alignment.bottomCenter,
+                        clipBehavior: Clip.none,
+                        children: <Widget>[...previous, ?current],
+                      ),
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) =>
+                          SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 1),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                  child: _open
+                      ? LayoutBuilder(
+                          key: const ValueKey<String>('settings-drawer'),
+                          builder:
+                              (
+                                BuildContext context,
+                                BoxConstraints constraints,
+                              ) {
+                                return SizedBox(
+                                  height: math.min(
+                                    600,
+                                    constraints.maxHeight * 0.9,
+                                  ),
+                                  child: KalloShadowBox(
+                                    kind: KalloShadowKind.sheet,
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(KalloRadius.sheet),
+                                      ),
+                                      child: SettingsDrawer(
+                                        export: widget.export,
+                                        locale: widget.locale,
+                                        onLocale: widget.onLocale,
+                                        spectral: widget.spectral,
+                                        onSpectral: widget.onSpectral,
+                                        onClose: _closeDrawer,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                        )
+                      : const SizedBox.shrink(
+                          key: ValueKey<String>('settings-closed'),
+                        ),
                 ),
               ),
             ],

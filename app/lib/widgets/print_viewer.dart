@@ -10,6 +10,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/print.dart';
 import '../lab/thumbnails.dart';
+import 'shadow_box.dart';
 import 'wall.dart';
 
 /// One print, held up inside the drying rack's room.
@@ -37,23 +38,48 @@ class PrintViewer extends StatefulWidget {
   State<PrintViewer> createState() => _PrintViewerState();
 }
 
-class _PrintViewerState extends State<PrintViewer> {
+class _PrintViewerState extends State<PrintViewer>
+    with SingleTickerProviderStateMixin {
   /// A copy wide enough for the window, loaded at once and dropped on close.
   PrintThumbnail? _preview;
 
-  /// A wide copy for deep zoom, loaded only after the print is actually
-  /// magnified. A glance at ten prints must not decode ten files at 4000.
+  /// The width that copy was asked for, not the width it came back at: a
+  /// small source is returned at its own size.
+  int _previewTarget = 0;
+
+  /// The newest preview request. A resize can ask for a wider copy while the
+  /// first one is still decoding; only the newest may be installed.
+  int _previewRequest = 0;
+
+  /// The original, loaded only after the print is actually magnified. A glance
+  /// at ten prints must not decode ten originals.
   ui.Image? _detail;
   PrintThumbnail? _thumbnail;
   bool _askingDetail = false;
   final FocusNode _keys = FocusNode(debugLabel: 'print-viewer');
   final TransformationController _transform = TransformationController();
 
+  /// The print comes up, not the whole window: fading the viewer itself would
+  /// make the engine raster a full 4K window for 160 ms and keep the caches
+  /// afterwards. The header and the room's ground are already there.
+  late final AnimationController _enter;
+  late final CurvedAnimation _fade;
+  bool _leaving = false;
+
   @override
   void initState() {
     super.initState();
+    _enter = AnimationController(
+      vsync: this,
+      duration: KalloMotion.quick,
+      reverseDuration: KalloMotion.instant,
+    )..forward();
+    _fade = CurvedAnimation(
+      parent: _enter,
+      curve: KalloMotion.enter,
+      reverseCurve: KalloMotion.leave,
+    );
     _loadThumbnail();
-    _loadPreview();
     _transform.addListener(_zoomChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -72,39 +98,79 @@ class _PrintViewerState extends State<PrintViewer> {
     setState(() => _thumbnail = thumbnail);
   }
 
-  Future<void> _loadPreview() async {
+  /// The preview is as wide as the paper on screen, not as wide as the file.
+  ///
+  /// A 4K window shows a print at more than 2400 physical pixels; a pinned
+  /// 1600 copy would be visibly soft there. A 1016 window still asks for 1600,
+  /// so the small-window path is unchanged.
+  Future<void> _ensurePreview(int target) async {
+    if (_detail != null || (_preview != null && _previewTarget >= target)) {
+      return;
+    }
+    if (_previewTarget == target) {
+      // Already in flight; a second request for the same width would decode
+      // the same file twice.
+      return;
+    }
+    _previewTarget = target;
+    final int request = ++_previewRequest;
     final PrintThumbnail? preview = await PrintThumbnailCache.instance.acquire(
       widget.print,
-      maxWidth: PrintThumbnailCache.previewWidth,
+      maxWidth: target,
     );
-    if (!mounted || _detail != null) {
+    if (!mounted || request != _previewRequest || _detail != null) {
       preview?.release(drop: true);
       return;
     }
     if (preview == null) {
+      // Let the next build try again rather than treating a failed decode as
+      // a preview that is already wide enough.
+      if (_previewTarget == target) {
+        _previewTarget = 0;
+      }
       return;
     }
-    final PrintThumbnail? old = _thumbnail;
+    final PrintThumbnail? old = _preview;
+    final PrintThumbnail? oldThumbnail = _thumbnail;
     setState(() {
       _preview = preview;
       _thumbnail = null;
     });
-    if (old != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => old.release());
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      old?.release(drop: true);
+      oldThumbnail?.release();
+    });
+  }
+
+  /// The width of the preview for a print that is [width] points wide.
+  ///
+  /// It is quantised to 256-pixel steps, so resizing a window does not leave a
+  /// new cache file for every pixel. The source's own width is the ceiling;
+  /// this is a downscale, never an enlargement.
+  int _previewWidthFor(double width) {
+    final double dpr = MediaQuery.devicePixelRatioOf(context);
+    final int source = widget.print.pixels?.width.round() ?? 1 << 20;
+    int target = (width * dpr).ceil().clamp(
+      PrintThumbnailCache.previewWidth,
+      PrintThumbnailCache.previewMaxWidth,
+    );
+    target = ((target + 255) ~/ 256) * 256;
+    return math.min(target, math.max(PrintThumbnailCache.previewWidth, source));
   }
 
   void _zoomChanged() {
     if (_detail == null &&
         !_askingDetail &&
-        _transform.value.getMaxScaleOnAxis() > 1.8) {
+        _transform.value.getMaxScaleOnAxis() > 1.5) {
       unawaited(_loadDetail());
     }
   }
 
   Future<void> _loadDetail() async {
     _askingDetail = true;
-    final ui.Image? detail = await widget.print.magnified(width: 4000);
+    // The original, not a 4000-pixel compromise: zoom is where the file's own
+    // detail is the point. It is one image, disposed when the viewer closes.
+    final ui.Image? detail = await widget.print.full();
     if (!mounted) {
       detail?.dispose();
       return;
@@ -119,6 +185,7 @@ class _PrintViewerState extends State<PrintViewer> {
       _detail = detail;
       _preview = null;
       _thumbnail = null;
+      _previewTarget = 0;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       oldPreview?.release(drop: true);
@@ -126,9 +193,23 @@ class _PrintViewerState extends State<PrintViewer> {
     });
   }
 
+  void _close() {
+    if (_leaving) {
+      return;
+    }
+    _leaving = true;
+    _enter.reverse().whenComplete(() {
+      if (mounted) {
+        widget.onClose();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _transform.dispose();
+    _fade.dispose();
+    _enter.dispose();
     _detail?.dispose();
     _preview?.release(drop: true);
     _thumbnail?.release();
@@ -146,7 +227,7 @@ class _PrintViewerState extends State<PrintViewer> {
     final Print print = widget.print;
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
+        const SingleActivator(LogicalKeyboardKey.escape): _close,
       },
       child: Focus(
         focusNode: _keys,
@@ -206,7 +287,7 @@ class _PrintViewerState extends State<PrintViewer> {
         ),
         _ViewerButton(
           key: const Key('print-viewer-close'),
-          onTap: widget.onClose,
+          onTap: _close,
           label: s.close,
         ),
       ],
@@ -226,27 +307,36 @@ class _PrintViewerState extends State<PrintViewer> {
             math.max(220, room.maxHeight / heightPerWidth),
           ),
         );
+        final int target = _previewWidthFor(width);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            unawaited(_ensurePreview(target));
+          }
+        });
         return InteractiveViewer(
           transformationController: _transform,
           minScale: 1,
           maxScale: 5,
           boundaryMargin: const EdgeInsets.all(120),
           child: Center(
-            child: DecoratedBox(
-              decoration: const BoxDecoration(boxShadow: KalloShadow.sheet),
-              child: PrintSheet(
-                width: width,
-                aspect: print.aspect,
-                paper: colors.print,
-                outline: colors.hairline,
-                light: 1,
-                child: image == null
-                    ? ColoredBox(color: colors.fill.withValues(alpha: 0.35))
-                    : RawImage(
-                        image: image,
-                        fit: BoxFit.cover,
-                        filterQuality: FilterQuality.high,
-                      ),
+            child: FadeTransition(
+              opacity: _fade,
+              child: KalloShadowBox(
+                kind: KalloShadowKind.sheet,
+                child: PrintSheet(
+                  width: width,
+                  aspect: print.aspect,
+                  paper: colors.print,
+                  outline: colors.hairline,
+                  light: 1,
+                  child: image == null
+                      ? ColoredBox(color: colors.fill.withValues(alpha: 0.35))
+                      : RawImage(
+                          image: image,
+                          fit: BoxFit.cover,
+                          filterQuality: FilterQuality.high,
+                        ),
+                ),
               ),
             ),
           ),

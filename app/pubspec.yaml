@@ -54,6 +54,9 @@ flutter:
     # the one link out of the app.
     - assets/kallo-icon.png
     - assets/github-mark.png
+    # Baked shadows: the same light as the old BoxShadow, without a blur pass.
+    - assets/shadow-paper.png
+    - assets/shadow-sheet.png
 
   # Bundled, not borrowed from the platform: the product has to look the same
   # on six of them, and a golden test can only pin type it actually has.

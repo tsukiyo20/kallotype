@@ -9,6 +9,7 @@ import '../lab/print.dart';
 import '../lab/print_out.dart';
 import '../widgets/print_image.dart';
 import '../widgets/print_viewer.dart';
+import '../widgets/shadow_box.dart';
 import '../widgets/wall.dart';
 
 /// The drying rack: lines of prints, pegs, and the ones still wet.
@@ -44,51 +45,31 @@ class Rack extends StatefulWidget {
   State<Rack> createState() => _RackState();
 }
 
-class _RackState extends State<Rack> with SingleTickerProviderStateMixin {
+class _RackState extends State<Rack> {
   Print? _viewer;
-  late final AnimationController _transition;
-  late final CurvedAnimation _fade;
-  late final Animation<double> _scale;
 
-  @override
-  void initState() {
-    super.initState();
-    _transition = AnimationController(
-      vsync: this,
-      duration: KalloMotion.quick,
-      reverseDuration: KalloMotion.instant,
-    );
-    _fade = CurvedAnimation(
-      parent: _transition,
-      curve: KalloMotion.enter,
-      reverseCurve: KalloMotion.leave,
-    );
-    _scale = Tween<double>(begin: 0.992, end: 1).animate(_fade);
-  }
-
-  @override
-  void dispose() {
-    _fade.dispose();
-    _transition.dispose();
-    super.dispose();
-  }
+  /// Once the viewer is in, the room underneath is not visible: the viewer
+  /// paints its own ground. Keeping the live rack laid out and painted under
+  /// it costs a full-window raster of paper, cards and shadows.
+  bool _roomHidden = false;
 
   void _open(Print print) {
     if (_viewer != null) {
       return;
     }
-    setState(() => _viewer = print);
-    _transition.forward(from: 0);
+    setState(() {
+      _viewer = print;
+      _roomHidden = true;
+    });
   }
 
   void _close() {
-    if (_viewer == null || _transition.status == AnimationStatus.reverse) {
+    if (_viewer == null) {
       return;
     }
-    _transition.reverse().whenComplete(() {
-      if (mounted) {
-        setState(() => _viewer = null);
-      }
+    setState(() {
+      _viewer = null;
+      _roomHidden = false;
     });
   }
 
@@ -97,27 +78,25 @@ class _RackState extends State<Rack> with SingleTickerProviderStateMixin {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        // The room stays underneath the print. Its scroll position, its paper
-        // and its wires do not leave when a print is opened.
-        _RackRoom(
-          prints: widget.prints,
-          jobs: widget.jobs,
-          topInset: widget.topInset,
-          onPrint: _open,
+        // The room stays alive under the print. Its scroll position, its paper
+        // and its wires do not leave when a print is opened; once the viewer is
+        // opaque it stops being painted, because none of it can be seen.
+        Offstage(
+          offstage: _roomHidden,
+          child: _RackRoom(
+            prints: widget.prints,
+            jobs: widget.jobs,
+            topInset: widget.topInset,
+            onPrint: _open,
+          ),
         ),
         if (_viewer != null)
           Positioned.fill(
-            child: FadeTransition(
-              opacity: _fade,
-              child: ScaleTransition(
-                scale: _scale,
-                child: PrintViewer(
-                  key: ObjectKey(_viewer),
-                  print: _viewer!,
-                  topInset: widget.topInset,
-                  onClose: _close,
-                ),
-              ),
+            child: PrintViewer(
+              key: ObjectKey(_viewer),
+              print: _viewer!,
+              topInset: widget.topInset,
+              onClose: _close,
             ),
           ),
       ],
@@ -414,32 +393,20 @@ class _HangingPrintState extends State<_HangingPrint> {
                       child: AnimatedPadding(
                         duration: KalloMotion.instant,
                         padding: EdgeInsets.only(top: _hover ? 0 : 2),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            boxShadow: _hover
-                                ? const <BoxShadow>[
-                                    BoxShadow(
-                                      color: Color(0x2A000000),
-                                      blurRadius: 24,
-                                      offset: Offset(0, 12),
-                                    ),
-                                    BoxShadow(
-                                      color: Color(0x0F000000),
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ]
-                                : KalloShadow.paper,
-                          ),
-                          child: PrintSheet(
-                            width: widget.width,
-                            aspect: print.aspect,
-                            paper: widget.colors.print,
-                            outline: widget.colors.hairline.withValues(
-                              alpha: 0.35,
+                        child: ClipRect(
+                          clipper: const _PaperShadowClip(),
+                          child: KalloShadowBox(
+                            kind: KalloShadowKind.paper,
+                            child: PrintSheet(
+                              width: widget.width,
+                              aspect: print.aspect,
+                              paper: widget.colors.print,
+                              outline: widget.colors.hairline.withValues(
+                                alpha: 0.35,
+                              ),
+                              light: 1,
+                              child: PrintImage(print: print),
                             ),
-                            light: 1,
-                            child: PrintImage(print: print),
                           ),
                         ),
                       ),
@@ -496,6 +463,22 @@ class _HangingPrintState extends State<_HangingPrint> {
       ),
     );
   }
+}
+
+/// The paper's shadow is in the air under the sheet, not a halo around it.
+///
+/// The rack has always shown the shadow of the paper, not a halo around it:
+/// the sheet is what is in the air, and the light under it is what the room
+/// sees. Keeping that crop is what lets a baked shadow stand in for the old
+/// one without making every print look pasted on.
+class _PaperShadowClip extends CustomClipper<Rect> {
+  const _PaperShadowClip();
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTWH(0, 0, size.width, size.height + 8);
+
+  @override
+  bool shouldReclip(_PaperShadowClip oldClipper) => false;
 }
 
 /// The wire, with the sag a line under paper has.
@@ -604,7 +587,6 @@ class _Running extends StatelessWidget {
         color: colors.surface.withValues(alpha: 0.90),
         borderRadius: BorderRadius.circular(KalloRadius.pill),
         border: Border.all(color: colors.hairline.withValues(alpha: 0.65)),
-        boxShadow: KalloShadow.control,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

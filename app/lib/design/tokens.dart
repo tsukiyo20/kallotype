@@ -351,30 +351,6 @@ abstract final class KalloRadius {
   static const double pill = 999;
 }
 
-/// Depth.
-///
-/// A plane still rises by being lighter, not by a blur. The shadows here are
-/// objects: a sheet over the window, a print hanging in air, and the one pixel
-/// under a segment that has lifted off its track.
-abstract final class KalloShadow {
-  /// A sheet over the window, or a print lifted off the rack in the viewer.
-  static const List<BoxShadow> sheet = <BoxShadow>[
-    BoxShadow(color: Color(0x24000000), blurRadius: 40, offset: Offset(0, 14)),
-    BoxShadow(color: Color(0x0F000000), blurRadius: 8, offset: Offset(0, 2)),
-  ];
-
-  /// Paper on the rack: a material in a room, not a card in a layout.
-  static const List<BoxShadow> paper = <BoxShadow>[
-    BoxShadow(color: Color(0x26000000), blurRadius: 18, offset: Offset(0, 8)),
-    BoxShadow(color: Color(0x10000000), blurRadius: 3, offset: Offset(0, 1)),
-  ];
-
-  /// A segment or key lifted off its fill.
-  static const List<BoxShadow> control = <BoxShadow>[
-    BoxShadow(color: Color(0x14000000), blurRadius: 4, offset: Offset(0, 1)),
-  ];
-}
-
 /// Motion, stated once.
 abstract final class KalloMotion {
   static const Duration instant = Duration(milliseconds: 90);
