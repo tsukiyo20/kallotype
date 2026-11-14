@@ -91,4 +91,81 @@ void main() {
     expect(json[print.path]['process'], 'negative');
     expect(json[print.path]['print'], 2);
   });
+
+  test('the store keeps the previous complete file as a backup', () async {
+    final Directory root = await Directory.systemTemp.createTemp(
+      'kallotype-store-',
+    );
+    addTearDown(() => root.delete(recursive: true));
+    final File first = File('${root.path}/print-01.png')
+      ..writeAsBytesSync(<int>[1]);
+    final File second = File('${root.path}/print-02.png')
+      ..writeAsBytesSync(<int>[2]);
+
+    await PrintStore.remember(
+      first,
+      const PrintRecord(printNumber: 1, film: 'GOLD 200', minutes: 9),
+      directory: root,
+    );
+    await PrintStore.remember(
+      second,
+      const PrintRecord(printNumber: 2, film: 'ULTRA MAX 400', minutes: 12),
+      directory: root,
+    );
+
+    final File live = File('${root.path}/prints.json');
+    final File backup = File('${root.path}/prints.json.bak');
+    final File temp = File('${root.path}/prints.json.tmp');
+    expect(live.existsSync(), isTrue);
+    expect(backup.existsSync(), isTrue);
+    expect(temp.existsSync(), isFalse);
+
+    final Map<String, dynamic> backupJson =
+        jsonDecode(backup.readAsStringSync()) as Map<String, dynamic>;
+    expect(backupJson.keys, <String>[first.path]);
+    final Map<String, dynamic> liveJson =
+        jsonDecode(live.readAsStringSync()) as Map<String, dynamic>;
+    expect(liveJson.keys, containsAll(<String>[first.path, second.path]));
+
+    // A live file that is half-written is not the store: the previous complete
+    // version is still readable.
+    live.writeAsStringSync('{');
+    final Map<String, PrintRecord> recovered = await PrintStore.load(
+      directory: root,
+    );
+    expect(recovered.keys, <String>[first.path]);
+    expect(recovered[first.path]?.film, 'GOLD 200');
+  });
+
+  test('two prints finishing together keep both records', () async {
+    final Directory root = await Directory.systemTemp.createTemp(
+      'kallotype-store-',
+    );
+    addTearDown(() => root.delete(recursive: true));
+    final File first = File('${root.path}/print-01.png')
+      ..writeAsBytesSync(<int>[1]);
+    final File second = File('${root.path}/print-02.png')
+      ..writeAsBytesSync(<int>[2]);
+
+    await Future.wait(<Future<void>>[
+      PrintStore.remember(
+        first,
+        const PrintRecord(printNumber: 1, film: 'GOLD 200'),
+        directory: root,
+      ),
+      PrintStore.remember(
+        second,
+        const PrintRecord(printNumber: 2, film: 'ULTRA MAX 400'),
+        directory: root,
+      ),
+    ]);
+
+    final Map<String, PrintRecord> records = await PrintStore.load(
+      directory: root,
+    );
+    expect(records.keys, containsAll(<String>[first.path, second.path]));
+    expect(records[first.path]?.printNumber, 1);
+    expect(records[second.path]?.printNumber, 2);
+  });
+
 }

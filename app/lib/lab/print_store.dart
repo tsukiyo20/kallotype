@@ -18,6 +18,24 @@ import 'settings.dart';
 abstract final class PrintStore {
   static const String _name = 'prints.json';
 
+  /// The previous version of the store. Kept beside the live file so a write
+  /// that is interrupted between the two renames still has somewhere to read.
+  static File? _backupFor(File? file) =>
+      file == null ? null : File('${file.path}.bak');
+
+  static File? _tempFor(File? file) =>
+      file == null ? null : File('${file.path}.tmp');
+
+  /// One writer at a time. Two prints finishing together must not both read the
+  /// old map and then overwrite one another.
+  static Future<void> _pending = Future<void>.value();
+
+  static Future<void> _serialized(Future<void> Function() body) {
+    final Future<void> result = _pending.then((_) => body());
+    _pending = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    return result;
+  }
+
   static File? _fileFor(Directory? directory) {
     final Directory? folder = directory ?? Settings.directory;
     if (folder == null) {
@@ -102,21 +120,40 @@ abstract final class PrintStore {
     File print,
     PrintRecord record, {
     Directory? directory,
-  }) async {
-    final Map<String, PrintRecord> records = await _read(directory);
-    records[print.path] = record;
-    await _write(records, directory);
+  }) {
+    return _serialized(() async {
+      final Map<String, PrintRecord> records = await _read(directory);
+      records[print.path] = record;
+      await _write(records, directory);
+    });
   }
 
   static Future<Map<String, PrintRecord>> _read(Directory? directory) async {
     final File? file = _fileFor(directory);
-    if (file == null || !file.existsSync()) {
+    if (file == null) {
       return <String, PrintRecord>{};
+    }
+    final Map<String, PrintRecord>? live = await _decode(file);
+    if (live != null) {
+      return live;
+    }
+    // A live file that cannot be read is either a half-written old version or
+    // a file somebody edited. The backup is the previous complete version.
+    final Map<String, PrintRecord>? backup = await _decode(_backupFor(file));
+    if (backup != null) {
+      return backup;
+    }
+    return <String, PrintRecord>{};
+  }
+
+  static Future<Map<String, PrintRecord>?> _decode(File? file) async {
+    if (file == null || !file.existsSync()) {
+      return null;
     }
     try {
       final Object? json = jsonDecode(await file.readAsString());
       if (json is! Map<String, dynamic>) {
-        return <String, PrintRecord>{};
+        return null;
       }
       final Map<String, PrintRecord> records = <String, PrintRecord>{};
       for (final MapEntry<String, dynamic> entry in json.entries) {
@@ -127,12 +164,17 @@ abstract final class PrintStore {
       }
       return records;
     } on FormatException {
-      return <String, PrintRecord>{};
+      return null;
     } on FileSystemException {
-      return <String, PrintRecord>{};
+      return null;
     }
   }
 
+  /// Write the whole store through a temporary file.
+  ///
+  /// The live file is never truncated. The old file becomes `.bak`, the
+  /// temporary file is flushed and renamed over the live name, and a reader
+  /// that finds a broken live file falls back to the backup.
   static Future<bool> _write(
     Map<String, PrintRecord> records,
     Directory? directory,
@@ -141,17 +183,54 @@ abstract final class PrintStore {
     if (file == null) {
       return false;
     }
+    final File? temp = _tempFor(file);
+    final File? backup = _backupFor(file);
+    if (temp == null || backup == null) {
+      return false;
+    }
     try {
       await file.parent.create(recursive: true);
-      await file.writeAsString(
-        const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+      final String text = const JsonEncoder.withIndent('  ').convert(
+        <String, Object?>{
           for (final MapEntry<String, PrintRecord> entry in records.entries)
             entry.key: entry.value.toJson(),
-        }),
+        },
       );
+      final RandomAccessFile out = await temp.open(mode: FileMode.write);
+      try {
+        await out.writeString(text);
+        await out.flush();
+      } finally {
+        await out.close();
+      }
+      if (await file.exists()) {
+        try {
+          if (await backup.exists()) {
+            await backup.delete();
+          }
+          await file.rename(backup.path);
+        } on FileSystemException {
+          // If the old file cannot be moved aside, keep it and leave the
+          // temporary file for the next attempt rather than truncating it.
+          await _deleteQuietly(temp);
+          return false;
+        }
+      }
+      await temp.rename(file.path);
       return true;
     } on FileSystemException {
+      await _deleteQuietly(temp);
       return false;
+    }
+  }
+
+  static Future<void> _deleteQuietly(File file) async {
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } on FileSystemException {
+      // A leftover temporary file is harmless; the next write replaces it.
     }
   }
 
