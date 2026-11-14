@@ -18,6 +18,7 @@ import 'lab/image_file.dart';
 import 'lab/model.dart';
 import 'lab/print.dart';
 import 'lab/print_out.dart';
+import 'lab/print_store.dart';
 import 'lab/print_request.dart';
 import 'lab/roll.dart';
 import 'lab/roll_store.dart';
@@ -495,21 +496,31 @@ class _KalloAppState extends State<KalloApp> {
     );
     setState(() => _jobs = <PrintJob>[job, ..._jobs]);
     try {
-      await printTest(
+      final String filmName =
+          _catalogue?.film(strip.stockId)?.short ?? strip.stockLabel;
+      final String paperName =
+          _catalogue?.paper(strip.paperId ?? '')?.short ??
+          strip.paperLabel ??
+          Stocks.paperShort;
+      final File output = await printTest(
         model: Model.find(),
         strip: strip,
         minutes: request.minutes,
         exports: exports,
-        paperName:
-            _catalogue?.paper(strip.paperId ?? '')?.short ??
-            strip.paperLabel ??
-            Stocks.paperShort,
-        filmName: _catalogue?.film(strip.stockId)?.short ?? strip.stockLabel,
-        process: _catalogue?.film(strip.stockId)?.process,
-        printNumber: 1,
         printEv: request.printEv,
         filters: request.filters,
         heatGlass: request.heatGlass,
+      );
+      await PrintStore.remember(
+        output,
+        PrintRecord(
+          printNumber: 1,
+          process: _catalogue?.film(strip.stockId)?.process,
+          film: filmName,
+          paper: paperName,
+          minutes: request.minutes,
+          tempC: strip.tempC,
+        ),
       );
       await _reloadPrints();
     } finally {

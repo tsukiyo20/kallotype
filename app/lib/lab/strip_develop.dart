@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -168,10 +167,6 @@ Future<File> printTest({
   required TestStrip strip,
   required double minutes,
   required Directory exports,
-  required String paperName,
-  String? filmName,
-  int printNumber = 1,
-  FilmProcess? process,
   double printEv = 0,
   String filters = '',
   String? heatGlass,
@@ -203,22 +198,6 @@ Future<File> printTest({
     printEv: printEv,
     filters: filters,
     heatGlass: heatGlass,
-  );
-  final File record = File(
-    '${exports.path}${Platform.pathSeparator}$stem.json',
-  );
-  await record.writeAsString(
-    const JsonEncoder.withIndent('  ').convert(<String, Object?>{
-      'print': printNumber,
-      'process': ?process?.name,
-      'film': filmName ?? strip.stockLabel,
-      'paper': paperName,
-      'minutes': minutes,
-      'temp_c': strip.tempC,
-      'print_ev': printEv,
-      'filters': filters,
-      'heat_glass': heatGlass,
-    }),
   );
   return output;
 }

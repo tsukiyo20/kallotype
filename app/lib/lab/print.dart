@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:ui' show Size;
 
@@ -62,6 +61,74 @@ FilmProcess? filmProcessFromName(String? film) {
     return FilmProcess.negative;
   }
   return null;
+}
+
+/// The metadata a print carries besides its pixels.
+///
+/// This used to be a JSON sidecar beside every PNG, which made the export
+/// folder a directory of pictures and records. The record now lives in the
+/// app's own support folder, keyed by the print's path; the image folder holds
+/// images only.
+@immutable
+class PrintRecord {
+  const PrintRecord({
+    this.printNumber = 1,
+    this.process,
+    this.film,
+    this.paper,
+    this.minutes,
+    this.tempC,
+  });
+
+  final int printNumber;
+  final FilmProcess? process;
+  final String? film;
+  final String? paper;
+  final double? minutes;
+  final double? tempC;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'print': printNumber,
+    'process': ?process?.name,
+    'film': ?film,
+    'paper': ?paper,
+    'minutes': ?minutes,
+    'temp_c': ?tempC,
+  };
+
+  /// Read a record from a map in either the new shape or the old sidecar's.
+  static PrintRecord? fromJson(Object? json) {
+    if (json is! Map<String, dynamic>) {
+      return null;
+    }
+    final String? film = json['film'] as String?;
+    final Object? process = json['process'];
+    final FilmProcess? parsed = switch (process) {
+      'negative' => FilmProcess.negative,
+      'reversal' => FilmProcess.reversal,
+      'monochrome' => FilmProcess.monochrome,
+      _ => filmProcessFromName(film),
+    };
+    return PrintRecord(
+      printNumber:
+          (json['print'] as num?)?.toInt() ??
+          (json['print_number'] as num?)?.toInt() ??
+          1,
+      process: parsed,
+      film: film,
+      paper: json['paper'] as String?,
+      minutes: (json['minutes'] as num?)?.toDouble(),
+      tempC: (json['temp_c'] as num?)?.toDouble(),
+    );
+  }
+
+  /// Whether a JSON map is one of the app's old print sidecars.
+  static bool looksLikeSidecar(Map<String, dynamic> json) =>
+      json['film'] is String &&
+      (json['minutes'] is num ||
+          json['frame'] is num ||
+          json['print'] is num ||
+          json['print_ev'] is num);
 }
 
 /// A print: a photograph, developed and printed, on paper.
@@ -224,7 +291,11 @@ class Print {
   /// A print written before the record carried a print number is print `01`;
   /// the old `frame` field was the strip's order, not a print number, so it is
   /// deliberately not read.
-  static Future<Print?> read(File image, {int width = 1600}) async {
+  static Future<Print?> read(
+    File image, {
+    int width = 1600,
+    PrintRecord? record,
+  }) async {
     final Uint8List bytes = await image.readAsBytes();
     final Size? pixels = _pngSize(bytes);
     final int source = pixels?.width.toInt() ?? 0;
@@ -233,29 +304,33 @@ class Print {
       targetWidth: source > width ? width : null,
     );
     final ui.FrameInfo frame = await codec.getNextFrame();
-    final String? film = _record(image, 'film') as String?;
+    final String? film = record?.film ?? _record(image, 'film') as String?;
     final Object? processRecord = _record(image, 'process');
-    final FilmProcess? process = switch (processRecord) {
-      'negative' => FilmProcess.negative,
-      'reversal' => FilmProcess.reversal,
-      'monochrome' => FilmProcess.monochrome,
-      _ => filmProcessFromName(film),
-    };
+    final FilmProcess? process =
+        record?.process ??
+        switch (processRecord) {
+          'negative' => FilmProcess.negative,
+          'reversal' => FilmProcess.reversal,
+          'monochrome' => FilmProcess.monochrome,
+          _ => filmProcessFromName(film),
+        };
     return Print(
       image: frame.image,
       name: _name(image.path),
       path: image.path,
       pixels: pixels,
       printNumber:
+          record?.printNumber ??
           (_record(image, 'print') as num?)?.toInt() ??
           (_record(image, 'print_number') as num?)?.toInt() ??
           1,
       process: process,
       printed: image.statSync().modified,
       film: film,
-      paper: _record(image, 'paper') as String?,
-      minutes: (_record(image, 'minutes') as num?)?.toDouble(),
-      tempC: (_record(image, 'temp_c') as num?)?.toDouble(),
+      paper: record?.paper ?? _record(image, 'paper') as String?,
+      minutes:
+          record?.minutes ?? (_record(image, 'minutes') as num?)?.toDouble(),
+      tempC: record?.tempC ?? (_record(image, 'temp_c') as num?)?.toDouble(),
     );
   }
 

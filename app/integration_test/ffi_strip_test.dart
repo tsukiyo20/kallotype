@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -11,7 +10,6 @@ import 'package:kallo_ui/lab/chart.dart';
 import 'package:kallo_ui/lab/model.dart';
 import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/strip.dart';
-import 'package:kallo_ui/lab/stock.dart';
 import 'package:kallo_ui/lab/strip_develop.dart';
 import 'package:kallo_ui/main.dart';
 import 'package:kallo_ui/views/steps.dart';
@@ -101,19 +99,15 @@ void main() {
       strip: strip,
       minutes: 6,
       exports: exports,
-      paperName: 'PORTRA ENDURA',
-      printNumber: 1,
-      process: FilmProcess.negative,
       width: 800,
     );
     expect(printed.existsSync(), isTrue);
     expect(printed.lengthSync(), greaterThan(0));
-    final File record = File(printed.path.replaceFirst('.png', '.json'));
-    expect(record.existsSync(), isTrue);
-    final Map<String, dynamic> json =
-        jsonDecode(await record.readAsString()) as Map<String, dynamic>;
-    expect(json['print'], 1, reason: 'the record keeps the print number');
-    expect(json['process'], 'negative');
+    expect(
+      File(printed.path.replaceFirst('.png', '.json')).existsSync(),
+      isFalse,
+      reason: 'the export folder holds images, not sidecars',
+    );
   }, timeout: const Timeout(Duration(minutes: 5)));
 
   test('a bench session is one decode, then renders', () async {

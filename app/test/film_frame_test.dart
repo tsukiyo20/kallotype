@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -138,6 +137,45 @@ void main() {
     expect(print.folio, startsWith('02'));
   });
 
+  test(
+    'a large print exports a capped JPEG, not a hundred-megabyte PNG',
+    () async {
+      final Directory folder = await Directory.systemTemp.createTemp(
+        'kallotype-large-frame-',
+      );
+      addTearDown(() => folder.delete(recursive: true));
+      final ui.Image card = await _card(width: 5000, height: 3333);
+      addTearDown(card.dispose);
+      final File printFile = File('${folder.path}/print-large.png');
+      final ByteData? png = await card.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      await printFile.writeAsBytes(png!.buffer.asUint8List(), flush: true);
+
+      final Print print = Print(
+        image: card,
+        name: 'print-large',
+        path: printFile.path,
+        pixels: const Size(5000, 3333),
+        printNumber: 1,
+        process: FilmProcess.negative,
+        film: 'ULTRA MAX 400',
+        paper: 'PORTRA ENDURA',
+        minutes: 9,
+        tempC: 20,
+      );
+
+      final File framed = await exportFilmFrame(print: print);
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        await framed.readAsBytes(),
+      );
+      final ui.FrameInfo info = await codec.getNextFrame();
+      addTearDown(info.image.dispose);
+      expect(info.image.width, lessThanOrEqualTo(4096));
+      expect(framed.lengthSync(), lessThan(8 * 1024 * 1024));
+    },
+  );
+
   test('the finished frame is written beside the print, in Frames', () async {
     final Directory folder = await Directory.systemTemp.createTemp(
       'kallotype-frame-',
@@ -166,7 +204,9 @@ void main() {
     final File framed = await exportFilmFrame(print: print, printNumber: 1);
     expect(framed.existsSync(), isTrue);
     expect(framed.path, contains('${Platform.pathSeparator}Frames'));
+    expect(framed.path, endsWith('.jpg'));
     expect(framed.lengthSync(), greaterThan(0));
+    expect(framed.lengthSync(), lessThan(5 * 1024 * 1024));
 
     final ui.Codec codec = await ui.instantiateImageCodec(
       await framed.readAsBytes(),
@@ -176,13 +216,10 @@ void main() {
     expect(info.image.width, greaterThan(300));
     expect(info.image.height, greaterThan(200));
 
-    final File record = File(framed.path.replaceFirst('.png', '.json'));
-    expect(record.existsSync(), isTrue);
-    final Map<String, dynamic> json =
-        jsonDecode(await record.readAsString()) as Map<String, dynamic>;
-    expect(json['border'], '35mm');
-    expect(json['print'], 1);
-    expect(json['process'], 'negative');
-    expect(json['film'], 'ULTRA MAX 400');
+    expect(
+      File(framed.path.replaceFirst('.jpg', '.json')).existsSync(),
+      isFalse,
+      reason: 'the frame folder holds the image, not a record',
+    );
   });
 }

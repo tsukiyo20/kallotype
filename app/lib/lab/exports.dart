@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 
 import 'print.dart';
+import 'print_store.dart';
 
 /// The export folder: where the model's prints land, and what is in there.
 ///
@@ -122,9 +123,17 @@ abstract final class Exports {
           return left.compareTo(right);
         });
 
+    final Map<String, PrintRecord> metadata = await PrintStore.load(
+      exports: folder,
+      frames: framesFolder(folder),
+    );
     final List<Print> prints = <Print>[];
     for (final File image in images) {
-      final Print? print = await Print.read(image, width: width);
+      final Print? print = await Print.read(
+        image,
+        width: width,
+        record: metadata[image.path],
+      );
       if (print != null) {
         prints.add(print);
       }

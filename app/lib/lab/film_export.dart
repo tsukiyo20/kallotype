@@ -1,27 +1,35 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
+import 'package:image/image.dart' as img;
 
 import '../widgets/film_frame.dart';
 import 'exports.dart';
 import 'model.dart';
 import 'print.dart';
 
+/// The longest edge of a finished frame, in pixels.
+///
+/// A print is rendered at the photograph's size, but a frame with a rebate is
+/// for looking at, not for another print. Four thousand pixels on the long edge
+/// is more than any screen and keeps the file in the low megabytes.
+const int _largestEdge = 4096;
+
 /// Write the print as a finished 35 mm frame: the picture, the black rebate,
-/// the sprocket holes and the edge printing, at the file's own size.
+/// the sprocket holes and the edge printing.
 ///
 /// This is a second product, not a second print. The plain print is what the
 /// enlarger made; the frame is what a person would put on a wall or send to
 /// someone. It goes in `Frames/` inside the export folder, so the gallery does
 /// not hang the same picture twice.
 ///
-/// The frame is drawn by the same painter the gallery uses. The export is flat
-/// — the loupe's distortion is a property of looking through glass, not of the
-/// negative — and it is full resolution, because a border that only exists on
-/// screen is a preview of an idea.
+/// The frame is drawn by the same painter the gallery uses, then encoded as a
+/// JPEG. The export is flat — the loupe's distortion is a property of looking
+/// through glass, not of the negative — and capped at [_largestEdge], because
+/// a lossless full-resolution frame is a 100 MB file and nobody wants that.
 Future<File> exportFilmFrame({
   required Print print,
   int? printNumber,
@@ -41,62 +49,65 @@ Future<File> exportFilmFrame({
 
   try {
     final double aspect = full.width / full.height;
-    final FilmFrameMetrics metrics = FilmFrameMetrics.fromImageWidth(
+    final FilmFrameMetrics whole = FilmFrameMetrics.fromImageWidth(
       full.width.toDouble(),
       aspect: aspect,
     );
-    final Rect source = Rect.fromLTWH(
-      0,
-      0,
-      full.width.toDouble(),
-      full.height.toDouble(),
-    );
+    final double scale = whole.outer.width > _largestEdge
+        ? _largestEdge / whole.outer.width
+        : 1;
+    final int width = (whole.outer.width * scale).round();
+    final int height = (whole.outer.height * scale).round();
 
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(recorder);
     FilmFramePainter(
       image: full,
-      source: source,
+      source: Rect.fromLTWH(
+        0,
+        0,
+        full.width.toDouble(),
+        full.height.toDouble(),
+      ),
       film: print.film,
       printNumber: printNumber ?? print.printNumber,
       process: print.process,
       light: 1,
-    ).paint(canvas, metrics.outer.size);
+    ).paint(canvas, Size(width.toDouble(), height.toDouble()));
     final ui.Picture picture = recorder.endRecording();
-    final int width = metrics.outer.width.round();
-    final int height = metrics.outer.height.round();
     final ui.Image framed = await picture.toImage(width, height);
     picture.dispose();
-    final ByteData? png = await framed.toByteData(
-      format: ui.ImageByteFormat.png,
+    final ByteData? raw = await framed.toByteData(
+      format: ui.ImageByteFormat.rawRgba,
     );
     framed.dispose();
-    if (png == null) {
-      throw FileSystemException('the frame could not be encoded', path);
+    if (raw == null) {
+      throw FileSystemException('the frame could not be read', path);
     }
+
+    final Uint8List rgba = raw.buffer.asUint8List(
+      raw.offsetInBytes,
+      raw.lengthInBytes,
+    );
+    final Uint8List jpeg = await Isolate.run(() {
+      final img.Image picture = img.Image.fromBytes(
+        width: width,
+        height: height,
+        bytes: rgba.buffer,
+        bytesOffset: rgba.offsetInBytes,
+        numChannels: 4,
+        order: img.ChannelOrder.rgba,
+      );
+      return img.encodeJpg(picture, quality: 92, chroma: img.JpegChroma.yuv420);
+    });
 
     final Directory folder = Exports.framesFolder(File(path).parent);
     await folder.create(recursive: true);
-    final File image = File(
-      '${folder.path}${Platform.pathSeparator}${print.name}-frame.png',
+    final File file = File(
+      '${folder.path}${Platform.pathSeparator}${print.name}-frame.jpg',
     );
-    await image.writeAsBytes(png.buffer.asUint8List(), flush: true);
-
-    final File record = File(
-      '${folder.path}${Platform.pathSeparator}${print.name}-frame.json',
-    );
-    await record.writeAsString(
-      const JsonEncoder.withIndent('  ').convert(<String, Object?>{
-        'film': ?print.film,
-        'paper': ?print.paper,
-        'minutes': ?print.minutes,
-        'temp_c': ?print.tempC,
-        'print': printNumber ?? print.printNumber,
-        'process': ?print.process?.name,
-        'border': '35mm',
-      }),
-    );
-    return image;
+    await file.writeAsBytes(jpeg, flush: true);
+    return file;
   } on FileSystemException {
     rethrow;
   } on Object catch (error) {
