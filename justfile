@@ -88,7 +88,6 @@ deny:
 print src dev="9" temp="20" dest="$HOME/Pictures/Kallotype":
     mkdir -p "{{dest}}"
     cargo run --release --quiet --bin kalo -- render {{src}} -o "{{dest}}/print-{{dev}}min.png" --film vision3_500t --paper fuji_crystal_archive_pearl --dev {{dev}} --temp {{temp}} --ev auto --grain --halation --couplers
-    printf '{\n  "film": "VISION3 500T",\n  "paper": "CRYSTAL ARCHIVE PEARL",\n  "minutes": %s,\n  "temp_c": %s\n}\n' "{{dev}}" "{{temp}}" > "{{dest}}/print-{{dev}}min.json"
 
 # Write the strip the app draws, from the model.
 #
