@@ -325,19 +325,6 @@ class KalloRack {
       brightness == Brightness.dark ? dark : light;
 }
 
-/// A picture taken off the wall and looked at on its own.
-///
-/// The viewer is black in both appearances: it is not a room and not a sheet,
-/// it is the absence of everything except the print. Its ink is fixed because
-/// the background is.
-abstract final class KalloViewer {
-  static const Color background = Color(0xFF09090B);
-  static const Color ink = Color(0xFFF5F5F7);
-  static const Color muted = Color(0xFFAEAEB2);
-  static const Color fill = Color(0x1FFFFFFF);
-  static const Color hairline = Color(0x26FFFFFF);
-}
-
 /// The spacing ramp. Six steps, and the gaps are the point.
 abstract final class KalloSpace {
   static const double step0 = 2;
@@ -370,7 +357,7 @@ abstract final class KalloRadius {
 /// objects: a sheet over the window, a print hanging in air, and the one pixel
 /// under a segment that has lifted off its track.
 abstract final class KalloShadow {
-  /// A sheet over the window, or a full-screen viewer.
+  /// A sheet over the window, or a print lifted off the rack in the viewer.
   static const List<BoxShadow> sheet = <BoxShadow>[
     BoxShadow(color: Color(0x24000000), blurRadius: 40, offset: Offset(0, 14)),
     BoxShadow(color: Color(0x0F000000), blurRadius: 8, offset: Offset(0, 2)),

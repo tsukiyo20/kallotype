@@ -501,7 +501,7 @@ void main() {
           photograph: card,
           prints: _rackPrints(card),
           initialChamber: Chamber.rack,
-          appearance: Brightness.dark,
+          appearance: Brightness.light,
           chrome: WindowChrome.mac,
         ),
       );

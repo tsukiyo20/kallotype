@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
@@ -19,9 +18,10 @@ import '../widgets/wall.dart';
 /// single row sideways off the screen.
 ///
 /// The line is a wire with a little sag, the print hangs from a clip, and the
-/// paper has a shadow because it is in the air. Clicking one takes it off the
-/// rack and fills the window with it.
-class Rack extends StatelessWidget {
+/// paper has a shadow because it is in the air. Clicking one opens it inside
+/// the room; the window's sidebars keep their own switches, and the print is
+/// shown on the rack's own ground.
+class Rack extends StatefulWidget {
   const Rack({
     super.key,
     required this.prints,
@@ -38,6 +38,114 @@ class Rack extends StatelessWidget {
 
   /// The transparent chrome over the room.
   final double topInset;
+
+  @override
+  State<Rack> createState() => _RackState();
+}
+
+class _RackState extends State<Rack> with SingleTickerProviderStateMixin {
+  Print? _viewer;
+  late final AnimationController _transition;
+  late final CurvedAnimation _fade;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _transition = AnimationController(
+      vsync: this,
+      duration: KalloMotion.quick,
+      reverseDuration: KalloMotion.instant,
+    );
+    _fade = CurvedAnimation(
+      parent: _transition,
+      curve: KalloMotion.enter,
+      reverseCurve: KalloMotion.leave,
+    );
+    _scale = Tween<double>(begin: 0.992, end: 1).animate(_fade);
+  }
+
+  @override
+  void dispose() {
+    _fade.dispose();
+    _transition.dispose();
+    super.dispose();
+  }
+
+  void _open(Print print) {
+    if (_viewer != null) {
+      return;
+    }
+    setState(() => _viewer = print);
+    _transition.forward(from: 0);
+  }
+
+  void _close() {
+    if (_viewer == null || _transition.status == AnimationStatus.reverse) {
+      return;
+    }
+    _transition.reverse().whenComplete(() {
+      if (mounted) {
+        setState(() => _viewer = null);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        // The room stays underneath the print. Its scroll position, its paper
+        // and its wires do not leave when a print is opened.
+        _RackRoom(
+          prints: widget.prints,
+          jobs: widget.jobs,
+          topInset: widget.topInset,
+          onPrint: _open,
+        ),
+        if (_viewer != null)
+          Positioned.fill(
+            child: FadeTransition(
+              opacity: _fade,
+              child: ScaleTransition(
+                scale: _scale,
+                child: PrintViewer(
+                  key: ObjectKey(_viewer),
+                  print: _viewer!,
+                  topInset: widget.topInset,
+                  onClose: _close,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// The room itself. It remains under the viewer, so closing a print returns to
+/// the same line and the same scroll position.
+class _RackRoom extends StatelessWidget {
+  const _RackRoom({
+    required this.prints,
+    required this.jobs,
+    required this.onPrint,
+    this.topInset = 0,
+  });
+
+  /// Everything exported, oldest first. The rack reads it backwards.
+  final List<Print> prints;
+
+  /// The prints being made. A print is a render, not a copy, so there is
+  /// always something on the line before there is anything on it.
+  final List<PrintJob> jobs;
+
+  /// The transparent chrome over the room.
+  final double topInset;
+
+  /// Takes a print off the wire into the room's viewer.
+  final ValueChanged<Print> onPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +266,7 @@ class Rack extends StatelessWidget {
                         rack: rack,
                         first: i == 0,
                         startIndex: i * columns,
+                        onPrint: onPrint,
                       ),
                   ],
                 ),
@@ -193,6 +302,7 @@ class _Line extends StatelessWidget {
     required this.rack,
     required this.first,
     required this.startIndex,
+    required this.onPrint,
   });
 
   final List<Print> prints;
@@ -202,6 +312,7 @@ class _Line extends StatelessWidget {
   final KalloRack rack;
   final bool first;
   final int startIndex;
+  final ValueChanged<Print> onPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -238,6 +349,7 @@ class _Line extends StatelessWidget {
                   rack: rack,
                   colors: colors,
                   angle: ((startIndex + i) % 3 - 1) * 0.004,
+                  onPrint: onPrint,
                 ),
               ),
           ],
@@ -258,6 +370,7 @@ class _HangingPrint extends StatefulWidget {
     required this.rack,
     required this.colors,
     required this.angle,
+    required this.onPrint,
   });
 
   final Print print;
@@ -268,6 +381,8 @@ class _HangingPrint extends StatefulWidget {
   /// A rack is not a grid. A degree this shallow is enough to remember that
   /// the paper was hung by a hand.
   final double angle;
+
+  final ValueChanged<Print> onPrint;
 
   @override
   State<_HangingPrint> createState() => _HangingPrintState();
@@ -285,7 +400,7 @@ class _HangingPrintState extends State<_HangingPrint> {
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
-        onTap: () => unawaited(showPrintViewer(context, print: print)),
+        onTap: () => widget.onPrint(print),
         behavior: HitTestBehavior.opaque,
         child: SizedBox(
           width: widget.width,

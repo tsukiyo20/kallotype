@@ -569,92 +569,97 @@ class _DevelopStageState extends State<DevelopStage> {
     final bool hasPrints = widget.strip.prints.isNotEmpty;
     return ColoredBox(
       color: colors.content,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints room) {
-          // The print and its controls are one object on the bench. They are
-          // laid together and centred, so a tall window puts the ruler under
-          // the picture instead of at the bottom of an empty field.
-          final double reserve = hasPrints ? 248 : 174;
-          final double width = math.max(
-            220,
-            math.min(
-              math.max(240, room.maxWidth - 96),
-              math.max(
-                180,
-                (room.maxHeight - reserve) /
-                    PrintSheet.heightPerWidth(aspect: aspect),
+      child: Padding(
+        // The capsule floats over the room. The work starts below it, so a
+        // tall print cannot slide under the chrome and lose its top edge.
+        padding: EdgeInsets.only(top: widget.topInset),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints room) {
+            // The print and its controls are one object on the bench. They are
+            // laid together and centred, so a tall window puts the ruler under
+            // the picture instead of at the bottom of an empty field.
+            final double reserve = hasPrints ? 248 : 174;
+            final double width = math.max(
+              160,
+              math.min(
+                math.max(240, room.maxWidth - 96),
+                math.max(
+                  160,
+                  (room.maxHeight - reserve) /
+                      PrintSheet.heightPerWidth(aspect: aspect),
+                ),
               ),
-            ),
-          );
-          return Center(
-            child: SizedBox(
-              width: width,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  PrintSheet(
-                    width: width,
-                    aspect: aspect,
-                    paper: colors.print,
-                    outline: colors.hairline,
-                    child: image == null
-                        ? Center(
-                            child: Text(
-                              _busy ? s.developing : s.noTestPrints,
-                              textAlign: TextAlign.center,
-                              style: KalloType.small.copyWith(
-                                color: KalloInk.muted,
+            );
+            return Center(
+              child: SizedBox(
+                width: width,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    PrintSheet(
+                      width: width,
+                      aspect: aspect,
+                      paper: colors.print,
+                      outline: colors.hairline,
+                      child: image == null
+                          ? Center(
+                              child: Text(
+                                _busy ? s.developing : s.noTestPrints,
+                                textAlign: TextAlign.center,
+                                style: KalloType.small.copyWith(
+                                  color: KalloInk.muted,
+                                ),
                               ),
+                            )
+                          : RawImage(
+                              image: image,
+                              fit: BoxFit.cover,
+                              filterQuality: FilterQuality.high,
                             ),
-                          )
-                        : RawImage(
-                            image: image,
-                            fit: BoxFit.cover,
-                            filterQuality: FilterQuality.high,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        SizedBox(
+                          width: 104,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                darkroomClock(_minutes),
+                                style: KalloType.plate.copyWith(
+                                  color: colors.ink,
+                                ),
+                              ),
+                              Text(
+                                '${widget.strip.tempC.toStringAsFixed(1)} °C',
+                                style: KalloType.small.copyWith(
+                                  color: colors.inkFaint,
+                                ),
+                              ),
+                            ],
                           ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 104,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              darkroomClock(_minutes),
-                              style: KalloType.plate.copyWith(
-                                color: colors.ink,
-                              ),
-                            ),
-                            Text(
-                              '${widget.strip.tempC.toStringAsFixed(1)} °C',
-                              style: KalloType.small.copyWith(
-                                color: colors.inkFaint,
-                              ),
-                            ),
-                          ],
                         ),
-                      ),
-                      const SizedBox(width: KalloSpace.step3),
-                      Expanded(
-                        child: TimeSlider(
-                          value: _minutes,
-                          ticks: _ladder,
-                          onChanged: _changed,
-                          onSettled: _settled,
+                        const SizedBox(width: KalloSpace.step3),
+                        Expanded(
+                          child: TimeSlider(
+                            value: _minutes,
+                            ticks: _ladder,
+                            onChanged: _changed,
+                            onSettled: _settled,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  _strip(colors, s),
-                ],
+                      ],
+                    ),
+                    _strip(colors, s),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

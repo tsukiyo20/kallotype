@@ -394,56 +394,61 @@ class _PrintStageState extends State<PrintStage> {
     final double aspect = image == null ? 1.5 : image.width / image.height;
     return ColoredBox(
       color: colors.content,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints room) {
-          final double width = math.max(
-            220,
-            math.min(
-              math.max(240, room.maxWidth - 140),
-              (room.maxHeight - 150) /
-                  PrintSheet.heightPerWidth(aspect: aspect),
-            ),
-          );
-          return Column(
-            children: <Widget>[
-              Expanded(
-                child: Center(
-                  child: PrintSheet(
-                    width: width,
-                    aspect: aspect,
-                    paper: colors.print,
-                    outline: colors.hairline,
-                    child: image == null
-                        ? Center(
-                            child: Text(
-                              _busy ? s.printing : s.printNote,
-                              textAlign: TextAlign.center,
-                              style: KalloType.small.copyWith(
-                                color: KalloInk.muted,
+      child: Padding(
+        // The step capsule floats over the bench; a print never starts under
+        // it, even when the picture is taller than the room.
+        padding: EdgeInsets.only(top: widget.topInset),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints room) {
+            final double width = math.max(
+              220,
+              math.min(
+                math.max(240, room.maxWidth - 140),
+                (room.maxHeight - 150) /
+                    PrintSheet.heightPerWidth(aspect: aspect),
+              ),
+            );
+            return Column(
+              children: <Widget>[
+                Expanded(
+                  child: Center(
+                    child: PrintSheet(
+                      width: width,
+                      aspect: aspect,
+                      paper: colors.print,
+                      outline: colors.hairline,
+                      child: image == null
+                          ? Center(
+                              child: Text(
+                                _busy ? s.printing : s.printNote,
+                                textAlign: TextAlign.center,
+                                style: KalloType.small.copyWith(
+                                  color: KalloInk.muted,
+                                ),
                               ),
+                            )
+                          : RawImage(
+                              image: image,
+                              fit: BoxFit.cover,
+                              filterQuality: FilterQuality.high,
                             ),
-                          )
-                        : RawImage(
-                            image: image,
-                            fit: BoxFit.cover,
-                            filterQuality: FilterQuality.high,
-                          ),
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(40, 0, 40, 24),
-                child: Text(
-                  '${darkroomClock(_minutes)}   ·   '
-                  '${_printEv >= 0 ? '+' : ''}${_printEv.toStringAsFixed(1)} EV'
-                  '${_filters.isEmpty ? '' : '   ·   $_filters'}'
-                  '${_glass == null ? '' : '   ·   ${_glass!.toUpperCase()}'}',
-                  style: KalloType.data.copyWith(color: colors.inkMuted),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(40, 0, 40, 24),
+                  child: Text(
+                    '${darkroomClock(_minutes)}   ·   '
+                    '${_printEv >= 0 ? '+' : ''}${_printEv.toStringAsFixed(1)} EV'
+                    '${_filters.isEmpty ? '' : '   ·   $_filters'}'
+                    '${_glass == null ? '' : '   ·   ${_glass!.toUpperCase()}'}',
+                    style: KalloType.data.copyWith(color: colors.inkMuted),
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

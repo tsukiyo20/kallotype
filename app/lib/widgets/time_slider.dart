@@ -188,10 +188,17 @@ class _RulerPainter extends CustomPainter {
     final Paint accentPaint = Paint()..color = accent;
 
     canvas.drawLine(Offset(0, y + 0.5), Offset(width, y + 0.5), hair);
-    // The five ladder marks: a tick, and its clock underneath.
-    for (final double minutes in ticks) {
+    // The five ladder marks: a tick, and its clock underneath. A narrow ruler
+    // keeps every tick but labels every other one, so the marks never write
+    // over each other.
+    final bool labelAll = width >= 260;
+    for (int i = 0; i < ticks.length; i++) {
+      final double minutes = ticks[i];
       final double x = _x(minutes, width);
       canvas.drawLine(Offset(x, y - 4), Offset(x, y + 4), hair);
+      if (!labelAll && i.isOdd) {
+        continue;
+      }
       final TextPainter label = TextPainter(
         text: TextSpan(
           text: darkroomClock(minutes),

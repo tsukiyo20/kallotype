@@ -10,50 +10,33 @@ import '../design/tokens.dart';
 import '../lab/print.dart';
 import 'wall.dart';
 
-/// Open a print at the window's full size.
+/// One print, held up inside the drying rack's room.
 ///
-/// The rack is a place to hang paper; this is the same paper taken down and
-/// held up. It covers the window, including both sidebars, because the point
-/// of walking up to a print is that the room gets out of the way.
-Future<void> showPrintViewer(BuildContext context, {required Print print}) {
-  final KalloStrings s = KalloStrings.of(context);
-  final KalloColors colors = KalloScope.colorsOf(context);
-  return showGeneralDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: s.close,
-    barrierColor: colors.scrim,
-    transitionDuration: KalloMotion.settle,
-    pageBuilder: (
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondary,
-    ) => PrintViewer(print: print),
-    transitionBuilder:
-        (
-          BuildContext context,
-          Animation<double> animation,
-          Animation<double> secondary,
-          Widget child,
-        ) => FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: KalloMotion.enter),
-          child: child,
-        ),
-  );
-}
-
-/// One print, as large as the window lets it be.
+/// It is not a route and not a second environment: the sidebars are the
+/// window's, not the picture's, and they keep their own switches. The room's
+/// ground and the window's ink are the ones already in use, so the print is
+/// simply taken off the wire and looked at, not carried into a black box.
 class PrintViewer extends StatefulWidget {
-  const PrintViewer({super.key, required this.print});
+  const PrintViewer({
+    super.key,
+    required this.print,
+    required this.onClose,
+    this.topInset = 0,
+  });
 
   final Print print;
+  final VoidCallback onClose;
+
+  /// The transparent chrome at the top of the window. The room's own head
+  /// starts below it, like the rack's.
+  final double topInset;
 
   @override
   State<PrintViewer> createState() => _PrintViewerState();
 }
 
 class _PrintViewerState extends State<PrintViewer> {
-  /// The file's copy, when the wall's copy is not the whole picture.
+  /// The file's copy, when the rack's copy is not the whole picture.
   ui.Image? _full;
   final FocusNode _keys = FocusNode(debugLabel: 'print-viewer');
 
@@ -86,58 +69,48 @@ class _PrintViewerState extends State<PrintViewer> {
     super.dispose();
   }
 
-  void _close() => Navigator.of(context).pop();
-
   @override
   Widget build(BuildContext context) {
     final KalloStrings s = KalloStrings.of(context);
+    final KalloColors colors = KalloScope.colorsOf(context);
+    final KalloRack rack = KalloRack.of(colors.brightness);
     final ui.Image image = _full ?? widget.print.image;
     final Print print = widget.print;
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.escape): _close,
+        const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
       },
       child: Focus(
         focusNode: _keys,
-        child: ColoredBox(
-          color: KalloViewer.background,
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              // A little light on the paper's own wall, so the black is a room
-              // and not a hole.
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(0, -0.18),
-                    radius: 0.95,
-                    colors: <Color>[Color(0xFF17171A), KalloViewer.background],
-                  ),
-                ),
+        child: SizedBox.expand(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0, -0.62),
+                radius: 1.08,
+                colors: <Color>[rack.top, rack.base],
               ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 16, 28, 22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      _head(s, print),
-                      const SizedBox(height: 12),
-                      Expanded(child: _picture(image, print)),
-                      const SizedBox(height: 10),
-                      _foot(print),
-                    ],
-                  ),
-                ),
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(28, widget.topInset + 16, 28, 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _head(s, print, colors),
+                  const SizedBox(height: 12),
+                  Expanded(child: _picture(image, print, colors)),
+                  const SizedBox(height: 10),
+                  _foot(print, colors),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _head(KalloStrings s, Print print) {
+  Widget _head(KalloStrings s, Print print, KalloColors colors) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -148,7 +121,7 @@ class _PrintViewerState extends State<PrintViewer> {
               Text(
                 print.folio,
                 style: KalloType.data.copyWith(
-                  color: KalloViewer.ink,
+                  color: colors.ink,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -156,7 +129,7 @@ class _PrintViewerState extends State<PrintViewer> {
               Text(
                 s.rack,
                 style: KalloType.caption.copyWith(
-                  color: KalloViewer.muted,
+                  color: colors.inkFaint,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -165,14 +138,14 @@ class _PrintViewerState extends State<PrintViewer> {
         ),
         _ViewerButton(
           key: const Key('print-viewer-close'),
-          onTap: _close,
+          onTap: widget.onClose,
           label: s.close,
         ),
       ],
     );
   }
 
-  Widget _picture(ui.Image image, Print print) {
+  Widget _picture(ui.Image image, Print print, KalloColors colors) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints room) {
         final double heightPerWidth = PrintSheet.heightPerWidth(
@@ -182,7 +155,7 @@ class _PrintViewerState extends State<PrintViewer> {
           180,
           math.min(
             room.maxWidth,
-            math.max(220, (room.maxHeight) / heightPerWidth),
+            math.max(220, room.maxHeight / heightPerWidth),
           ),
         );
         return InteractiveViewer(
@@ -195,7 +168,8 @@ class _PrintViewerState extends State<PrintViewer> {
               child: PrintSheet(
                 width: width,
                 aspect: print.aspect,
-                paper: KalloColors.light.print,
+                paper: colors.print,
+                outline: colors.hairline,
                 light: 1,
                 child: RawImage(
                   image: image,
@@ -210,7 +184,7 @@ class _PrintViewerState extends State<PrintViewer> {
     );
   }
 
-  Widget _foot(Print print) {
+  Widget _foot(Print print, KalloColors colors) {
     final List<String> facts = <String>[
       if (print.filmDisplay.isNotEmpty) print.filmDisplay,
       if (print.paperDisplay.isNotEmpty) print.paperDisplay,
@@ -224,7 +198,7 @@ class _PrintViewerState extends State<PrintViewer> {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
-      style: KalloType.small.copyWith(color: KalloViewer.muted),
+      style: KalloType.small.copyWith(color: colors.inkMuted),
     );
   }
 }
@@ -244,6 +218,7 @@ class _ViewerButtonState extends State<_ViewerButton> {
 
   @override
   Widget build(BuildContext context) {
+    final KalloColors colors = KalloScope.colorsOf(context);
     return Semantics(
       button: true,
       label: widget.label,
@@ -259,18 +234,14 @@ class _ViewerButtonState extends State<_ViewerButton> {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: _hover ? const Color(0x33FFFFFF) : KalloViewer.fill,
+              color: _hover ? colors.fillStrong : colors.fill,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: _hover ? const Color(0x4DFFFFFF) : KalloViewer.hairline,
-              ),
+              border: Border.all(color: colors.hairline),
             ),
             child: Center(
               child: CustomPaint(
                 size: const Size(12, 12),
-                painter: _ClosePainter(
-                  _hover ? KalloViewer.ink : KalloViewer.muted,
-                ),
+                painter: _ClosePainter(_hover ? colors.ink : colors.inkMuted),
               ),
             ),
           ),

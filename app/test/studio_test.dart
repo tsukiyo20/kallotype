@@ -20,6 +20,7 @@ import 'package:kallo/widgets/stage_tabs.dart';
 import 'package:kallo/widgets/stepper.dart';
 import 'package:kallo/widgets/print_viewer.dart';
 import 'package:kallo/widgets/studio_sidebar.dart';
+import 'package:kallo/widgets/wall.dart';
 
 Future<ui.Image> _card({int width = 600, int height = 400}) async {
   final ui.PictureRecorder recorder = ui.PictureRecorder();
@@ -155,6 +156,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+    // The step capsule floats over the room, so the work starts below it.
+    expect(
+      tester.getTopLeft(find.byType(PrintSheet)).dy,
+      greaterThanOrEqualTo(56),
+    );
     expect(find.text('6:00'), findsWidgets);
     expect(find.text('9:00'), findsWidgets);
   });
@@ -310,7 +316,7 @@ void main() {
     );
   });
 
-  testWidgets('the rack wraps its prints and opens one full screen', (
+  testWidgets('the rack opens a print in the room, not over the window', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1280, 820);
@@ -355,6 +361,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PrintViewer), findsOneWidget);
     expect(find.byKey(const Key('print-viewer-close')), findsOneWidget);
+    expect(find.byType(StudioSidebar), findsOneWidget);
+
+    // The sidebar's switch still owns the sidebar while a print is open. The
+    // viewer is inside the room and must not make that decision for it.
+    await tester.tap(find.byKey(const Key('sidebar-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byType(StudioSidebar), findsNothing);
+    expect(find.byType(PrintViewer), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('print-viewer-close')));
     await tester.pumpAndSettle();
