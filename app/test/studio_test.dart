@@ -114,6 +114,51 @@ void main() {
     expect(find.text('同曝光 · 9:00'), findsOneWidget);
   });
 
+  testWidgets('the strip holds prints of different shapes', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(960, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final ui.Image portrait = await _card(width: 450, height: 800);
+    final TestStrip strip =
+        const TestStrip(
+              photo: '/photographs/uji.jpg',
+              stockId: 'vision3_500t',
+              stockLabel: 'VISION3 500T',
+              paperId: 'portra_endura',
+              paperLabel: 'PORTRA ENDURA',
+            )
+            .withPrint(
+              TestPrint(minutes: 6, tempC: 20, image: card, chart: _chart(6)),
+            )
+            .withPrint(
+              TestPrint(
+                minutes: 9,
+                tempC: 20,
+                image: portrait,
+                chart: _chart(9),
+              ),
+            );
+
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: strip,
+        photograph: card,
+        prints: const <Print>[],
+        initialStep: DarkroomStep.develop,
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('6:00'), findsWidgets);
+    expect(find.text('9:00'), findsWidgets);
+  });
+
   testWidgets('the temperature dial asks for the next step', (
     WidgetTester tester,
   ) async {

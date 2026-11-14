@@ -919,33 +919,40 @@ class _Pegged extends StatelessWidget {
     final KalloColors colors = KalloScope.colorsOf(context);
     final ui.Image? image = print.image;
     final double aspect = image == null ? 1.5 : image.width / image.height;
+    // The strip has one height, not one width: a portrait print narrows and a
+    // landscape print widens, and every print stays whole on the paper. The
+    // card includes its padding and its border, which is thicker when chosen.
+    const double imageHeight = 88;
+    final double imageWidth = (imageHeight * aspect).clamp(44.0, 160.0);
+    final double border = selected ? 1.5 : 1;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          width: 96,
+          width: imageWidth + 6 + border * 2,
           margin: const EdgeInsets.only(right: KalloSpace.step3),
           padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             color: colors.print,
             border: Border.all(
               color: selected ? colors.accent : colors.hairline,
-              width: selected ? 1.5 : 1,
+              width: border,
             ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              AspectRatio(
-                aspectRatio: aspect,
+              SizedBox(
+                height: imageHeight,
+                width: imageWidth,
                 child: image == null
                     ? const SizedBox.shrink()
                     : RawImage(
                         image: image,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         filterQuality: FilterQuality.medium,
                       ),
               ),
