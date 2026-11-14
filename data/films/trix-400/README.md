@@ -7,7 +7,7 @@ record instead of three.
   the stock uses, why two of its curves belong to the previous emulsion, the
   grain number inverted from rms 17, and what a monochrome film does to a format
   built for colour.
-- **The film:** `trix-400.kalofilm` (5,527 bytes) — load it with
+- **The film:** `trix-400.kalofilm` (5,593 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 points, the same curve in all three files,
   because a silver image has one record.

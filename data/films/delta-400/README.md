@@ -8,7 +8,7 @@ declared rather than invented.
 - **The report:** [REPORT.md](REPORT.md) — the curve the kinetics are checked
   against, three declared absences, the speed-point anchor, and what a flat
   panchromatic response means in a three-channel format.
-- **The film:** `delta-400.kalofilm` (5,568 bytes) — load it with
+- **The film:** `delta-400.kalofilm` (5,635 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 367 points, the same record in all three files.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn

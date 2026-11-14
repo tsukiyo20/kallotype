@@ -1,9 +1,13 @@
 //! Built-in film and paper stocks.
 //!
-//! Two of them are measured — the film `vision3_500t` and the paper
-//! `endura_premier_metallic`. Their curves are digitised from the manufacturer's
-//! data sheets. Everything else is a stand-in with realistic numbers, and the
-//! notes on each say which it is.
+//! Every film in `data/films/` and every paper in `data/papers/` is here, one
+//! entry each, generated at build time from the `.kalofilm` and `.kalopaper`
+//! files the renderer can also read one at a time. A stock is not a summary of
+//! its sheet: it carries what the fields below say it carries, and it carries
+//! what the sheet admitted to in [`FilmStock::measured`] — one line per field,
+//! saying whether that field was measured, borrowed from another stock, or left
+//! as a compiled placeholder. A product whose whole claim is that the numbers
+//! mean something has to be able to say where each one came from.
 //!
 //! ## A stock carries its own spectra
 //!
@@ -14,14 +18,13 @@
 //! different products, and they ride on the stock so that choosing a film
 //! changes the colour and not only the density.
 //!
-//! The placeholder stocks borrow the measured VISION3 spectra and say so in
-//! their notes. That is the honest version of a placeholder: the curve is
-//! invented, and the colour response is somebody else's.
+//! Not every sheet prints three dyes, so some stocks borrow the measured VISION3
+//! spectra — and [`FilmStock::measured`] says so, which is the honest version of
+//! a borrow: the number is real, it is simply not this film's.
 //!
-//! The ids of the stand-ins deliberately name no real product. A stock called
-//! `portra400` that is not Portra 400 would be a lie, and the whole point of this
-//! project is that the numbers mean something. The measured one names its own
-//! film, because it is that film.
+//! The ids name the real product. A stock called `portra400` that is not Portra
+//! 400 would be a lie, and the whole point of this project is that the numbers
+//! mean something.
 //!
 //! ## What `d_min` means, and why it is zero for film
 //!
@@ -58,12 +61,42 @@ pub enum FilmProcess {
     /// Silver image: one curve, one sensitivity, no dye, no mask.
     Monochrome,
 }
+/// Where a stock's numbers came from.
+///
+/// A data sheet, a printed page, a date, and the digest of the document itself.
+/// It is not decoration: a curve that cannot name its sheet is a curve someone
+/// drew, and the difference is the whole product.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Provenance {
+    /// The publication, as the manufacturer numbers it: `E-4050`, `AF3-865E`.
+    pub publication: &'static str,
+    /// The printed page the numbers were read on, as the sheet numbers it.
+    pub page: &'static str,
+    /// The date the sheet was read, ISO 8601.
+    pub retrieved: &'static str,
+    /// The digest of the document, `sha256:...`.
+    pub checksum: &'static str,
+}
+
+impl Provenance {
+    /// A stock with no sheet behind it: a test, or a file that did not say.
+    pub const UNKNOWN: Self = Self {
+        publication: "",
+        page: "",
+        retrieved: "",
+        checksum: "",
+    };
+}
+
 /// A film stock: one characteristic curve per colour layer.
 #[derive(Debug, Clone, Copy)]
 
 pub struct FilmStock {
     /// Stable identifier used on the command line.
     pub id: &'static str,
+    /// The name a box or a wall label would use, without the catalogue numbers:
+    /// `PORTRA 400`, not `KODAK PROFESSIONAL PORTRA 400, C-41`.
+    pub short: &'static str,
     /// The chemistry, and therefore which stages the render runs.
     pub process: FilmProcess,
     /// A second emulsion feeding the cyan dye, if the film has one.
@@ -133,6 +166,31 @@ pub struct FilmStock {
     pub reference_time_min: f64,
     /// The temperature the curve was measured at, in °C.
     pub reference_temp_c: f64,
+    /// The sheet this film was read from.
+    pub provenance: Provenance,
+    /// One line per field: what was measured, what was borrowed, what is a
+    /// placeholder, and what is absent.
+    ///
+    /// The order is the model's — the curve first, the grain last — rather than
+    /// the file's, because a person reading a film's record wants the film's
+    /// shape before its texture. Every sentence begins with its own verdict:
+    /// `measured: ...`, `borrowed: ...`, `placeholder: ...`, `none`.
+    pub measured: &'static [(&'static str, &'static str)],
+}
+
+/// What a paper carries.
+///
+/// A colour paper has three dye-forming layers and records colour; a silver
+/// paper has one silver image, no dyes, and records luminance. It is the
+/// paper's own fact, not a rendering preference: a colour film printed on a
+/// silver paper is a black-and-white print, and a paper that cannot say which
+/// it is cannot be printed honestly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaperEmulsion {
+    /// Three dye-forming layers, RA-4: the print carries colour.
+    Colour,
+    /// One silver image, no dyes: the print carries luminance.
+    Silver,
 }
 
 /// A paper stock: one curve, because paper only has to record what is on the
@@ -141,6 +199,10 @@ pub struct FilmStock {
 pub struct PaperStock {
     /// Stable identifier used on the command line.
     pub id: &'static str,
+    /// The name a box or a wall label would use, without the catalogue numbers.
+    pub short: &'static str,
+    /// What the paper carries: three dye-forming layers, or one silver image.
+    pub emulsion: PaperEmulsion,
     /// Human-readable name.
     pub label: &'static str,
     /// What this paper is, and what it is not.
@@ -157,6 +219,10 @@ pub struct PaperStock {
     /// The paper's three layer sensitivities on one relative scale, 380–730 nm
     /// at 5 nm. What the spectral print integrates the enlarger's light against.
     pub layers: &'static [[f64; GRID_LEN]; 3],
+    /// The sheet this paper was read from.
+    pub provenance: Provenance,
+    /// One line per field, as a film's: measured, borrowed, placeholder or none.
+    pub measured: &'static [(&'static str, &'static str)],
 }
 
 const fn curve(d_min: f64, d_max: f64, gamma: f64, log_e0: f64) -> CharacteristicCurve {
@@ -216,6 +282,102 @@ mod tests {
             ratios.iter().any(|ratio| (ratio - 1.0).abs() > 0.05),
             "the two films share their layer tables: {ratios:?}"
         );
+    }
+
+    /// What a stock says about a field matches what it carries.
+    ///
+    /// The catalogue's value is that its claims are checkable, so they are
+    /// checked. A stock that said `none` about its mask while shipping another
+    /// film's — which seven of them did until this test existed — is worse than
+    /// one that said nothing at all, because a reader believes it.
+    ///
+    /// The claims are read the way `kalo stocks --json` reads them: the word
+    /// before the first colon.
+    #[test]
+    fn the_claims_match_the_tables() {
+        fn claim<'a>(stock: &'a FilmStock, field: &str) -> &'a str {
+            stock
+                .measured
+                .iter()
+                .find(|(name, _)| *name == field)
+                .map(|(_, text)| text.split(':').next().unwrap_or("").trim())
+                .unwrap_or_else(|| panic!("{} says nothing about its {field}", stock.id))
+        }
+
+        let reference_mask: &[f64] = FILM_MASK.as_slice();
+        let reference_dyes: &[[f64; GRID_LEN]] = FILM_DYES.as_slice();
+        for stock in FILM_STOCKS {
+            for field in ["curves", "layers", "dyes", "mask", "mtf", "grain"] {
+                let verdict = claim(stock, field);
+                assert!(
+                    matches!(verdict, "measured" | "borrowed" | "placeholder" | "none"),
+                    "{}'s {field} begins with {verdict:?}",
+                    stock.id
+                );
+            }
+
+            let masks = stock.mask.as_slice();
+            let mask_empty = masks.iter().all(|value| *value == 0.0);
+            match claim(stock, "mask") {
+                "none" => assert!(
+                    mask_empty,
+                    "{} says it has no mask and carries one",
+                    stock.id
+                ),
+                "borrowed" => assert!(
+                    masks == reference_mask,
+                    "{} says its mask is borrowed and it is not the reference",
+                    stock.id
+                ),
+                _ => assert!(
+                    !mask_empty,
+                    "{} says its mask is measured and has none",
+                    stock.id
+                ),
+            }
+
+            let dyes = stock.dyes.as_slice();
+            let dyes_empty = dyes.iter().flatten().all(|value| *value == 0.0);
+            match claim(stock, "dyes") {
+                "none" => assert!(
+                    dyes_empty,
+                    "{} says it has no dyes and carries some",
+                    stock.id
+                ),
+                "borrowed" => assert!(
+                    dyes == reference_dyes,
+                    "{} says its dyes are borrowed and they are not the reference",
+                    stock.id
+                ),
+                _ => assert!(
+                    !dyes_empty,
+                    "{} says its dyes are measured and has none",
+                    stock.id
+                ),
+            }
+
+            // The render blurs every stock: a stock whose sheet published no MTF
+            // runs on the compiled VISION3 fit, so `none` is a claim the model
+            // contradicts — the honest word for a sheet without an MTF is
+            // `borrowed`, and the note has to say what is borrowed.
+            match claim(stock, "mtf") {
+                "measured" => assert!(
+                    stock.sigma_um.is_some(),
+                    "{} says its blur is measured and carries none",
+                    stock.id
+                ),
+                "borrowed" => assert!(
+                    stock.sigma_um.is_none(),
+                    "{} says its blur is borrowed and carries its own",
+                    stock.id
+                ),
+                other => panic!(
+                    "{} claims {other:?} for its blur; a stock without an MTF \
+                     borrows the measured VISION3 blur and has to say so",
+                    stock.id
+                ),
+            }
+        }
     }
 
     /// Every film carries three dyes, three layer sensitivities and a mask, on

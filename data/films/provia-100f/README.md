@@ -5,7 +5,7 @@ granularity are all from its own sheet.
 
 - **The report:** [REPORT.md](REPORT.md) — the vector-path reading, the
   three-plate decomposition and its residual cost, the fits, uncertainty.
-- **The film:** `provia-100f.kalofilm` (5,444 bytes) — load it with
+- **The film:** `provia-100f.kalofilm` (5,403 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 768, 183 and 320 digitised points.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn

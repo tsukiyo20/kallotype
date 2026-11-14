@@ -1,0 +1,22 @@
+# The app's binding crate is built by Flutter's native-assets hook, not by
+# `cargo build` at the root: its target is the app, not the crates.io release.
+[workspace]
+
+[package]
+name = "rust_lib_kallotype"
+description = "The model as a library the app can call"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.13.0"
+kallotype-api = { path = "../../crates/kallotype-api" }
+kallotype-io = { path = "../../crates/kallotype-io" }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

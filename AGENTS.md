@@ -5,7 +5,7 @@ Two build units, one tree.
 | | |
 |---|---|
 | `crates/` | the model, in Rust. A `cargo` workspace, published to crates.io. |
-| `app/` | the interface, in Flutter. Its `pubspec.yaml` lives in `app/`. |
+| `app/` | the interface, in Flutter; `app/rust/` is the binding crate that links the model into it. Its `pubspec.yaml` lives in `app/`. |
 
 ## The one law
 
@@ -31,20 +31,26 @@ checklist.
   change usually belongs here, not in a widget.
 - `app/lib/design/scope.dart` — the two environments, and the `emissive` value
   the transition interpolates.
-- `app/lib/film/film.dart` — 35 mm geometry and the strip painter.
-- `app/test/goldens/` — the two pictures the design is held against.
+- `app/lib/widgets/film_frame.dart` — 35 mm frame geometry and the film painter.
+- `app/test/goldens/<platform>/` — the studio pictures the design is held
+  against; macOS has twelve, Windows draws its own.
 
 ## Verifying
 
 ```bash
 just check                    # Rust: fmt, clippy, tests
 cd app && flutter analyze     # must say "No issues found!"
-cd app && flutter test        # goldens skip off Windows, on purpose
+cd app && flutter test        # the studio goldens are opt-in
+cd app && flutter test --dart-define=studio-goldens=true test/studio_golden_test.dart
+                              # the twelve pictures, from this platform's folder
+cd app && flutter test integration_test/ffi_strip_test.dart -d macos
+                              # the linked model, in the app it ships in
 ```
 
-The goldens are drawn with the machine's own fonts, so their baseline is Windows
-and the test skips elsewhere. `flutter test --update-goldens` rewrites them
-deliberately — never as a way to turn a red test green.
+The studio goldens are drawn with the bundled faces and belong to the machine
+that drew them; each platform keeps its own folder under `app/test/goldens/`.
+They are opt-in and CI never runs them. `flutter test --update-goldens`
+rewrites them deliberately — never as a way to turn a red test green.
 
 ## Commits
 

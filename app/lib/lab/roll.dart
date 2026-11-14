@@ -1,0 +1,236 @@
+import 'dart:io' as io;
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'dart:ui' show Color;
+
+import '../film/strip_data.dart';
+import 'clock.dart';
+import 'contact.dart';
+import 'stock.dart';
+
+/// A roll: the thing you are carrying.
+///
+/// A frame is one exposure, one stock, one development. The roll is the unit
+/// that holds them, and rolling it up is what the strip is; unrolling it is
+/// what the contact sheet is.
+class Roll {
+  const Roll({
+    required this.stockId,
+    required this.stockLabel,
+    required this.frames,
+    this.photo,
+    this.paperId,
+    this.paperLabel,
+    this.spectral = false,
+    this.contact,
+  });
+
+  /// The stock's id, as the CLI and the `.kalofilm` files spell it.
+  final String stockId;
+
+  /// The stock's label, as it would be printed on the box.
+  final String stockLabel;
+
+  /// The photograph this roll was developed from, when the app developed it.
+  /// A roll the model drew has none: it is a chart, not a picture.
+  final String? photo;
+
+  /// What this roll is called: the photograph's own name, without its folder
+  /// or its extension.
+  ///
+  /// There is one roll, so there is no number to give it. A serial would be a
+  /// list of one, and the photograph is the thing a person calls the roll by —
+  /// and the only thing on this roll that the app did not make.
+  String? get name {
+    final String? photo = this.photo;
+    if (photo == null) {
+      return null;
+    }
+    final String file = photo.split(io.Platform.pathSeparator).last;
+    final int dot = file.lastIndexOf('.');
+    return dot <= 0 ? file : file.substring(0, dot);
+  }
+
+  /// The paper the frames were printed on, when the shelf chose one. A roll
+  /// from before the choice has none, and prints on the app's paper.
+  ///
+  /// It belongs to the roll rather than to the print because every frame on the
+  /// bench is already a print: the model renders each one through the paper,
+  /// so the paper is a fact about the roll and not a setting of the viewer.
+  final String? paperId;
+
+  /// The paper's label, for a catalogue that cannot name it.
+  final String? paperLabel;
+
+  /// The contact proof the model printed for this roll.
+  ///
+  /// A proof is of one film exposed once: it is what the roll carries, frame
+  /// against frame, and the only thing on the table that is a print rather than
+  /// a picture of one. Null for a roll the model drew — a chart has no negative
+  /// to lay on paper — and for a roll developed before the proof existed.
+  final ContactProof? contact;
+
+  /// Whether this roll was exposed, printed and scanned through the spectrum.
+  ///
+  /// It belongs to the roll for the same reason the paper does: every frame on
+  /// the bench is already a print, made once, one way. A print of this roll is
+  /// made the same way, because a print of a spectral negative through the
+  /// scalar path would not be the same photograph.
+  final bool spectral;
+
+  /// The paper a print of this roll is made on.
+  String get paper => paperId ?? Stocks.paper;
+
+  /// What that paper is called on a wall label.
+  ///
+  /// Resolved against the shelf when it has the paper, and against the record
+  /// when it does not — a roll is allowed to be older than the app's catalogue.
+  String paperName(Catalogue catalogue) =>
+      catalogue.paper(paper)?.short ?? paperLabel ?? Stocks.paperShort;
+
+  final List<Frame> frames;
+
+  /// Read the roll the model drew.
+  ///
+  /// The committed asset holds one stock developed five times, so the roll is
+  /// the same exposure at five times rather than five different photographs —
+  /// which is the one thing this product exists to show, and a good first roll
+  /// to judge the sheet against.
+  factory Roll.fromStrip(StripData strip) {
+    return Roll(
+      stockId: strip.stockId,
+      stockLabel: strip.label,
+      frames: <Frame>[
+        for (int i = 0; i < strip.frames.length; i++)
+          Frame.fromStrip(i + 1, strip.frames[i]),
+      ],
+    );
+  }
+}
+
+/// One frame: what was in the camera, and how long it was in the developer.
+class Frame {
+  const Frame({
+    required this.number,
+    required this.minutes,
+    required this.tempC,
+    this.gamma,
+    this.dMax,
+    this.patches,
+    this.measured = false,
+    this.image,
+  });
+
+  /// The frame's number on the roll, from one.
+  final int number;
+
+  /// How long this frame was in the developer.
+  final double minutes;
+
+  /// The developer's temperature, in °C.
+  final double tempC;
+
+  /// Contrast in the red, green and blue records.
+  final List<double>? gamma;
+
+  /// The dye's density ceiling, in the red, green and blue records.
+  final List<double>? dMax;
+
+  /// Status density per patch, three numbers each — what the chart draws.
+  ///
+  /// A measured chart is a densitometer reading: the dye the development formed
+  /// plus the base, fog and mask the instrument sees. The committed strip's
+  /// numbers are the model's dye without the base, because the strip is a
+  /// drawing rather than a reading.
+  ///
+  /// Null for a frame the app developed through the subprocess: `kalo render`
+  /// writes pixels, and the curves behind them are not a thing a command line
+  /// prints. A chart with four rows missing is better than a chart with four
+  /// rows invented.
+  final List<List<double>>? patches;
+
+  /// Whether the chart was read off the developed strip by a densitometer.
+  ///
+  /// A roll the library developed carries a measurement. The committed strip is
+  /// a drawing of the model — charted, but not measured — and a record written
+  /// before the instrument existed comes back unmeasured until the library is
+  /// asked again.
+  final bool measured;
+
+  /// The print the model made of this frame, at the size the bench shows.
+  final ui.Image? image;
+
+  factory Frame.fromStrip(int number, StripFrame frame) => Frame(
+        number: number,
+        minutes: frame.minutes,
+        tempC: frame.tempC,
+        gamma: frame.gamma,
+        dMax: frame.dMax,
+        patches: frame.patches,
+      );
+
+  /// `3:00`, `12:30` — the clock a darkroom timer would show.
+  String get clock => darkroomClock(minutes);
+
+  /// Whether there is a chart to draw at all — measured or drawn.
+  ///
+  /// The committed strip is charted without being measured, so the interface
+  /// asks this question and not [isMeasured] when it decides to draw a curve.
+  bool get hasChart => patches != null;
+
+  /// Whether the chart is a measurement: a reading off the developed strip.
+  ///
+  /// Not the same question as [hasChart]. A chart with invented rows would be
+  /// worse than no chart, and so would a chart called measured that is the
+  /// curve sampled at nine exposures.
+  bool get isMeasured => measured && patches != null;
+
+  /// The print: nine patches, each a colour. Null when there is no chart.
+  ///
+  /// Density is optical, so ten to the minus it is the light that got through.
+  /// Each frame is printed for its own highlights, the way a printer exposes
+  /// for the thin part of the negative: subtract the frame's minimum density
+  /// before turning it into light. That is what makes the sheet show the thing
+  /// it exists to show — the same wedge, nine minutes apart, with more contrast
+  /// at longer times and not merely more darkness.
+  ///
+  /// The real print solve — the enlarger, the paper, the reflectance — belongs
+  /// to the model and is not guessed here.
+  List<Color>? printColours(Color paper) {
+    final List<List<double>>? patches = this.patches;
+    if (patches == null) {
+      return null;
+    }
+    final List<double> low = <double>[
+      for (int channel = 0; channel < 3; channel++)
+        patches
+            .map((List<double> patch) => patch[channel])
+            .reduce((double a, double b) => math.min(a, b)),
+    ];
+    return <Color>[
+      for (final List<double> dye in patches) _print(dye, low, paper),
+    ];
+  }
+
+  /// Density at each patch, averaged over the records: what the card's curve
+  /// draws. Null when there is no chart to draw.
+  List<double>? get toneCurve {
+    final List<List<double>>? patches = this.patches;
+    if (patches == null) {
+      return null;
+    }
+    return <double>[
+      for (final List<double> dye in patches) (dye[0] + dye[1] + dye[2]) / 3,
+    ];
+  }
+
+  static Color _print(List<double> dye, List<double> low, Color paper) {
+    double through(int i) => math.pow(10, -(dye[i] - low[i]) * 1.05).toDouble();
+    return Color.from(
+      alpha: 1.0,
+      red: paper.r * through(0),
+      green: paper.g * through(1),
+      blue: paper.b * through(2),
+    );
+  }
+}

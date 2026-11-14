@@ -5,7 +5,7 @@ declared borrowings, and the report says why that is still a film.
 
 - **The report:** [REPORT.md](REPORT.md) — the sheet, the fit, the anchor and what
   is borrowed rather than measured.
-- **The film:** `fuji-200.kalofilm` (5,499 bytes) — load it with
+- **The film:** `fuji-200.kalofilm` (5,802 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 128 points per layer.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png).

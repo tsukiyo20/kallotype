@@ -6,45 +6,20 @@ set shell := ["bash", "-c"]
 default:
     @just --list
 
-# Build `kalo` with camera raw decoding.
-#
-# This pulls in `kallotype-raw`, which is LGPL-2.1 through `rawler`, so the
-# binary is a combined work. It lives outside the workspace so that the default
-# build, `just lint` and `just deny` are Apache-2.0 all the way down.
-raw:
-    cargo build --release --bin kalo --features raw
-
 # Format the tree.
 fmt:
     cargo fmt --all
 
 # Fail if anything is unformatted.
-#
-# `kallotype-raw` is outside the workspace and so is not reached by
-# `cargo fmt --all`; it is formatted directly.
 fmt-check:
     cargo fmt --all --check
-    rustfmt --edition 2024 --check crates/kallotype-raw/src/lib.rs
 
 # Lint everything, warnings are errors.
 #
-# Default features on purpose: `--all-features` would enable `raw` and drag the
-# LGPL decoder into the graph this recipe is meant to keep Apache-2.0. The raw
-# crate has its own recipe below.
+# `--all-features` because that is what CI lints with: a warning that only
+# appears in the graph with `raw` or `gpu` on passes here and fails there.
 lint:
-    cargo clippy --workspace --all-targets -- -D warnings
-
-# The lint CI runs, which is not the one above.
-#
-# CI lints with `--all-features`, so a warning that only appears in that graph
-# passes here and fails there. Run this before pushing; the cost is that the
-# LGPL decoder is compiled locally for the lint.
-lint-ci:
     cargo clippy --workspace --all-targets --all-features -- -D warnings
-
-# Lint the camera raw crate, which is outside the workspace.
-lint-raw:
-    cd crates/kallotype-raw && cargo clippy --all-targets -- -D warnings
 
 # Repack every stock file in a scratch directory and compare it with the
 # `.kalofilm` the build reads. The crate no longer carries the film data: the
@@ -73,6 +48,15 @@ data:
 doc:
     cargo doc --workspace --no-deps
 
+# Check the app's binding crate.
+#
+# It is its own workspace because Flutter's native-assets hook builds it, not
+# `cargo build` at the root — and because flutter_rust_bridge rewrites
+# `src/frb_generated.rs` on every generation, which `cargo fmt --all` should
+# not touch.
+ffi:
+    cd app/rust && cargo check --all-targets
+
 # Everything CI checks.
 check: fmt-check lint test
 
@@ -87,6 +71,23 @@ bench *args:
 # Audit licences, advisories and sources.
 deny:
     cargo deny check
+
+# Render a photograph through the model, into the folder the app reads.
+#
+# A print is not an asset: it is output. The app ships no pictures, the gallery
+# hangs whatever is in the export folder, and an app that has not printed
+# anything has an empty wall — which is the state it is built to show. Nothing
+# here is committed.
+#
+# The export lands in `Pictures/Kallo` under $HOME unless a fourth argument
+# says otherwise — that is the app's default folder, not a promise that it is
+# the one you chose in the drawer.
+#
+# Example: just print ../file-test/DSCF0989.JPG
+#          just print ../file-test/DSCF0989.JPG 12 20 ~/Desktop/prints
+print src dev="9" temp="20" dest="$HOME/Pictures/Kallo":
+    mkdir -p "{{dest}}"
+    cargo run --release --quiet --bin kalo -- render {{src}} -o "{{dest}}/print-{{dev}}min.png" --film vision3_500t --paper fuji_crystal_archive_pearl --dev {{dev}} --temp {{temp}} --ev auto --grain --halation --couplers
 
 # Write the strip the app draws, from the model.
 #

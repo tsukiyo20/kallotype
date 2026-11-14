@@ -1,7 +1,8 @@
-name: kallo_ui
+name: kallo
 description: >-
-  The interface of Kallotype: a design language, a handful of primitives, and
-  the film strip. Not a widget library — this is the app's vocabulary.
+  Kallo, the interface of Kallotype: a design language, a handful of primitives,
+  and the places a roll of film passes through. Not a widget library — this is
+  the app's vocabulary.
 publish_to: none
 version: 0.1.0
 
@@ -15,13 +16,34 @@ environment:
   flutter: ">=3.47.9"
 
 dependencies:
+  file_selector: ^1.1.0
   flutter:
     sdk: flutter
+  flutter_rust_bridge: 2.13.0
+  flutter_rust_bridge_hooks: 2.13.0
+  # A JPEG is the finished frame's format. Flutter's image API writes PNG and
+  # raw pixels only; the encoder is a small pure-Dart dependency, run in an
+  # isolate so the export does not hold the frame.
+  image: ^4.5.4
+  # The window opens at a size the screen can hold. A 1280-point window on a
+  # 1080-point display is a window with its right panel off the screen.
+  screen_retriever: ^0.2.2
+  # The one outbound link in the interface. Opening the project page in the
+  # system browser belongs to the platform, not to a platform branch here.
+  sqlite3: ^3.9.1
+  url_launcher: ^6.3.2
+  window_manager: ^0.5.1
+  xml: ^7.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Runs the app on a device, which is the only place the linked model can be
+  # loaded: its code asset is bundled by the platform build, not by `flutter
+  # test`. See integration_test/ffi_roll_test.dart.
+  integration_test:
+    sdk: flutter
 
 flutter:
   # Material is not used anywhere in this app, and this is where that is said.
@@ -30,3 +52,32 @@ flutter:
     # Written by `just view` from `kallotype-view`. A rendering of the model at
     # a commit, not a second model: regenerate it, never edit it.
     - assets/film_strip.json
+    # The mark in About, written by `icon/generate.py`, and GitHub's mark for
+    # the one link out of the app.
+    - assets/kallo-icon.png
+    - assets/github-mark.png
+    # Baked shadows: the same light as the old BoxShadow, without a blur pass.
+    - assets/shadow-paper.png
+    - assets/shadow-sheet.png
+
+  # Bundled, not borrowed from the platform: the product has to look the same
+  # on six of them, and a golden test can only pin type it actually has.
+  # Both families are under the SIL Open Font License 1.1, so a public
+  # repository may carry them — see `fonts/OFL-Inter.txt` and
+  # `fonts/OFL-NotoSansSC.txt`, which are upstream's own files.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: fonts/inter-400.ttf
+        - asset: fonts/inter-500.ttf
+          weight: 500
+        - asset: fonts/inter-600.ttf
+          weight: 600
+    # The Chinese cut: Noto Sans SC. Alibaba's PuHuiTi is free to use and not
+    # free to redistribute, which is why it is not here. Two weights, because
+    # Chinese headings need one.
+    - family: NotoSansSC
+      fonts:
+        - asset: fonts/noto-sans-sc-Regular.otf
+        - asset: fonts/noto-sans-sc-Medium.otf
+          weight: 500

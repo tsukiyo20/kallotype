@@ -28,8 +28,14 @@ pub struct Cli {
 pub enum Command {
     /// Render an image through a film stock and a paper.
     Render(RenderArgs),
+    /// Print a contact proof: one exposure, every development, on one sheet.
+    Contact(ContactArgs),
     /// List the built-in film and paper stocks.
-    Stocks,
+    Stocks {
+        /// Write the catalogue as JSON, for a program to read.
+        #[arg(long)]
+        json: bool,
+    },
     /// Work with a stock file: its provenance, its curves and its spectra.
     Stock {
         /// What to do with it.
@@ -173,6 +179,28 @@ pub struct RenderArgs {
     )]
     pub ev: Exposure,
 
+    /// Print exposure in stops, on top of the exposure that prints a mid grey
+    /// as a mid grey.
+    ///
+    /// The print is solved so that an 18 % grey negative lands at the paper's
+    /// target: this is the timer, not the balance. Positive is more light and a
+    /// darker print, which is what a printer would call "one stop more".
+    #[arg(
+        long,
+        value_name = "EV",
+        default_value = "0",
+        allow_hyphen_values = true
+    )]
+    pub print_ev: f64,
+
+    /// Print on the balance solved for this development, not the requested one.
+    ///
+    /// This is a test strip's one exposure: a print is made at each development
+    /// with the enlarger where the first print set it, so the comparison is the
+    /// development and not the timer.
+    #[arg(long, value_name = "MINUTES")]
+    pub balance_from: Option<f64>,
+
     /// How to interpret the values stored in the input file.
     #[arg(long, value_enum, default_value_t = EncodingArg::Srgb)]
     pub input_encoding: EncodingArg,
@@ -183,6 +211,15 @@ pub struct RenderArgs {
     /// --frame-mm to know how big the frame is.
     #[arg(long)]
     pub grain: bool,
+
+    /// Render at this width, in pixels, instead of at the input's own.
+    ///
+    /// The bench works at the size a screen can show, and a 26 megapixel camera
+    /// file is not that. It is a resize and not a crop — the whole frame — and
+    /// the grain is computed for the sampling that results, because a smaller
+    /// render is a coarser scan and should look like one.
+    #[arg(long, value_name = "PIXELS")]
+    pub size: Option<u32>,
 
     /// Width of the film frame the image represents, in millimetres.
     ///
@@ -273,6 +310,91 @@ pub struct RenderArgs {
     /// second number pretending to be the first. Enabling it enables --scanner.
     #[arg(long, value_name = "MM", requires = "scanner")]
     pub scan_optics_um: Option<f64>,
+}
+
+/// `kalo contact`
+///
+/// The proof, not the print: every development of one frame laid on a sheet,
+/// exposed once, with the film's rebate and edge markings around it. What the
+/// sheet then shows is what the film carries, frame against frame — the one
+/// comparison a print, which is corrected one frame at a time, cannot make.
+#[derive(Debug, Args)]
+pub struct ContactArgs {
+    /// The photograph. It is cropped to 3:2 and sampled at the frame's size.
+    pub input: PathBuf,
+
+    /// Where the sheet is written.
+    #[arg(short, long)]
+    pub output: PathBuf,
+
+    /// Where the sheet's frame rects are written, in pixels, for a viewer.
+    #[arg(long, value_name = "PATH")]
+    pub record: Option<PathBuf>,
+
+    /// Film stock id (see `kalo stocks`).
+    #[arg(long, default_value = "vision3_500t")]
+    pub film: String,
+
+    /// Paper stock id (see `kalo stocks`).
+    #[arg(long, default_value = "portra_endura")]
+    pub paper: String,
+
+    /// Development times in minutes, one strip each: `--dev 3,6,9,12,15`.
+    ///
+    /// Empty is the interface's ladder, three to fifteen.
+    #[arg(long, value_name = "MINUTES", value_delimiter = ',')]
+    pub dev: Vec<f64>,
+
+    /// Developer temperature, in degrees Celsius.
+    #[arg(long, value_name = "C")]
+    pub temp: Option<f64>,
+
+    /// The exposure the frame was given: a number of stops, or `auto` to meter
+    /// it. One exposure, used by every strip.
+    #[arg(
+        long,
+        value_name = "EV|auto",
+        default_value = "auto",
+        allow_hyphen_values = true
+    )]
+    pub ev: Exposure,
+
+    /// The enlarger's exposure on top of the solved balance, in stops.
+    #[arg(
+        long,
+        value_name = "EV",
+        default_value = "0",
+        allow_hyphen_values = true
+    )]
+    pub print_ev: f64,
+
+    /// Sheet resolution, in dots per inch.
+    #[arg(long, value_name = "DPI", default_value_t = 600.0)]
+    pub dpi: f64,
+
+    /// How to interpret the values stored in the input file.
+    #[arg(long, value_enum, default_value_t = EncodingArg::Srgb)]
+    pub input_encoding: EncodingArg,
+
+    /// Expose and print through the spectral model.
+    #[arg(long)]
+    pub spectral: bool,
+
+    /// Add grain to the negative, as a particle process on the film's scale.
+    #[arg(long)]
+    pub grain: bool,
+
+    /// Add halation: light scattered in the emulsion and reflected off the base.
+    #[arg(long)]
+    pub halation: bool,
+
+    /// Add DIR couplers: development inhibition between layers, with diffusion.
+    #[arg(long)]
+    pub couplers: bool,
+
+    /// Do not print the edge markings: the stock, the frame number, the time.
+    #[arg(long)]
+    pub no_edge_codes: bool,
 }
 
 /// `kalo bake`

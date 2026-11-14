@@ -1,294 +1,56 @@
-//! Argument resolution and the report every command shares.
+//! Argument resolution, the input reader, and the report every command shares.
 
-use kallotype_core::{CameraProfile, DevelopmentParams, FilmStock, PaperStock, RenderParams};
-use kallotype_core::{film_stock, paper_stock};
-use kallotype_spectral::Sensor;
+use kallotype_api::StockChoice;
+use kallotype_core::{CameraProfile, RenderParams};
 
 use crate::cli::StockArgs;
 use crate::error::CliError;
 
-/// A stock selection resolved from the command line.
-pub struct Selection {
-    /// How the negative was developed.
-    pub development: DevelopmentParams,
-    /// The negative.
-    pub film: &'static FilmStock,
-    /// The paper.
-    pub paper: &'static PaperStock,
-    /// Whether to expose through the spectral path.
-    pub spectral: bool,
-    /// Which sensor the input is assumed to have come from.
-    pub camera: CameraProfile,
-    /// Side of the baked exposure table, or 0 for no table.
-    pub lut_size: usize,
-    /// Reflectance CSVs for the dictionary prior.
-    pub dictionary: Vec<std::path::PathBuf>,
-    /// A table baked by `kalo bake`.
-    pub lut: Option<std::path::PathBuf>,
-    /// Whether a model mismatch in the table is tolerated.
-    pub allow_model_mismatch: bool,
-    /// Whether to print through the spectral model.
-    pub spectral_print: bool,
-    /// The enlarger's colour pack, in Kodak CC units.
-    pub filters: kallotype_core::filters::FilterPack,
-    /// A heat-absorbing glass in the light path.
-    pub heat_glass: Option<kallotype_core::filters::HeatGlass>,
-    /// Whether to scan through the spectral model.
-    pub spectral_scan: bool,
-}
+pub use kallotype_api::{Selection, check_model, read_input};
 
-impl Selection {
-    /// Bundle the selection into the core's render parameters.
-    #[must_use]
-    pub fn render_params(
-        &self,
-        exposure_ev: f64,
-        interimage: bool,
-        film: &'static kallotype_core::emulsion::FilmStock,
-    ) -> RenderParams {
-        RenderParams {
-            film,
-            paper: self.paper,
-            development: self.development,
-            exposure_ev,
-            spectral: self.spectral || self.lut.is_some(),
-            camera: self.camera.clone(),
-            lut_size: self.lut_size,
-            spectral_print: self.spectral_print,
-            spectral_scan: self.spectral_scan,
-            // The layer only exists on some sheets, so the flag that asks for
-            // it is the render command's, not the selection's.
-            interimage,
-            filters: self.filters,
-            heat_glass: self.heat_glass,
+impl From<&StockArgs> for StockChoice {
+    fn from(stock: &StockArgs) -> Self {
+        Self {
+            film: stock.film.clone(),
+            paper: stock.paper.clone(),
+            filters: stock.filters.clone(),
+            heat_glass: stock.heat_glass.clone(),
+            dev_time: stock.dev_time,
+            temp: stock.temp,
+            spectral: stock.spectral,
+            lut_size: stock.lut_size,
+            dictionary: stock.dictionary.clone(),
+            lut: stock.lut.clone(),
+            allow_model_mismatch: stock.allow_model_mismatch,
+            camera: stock.camera.clone(),
+            spectral_print: stock.spectral_print,
+            spectral_scan: stock.spectral_scan,
         }
-    }
-}
-
-impl Selection {
-    /// Load the table or dictionary, if requested, and prepare the render.
-    pub fn prepare(
-        &self,
-        exposure_ev: f64,
-        interimage: bool,
-    ) -> Result<kallotype_core::PreparedRender, CliError> {
-        self.prepare_with_film(exposure_ev, interimage, self.film)
-    }
-
-    /// Prepare a render whose film came from somewhere other than the compiled
-    /// table — a `.kalofilm` file, in practice.
-    pub fn prepare_with_film(
-        &self,
-        exposure_ev: f64,
-        interimage: bool,
-        film: &'static kallotype_core::emulsion::FilmStock,
-    ) -> Result<kallotype_core::PreparedRender, CliError> {
-        let params = self.render_params(exposure_ev, interimage, film);
-
-        if let Some(path) = &self.lut {
-            let table = kallotype_core::ExposureLut::read(path).map_err(|error| CliError::Lut {
-                path: path.clone(),
-                message: error.to_string(),
-            })?;
-
-            let expected = kallotype_core::SpectralContext::for_stock(film).identity();
-            if let Err(message) = check_model(table.identity(), &expected) {
-                if !self.allow_model_mismatch {
-                    return Err(CliError::Lut {
-                        path: path.clone(),
-                        message,
-                    });
-                }
-                eprintln!("warning: {message}");
-            }
-
-            return Ok(params.prepare_with_lut(table));
-        }
-
-        let atoms = if self.dictionary.is_empty() {
-            None
-        } else {
-            let mut atoms = Vec::new();
-            for path in &self.dictionary {
-                let set =
-                    kallotype_spectral::load_csv(path).map_err(|error| CliError::Dictionary {
-                        path: path.clone(),
-                        message: error.to_string(),
-                    })?;
-                atoms.extend(set.samples.iter().map(|sample| sample.reflectance.clone()));
-            }
-            Some(atoms)
-        };
-        Ok(params.prepare_with(atoms.as_deref()))
-    }
-}
-
-/// Decide whether a table's recorded model matches the one this build implements.
-///
-/// Split out from the loader so it can be tested without crafting a corrupt file.
-pub fn check_model(table: &str, build: &str) -> Result<(), String> {
-    if table == build {
-        Ok(())
-    } else {
-        Err(format!(
-            "baked for a different model: table says `{table}`, this build is `{build}`. \
-             Pass --allow-model-mismatch to use it anyway."
-        ))
     }
 }
 
 /// Validate the numeric flags and look up both stocks.
 pub fn resolve(stock: &StockArgs) -> Result<Selection, CliError> {
-    let film = film_stock(&stock.film).ok_or_else(|| CliError::UnknownStock {
-        kind: "film",
-        id: stock.film.clone(),
-    })?;
-    let dev_time = stock.dev_time.unwrap_or(film.reference_time_min);
-    let temp = stock.temp.unwrap_or(film.reference_temp_c);
-    if !(dev_time.is_finite() && dev_time > 0.0) {
-        return Err(CliError::InvalidNumber {
-            flag: "--dev",
-            value: dev_time,
-            expected: "a positive number of minutes",
-        });
-    }
-    if !temp.is_finite() {
-        return Err(CliError::InvalidNumber {
-            flag: "--temp",
-            value: temp,
-            expected: "a finite temperature in degrees Celsius",
-        });
-    }
-
-    let paper = paper_stock(&stock.paper).ok_or_else(|| CliError::UnknownStock {
-        kind: "paper",
-        id: stock.paper.clone(),
-    })?;
-
-    // The sheet's development is the reference and the default; `--dev` moves
-    // away from it rather than from a number this program invented.
-    let development = DevelopmentParams {
-        time_min: dev_time,
-        temp_c: temp,
-        reference_time_min: film.reference_time_min,
-        reference_temp_c: film.reference_temp_c,
-        ..DevelopmentParams::default()
-    };
-
-    Ok(Selection {
-        development,
-        film,
-        paper,
-        spectral: stock.spectral,
-        camera: camera_profile(stock.camera.as_deref())?,
-        lut_size: stock.lut_size,
-        dictionary: stock.dictionary.clone(),
-        lut: stock.lut.clone(),
-        allow_model_mismatch: stock.allow_model_mismatch,
-        spectral_print: stock.spectral_print,
-        spectral_scan: stock.spectral_scan,
-        filters: parse_filters(&stock.filters)?,
-        heat_glass: parse_heat_glass(stock.heat_glass.as_deref())?,
-    })
+    kallotype_api::resolve(&StockChoice::from(stock))
 }
 
-/// `30M`, `20Y+10M`, `5C` — the pack an operator would dial.
-///
-/// One letter per colour, the number in CC units; a bare number is magenta,
-/// because that is the dial a colour head actually uses.
-fn parse_filters(text: &str) -> Result<kallotype_core::filters::FilterPack, CliError> {
-    let mut pack = kallotype_core::filters::FilterPack::none();
-    for part in text
-        .split('+')
-        .map(str::trim)
-        .filter(|part| !part.is_empty())
-    {
-        let split = part
-            .find(|c: char| c.is_ascii_alphabetic())
-            .unwrap_or(part.len());
-        let (number, colour) = part.split_at(split);
-        let value: f64 = number.trim().parse().map_err(|_| CliError::InvalidNumber {
-            flag: "--filters",
-            value: f64::NAN,
-            expected: "a CC setting such as 30M",
-        })?;
-        match colour.trim().to_ascii_uppercase().as_str() {
-            "Y" => pack.yellow = value,
-            "M" | "" => pack.magenta = value,
-            "C" => pack.cyan = value,
-            _ => {
-                return Err(CliError::InvalidNumber {
-                    flag: "--filters",
-                    value: f64::NAN,
-                    expected: "one of Y, M or C",
-                });
-            }
+/// The same, from a choice a command built by hand.
+pub fn resolve_stock_choice(choice: &StockChoice) -> Result<Selection, CliError> {
+    kallotype_api::resolve(choice)
+}
+
+impl From<crate::cli::Exposure> for kallotype_api::Exposure {
+    fn from(value: crate::cli::Exposure) -> Self {
+        match value {
+            crate::cli::Exposure::Stops(ev) => Self::Stops(ev),
+            crate::cli::Exposure::Auto => Self::Auto,
         }
-    }
-    Ok(pack)
-}
-
-/// The heat glass by name.
-fn parse_heat_glass(
-    text: Option<&str>,
-) -> Result<Option<kallotype_core::filters::HeatGlass>, CliError> {
-    use kallotype_core::filters::HeatGlass;
-    let Some(text) = text else {
-        return Ok(None);
-    };
-    match text.trim().to_ascii_lowercase().as_str() {
-        "kg1" => Ok(Some(HeatGlass::Kg1)),
-        "kg2" => Ok(Some(HeatGlass::Kg2)),
-        "kg3" => Ok(Some(HeatGlass::Kg3)),
-        "kg5" => Ok(Some(HeatGlass::Kg5)),
-        _ => Err(CliError::InvalidNumber {
-            flag: "--heat-glass",
-            value: f64::NAN,
-            expected: "one of kg1, kg2, kg3, kg5",
-        }),
     }
 }
 
 /// Resolve `--camera` into a profile.
-///
-/// Two names are built in; anything else is a path to a CSV imported by
-/// a measured sensitivity, with one column per channel named red, green and blue.
 pub(crate) fn camera_profile(value: Option<&str>) -> Result<CameraProfile, CliError> {
-    let Some(value) = value else {
-        return Ok(CameraProfile::default());
-    };
-    match value {
-        "srgb" => Ok(CameraProfile::Srgb),
-        "generic" => Ok(CameraProfile::Generic),
-        "observer" => Ok(CameraProfile::Observer),
-        path => {
-            let set = kallotype_spectral::load_csv(path).map_err(|error| CliError::Camera {
-                path: path.into(),
-                message: error.to_string(),
-            })?;
-            let channel = |name: &str| {
-                set.sample(name)
-                    .map(|sample| sample.reflectance.clone())
-                    .ok_or_else(|| CliError::Camera {
-                        path: path.into(),
-                        message: format!("no column named {name:?}"),
-                    })
-            };
-            let channels = [channel("red")?, channel("green")?, channel("blue")?];
-            // The dataset name is the directory's; the camera's is the file's.
-            let name = std::path::Path::new(path)
-                .file_stem()
-                .map(|stem| stem.to_string_lossy().into_owned())
-                .unwrap_or_else(|| path.to_owned());
-            let sensor = Sensor::new(name, channels)
-                .map_err(|error| CliError::Camera {
-                    path: path.into(),
-                    message: error.to_string(),
-                })?
-                .area_normalized();
-            Ok(CameraProfile::Measured(sensor))
-        }
-    }
+    kallotype_api::camera_profile(value)
 }
 
 /// Print what the development did, before any pixels are touched.
@@ -495,52 +257,5 @@ pub fn print_report(
 
     if width > 0 {
         println!("  image     {width}x{height}");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{camera_profile, check_model};
-    use kallotype_core::CameraProfile;
-
-    #[test]
-    fn the_built_in_camera_names_resolve() {
-        // The default is the sRGB primaries: the input is an sRGB image, and
-        // that basis is the one that means what the file says.
-        assert!(matches!(camera_profile(None).unwrap(), CameraProfile::Srgb));
-        assert!(matches!(
-            camera_profile(Some("srgb")).unwrap(),
-            CameraProfile::Srgb
-        ));
-        assert!(matches!(
-            camera_profile(Some("generic")).unwrap(),
-            CameraProfile::Generic
-        ));
-        assert!(matches!(
-            camera_profile(Some("observer")).unwrap(),
-            CameraProfile::Observer
-        ));
-    }
-
-    #[test]
-    fn a_missing_camera_file_names_the_path() {
-        let message = camera_profile(Some("/nonexistent/camera.csv")).unwrap_err();
-        assert!(
-            message.to_string().contains("/nonexistent/camera.csv"),
-            "{message}"
-        );
-    }
-
-    #[test]
-    fn a_matching_identity_passes() {
-        assert!(check_model("camera=a;film=b", "camera=a;film=b").is_ok());
-    }
-
-    #[test]
-    fn a_foreign_identity_names_both_sides() {
-        let message = check_model("camera=old;film=b", "camera=new;film=b").unwrap_err();
-        assert!(message.contains("camera=old"), "{message}");
-        assert!(message.contains("camera=new"), "{message}");
-        assert!(message.contains("--allow-model-mismatch"), "{message}");
     }
 }

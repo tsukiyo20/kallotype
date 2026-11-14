@@ -7,7 +7,7 @@ what a raster sheet with no shoulder and a merged MTF curve does to a tracker.
 - **The report:** [REPORT.md](REPORT.md) — the shoulder that is not drawn, the MTF
   that merges with its own 100 % rule, the granularity chart the tracker cannot
   read, and the dye set the model shares with the 500T.
-- **The film:** `vision3-250d.kalofilm` (5,727 bytes) — load it with
+- **The film:** `vision3-250d.kalofilm` (5,946 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 538 points per layer.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn

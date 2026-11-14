@@ -7,7 +7,7 @@ curve that starts at a dip rather than a tail.
 - **The report:** [REPORT.md](REPORT.md) — the note inside the plot, the clamped
   cyan tail, the shared dye set, and the granularity chart that merges into two
   curves instead of three.
-- **The film:** `vision3-200t.kalofilm` (5,651 bytes) — load it with
+- **The film:** `vision3-200t.kalofilm` (5,870 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 563 points per layer.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn

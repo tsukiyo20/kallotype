@@ -138,6 +138,21 @@ struct Header {
     sections: BTreeMap<String, BTreeMap<String, String>>,
 }
 
+/// A header string, escaped for the Rust literal it is about to become.
+///
+/// The provenance sentences are prose and carry quotes and the odd backslash;
+/// a note that does not survive the trip into the binary is a note the renderer
+/// cannot repeat, which is the one thing this data is for.
+fn escaped(text: &str) -> String {
+    text.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+/// The order the model reads a stock's fields in, and therefore the order a
+/// record shows them: shape first, texture last.
+const MEASURED_ORDER: [&str; 7] = [
+    "curves", "layers", "dyes", "mask", "mtf", "grain", "cl_layer",
+];
+
 impl Header {
     fn get(&self, section: &str, key: &str) -> &str {
         let value = self
@@ -176,6 +191,12 @@ impl Header {
             .get(section)
             .and_then(|values| values.get(key))
             .map(String::as_str)
+    }
+
+    /// A value with its quotes taken off, if the header has one.
+    fn maybe(&self, section: &str, key: &str) -> Option<&str> {
+        self.optional(section, key)
+            .map(|value| value.trim_matches('"'))
     }
 }
 
@@ -320,11 +341,8 @@ impl Film {
             other => panic!("unknown process {other:?}"),
         };
         let label = self.header.get("", "label");
-        let note = self
-            .header
-            .get("provenance", "note")
-            .replace('\\', "\\\\")
-            .replace('"', "\\\"");
+        let short = escaped(self.header.maybe("", "short").unwrap_or(label));
+        let note = escaped(self.header.get("provenance", "note"));
         let sigma = self.header.numbers("character", "sigma_um");
         let sigma = if sigma.iter().all(|value| *value == 0.0) {
             "None".to_string()
@@ -338,6 +356,7 @@ impl Film {
 
         writeln!(code, "    FilmStock {{").unwrap();
         writeln!(code, "        id: \"{}\",", self.id()).unwrap();
+        writeln!(code, "        short: \"{short}\",").unwrap();
         writeln!(code, "        process: {process},").unwrap();
         writeln!(code, "        extra_cyan: None,").unwrap();
         match self.table("cl_sensitivity") {
@@ -408,8 +427,48 @@ impl Film {
         writeln!(code, "        sigma_um: {sigma},").unwrap();
         writeln!(code, "        reference_time_min: {time:.4},").unwrap();
         writeln!(code, "        reference_temp_c: {temp:.4},").unwrap();
+        self.emit_provenance(code);
+        self.emit_measured(code);
         writeln!(code, "    }},").unwrap();
         let _ = index;
+    }
+
+    /// The sheet behind a stock, as fields the binary can carry.
+    fn emit_provenance(&self, code: &mut String) {
+        let field = |key: &str| escaped(self.header.maybe("provenance", key).unwrap_or(""));
+        writeln!(code, "        provenance: Provenance {{").unwrap();
+        for name in ["publication", "page", "retrieved", "checksum"] {
+            writeln!(code, "            {name}: \"{}\",", field(name)).unwrap();
+        }
+        writeln!(code, "        }},").unwrap();
+    }
+
+    /// What each field admits to: measured, borrowed, placeholder or none.
+    ///
+    /// The order is [`MEASURED_ORDER`]'s, and any field the order does not name
+    /// follows in the file's own order — a stock that grew a field should not
+    /// need two edits to be visible.
+    fn emit_measured(&self, code: &mut String) {
+        let Some(section) = self.header.sections.get("measured") else {
+            writeln!(code, "        measured: &[],").unwrap();
+            return;
+        };
+        let mut names: Vec<&str> = MEASURED_ORDER
+            .iter()
+            .copied()
+            .filter(|name| section.contains_key(*name))
+            .collect();
+        for name in section.keys() {
+            if !names.contains(&name.as_str()) {
+                names.push(name.as_str());
+            }
+        }
+        writeln!(code, "        measured: &[").unwrap();
+        for name in names {
+            let value = escaped(section[name].trim_matches('"'));
+            writeln!(code, "            (\"{name}\", \"{value}\"),").unwrap();
+        }
+        writeln!(code, "        ],").unwrap();
     }
 
     fn emit_paper_tables(&self, code: &mut String, _index: usize) {
@@ -425,11 +484,16 @@ impl Film {
     fn emit_paper(&self, code: &mut String, _index: usize) {
         let ident = self.ident();
         let label = self.header.get("", "label");
-        let note = self
-            .header
-            .get("provenance", "note")
-            .replace('\\', "\\\\")
-            .replace('"', "\\\"");
+        let short = escaped(self.header.maybe("", "short").unwrap_or(label));
+        let note = escaped(self.header.get("provenance", "note"));
+        // A file that predates the key is a colour paper: that is the path the
+        // model renders when nothing says otherwise, and it is what every paper
+        // before POLYMAX II RC was.
+        let emulsion = match self.header.maybe("", "emulsion").unwrap_or("colour") {
+            "colour" => "PaperEmulsion::Colour",
+            "silver" => "PaperEmulsion::Silver",
+            other => panic!("unknown paper emulsion {other:?}"),
+        };
         let d_min = self.header.number("curve", "d_min");
         let d_max = self.header.number("curve", "d_max");
         let gamma = self.header.number("curve", "gamma");
@@ -441,6 +505,8 @@ impl Film {
         let target = self.header.number("character", "target_mid_reflectance");
         writeln!(code, "    PaperStock {{").unwrap();
         writeln!(code, "        id: \"{}\",", self.id()).unwrap();
+        writeln!(code, "        short: \"{short}\",").unwrap();
+        writeln!(code, "        emulsion: {emulsion},").unwrap();
         writeln!(code, "        label: \"{label}\",").unwrap();
         writeln!(code, "        note: \"{note}\",").unwrap();
         writeln!(
@@ -451,6 +517,8 @@ impl Film {
         writeln!(code, "        target_mid_reflectance: {target:.2},").unwrap();
         writeln!(code, "        dyes: &DYES_{ident},").unwrap();
         writeln!(code, "        layers: &LAYERS_{ident},").unwrap();
+        self.emit_provenance(code);
+        self.emit_measured(code);
         writeln!(code, "    }},").unwrap();
     }
 }

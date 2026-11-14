@@ -555,3 +555,75 @@ fn the_cpu_can_be_forced() {
         .expect("the report must name the backend");
     assert!(line.contains("cpu"), "unexpected backend line: {line}");
 }
+
+#[test]
+fn contact_prints_one_sheet_and_a_record_of_where_the_frames_are() {
+    let dir = scratch("contact");
+    let sheet = dir.join("proof.png");
+    let record = dir.join("proof.json");
+    let output = run(&[
+        "contact",
+        chart().to_str().expect("a path"),
+        "-o",
+        sheet.to_str().expect("a path"),
+        "--record",
+        record.to_str().expect("a path"),
+        "--film",
+        "kodak_portra_400",
+        "--paper",
+        "portra_endura",
+        "--dev",
+        "3,6,9,12,15",
+        "--dpi",
+        "150",
+    ]);
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    assert!(sheet.is_file(), "the sheet was not written");
+
+    let json: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&record).expect("the record"))
+            .expect("the record is json");
+    let frames = json["frames"].as_array().expect("frames");
+    assert_eq!(frames.len(), 5);
+    assert_eq!(frames[0]["minutes"], 3.0);
+    assert_eq!(frames[4]["minutes"], 15.0);
+    assert!(
+        frames[0]["x"].as_u64() < frames[1]["x"].as_u64(),
+        "a row of strips runs left to right"
+    );
+
+    // The record describes the file it sits beside, not another one.
+    let image = kallotype_io::load(&sheet, kallotype_io::InputEncoding::Srgb)
+        .expect("the sheet reads back");
+    assert_eq!(
+        json["width"].as_u64().expect("width"),
+        u64::from(image.width)
+    );
+    assert_eq!(
+        json["height"].as_u64().expect("height"),
+        u64::from(image.height)
+    );
+    // Five strips on one sheet: the sheet is wider than a single frame.
+    assert!(image.width > image.height);
+}
+
+#[test]
+fn contact_refuses_a_reversal() {
+    let dir = scratch("contact-reversal");
+    let output = run(&[
+        "contact",
+        chart().to_str().expect("a path"),
+        "-o",
+        dir.join("proof.png").to_str().expect("a path"),
+        "--film",
+        "provia_100f",
+        "--dev",
+        "6",
+    ]);
+    assert!(!output.status.success());
+    assert!(
+        stderr(&output).contains("reversal"),
+        "an error a person can act on: {}",
+        stderr(&output)
+    );
+}

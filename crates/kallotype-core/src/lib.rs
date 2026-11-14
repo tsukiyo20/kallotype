@@ -26,8 +26,10 @@
 #![forbid(unsafe_code)]
 
 pub mod color;
+pub mod contact;
 pub mod couplers;
 pub mod curve;
+pub mod densitometer;
 pub mod development;
 pub mod dye;
 pub mod emulsion;
@@ -49,11 +51,15 @@ pub mod scanner;
 pub mod spectral;
 
 pub use color::{linear_to_srgb, srgb_to_linear};
+pub use contact::print as contact_print;
+pub use contact::{Contact, ContactSpec, LADDER_MINUTES, SheetGeometry};
 pub use couplers::{Couplers, fit_inhibition};
 pub use curve::CharacteristicCurve;
+pub use densitometer::Densitometer;
 pub use development::DevelopmentParams;
 pub use emulsion::{
-    FILM_STOCKS, FilmProcess, FilmStock, PAPER_STOCKS, PaperStock, film_stock, paper_stock,
+    FILM_STOCKS, FilmProcess, FilmStock, PAPER_STOCKS, PaperEmulsion, PaperStock, Provenance,
+    film_stock, paper_stock,
 };
 pub use grain::GrainField;
 pub use halation::{Halation, Halo};

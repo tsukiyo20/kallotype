@@ -2,30 +2,39 @@ import 'package:flutter/widgets.dart';
 
 import 'tokens.dart';
 
-/// Carries the colours of wherever we currently are.
+/// Carries the appearance of the window.
 ///
-/// It carries [KalloColors] rather than a [KalloEnvironment] because the app
-/// animates between the two environments, and an enum cannot be half way
-/// between two rooms.
+/// One set of colours, resolved: light or dark. The system decides unless the
+/// user pinned one in the drawer, and the resolution happens once, at the top,
+/// so that nothing below has to ask what time it is.
+///
+/// A room's lamp is not here. The gallery has one, and it dims the wall and the
+/// work — not the window around them, which is why the light is passed to the
+/// gallery and not to every plane.
 class KalloScope extends InheritedWidget {
   const KalloScope({
     super.key,
     required this.colors,
-    required this.environment,
+    required this.pinned,
+    required this.onPin,
     required super.child,
   });
 
   final KalloColors colors;
 
-  /// Where we are heading. During the transition the colours are between the
-  /// two, and this says which of the two they are being asked about.
-  final KalloEnvironment environment;
+  /// What the user pinned, or null when the window follows the system.
+  final Brightness? pinned;
 
-  bool get isLit => environment == KalloEnvironment.lightTable;
+  /// Pins an appearance, or hands it back to the system with null.
+  final ValueChanged<Brightness?> onPin;
+
+  Brightness get brightness => colors.brightness;
+
+  static KalloScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<KalloScope>();
 
   static KalloScope of(BuildContext context) {
-    final KalloScope? scope =
-        context.dependOnInheritedWidgetOfExactType<KalloScope>();
+    final KalloScope? scope = maybeOf(context);
     assert(scope != null, 'No KalloScope above this widget.');
     return scope!;
   }
@@ -34,6 +43,5 @@ class KalloScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(KalloScope oldWidget) =>
-      !identical(oldWidget.colors, colors) ||
-      oldWidget.environment != environment;
+      !identical(oldWidget.colors, colors) || oldWidget.pinned != pinned;
 }

@@ -7,7 +7,7 @@ the softest MTF of the three VISION3 films.
 - **The report:** [REPORT.md](REPORT.md) — the dotted curve, the mislabelled
   sensitivity axis, the dye set the model shares with the 500T, and the
   granularity chart the tracker cannot read.
-- **The film:** `vision3-50d.kalofilm` (5,737 bytes) — load it with
+- **The film:** `vision3-50d.kalofilm` (5,955 bytes) — load it with
   `kalo render --film-file`.
 - **The points:** `curves/` — 349 points for red, 538 for green and blue.
 - **The figures:** [01-curves](figures/01-curves.png), [02-residuals](figures/02-residuals.png), [03-spectra](figures/03-spectra.png), drawn

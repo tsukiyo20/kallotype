@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The film and its safelight are the whole mark; the launcher supplies
+         the mask. The artwork lives in the background layer so that it is not
+         scaled twice by the adaptive-icon foreground. -->
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
