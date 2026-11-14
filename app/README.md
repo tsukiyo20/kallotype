@@ -127,6 +127,15 @@ the viewer is opaque. A 4K viewer settles around 420 MB rather than the old
 layers, not the print. Opening ten prints no longer leaves ten originals
 decoded.
 
+The print record is one JSON store, written through a flushed temporary file
+and keeping the previous complete version beside it as `.bak`; a reader that
+finds a broken live file falls back to the backup. The export folder is statted
+once per file on read, and the thumbnail key is 64-bit, because a 32-bit key
+can silently name the wrong print at this library's future size. There is still
+no database: at ten prints `prints.json` is 2 KB and the scan is under 10 ms. A
+catalog index is warranted only when the folder reaches thousands and the scan
+becomes measurable.
+
 The test loads the bundled faces from disk before it draws, so the picture is in
 the product's own type rather than the runner's. That is the reason the fonts are
 bundled — and both are under the SIL Open Font License, so a public repository
