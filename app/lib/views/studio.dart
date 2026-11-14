@@ -198,6 +198,8 @@ class _StudioState extends State<Studio> {
                               onChamber: _room,
                               galleryCount: widget.prints.length,
                               onSettings: () => setState(() => _open = true),
+                              onSidebar: () =>
+                                  setState(() => _sidebar = !_sidebar),
                             ),
                           )
                         : const SizedBox(width: 0),

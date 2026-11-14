@@ -199,6 +199,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('studio-sidebar')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('studio-sidebar')),
+        matching: find.byKey(const Key('sidebar-toggle')),
+      ),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('select-inspector')), findsOneWidget);
     expect(find.text('彩色负片'), findsOneWidget);
 
@@ -220,6 +227,38 @@ void main() {
     await tester.tap(find.byKey(const Key('inspector-toggle')));
     await tester.pumpAndSettle();
     expect(find.text('彩色负片'), findsOneWidget);
+  });
+
+  testWidgets('settings opens on About, without a drawer title', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: const TestStrip(photo: '/photographs/uji.jpg'),
+        photograph: card,
+        prints: const <Print>[],
+        initialStep: DarkroomStep.select,
+        locale: const Locale('zh'),
+        drawerOpen: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('抽屉'), findsNothing);
+    expect(find.text('DRAWER'), findsNothing);
+    expect(find.text('Kallo'), findsOneWidget);
+    expect(find.text('版本 0.1.0'), findsOneWidget);
+    expect(find.text('GitHub'), findsOneWidget);
+    expect(find.text('github.com/tsukiyo20/kallotype'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('关于')).dy,
+      lessThan(tester.getTopLeft(find.text('语言')).dy),
+    );
   });
 
   testWidgets('the rack wraps its prints and opens one full screen', (

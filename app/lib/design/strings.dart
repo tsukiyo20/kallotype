@@ -58,11 +58,11 @@ class KalloStrings {
   String get hideInspector => zh ? '隐藏面板' : 'Hide inspector';
   String get noPhotographChosen => zh ? '还没选片' : 'nothing chosen';
   String get choosePhotoNote => zh
-      ? '选一张照片。它会留在暗房里，胶片和相纸随后决定。'
-      : 'Choose a photograph. It stays in the darkroom; the film and the paper come next.';
+      ? '选一张照片。胶片和相纸随后决定。'
+      : 'Choose a photograph. The film and paper come after.';
   String get originalNote => zh
-      ? '照片还没有进显影液。先看它，再决定用什么胶片。'
-      : 'The photograph before the developer. Look at it, then choose a film.';
+      ? '照片还没有进显影液。先看它，再选胶片。'
+      : 'The photograph before the developer. Look first, then choose a film.';
   String get theOriginal => zh ? '原片' : 'ORIGINAL';
   String get changePhoto => zh ? '换一张' : 'Change';
   String get goDevelop => zh ? '去显影' : 'To the developer';
@@ -72,10 +72,10 @@ class KalloStrings {
   /// The strip, and the one exposure every print on it shares.
   String get testStrip => zh ? '试片条' : 'TEST STRIP';
   String get testStripNote => zh
-      ? '每按一次显影落一张，所有试片共用首张的相纸曝光。'
+      ? '每显影一次生成一张；所有试片共用首张的相纸曝光。'
       : 'One print per development, all on the first print\'s paper exposure.';
   String get noTestPrints =>
-      zh ? '还没有试片。拉时间，按显影。' : 'No prints yet. Choose a time and develop.';
+      zh ? '还没有试片。选好时间，按显影。' : 'No prints yet. Choose a time and develop.';
   String get newStrip => zh ? '另起一条' : 'New strip';
   String stripCount(int count) =>
       zh ? '$count 张' : '$count print${count == 1 ? '' : 's'}';
@@ -86,10 +86,10 @@ class KalloStrings {
       zh ? '同曝光 · $clock' : 'one exposure · $clock';
   String get removePrint => zh ? '移除这张' : 'Remove this print';
   String get materialsNote =>
-      zh ? '换胶片或相纸会另起一条试片。' : 'A different film or paper starts a new strip.';
+      zh ? '换胶片或相纸，会另起一条试片。' : 'A different film or paper starts a new strip.';
   String get temperatureNote => zh
-      ? '温度也属于这条试片。换温度会另起一条，照片和材料留下。'
-      : 'The temperature belongs to the strip too. Changing it starts a new strip; the photograph and materials stay.';
+      ? '温度属于这条试片。换温度会另起一条，照片和材料保留。'
+      : 'Temperature belongs to the strip. Changing it starts a new strip; the photograph and materials stay.';
 
   /// The instrument panel's curves.
   String get filmCurve => zh ? '胶片' : 'FILM';
@@ -111,12 +111,13 @@ class KalloStrings {
   String get lossyNote => zh ? 'JPEG · 有损 · 文件更小' : 'JPEG · lossy · smaller';
   String get losslessNote => zh ? '无损 · 文件更大' : 'Lossless · larger';
   String get printNote => zh
-      ? '成品按这张底片单独平衡，不是试片上的那一张。'
-      : 'The finished print is balanced for this negative, not for the strip.';
+      ? '成品会为这张底片重新平衡，不沿用试片上的曝光。'
+      : 'The finished print is balanced for this negative, not for the strip\'s exposure.';
   String get chooseFirstPrint => zh
       ? '先冲一张试片，再印成品。'
       : 'Develop a test print first; the finished print follows.';
-  String get printQueued => zh ? '已印 · 去晾片架看看' : 'printed · look at the rack';
+  String get printQueued =>
+      zh ? '已印。去晾片架看看。' : 'Printed. Look at the drying rack.';
   String get goRack => zh ? '去晾片架' : 'To the drying rack';
 
   /// What a roll is called on the pages that name it.
@@ -125,8 +126,7 @@ class KalloStrings {
   /// does not need a number, and a name is what it had before it was film. A
   /// roll the model drew has no photograph: it is the strip that proves the
   /// sheet can be read at all, and it says so.
-  String rollName(Roll roll) =>
-      roll.name ?? (zh ? '模型的样片' : "The model's strip");
+  String rollName(Roll roll) => roll.name ?? (zh ? '模型样片' : 'Model strip');
 
   String frames(int count) =>
       zh ? '$count 格' : '$count frame${count == 1 ? '' : 's'}';
@@ -163,8 +163,8 @@ class KalloStrings {
   String get newRoll => zh ? '新的一卷' : 'A new roll';
 
   String get newRollNote => zh
-      ? '一张照片进显影液五次，出来一卷。同一格、五个时间——这条胶片唯一要证明的就是这件事。'
-      : 'One photograph into the developer five times, and a roll comes out. The same frame at five times — which is the one thing a strip of film has to prove.';
+      ? '一张照片显影五次，得到一卷。同一格、五个时间。'
+      : 'One photograph developed five times makes a roll: one frame at five times.';
 
   String get photograph => zh ? '照片' : 'PHOTOGRAPH';
   String get choosePhoto => zh ? '选择照片…' : 'Choose a photograph…';
@@ -196,8 +196,8 @@ class KalloStrings {
 
   /// Said when the model did not answer and the shelf holds its one film.
   String get shelfAlone => zh
-      ? '模型没有应答，架上只有 app 自己带着的这一支。'
-      : 'The model did not answer, so the shelf holds the one film this app carries.';
+      ? '模型没有响应。架上只保留内置胶片。'
+      : 'The model did not respond. The shelf keeps its built-in film.';
 
   /// A group of boxes on the shelf, and the chemistry they share.
   String processName(FilmProcess process) => switch (process) {
@@ -226,8 +226,8 @@ class KalloStrings {
 
   /// Said where the papers would be, for a film whose print stage is skipped.
   String get noPaper => zh
-      ? '反转片自己就是照片 —— 没有印相，也就没有相纸可选。'
-      : 'A reversal is its own picture — no print, and so no paper to choose.';
+      ? '反转片自己就是照片，没有印相，也就不用选相纸。'
+      : 'A reversal is its own picture: no print, so there is no paper to choose.';
 
   /// Said where the print button would be, for a film that has no print stage.
   String get noPrintStage => zh
@@ -247,14 +247,13 @@ class KalloStrings {
   String printCount(int count) =>
       zh ? '$count 张' : '$count print${count == 1 ? '' : 's'}';
   String get rackEmpty => zh ? '晾片架是空的' : 'Nothing on the rack';
-  String get rackEmptyNote => zh
-      ? '在印相里按印，成品会挂到这里，等干了再进观景台。'
-      : 'Print in the darkroom and it hangs here until it is dry.';
+  String get rackEmptyNote =>
+      zh ? '在印相步骤印一张，成品会挂到这里。' : 'Make a print in the darkroom; it hangs here.';
 
   // -- the binder -----------------------------------------------------------
 
   String get binderNote => zh
-      ? '这一卷的来历，和模型量到的数。'
+      ? '这一卷的来历，以及模型量到的数。'
       : 'Where this roll came from, and the numbers the model measured.';
 
   String get theFilm => zh ? '胶片' : 'THE FILM';
@@ -299,8 +298,8 @@ class KalloStrings {
   String get printsFolder => zh ? '印相' : 'Prints';
 
   String get noCurve => zh
-      ? '这一卷是模型直接渲出来的：它交出像，不交出像背后的密度。等它肯把数给出来，曲线就回来了。'
-      : 'This roll came out as pixels. The model writes a picture and not the densities behind it; the curves come back when it hands over the numbers.';
+      ? '这一卷没有附带密度数据，所以没有曲线可画。'
+      : 'This roll came without density data, so there are no curves to draw.';
 
   // -- the gallery ----------------------------------------------------------
 
@@ -320,7 +319,7 @@ class KalloStrings {
   /// The finished product: the print as a 35 mm frame.
   String get exportFrame => zh ? '导出胶片边框' : 'Export film frame';
   String get exportingFrame => zh ? '正在导出…' : 'Exporting…';
-  String get exportedFrame => zh ? '已导出 · Frames' : 'Exported · Frames';
+  String get exportedFrame => zh ? '已导出到 Frames' : 'Exported to Frames';
   String get exportFailed => zh ? '导出失败' : 'Export failed';
 
   /// What the edge of the film is called, when the frame needs a name.
@@ -328,7 +327,6 @@ class KalloStrings {
 
   // -- the drawer -----------------------------------------------------------
 
-  String get drawer => zh ? '抽屉' : 'DRAWER';
   String get close => zh ? '关闭' : 'CLOSE';
 
   String get tabLanguage => zh ? '语言' : 'LANGUAGE';
@@ -339,7 +337,7 @@ class KalloStrings {
 
   String get language => zh ? '语言' : 'Language';
   String get followsDevice =>
-      zh ? '跟随系统，除非你在这里把它钉住。' : 'Follows your device unless you pin it here.';
+      zh ? '默认跟随系统。' : 'Uses the system setting by default.';
   String get interfaceLanguage => zh ? '界面语言' : 'Interface language';
   String get system => zh ? '跟随系统' : 'System';
   String deviceLine(String tag) => zh ? '设备：$tag' : 'device: $tag';
@@ -354,8 +352,8 @@ class KalloStrings {
   String get prints => zh ? '印相' : 'Prints';
 
   String get printsNote => zh
-      ? '印相是文件。模型把它写出来，观景台把每一张放进胶片边框；导出的成品在 Frames/ 里。app 自己一张都不带。'
-      : 'A print is a file. The model writes it out, the gallery frames whatever is in this folder, and the framed exports go in Frames/. The app carries none of them itself.';
+      ? '每一张印相都保存在这个文件夹；观景台会给它们加上胶片边框，导出的成品在 Frames/。'
+      : 'Every print is a file in this folder; the gallery frames it, and exports go in Frames/.';
 
   String get folder => zh ? '文件夹' : 'Folder';
   String get choose => zh ? '选择…' : 'Choose…';
@@ -364,8 +362,8 @@ class KalloStrings {
 
   /// Said where the platform does not let an app pick, which is every phone.
   String get fixedFolder => zh
-      ? '手机上 app 不能挑文件夹。这里是系统给的位置：在「文件」里打开它，放进去什么，观景台就挂什么。'
-      : 'A phone does not let an app choose a folder. This one is the system\'s: open it in Files, and whatever you put there is on the wall.';
+      ? '手机不能选择文件夹。这里是系统给的位置：在「文件」里打开它，放进去的图片会出现在观景台。'
+      : 'Phones cannot choose a folder. This is the system location: open it in Files, and the pictures you put there appear on the wall.';
 
   // -- colour ---------------------------------------------------------------
 
@@ -376,19 +374,17 @@ class KalloStrings {
 
   /// What choosing the spectral path does, and what it changes.
   String get spectralNote => zh
-      ? '71 个波长：曝光、印相、扫描都走光谱，而不是逐通道。图会变淡——染料串色是真的，不是滤镜。'
-      : 'Seventy-one wavelengths through exposure, print and scan, instead of one number per channel. The image goes more muted: dye crosstalk is real, not a filter.';
+      ? '71 个波长走完曝光、印相和扫描，而不是每通道一个数。图像会变淡：染料串色是真实的，不是滤镜。'
+      : 'Seventy-one wavelengths through exposure, print and scan instead of one number per channel. The image goes quieter: dye crosstalk is real, not a filter.';
   String get colourNote => zh
-      ? '模型只输出 sRGB，显示交给系统管理。宽色域是显示器的本事，不是我们的。'
-      : 'The model writes sRGB and the system manages the display. Wide gamut is the screen\'s business, not ours.';
+      ? '模型只输出 sRGB，显示由系统管理。宽色域取决于显示器。'
+      : 'The model writes sRGB; the system manages the display. Wide gamut depends on the screen.';
 
-  String get about => zh ? '关于' : 'About';
-  String get aboutNote => zh
-      ? 'Kallo，Kallotype 的界面。字体是 Inter 和 Noto Sans SC。模型在 Rust 里，这里是它的脸。'
-      : 'Kallo, the interface of Kallotype. Type is Inter and Noto Sans SC. The model is in Rust; this is its face.';
+  String appVersion(String version) => zh ? '版本 $version' : 'Version $version';
+  String get openRepository =>
+      zh ? '在 GitHub 上打开项目' : 'Open the project on GitHub';
 
-  String get applyAtOnce =>
-      zh ? '设置立即生效，不重启。' : 'Settings apply at once. Nothing restarts.';
+  String get applyAtOnce => zh ? '更改会立即生效。' : 'Changes apply immediately.';
 }
 
 class _KalloStringsDelegate extends LocalizationsDelegate<KalloStrings> {

@@ -28,6 +28,7 @@ MACOS = ROOT / "macos/Runner/Assets.xcassets/AppIcon.appiconset"
 IOS = ROOT / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
 ANDROID = ROOT / "android/app/src/main/res"
 WINDOWS = ROOT / "windows/runner/resources/app_icon.ico"
+UI = ROOT / "assets/kallo-icon.png"
 
 MAC_SIZES = {
     16: "app_icon_16.png",
@@ -90,6 +91,11 @@ def save_png(image: Image.Image, path: Path) -> None:
     image.save(path, "PNG", optimize=True)
 
 
+def ui(master: Image.Image) -> None:
+    """The mark the About page draws, at the largest size it asks for."""
+    save_png(master.resize((256, 256), Image.LANCZOS), UI)
+
+
 def macos(master: Image.Image) -> None:
     icon = squircle(master)
     for size, name in MAC_SIZES.items():
@@ -150,6 +156,7 @@ def main() -> None:
     master = Image.open(MASTER).convert("RGBA")
     if master.size != (1024, 1024):
         raise SystemExit(f"{MASTER} is not 1024 x 1024")
+    ui(master)
     macos(master)
     ios(master)
     android(master)

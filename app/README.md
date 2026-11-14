@@ -113,8 +113,13 @@ the product's own type rather than the runner's. That is the reason the fonts ar
 bundled — and both are under the SIL Open Font License, so a public repository
 may carry them: `fonts/OFL-Inter.txt`, `fonts/OFL-NotoSansSC.txt`.
 
+GitHub's mark in the About link is from [Simple Icons](https://simpleicons.org)
+16 and is CC0 1.0; its source and rendering note live in `assets/README.md`.
+
 The four-plane shell and its twenty-one Windows goldens are gone. What is left
 is the window the product opens.
+The settings sheet is covered by widget tests rather than a golden: it opens on
+About, and neither a drawer title nor the old prose is there.
 
 ---
 
@@ -125,8 +130,15 @@ darkroom, three steps in one small capsule over the centre of the bench: select,
 develop, print. There is no bar and no rule under it, because the steps change
 what is on the bench, not where the bench is. The instrument panel on the right
 belongs to the step, and the one action is at its bottom. Both sides of the
-window can be put away: the glass switch at the left edge hides the source list,
-the one at the right hides the inspector, and the work takes the width back.
+window can be put away. The open sidebar carries its glass switch at the top
+right; when the sidebar is put away, the same switch moves into the content's
+top edge. The right switch hides the inspector, and the work takes the width
+back.
+
+Settings is one sheet, opened from the bottom of the sidebar. About is first:
+the app's mark, its version, and one click to the repository. There is no
+drawer heading and no prose about the type or the model; the other four pages
+are the settings themselves, with the one sentence each needs.
 
 | | |
 |---|---|
@@ -249,12 +261,13 @@ translates.
   measured chart; the committed strip is the model's drawing — charted, not
   measured. The subprocess fallback writes pixels and no densities, and a roll
   developed that way stays chartless — which is what `flutter test` sees.
-- **A settings card with nothing to set.** The drawer is five cards: language,
-  appearance, the print folder, the path, and what the app is. A card about a
-  renderer the app cannot switch, or a sound it does not make, was the
-  scaffold's idea of a settings page; it is not this one. The same goes for the
-  version: it is the bundle's, and an app that wrote it out twice got it wrong
-  in both places.
+- **A settings card with nothing to set.** The drawer is five pages: about,
+  language, appearance, the print folder and the path. The first is the app
+  itself — its mark, its version and one way out to the repository. A card
+  about a renderer the app cannot switch, or a sound it does not make, was the
+  scaffold's idea of a settings page; it is not this one. The version is the
+  bundle's, mirrored once in `app_info.dart` and checked against `pubspec.yaml`
+  by a test, not copied into the interface ad hoc.
 - **A soft proof of the paper's surface.** A print is rendered again from the
   photograph, at the size the photograph has and capped at 6000 points, and the
   app's own record carries the stock, the paper and the development rather than

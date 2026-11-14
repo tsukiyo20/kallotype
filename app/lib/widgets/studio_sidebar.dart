@@ -4,6 +4,7 @@ import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../views/chambers.dart';
+import 'pane_button.dart';
 
 /// The three places, and the one setting.
 ///
@@ -18,6 +19,7 @@ class StudioSidebar extends StatelessWidget {
     required this.onChamber,
     required this.galleryCount,
     required this.onSettings,
+    required this.onSidebar,
     this.topInset = 12,
   });
 
@@ -28,6 +30,9 @@ class StudioSidebar extends StatelessWidget {
   final int galleryCount;
 
   final VoidCallback onSettings;
+
+  /// Puts the source list away. The switch lives here while the list is open.
+  final VoidCallback onSidebar;
 
   /// Room for the traffic lights when the title bar is hidden.
   final double topInset;
@@ -43,14 +48,27 @@ class StudioSidebar extends StatelessWidget {
         children: <Widget>[
           SizedBox(height: topInset),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 2, 16, 18),
-            child: Text(
-              'KALLO',
-              style: KalloType.caption.copyWith(
-                color: colors.inkFaint,
-                letterSpacing: 2.0,
-                fontWeight: FontWeight.w600,
-              ),
+            padding: const EdgeInsets.fromLTRB(20, 2, 12, 12),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'KALLO',
+                    style: KalloType.caption.copyWith(
+                      color: colors.inkFaint,
+                      letterSpacing: 2.0,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                PaneButton(
+                  key: const Key('sidebar-toggle'),
+                  side: PaneSide.left,
+                  open: true,
+                  label: s.hideSidebar,
+                  onTap: onSidebar,
+                ),
+              ],
             ),
           ),
           _Room(
