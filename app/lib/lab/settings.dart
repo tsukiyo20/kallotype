@@ -37,22 +37,22 @@ class Settings {
     final Map<String, String> environment = Platform.environment;
     final String? home = environment['HOME'];
     if (Platform.isMacOS && home != null) {
-      return Directory('$home/Library/Application Support/dev.kallotype.app');
+      return Directory('$home/Library/Application Support/com.kallo.app');
     }
     if (Platform.isWindows) {
       final String? roaming = environment['APPDATA'];
       if (roaming != null) {
-        return Directory('$roaming${separator}Kallotype');
+        return Directory('$roaming${separator}Kallo');
       }
     }
     final String? config = environment['XDG_CONFIG_HOME'];
     if (config != null && config.isNotEmpty) {
-      return Directory('$config/kallotype');
+      return Directory('$config/kallo');
     }
     // A phone has no XDG and no APPDATA: the app's container is its home, and
     // the file lives quietly inside it.
     if (home != null) {
-      return Directory('$home/.config/kallotype');
+      return Directory('$home/.config/kallo');
     }
     return null;
   }

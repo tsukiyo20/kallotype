@@ -5,13 +5,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/lab/print.dart';
-import 'package:kallo_ui/lab/stock.dart';
-import 'package:kallo_ui/lab/strip.dart';
-import 'package:kallo_ui/main.dart';
-import 'package:kallo_ui/views/chambers.dart';
-import 'package:kallo_ui/widgets/film_frame.dart';
-import 'package:kallo_ui/widgets/switch.dart';
+import 'package:kallo/lab/print.dart';
+import 'package:kallo/lab/stock.dart';
+import 'package:kallo/lab/strip.dart';
+import 'package:kallo/main.dart';
+import 'package:kallo/views/chambers.dart';
+import 'package:kallo/widgets/film_frame.dart';
+import 'package:kallo/widgets/switch.dart';
 
 Future<ui.Image> _card({int width = 1600, int height = 1067}) async {
   final ui.PictureRecorder recorder = ui.PictureRecorder();

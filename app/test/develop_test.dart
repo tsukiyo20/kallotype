@@ -5,13 +5,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/lab/develop.dart';
-import 'package:kallo_ui/lab/model.dart';
-import 'package:kallo_ui/lab/print.dart';
-import 'package:kallo_ui/lab/print_out.dart';
-import 'package:kallo_ui/lab/roll.dart';
-import 'package:kallo_ui/lab/roll_store.dart';
-import 'package:kallo_ui/lab/stock.dart';
+import 'package:kallo/lab/develop.dart';
+import 'package:kallo/lab/model.dart';
+import 'package:kallo/lab/print.dart';
+import 'package:kallo/lab/print_out.dart';
+import 'package:kallo/lab/roll.dart';
+import 'package:kallo/lab/roll_store.dart';
+import 'package:kallo/lab/stock.dart';
 
 /// The model is a binary and the photograph is somebody's, so this test runs
 /// where both are and says so where they are not. It is the one test in the app

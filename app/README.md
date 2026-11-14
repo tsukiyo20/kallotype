@@ -15,9 +15,9 @@ ship.
 
 The app is **Kallo**; the model, the CLI and the repository are **Kallotype**.
 The window titles, the sidebar wordmark and every platform's display name say
-Kallo. The Dart package, the bundle identifiers and the `Kallotype` export
-folder keep their old names: those are paths that settings and photographs live
-behind, not labels on the window.
+Kallo. The Dart package is `kallo`, the bundle identifier is `com.kallo.app`,
+and the export folder is `Kallo`. The app has not been published, so these are
+the first addresses it has, not a migration away from old ones.
 
 The icon is one 35 mm sprocket edge folded into a K. `icon/kallo-icon.svg` is
 the source, `icon/kallo-icon-1024.png` is the rendered master, and
@@ -45,7 +45,7 @@ and the two render differently — which is exactly the failure this pin exists 
 prevent.
 
 All five platforms are checked in: `macos`, `windows`, `linux`, `ios`, `android`.
-They share one identity, `dev.kallotype.app`, and three floors — macOS 13,
+They share one identity, `com.kallo.app`, and three floors — macOS 13,
 iOS 15, and Android API 29, which is where Impeller takes the Vulkan path
 instead of falling back to its OpenGL ES backend.
 
@@ -84,6 +84,10 @@ fvm flutter test --dart-define=studio-goldens=true   test/studio_golden_test.dar
 
 fvm flutter test --dart-define=studio-goldens=true --update-goldens   test/studio_golden_test.dart
 ```
+
+The integration test builds the Debug bundle with its own entrypoint. After it
+has run, `fvm flutter build macos --debug` (or `fvm flutter run`) before opening
+`Kallo.app` from Finder; otherwise the window is the blank test harness.
 
 | | |
 |---|---|
@@ -131,7 +135,7 @@ the one at the right hides the inspector, and the work takes the width back.
 | **The print step is the enlarger dialled** | The chosen development is printed again at the photograph's size, balanced on its own negative, with the timer, the CC pack and the heat glass. It is not a copy of the strip's print: the strip is one exposure; the finished print is the one dialled for this photograph. The panel draws the paper's curve under those settings — the timer, the pack and the glass move it — so the picture and the instrument are the same enlarger. Pressing *print* opens a sheet for the size (original, 6000 or 4000 pixels) and the file format (PNG or JPEG). |
 | **The drying rack is what came out** | A place beside the darkroom, not a fourth step: lines of wire across the room, each print held by a clip, newest first, wrapping into as many columns as the window holds and scrolling down to the next line. The paper has a shadow because it is in the air; clicking one takes it off the rack and fills the window with it, where it can be pinched or scrolled. A corner says what is still being made. The gallery is the same files looked at properly, as film. |
 | **The path is a choice** | Exposure, print and scan go through the spectrum — 71 wavelengths, reconstructed from the input and integrated against each layer's sensitivity — or through one number per channel. It is a setting because the model keeps it opt-in: the structure is physical end to end, and the data under it is mixed — the curves and layer sensitivities of twenty-one films are measured, the papers are, the illuminant is CIE D50, and fifteen films still borrow their dye shapes because their sheets print a neutral instead of three dyes. The select panel and the catalogue say per film which is which. The two paths are different photographs, not different labels, and the strip remembers which made it: a print of that strip is made the same way. |
-| **The model is the app's own library** | The app's Dart package (`kallo_ui`) links `kallotype-api` through `flutter_rust_bridge`; a strip print is one call, and a finished print is the same pipeline at the photograph's size. A roll and its contact proof are one call for the CLI, from one read of the photograph. The `kalo` binary is still underneath as the fallback when the library cannot load — tests run that way — and both answer the same `Model`, because the binding was written to the shape the subprocess already had. |
+| **The model is the app's own library** | The app's Dart package (`kallo`) links `kallotype-api` through `flutter_rust_bridge`; a strip print is one call, and a finished print is the same pipeline at the photograph's size. A roll and its contact proof are one call for the CLI, from one read of the photograph. The `kalo` binary is still underneath as the fallback when the library cannot load — tests run that way — and both answer the same `Model`, because the binding was written to the shape the subprocess already had. |
 | **Two rooms, a rack, three steps** | The darkroom and the gallery are rooms; the drying rack is the place between them. In the darkroom: select, develop, print — the photograph, the strip and the finished print. The rack has no steps and neither does the gallery: a line is hung, a wall is looked at. The old six places are gone; the shelf's job is the select step, the bench's is develop and print, the rack's is the paper. |
 | **The test strip is the proof, made one print at a time** | A proof is the film laid on paper and exposed once. The strip is that idea with the person's hand in it: one print per development, all on the first print's exposure, laid side by side. A longer development makes a denser negative, so on one exposure it prints lighter; the strip says that before the finished print is dialled. The prints are rendered, not drawn: each is a real 1200 px print, and the densitometer reads its chart. |
 | **A frame can be looked through, then walked up to** | The loupe is a switch beside the lamp, put away by default. With it out, hovering a frame brings a loupe to the pointer: three times the wall, from the print's own file decoded wide enough to be sharp, with the 35 mm rebate still in the glass. The picture under the lens bows slightly at its edge — glass is not a window — while the rebate and the sprocket holes stay flat. The switch belongs to the wall, so it goes when a print fills the window; the lamp stays. Clicking opens the frame at the file's own size: the film keeps its size and shape — this is a loupe on film, not a picture viewer — and the picture is magnified *inside* the aperture, clipped by the gate, up to 1:1, one image pixel per device pixel, which is as far as the file goes. That close view is flat: it moves the picture under the gate and never bends the file. The label under it says the file's pixels and the scale; escape puts it back on the wall, and the lamp comes with you. The same view opens an export sheet: the size is the print's own by default or 4096 pixels, and the format is JPEG, PNG or TIFF. |

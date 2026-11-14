@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/lab/chart.dart';
-import 'package:kallo_ui/lab/strip.dart';
+import 'package:kallo/lab/chart.dart';
+import 'package:kallo/lab/strip.dart';
 
 FilmChart _chart(double minutes) => FilmChart(
   minutes: minutes,

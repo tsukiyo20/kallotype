@@ -17,7 +17,7 @@ import 'print_store.dart';
 /// class is the one place that knows where that is.
 abstract final class Exports {
   /// The name of the folder inside the pictures directory.
-  static const String folder = 'Kallotype';
+  static const String folder = 'Kallo';
 
   /// The folder of finished film frames, inside the export folder.
   ///
@@ -80,7 +80,7 @@ abstract final class Exports {
       ? Directory(chosen)
       : defaultDirectory;
 
-  /// `~/Pictures/Kallotype` — a path with the home shortened, because a path
+  /// `~/Pictures/Kallo` — a path with the home shortened, because a path
   /// that begins with a person's name begins with noise.
   static String display(String? path) {
     if (path == null || path.isEmpty) {
@@ -160,7 +160,7 @@ class ExportSetting {
     this.onReset,
   });
 
-  /// The folder as a person reads it: `~/Pictures/Kallotype`.
+  /// The folder as a person reads it: `~/Pictures/Kallo`.
   final String label;
 
   /// Whether a chooser exists on this platform.

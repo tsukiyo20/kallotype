@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:kallo_ui/lab/develop.dart';
-import 'package:kallo_ui/lab/ffi_model.dart';
-import 'package:kallo_ui/lab/model.dart';
-import 'package:kallo_ui/lab/roll.dart';
-import 'package:kallo_ui/lab/roll_store.dart';
-import 'package:kallo_ui/lab/stock.dart';
+import 'package:kallo/lab/develop.dart';
+import 'package:kallo/lab/ffi_model.dart';
+import 'package:kallo/lab/model.dart';
+import 'package:kallo/lab/roll.dart';
+import 'package:kallo/lab/roll_store.dart';
+import 'package:kallo/lab/stock.dart';
 
 /// The linked model, exercised in the app it ships in.
 ///

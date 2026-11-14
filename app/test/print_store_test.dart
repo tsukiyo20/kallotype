@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/lab/print.dart';
-import 'package:kallo_ui/lab/print_store.dart';
-import 'package:kallo_ui/lab/stock.dart';
+import 'package:kallo/lab/print.dart';
+import 'package:kallo/lab/print_store.dart';
+import 'package:kallo/lab/stock.dart';
 
 void main() {
   test('old sidecars move into the app folder and the pictures stay', () async {

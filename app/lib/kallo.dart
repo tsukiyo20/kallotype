@@ -1,4 +1,4 @@
-/// The interface of Kallotype.
+/// Kallo, the interface of Kallotype.
 ///
 /// Import this; do not reach into `design/` or `widgets/` directly.
 library;

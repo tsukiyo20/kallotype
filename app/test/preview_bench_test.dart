@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/lab/model.dart';
-import 'package:kallo_ui/lab/preview_bench.dart';
+import 'package:kallo/lab/model.dart';
+import 'package:kallo/lab/preview_bench.dart';
 
 /// A session with no pixels: the bench's bookkeeping is what is under test.
 class _Session implements PreviewSession {

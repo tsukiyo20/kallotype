@@ -7,16 +7,16 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/design/chrome.dart';
-import 'package:kallo_ui/lab/chart.dart';
-import 'package:kallo_ui/lab/model.dart';
-import 'package:kallo_ui/lab/print.dart';
-import 'package:kallo_ui/lab/stock.dart';
-import 'package:kallo_ui/lab/strip.dart';
-import 'package:kallo_ui/main.dart';
-import 'package:kallo_ui/views/chambers.dart';
-import 'package:kallo_ui/views/steps.dart';
-import 'package:kallo_ui/widgets/film_frame.dart';
+import 'package:kallo/design/chrome.dart';
+import 'package:kallo/lab/chart.dart';
+import 'package:kallo/lab/model.dart';
+import 'package:kallo/lab/print.dart';
+import 'package:kallo/lab/stock.dart';
+import 'package:kallo/lab/strip.dart';
+import 'package:kallo/main.dart';
+import 'package:kallo/views/chambers.dart';
+import 'package:kallo/views/steps.dart';
+import 'package:kallo/widgets/film_frame.dart';
 
 /// The studio's pictures.
 ///

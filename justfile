@@ -79,13 +79,13 @@ deny:
 # anything has an empty wall — which is the state it is built to show. Nothing
 # here is committed.
 #
-# The export lands in `Pictures/Kallotype` under $HOME unless a fourth argument
+# The export lands in `Pictures/Kallo` under $HOME unless a fourth argument
 # says otherwise — that is the app's default folder, not a promise that it is
 # the one you chose in the drawer.
 #
 # Example: just print ../file-test/DSCF0989.JPG
 #          just print ../file-test/DSCF0989.JPG 12 20 ~/Desktop/prints
-print src dev="9" temp="20" dest="$HOME/Pictures/Kallotype":
+print src dev="9" temp="20" dest="$HOME/Pictures/Kallo":
     mkdir -p "{{dest}}"
     cargo run --release --quiet --bin kalo -- render {{src}} -o "{{dest}}/print-{{dev}}min.png" --film vision3_500t --paper fuji_crystal_archive_pearl --dev {{dev}} --temp {{temp}} --ev auto --grain --halation --couplers
 

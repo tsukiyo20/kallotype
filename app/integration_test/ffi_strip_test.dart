@@ -5,16 +5,16 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:kallo_ui/lab/ffi_model.dart';
-import 'package:kallo_ui/lab/chart.dart';
-import 'package:kallo_ui/lab/export_format.dart';
-import 'package:kallo_ui/lab/model.dart';
-import 'package:kallo_ui/lab/print.dart';
-import 'package:kallo_ui/lab/strip.dart';
-import 'package:kallo_ui/lab/strip_develop.dart';
-import 'package:kallo_ui/main.dart';
-import 'package:kallo_ui/views/steps.dart';
-import 'package:kallo_ui/widgets/time_slider.dart';
+import 'package:kallo/lab/ffi_model.dart';
+import 'package:kallo/lab/chart.dart';
+import 'package:kallo/lab/export_format.dart';
+import 'package:kallo/lab/model.dart';
+import 'package:kallo/lab/print.dart';
+import 'package:kallo/lab/strip.dart';
+import 'package:kallo/lab/strip_develop.dart';
+import 'package:kallo/main.dart';
+import 'package:kallo/views/steps.dart';
+import 'package:kallo/widgets/time_slider.dart';
 
 /// The test strip, through the linked model.
 ///

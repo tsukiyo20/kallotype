@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.kallotype.app"
+    namespace = "com.kallo.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +16,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "dev.kallotype.app"
+        applicationId = "com.kallo.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // API 29 is where Impeller takes the Vulkan path by default. Below it

@@ -1,4 +1,4 @@
-package dev.kallotype.app
+package com.kallo.app
 
 import io.flutter.embedding.android.FlutterActivity
 

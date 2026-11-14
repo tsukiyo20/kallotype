@@ -3,13 +3,13 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:kallo_ui/src/rust/api/catalogue.dart' as catalogue_api;
-import 'package:kallo_ui/src/rust/api/chart.dart' as chart_api;
-import 'package:kallo_ui/src/rust/api/contact.dart' as contact_api;
-import 'package:kallo_ui/src/rust/api/preview.dart' as preview_api;
-import 'package:kallo_ui/src/rust/api/print.dart' as print_api;
-import 'package:kallo_ui/src/rust/api/roll.dart' as roll_api;
-import 'package:kallo_ui/src/rust/frb_generated.dart';
+import 'package:kallo/src/rust/api/catalogue.dart' as catalogue_api;
+import 'package:kallo/src/rust/api/chart.dart' as chart_api;
+import 'package:kallo/src/rust/api/contact.dart' as contact_api;
+import 'package:kallo/src/rust/api/preview.dart' as preview_api;
+import 'package:kallo/src/rust/api/print.dart' as print_api;
+import 'package:kallo/src/rust/api/roll.dart' as roll_api;
+import 'package:kallo/src/rust/frb_generated.dart';
 
 import 'chart.dart';
 import 'model.dart';

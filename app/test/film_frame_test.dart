@@ -4,13 +4,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/lab/export_codec.dart';
-import 'package:kallo_ui/lab/export_format.dart';
-import 'package:kallo_ui/lab/exports.dart';
-import 'package:kallo_ui/lab/film_export.dart';
-import 'package:kallo_ui/lab/print.dart';
-import 'package:kallo_ui/lab/stock.dart';
-import 'package:kallo_ui/widgets/film_frame.dart';
+import 'package:kallo/lab/export_codec.dart';
+import 'package:kallo/lab/export_format.dart';
+import 'package:kallo/lab/exports.dart';
+import 'package:kallo/lab/film_export.dart';
+import 'package:kallo/lab/print.dart';
+import 'package:kallo/lab/stock.dart';
+import 'package:kallo/widgets/film_frame.dart';
 
 Future<ui.Image> _card({int width = 300, int height = 200}) async {
   final ui.PictureRecorder recorder = ui.PictureRecorder();

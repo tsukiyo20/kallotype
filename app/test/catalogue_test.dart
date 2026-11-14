@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/lab/model.dart';
-import 'package:kallo_ui/lab/stock.dart';
+import 'package:kallo/lab/model.dart';
+import 'package:kallo/lab/stock.dart';
 
 /// A catalogue in the shape `kalo stocks --json` writes, cut down to the keys
 /// the app reads. Two films and a paper is enough to prove the document is

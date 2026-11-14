@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kallo_ui/lab/chart.dart';
-import 'package:kallo_ui/lab/chart_fill.dart';
-import 'package:kallo_ui/lab/model.dart';
-import 'package:kallo_ui/lab/roll.dart';
+import 'package:kallo/lab/chart.dart';
+import 'package:kallo/lab/chart_fill.dart';
+import 'package:kallo/lab/model.dart';
+import 'package:kallo/lab/roll.dart';
 
 /// A model that can chart, without a photograph or a library.
 class _Charting extends ProcessModel {
