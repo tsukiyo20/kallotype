@@ -186,35 +186,46 @@ final class KalloPhotoLibrary: NSObject {
       result(FlutterError(code: "not_found", message: "The print is no longer in Photos.", details: nil))
       return
     }
-    let options = PHImageRequestOptions()
-    options.version = .current
-    options.deliveryMode = .highQualityFormat
+    // `requestImageDataAndOrientation` returns the current rendered image; iOS
+    // may hand back a re-encoded JPEG and drop the XMP packet. The resource's
+    // own bytes are the file that was saved, marker and all.
+    guard let resource = Self.originalResource(for: asset) else {
+      result(FlutterError(code: "no_resource", message: "The print has no readable resource.", details: nil))
+      return
+    }
+    let ext = (resource.originalFilename as NSString).pathExtension
+    let suffix = ext.isEmpty ? "img" : ext
+    let target = FileManager.default.temporaryDirectory
+      .appendingPathComponent("kallo-\(UUID().uuidString).\(suffix)")
+    let options = PHAssetResourceRequestOptions()
     options.isNetworkAccessAllowed = true
-    options.resizeMode = .none
-    PHImageManager.default().requestImageDataAndOrientation(for: asset, options: options) {
-      data, uti, _, info in
-      guard let data else {
-        DispatchQueue.main.async {
+    PHAssetResourceManager.default().writeData(
+      for: resource,
+      toFile: target,
+      options: options
+    ) { error in
+      DispatchQueue.main.async {
+        if let error {
           result(FlutterError(
-            code: "no_data",
-            message: (info?[PHImageErrorKey] as? Error)?.localizedDescription ?? "The print could not be read.",
+            code: "write_failed",
+            message: error.localizedDescription,
             details: nil
           ))
-        }
-        return
-      }
-      let ext = uti.flatMap { UTType($0)?.preferredFilenameExtension } ?? "img"
-      let target = FileManager.default.temporaryDirectory
-        .appendingPathComponent("kallo-\(UUID().uuidString).\(ext)")
-      do {
-        try data.write(to: target, options: .atomic)
-        DispatchQueue.main.async { result(target.path) }
-      } catch {
-        DispatchQueue.main.async {
-          result(FlutterError(code: "write_failed", message: error.localizedDescription, details: nil))
+        } else {
+          result(target.path)
         }
       }
     }
+  }
+
+  private static func originalResource(for asset: PHAsset) -> PHAssetResource? {
+    let resources = PHAssetResource.assetResources(for: asset)
+    for type in [PHAssetResourceType.photo, .alternatePhoto, .fullSizePhoto] {
+      if let resource = resources.first(where: { $0.type == type }) {
+        return resource
+      }
+    }
+    return resources.first
   }
 
   private func image(locator: String, width: Int?, result: @escaping FlutterResult) {
