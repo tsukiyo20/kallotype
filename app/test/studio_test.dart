@@ -206,6 +206,10 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(
+      tester.getCenter(find.byKey(const Key('sidebar-toggle'))).dy,
+      tester.getCenter(find.byKey(const Key('inspector-toggle'))).dy,
+    );
     expect(find.byKey(const Key('select-inspector')), findsOneWidget);
     expect(find.text('彩色负片'), findsOneWidget);
 

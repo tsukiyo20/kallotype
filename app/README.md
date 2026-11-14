@@ -131,9 +131,9 @@ develop, print. There is no bar and no rule under it, because the steps change
 what is on the bench, not where the bench is. The instrument panel on the right
 belongs to the step, and the one action is at its bottom. Both sides of the
 window can be put away. The open sidebar carries its glass switch at the top
-right; when the sidebar is put away, the same switch moves into the content's
-top edge. The right switch hides the inspector, and the work takes the width
-back.
+right, on the same line as the window's other pane controls; when the sidebar
+is put away, the same switch moves into the content's top edge. The right
+switch hides the inspector, and the work takes the width back.
 
 Settings is one sheet, opened from the bottom of the sidebar. About is first:
 the app's mark, its version, and one click to the repository. There is no

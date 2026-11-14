@@ -20,7 +20,6 @@ class StudioSidebar extends StatelessWidget {
     required this.galleryCount,
     required this.onSettings,
     required this.onSidebar,
-    this.topInset = 12,
   });
 
   final Chamber chamber;
@@ -34,9 +33,6 @@ class StudioSidebar extends StatelessWidget {
   /// Puts the source list away. The switch lives here while the list is open.
   final VoidCallback onSidebar;
 
-  /// Room for the traffic lights when the title bar is hidden.
-  final double topInset;
-
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
@@ -46,29 +42,36 @@ class StudioSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          SizedBox(height: topInset),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 2, 12, 12),
-            child: Row(
+          // The height and the button's top are the top bar's, so the pane
+          // switches line up across the window even though this one belongs to
+          // the sidebar.
+          SizedBox(
+            height: 56,
+            child: Stack(
               children: <Widget>[
-                Expanded(
-                  child: Text(
-                    'KALLO',
-                    style: KalloType.caption.copyWith(
-                      color: colors.inkFaint,
-                      letterSpacing: 2.0,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Positioned(
+                  right: 16,
+                  top: 11,
+                  child: PaneButton(
+                    key: const Key('sidebar-toggle'),
+                    side: PaneSide.left,
+                    open: true,
+                    label: s.hideSidebar,
+                    onTap: onSidebar,
                   ),
                 ),
-                PaneButton(
-                  key: const Key('sidebar-toggle'),
-                  side: PaneSide.left,
-                  open: true,
-                  label: s.hideSidebar,
-                  onTap: onSidebar,
-                ),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 16, 18),
+            child: Text(
+              'KALLO',
+              style: KalloType.caption.copyWith(
+                color: colors.inkFaint,
+                letterSpacing: 2.0,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           _Room(

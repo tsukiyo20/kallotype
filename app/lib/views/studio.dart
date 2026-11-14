@@ -191,9 +191,6 @@ class _StudioState extends State<Studio> {
                             key: const Key('studio-sidebar'),
                             width: 232,
                             child: StudioSidebar(
-                              topInset: widget.chrome == WindowChrome.mac
-                                  ? 44
-                                  : 12,
                               chamber: _chamber,
                               onChamber: _room,
                               galleryCount: widget.prints.length,
@@ -227,7 +224,9 @@ class _StudioState extends State<Studio> {
                 Positioned(
                   left: 0,
                   top: 0,
-                  width: 232,
+                  // Leave the sidebar's own switch hittable. The rest of the
+                  // strip above the traffic lights still drags the window.
+                  width: 232 - 16 - 34 - 12,
                   height: 44,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
