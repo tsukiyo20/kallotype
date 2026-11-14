@@ -336,6 +336,7 @@ void main() {
     expect(find.byType(StudioSidebar), findsOneWidget);
     expect(find.byType(StageTabs), findsNothing);
     expect(find.byType(FilmFrame), findsOneWidget);
+    expect(find.text('放大镜'), findsOneWidget);
     expect(find.text('灯'), findsOneWidget);
   });
 }

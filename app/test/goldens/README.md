@@ -29,10 +29,11 @@ fvm flutter test --dart-define=studio-goldens=true --update-goldens \
 
 The twelve baselines are `select`, `select-light`, `develop`, `print`, `rack`,
 `rack-light`, `viewer`, `gallery`, `gallery-light`, `portrait`, `lens` and
-`loupe`. The lens and the loupe are the two views through glass; the portrait is
-the proof that a vertical frame turns the strip; the daylight set is the proof
-that the neutral ramp and the physical materials hold in both appearances; and
-the viewer is a print off the rack, full screen.
+`loupe`. The lens is the frame under the wall's glass, with the loupe switch
+beside the lamp; the loupe is that same frame walked up to, flat and at 1:1. The
+portrait is the proof that a vertical frame turns the strip; the daylight set is
+the proof that the neutral ramp and the physical materials hold in both
+appearances; and the viewer is a print off the rack, full screen.
 
 `--update-goldens` is the only way a baseline changes, and it changes only the
 folder for the platform that ran it. CI runs `flutter test` without the define,

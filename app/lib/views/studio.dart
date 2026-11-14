@@ -116,10 +116,21 @@ class _StudioState extends State<Studio> {
   /// The gallery's lamp. The room remembers it; the window does not go dark.
   bool _lit = true;
 
+  /// The gallery's loupe. It starts put away: the wall is for looking at, and
+  /// glass is a tool a person takes up on purpose.
+  bool _loupe = false;
+
+  /// Whether one print has left the wall to fill the window. The loupe is a
+  /// wall tool, so its switch goes with the wall.
+  bool _galleryNear = false;
+
   void _room(Chamber chamber) {
     setState(() {
       _chamber = chamber;
       _open = false;
+      if (chamber != Chamber.gallery) {
+        _galleryNear = false;
+      }
     });
     if (chamber != Chamber.darkroom) {
       widget.onEnterExports?.call();
@@ -136,6 +147,8 @@ class _StudioState extends State<Studio> {
   void _closeDrawer() => setState(() => _open = false);
 
   void _toggleLight() => setState(() => _lit = !_lit);
+
+  void _toggleLoupe() => setState(() => _loupe = !_loupe);
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +302,12 @@ class _StudioState extends State<Studio> {
           // the one worth seeing.
           prints: widget.prints.reversed.toList(growable: false),
           light: light,
+          loupe: _loupe,
+          onNear: (bool near) {
+            if (_galleryNear != near) {
+              setState(() => _galleryNear = near);
+            }
+          },
           topInset: _topBarHeight,
         ),
       );
@@ -332,12 +351,27 @@ class _StudioState extends State<Studio> {
           ? () => setState(() => _inspector = !_inspector)
           : null,
       trailing: _chamber == Chamber.gallery
-          ? KalloSwitch(
-              key: const Key('light'),
-              label: s.roomLight,
-              control: colors.inkMuted,
-              on: _lit,
-              onTap: _toggleLight,
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (!_galleryNear) ...<Widget>[
+                  KalloSwitch(
+                    key: const Key('loupe'),
+                    label: s.loupe,
+                    control: colors.inkMuted,
+                    on: _loupe,
+                    onTap: _toggleLoupe,
+                  ),
+                  const SizedBox(width: KalloSpace.step2),
+                ],
+                KalloSwitch(
+                  key: const Key('light'),
+                  label: s.roomLight,
+                  control: colors.inkMuted,
+                  on: _lit,
+                  onTap: _toggleLight,
+                ),
+              ],
             )
           : null,
       center: center,

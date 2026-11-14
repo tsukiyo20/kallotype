@@ -11,6 +11,7 @@ import 'package:kallo_ui/lab/strip.dart';
 import 'package:kallo_ui/main.dart';
 import 'package:kallo_ui/views/chambers.dart';
 import 'package:kallo_ui/widgets/film_frame.dart';
+import 'package:kallo_ui/widgets/switch.dart';
 
 Future<ui.Image> _card({int width = 1600, int height = 1067}) async {
   final ui.PictureRecorder recorder = ui.PictureRecorder();
@@ -35,7 +36,7 @@ Future<ui.Image> _card({int width = 1600, int height = 1067}) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('the loupe bows the picture it magnifies', (
+  testWidgets('the loupe switch is glass on the wall, and the wall is flat', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(1280, 820);
@@ -75,19 +76,61 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(FilmFrame).first);
-    await tester.pumpAndSettle();
-    expect(find.byType(FilmFrame), findsOneWidget);
-    expect(tester.widget<FilmFrame>(find.byType(FilmFrame)).barrel, 0);
-    expect(find.text('导出胶片边框'), findsOneWidget);
+    final Finder loupe = find.byKey(const Key('loupe'));
+    expect(loupe, findsOneWidget);
+    expect(tester.widget<KalloSwitch>(loupe).on, isFalse);
 
-    final Offset centre = tester.getCenter(find.byType(FilmFrame));
+    final Offset wallCentre = tester.getCenter(find.byType(FilmFrame).first);
     final TestGesture mouse = await tester.createGesture(
       kind: PointerDeviceKind.mouse,
     );
     addTearDown(mouse.removePointer);
-    await mouse.addPointer(location: centre);
-    await mouse.moveTo(centre);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(wallCentre);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('lens')),
+      findsNothing,
+      reason: 'a loupe is taken up, not followed by the pointer',
+    );
+
+    await tester.tap(loupe);
+    await tester.pumpAndSettle();
+    expect(tester.widget<KalloSwitch>(loupe).on, isTrue);
+    await mouse.moveTo(wallCentre);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lens')), findsOneWidget);
+    final FilmFrame glass = tester.widget<FilmFrame>(
+      find.descendant(
+        of: find.byKey(const Key('lens')),
+        matching: find.byType(FilmFrame),
+      ),
+    );
+    expect(
+      glass.barrel,
+      greaterThan(0),
+      reason: 'the glass is the one place the picture bends',
+    );
+
+    await tester.tap(loupe);
+    await tester.pumpAndSettle();
+    expect(tester.widget<KalloSwitch>(loupe).on, isFalse);
+    await mouse.moveTo(wallCentre);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('lens')), findsNothing);
+
+    await tester.tap(find.byType(FilmFrame).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(FilmFrame), findsOneWidget);
+    expect(
+      find.byKey(const Key('loupe')),
+      findsNothing,
+      reason: 'the glass belongs to the wall, not to the print in hand',
+    );
+    expect(tester.widget<FilmFrame>(find.byType(FilmFrame)).barrel, 0);
+    expect(find.text('导出胶片边框'), findsOneWidget);
+
+    final Offset centre = tester.getCenter(find.byType(FilmFrame));
     await tester.sendEventToBinding(
       PointerScrollEvent(
         position: centre,
@@ -98,8 +141,8 @@ void main() {
     await tester.pump();
     expect(
       tester.widget<FilmFrame>(find.byType(FilmFrame)).barrel,
-      greaterThan(0),
-      reason: 'the glass distorts what it magnifies',
+      0,
+      reason: 'walking up to a frame does not bend the film',
     );
 
     await tester.tap(find.byKey(const Key('export')));
@@ -118,6 +161,7 @@ void main() {
     await tester.tap(find.byKey(const Key('back')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('back')), findsNothing);
+    expect(find.byKey(const Key('loupe')), findsOneWidget);
     expect(find.text('导出胶片边框'), findsNothing);
   }, timeout: const Timeout(Duration(seconds: 30)));
 }

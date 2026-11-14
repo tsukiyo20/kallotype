@@ -48,6 +48,8 @@ class Gallery extends StatefulWidget {
     super.key,
     required this.prints,
     required this.light,
+    this.loupe = false,
+    this.onNear,
     this.topInset = 0,
   });
 
@@ -57,6 +59,16 @@ class Gallery extends StatefulWidget {
   /// The lamp on the wall, from off to all of it. It is the room's, and it
   /// takes the wall and the work with it — not the window around them.
   final double light;
+
+  /// Whether the loupe is out. It is a tool on the wall, not a cursor: off,
+  /// every frame is just a frame; on, the frame under the pointer is read
+  /// through glass.
+  final bool loupe;
+
+  /// Called when the wall is left for one frame, and when it is returned to.
+  /// The loupe switch belongs to the wall, so the chrome can leave it behind
+  /// while a print fills the window.
+  final ValueChanged<bool>? onNear;
 
   /// The transparent chrome over the wall: the grid starts below it.
   final double topInset;
@@ -74,8 +86,8 @@ class _GalleryState extends State<Gallery> {
   ///
   /// The lens is a loupe held over the film, not a picture viewer: it shows the
   /// frame at three times the wall, from a decode wide enough that the glass
-  /// has something to show. It goes away when the pointer does, and clicking
-  /// still walks up to the whole frame.
+  /// has something to show. It goes away when the pointer does or the loupe is
+  /// put away, and clicking still walks up to the whole frame.
   Print? _lensFor;
   ui.Image? _lens;
   Offset _lensAt = Offset.zero;
@@ -93,6 +105,9 @@ class _GalleryState extends State<Gallery> {
     double width,
     Offset global,
   ) {
+    if (!widget.loupe) {
+      return;
+    }
     final RenderBox? box =
         _field.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) {
@@ -121,6 +136,20 @@ class _GalleryState extends State<Gallery> {
       _lensFor = null;
       _dropLens();
     });
+  }
+
+  /// Walk up to one frame, and leave the wall's tools behind.
+  void _walkUp(Print print, int printNumber) {
+    setState(() {
+      _near = print;
+      _nearPrintNumber = printNumber;
+    });
+    widget.onNear?.call(true);
+  }
+
+  void _backToWall() {
+    setState(() => _near = null);
+    widget.onNear?.call(false);
   }
 
   /// Free the magnified copy, but only after the frame that drew it: a texture
@@ -156,9 +185,15 @@ class _GalleryState extends State<Gallery> {
     final Print? near = _near;
     if (near != null && !widget.prints.any((Print p) => identical(p, near))) {
       _near = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          widget.onNear?.call(false);
+        }
+      });
     }
     final Print? lens = _lensFor;
-    if (lens != null && !widget.prints.any((Print p) => identical(p, lens))) {
+    if (!widget.loupe ||
+        (lens != null && !widget.prints.any((Print p) => identical(p, lens)))) {
       _lensFor = null;
       _dropLens();
     }
@@ -186,7 +221,7 @@ class _GalleryState extends State<Gallery> {
         wall: wall,
         light: light,
         printed: printed,
-        onClose: () => setState(() => _near = null),
+        onClose: _backToWall,
       );
     }
 
@@ -268,26 +303,25 @@ class _GalleryState extends State<Gallery> {
                         width: widthOf(prints[i]),
                         light: light,
                         printed: printed,
-                        cursor: _lensFor == null
-                            ? SystemMouseCursors.click
-                            : SystemMouseCursors.none,
-                        onHover: (Offset local, Offset global) => _lookAt(
-                          prints[i],
-                          prints[i].printNumber,
-                          local,
-                          widthOf(prints[i]),
-                          global,
-                        ),
-                        onLeave: _leaveLens,
-                        onTap: () => setState(() {
-                          _near = prints[i];
-                          _nearPrintNumber = prints[i].printNumber;
-                        }),
+                        cursor: widget.loupe && _lensFor != null
+                            ? SystemMouseCursors.none
+                            : SystemMouseCursors.click,
+                        onHover: widget.loupe
+                            ? (Offset local, Offset global) => _lookAt(
+                                prints[i],
+                                prints[i].printNumber,
+                                local,
+                                widthOf(prints[i]),
+                                global,
+                              )
+                            : null,
+                        onLeave: widget.loupe ? _leaveLens : null,
+                        onTap: () => _walkUp(prints[i], prints[i].printNumber),
                       ),
                   ],
                 ),
               ),
-            if (_lensFor != null)
+            if (widget.loupe && _lensFor != null)
               _Lens(
                 key: const Key('lens'),
                 at: _lensAt,
@@ -343,8 +377,10 @@ class _GalleryState extends State<Gallery> {
 /// this display, so `1:1` means one image pixel per device pixel and is as far
 /// as the loupe goes. Past that there is nothing left in the file to show.
 ///
-/// The image is seen through the glass, so it bows a little at the edge. The
-/// export is the flat frame: a lens is how you look, not what the film is.
+/// Walking up to a frame is flat: the picture moves under the gate, and the
+/// film stays film. Glass belongs to the loupe on the wall, not to this view,
+/// and the export is flat for the same reason — a lens is how you look, not
+/// what the negative is.
 class _Loupe extends StatefulWidget {
   const _Loupe({
     required this.print,
@@ -597,9 +633,6 @@ class _LoupeState extends State<_Loupe> {
                   sourceWidth,
                   sourceHeight,
                 );
-                final double barrel = ceiling > 1.001
-                    ? 0.075 * ((mag - 1) / (ceiling - 1)).clamp(0.0, 1.0)
-                    : 0;
                 final String exportLabel = _exporting
                     ? s.exportingFrame
                     : _exportFailed
@@ -626,7 +659,6 @@ class _LoupeState extends State<_Loupe> {
                               printNumber: widget.printNumber,
                               process: widget.print.process,
                               light: widget.printed,
-                              barrel: barrel,
                             ),
                             Positioned.fromRect(
                               rect: metrics.aperture,
@@ -882,9 +914,9 @@ class _Hung extends StatelessWidget {
   final MouseCursor cursor;
 
   /// The lens: the pointer over the frame, its place on the frame, and where
-  /// it is on the wall.
-  final void Function(Offset local, Offset global) onHover;
-  final VoidCallback onLeave;
+  /// it is on the wall. Null when the loupe is put away.
+  final void Function(Offset local, Offset global)? onHover;
+  final VoidCallback? onLeave;
 
   /// Walking up to the print: the loupe.
   final VoidCallback onTap;
@@ -899,9 +931,11 @@ class _Hung extends StatelessWidget {
         children: <Widget>[
           MouseRegion(
             cursor: cursor,
-            onHover: (PointerHoverEvent event) =>
-                onHover(event.localPosition, event.position),
-            onExit: (_) => onLeave(),
+            onHover: onHover == null
+                ? null
+                : (PointerHoverEvent event) =>
+                      onHover!(event.localPosition, event.position),
+            onExit: onLeave == null ? null : (_) => onLeave!(),
             child: GestureDetector(
               onTap: onTap,
               behavior: HitTestBehavior.opaque,
@@ -984,7 +1018,13 @@ class _Lens extends StatelessWidget {
   final double light;
 
   static const double radius = 90;
+
+  /// Three times the wall is enough to read a grain without making the glass
+  /// a window. The bow is deliberately small: a real loupe is corrected, and
+  /// the eye should notice the glass at the edge rather than watch the picture
+  /// bend all the way across.
   static const double _magnification = 3;
+  static const double _barrel = 0.05;
 
   @override
   Widget build(BuildContext context) {
@@ -1004,7 +1044,7 @@ class _Lens extends StatelessWidget {
               printNumber: printNumber,
               process: process,
               light: light,
-              barrel: 0.075,
+              barrel: _barrel,
             ),
           ),
         ],

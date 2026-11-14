@@ -602,6 +602,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('loupe')));
+      await tester.pumpAndSettle();
       final TestGesture mouse = await tester.createGesture(
         kind: PointerDeviceKind.mouse,
       );

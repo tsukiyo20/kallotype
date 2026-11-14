@@ -21,7 +21,7 @@ import 'print.dart';
 /// not hang the same picture twice.
 ///
 /// The frame is drawn by the same painter the gallery uses, then encoded in
-/// [format]. The export is flat — the loupe's distortion is a property of
+/// [format]. The export is flat — the lens's distortion is a property of
 /// looking through glass, not of the negative. A null [maxEdge] keeps the
 /// print's own pixel size; a value caps the frame's long edge. JPEG is the
 /// default because a lossless full-resolution frame was a 100 MB file.
