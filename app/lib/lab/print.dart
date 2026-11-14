@@ -312,10 +312,14 @@ class Print {
   /// The folder may hold thousands of prints. Reading the header of each one
   /// is enough for the wall to lay them out; the pixels are fetched later from
   /// the thumbnail cache only when the print is on screen.
-  static Future<Print?> scan(File image, {PrintRecord? record}) async {
-    final FileStat stat;
+  static Future<Print?> scan(
+    File image, {
+    PrintRecord? record,
+    FileStat? stat,
+  }) async {
+    final FileStat info;
     try {
-      stat = await image.stat();
+      info = stat ?? await image.stat();
     } on FileSystemException catch (error) {
       Model.log('no print at ${image.path}: $error');
       return null;
@@ -341,7 +345,7 @@ class Print {
           (_record(image, 'print_number') as num?)?.toInt() ??
           1,
       process: process,
-      printed: stat.modified,
+      printed: info.modified,
       film: film,
       paper: record?.paper ?? _record(image, 'paper') as String?,
       minutes:

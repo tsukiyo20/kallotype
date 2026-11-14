@@ -124,25 +124,35 @@ abstract final class Exports {
     if (folder == null || !folder.existsSync()) {
       return const <Print>[];
     }
-    final List<File> images =
-        <File>[
-          for (final FileSystemEntity entity in folder.listSync())
-            if (entity is File && _isImage(entity.path)) entity,
-        ]..sort((File a, File b) {
-          final DateTime left = a.statSync().modified;
-          final DateTime right = b.statSync().modified;
-          return left.compareTo(right);
-        });
+    // One stat per file, kept with the file: sorting used to stat twice per
+    // comparison, which at ten thousand prints is hundreds of thousands of
+    // syscalls. The same stat is handed to the scan so it does not repeat it.
+    final List<({File file, FileStat stat})> images =
+        <({File file, FileStat stat})>[];
+    for (final FileSystemEntity entity in folder.listSync()) {
+      if (entity is! File || !_isImage(entity.path)) {
+        continue;
+      }
+      try {
+        images.add((file: entity, stat: entity.statSync()));
+      } on FileSystemException {
+        // A file that vanished between list and stat is not a print.
+      }
+    }
+    images.sort(
+      (a, b) => a.stat.modified.compareTo(b.stat.modified),
+    );
 
     final Map<String, PrintRecord> metadata = await PrintStore.load(
       exports: folder,
       frames: framesFolder(folder),
     );
     final List<Print> prints = <Print>[];
-    for (final File image in images) {
+    for (final ({File file, FileStat stat}) image in images) {
       final Print? print = await Print.scan(
-        image,
-        record: metadata[image.path],
+        image.file,
+        record: metadata[image.file.path],
+        stat: image.stat,
       );
       if (print != null) {
         prints.add(print);
