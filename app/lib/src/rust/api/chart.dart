@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// Measure a stock's strip at a ladder of development times.
 Future<List<ChartFrame>> makeChart({
@@ -36,17 +36,8 @@ Future<PaperCurve> makePaperCurve({required String paper}) =>
     RustLib.instance.api.crateApiChartMakePaperCurve(paper: paper);
 
 /// The print curve, for a film, a paper and a development.
-Future<PrintCurve> makePrintCurve({
-  required String film,
-  required String paper,
-  required double minutes,
-  required double tempC,
-}) => RustLib.instance.api.crateApiChartMakePrintCurve(
-  film: film,
-  paper: paper,
-  minutes: minutes,
-  tempC: tempC,
-);
+Future<PrintCurve> makePrintCurve({required PrintCurveJob job}) =>
+    RustLib.instance.api.crateApiChartMakePrintCurve(job: job);
 
 /// One frame's chart.
 class ChartFrame {
@@ -298,4 +289,67 @@ class PrintCurve {
           shift == other.shift &&
           logE == other.logE &&
           density == other.density;
+}
+
+/// What a print curve is asked for.
+class PrintCurveJob {
+  /// Film stock id.
+  final String film;
+
+  /// Paper stock id.
+  final String paper;
+
+  /// Development time in minutes.
+  final double minutes;
+
+  /// Developer temperature in degrees Celsius.
+  final double tempC;
+
+  /// Extra print exposure in stops.
+  final double printEv;
+
+  /// The enlarger's colour pack, in Kodak CC units.
+  final String filters;
+
+  /// A heat-absorbing glass in the light path, by name.
+  final String? heatGlass;
+
+  /// Print through the spectral path.
+  final bool spectral;
+
+  const PrintCurveJob({
+    required this.film,
+    required this.paper,
+    required this.minutes,
+    required this.tempC,
+    required this.printEv,
+    required this.filters,
+    this.heatGlass,
+    required this.spectral,
+  });
+
+  @override
+  int get hashCode =>
+      film.hashCode ^
+      paper.hashCode ^
+      minutes.hashCode ^
+      tempC.hashCode ^
+      printEv.hashCode ^
+      filters.hashCode ^
+      heatGlass.hashCode ^
+      spectral.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PrintCurveJob &&
+          runtimeType == other.runtimeType &&
+          film == other.film &&
+          paper == other.paper &&
+          minutes == other.minutes &&
+          tempC == other.tempC &&
+          printEv == other.printEv &&
+          filters == other.filters &&
+          heatGlass == other.heatGlass &&
+          spectral == other.spectral;
 }

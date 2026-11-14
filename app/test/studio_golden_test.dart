@@ -129,6 +129,44 @@ class _CardModel extends ProcessModel {
   }
 
   @override
+  Future<PrintCurve?> printCurve({
+    required String film,
+    required String paper,
+    required double minutes,
+    required double tempC,
+    double printEv = 0,
+    String filters = '',
+    String? heatGlass,
+    bool spectral = false,
+  }) async {
+    final List<double> logE = <double>[
+      for (int i = 0; i < 48; i++) -3.5 + i * 0.077,
+    ];
+    final double timer = printEv * 0.30103;
+    final List<double> shift = <double>[
+      0.10 + timer,
+      0.04 + timer,
+      -0.02 + timer,
+    ];
+    final PrintCurve curve = PrintCurve(
+      film: film,
+      paper: paper,
+      minutes: minutes,
+      tempC: tempC,
+      shift: shift,
+      logE: logE,
+      density: <List<double>>[
+        for (final double x in logE)
+          <double>[
+            for (final double s in shift)
+              0.06 + 2.24 / (1 + math.exp(-(x + s + 0.1) * 4.0)),
+          ],
+      ],
+    );
+    return curve;
+  }
+
+  @override
   Future<PaperCurve?> paperCurve({required String paper}) async {
     final List<double> logE = <double>[
       for (int i = 0; i < 48; i++) -3.0 + i * 0.09,
@@ -259,7 +297,7 @@ void main() {
     Model.useLinked(_CardModel(cardPng, card));
   });
 
-  group('studio', skip: _paint ? false : 'the studio goldens are opt-in; pass --dart-define=studio-goldens=true', () {
+  group('studio', skip: _paintHere ? false : 'the studio goldens are opt-in and have baselines on macOS and Windows', () {
     testWidgets('the select step', (WidgetTester tester) async {
       _window(tester);
       await tester.pumpWidget(

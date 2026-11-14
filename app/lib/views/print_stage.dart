@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
+import '../lab/chart.dart';
 import '../lab/clock.dart';
 import '../lab/model.dart';
 import '../lab/preview_bench.dart';
@@ -17,6 +18,7 @@ import '../lab/strip.dart';
 import '../lab/strip_develop.dart';
 import '../widgets/button.dart';
 import '../widgets/chip.dart';
+import '../widgets/curves.dart';
 import '../widgets/stepper.dart';
 import '../widgets/wall.dart';
 
@@ -55,6 +57,8 @@ class _PrintStageState extends State<PrintStage> {
   String? _glass;
 
   ui.Image? _preview;
+  PrintCurve? _curve;
+  int _curveGeneration = 0;
   bool _busy = false;
   bool _printed = false;
   String? _error;
@@ -70,7 +74,10 @@ class _PrintStageState extends State<PrintStage> {
     _minutes = widget.strip.latest?.minutes ?? 9;
     _openBench();
     if (widget.strip.hasPrints) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _previewNow());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _previewNow();
+        unawaited(_loadPrintCurve());
+      });
     }
   }
 
@@ -94,6 +101,7 @@ class _PrintStageState extends State<PrintStage> {
         _openBench();
       }
       _schedule();
+      unawaited(_loadPrintCurve());
     }
   }
 
@@ -101,6 +109,7 @@ class _PrintStageState extends State<PrintStage> {
   void dispose() {
     _timer?.cancel();
     _generation++;
+    _curveGeneration++;
     _preview?.dispose();
     _previewBench?.dispose();
     super.dispose();
@@ -155,11 +164,66 @@ class _PrintStageState extends State<PrintStage> {
       _error = null;
     });
     _schedule();
+    unawaited(_loadPrintCurve());
   }
 
   void _schedule() {
     _timer?.cancel();
     _timer = Timer(const Duration(milliseconds: 120), _previewNow);
+  }
+
+  /// The print's three channel curves, each one density per log E.
+  ///
+  /// The model returns one sample per exposure with three densities; the chart
+  /// wants the other way round, three curves over the one exposure axis.
+  List<List<double>>? get _printSeries {
+    final PrintCurve? curve = _curve;
+    if (curve == null) {
+      return null;
+    }
+    return <List<double>>[
+      for (int channel = 0; channel < 3; channel++)
+        <double>[
+          for (final List<double> sample in curve.density) sample[channel],
+        ],
+    ];
+  }
+
+  /// The paper's curve under the enlarger as it is dialled now.
+  ///
+  /// The timer, the colour pack and the heat glass all move the balance; the
+  /// curve is the paper through that balance, not a second picture of it.
+  Future<void> _loadPrintCurve() async {
+    if (!widget.strip.hasPrints) {
+      return;
+    }
+    final Model model = Model.find();
+    if (!model.available) {
+      return;
+    }
+    final int generation = ++_curveGeneration;
+    final double minutes = _minutes;
+    final double printEv = _printEv;
+    final String filters = _filters;
+    final String? glass = _glass;
+    try {
+      final PrintCurve? curve = await model.printCurve(
+        film: widget.strip.stockId,
+        paper: widget.strip.paperId ?? Stocks.paper,
+        minutes: minutes,
+        tempC: widget.strip.tempC,
+        printEv: printEv,
+        filters: filters,
+        heatGlass: glass,
+        spectral: widget.strip.spectral,
+      );
+      if (!mounted || generation != _curveGeneration) {
+        return;
+      }
+      setState(() => _curve = curve);
+    } on Object catch (error) {
+      Model.log('the print curve could not be read: $error');
+    }
   }
 
   Future<void> _previewNow() async {
@@ -356,7 +420,7 @@ class _PrintStageState extends State<PrintStage> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   Text(
                     s.time,
@@ -479,6 +543,37 @@ class _PrintStageState extends State<PrintStage> {
                     ],
                   ),
                   const SizedBox(height: KalloSpace.step5),
+                  Container(height: 1, color: colors.hairline),
+                  const SizedBox(height: KalloSpace.step4),
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        s.printCurve,
+                        style: KalloType.caption.copyWith(
+                          color: colors.inkFaint,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'log E →',
+                        style: KalloType.folio.copyWith(color: colors.inkFaint),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  if (_curve != null)
+                    KalloCurves(
+                      series: _printSeries!,
+                      xs: _curve!.logE,
+                      height: 62,
+                    )
+                  else
+                    Text(
+                      s.noCurve,
+                      style: KalloType.small.copyWith(color: colors.inkFaint),
+                    ),
+                  const SizedBox(height: KalloSpace.step4),
                   Text(
                     s.printNote,
                     style: KalloType.small.copyWith(color: colors.inkFaint),

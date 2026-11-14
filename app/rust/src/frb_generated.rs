@@ -366,19 +366,11 @@ fn wire__crate__api__chart__make_print_curve_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_film = <String>::sse_decode(&mut deserializer);
-            let api_paper = <String>::sse_decode(&mut deserializer);
-            let api_minutes = <f64>::sse_decode(&mut deserializer);
-            let api_temp_c = <f64>::sse_decode(&mut deserializer);
+            let api_job = <crate::api::chart::PrintCurveJob>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok = crate::api::chart::make_print_curve(
-                        api_film,
-                        api_paper,
-                        api_minutes,
-                        api_temp_c,
-                    )?;
+                    let output_ok = crate::api::chart::make_print_curve(api_job)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -765,6 +757,30 @@ impl SseDecode for crate::api::chart::PrintCurve {
             shift: var_shift,
             log_e: var_logE,
             density: var_density,
+        };
+    }
+}
+
+impl SseDecode for crate::api::chart::PrintCurveJob {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_film = <String>::sse_decode(deserializer);
+        let mut var_paper = <String>::sse_decode(deserializer);
+        let mut var_minutes = <f64>::sse_decode(deserializer);
+        let mut var_tempC = <f64>::sse_decode(deserializer);
+        let mut var_printEv = <f64>::sse_decode(deserializer);
+        let mut var_filters = <String>::sse_decode(deserializer);
+        let mut var_heatGlass = <Option<String>>::sse_decode(deserializer);
+        let mut var_spectral = <bool>::sse_decode(deserializer);
+        return crate::api::chart::PrintCurveJob {
+            film: var_film,
+            paper: var_paper,
+            minutes: var_minutes,
+            temp_c: var_tempC,
+            print_ev: var_printEv,
+            filters: var_filters,
+            heat_glass: var_heatGlass,
+            spectral: var_spectral,
         };
     }
 }
@@ -1203,6 +1219,33 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::chart::PrintCurve>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::chart::PrintCurveJob {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.film.into_into_dart().into_dart(),
+            self.paper.into_into_dart().into_dart(),
+            self.minutes.into_into_dart().into_dart(),
+            self.temp_c.into_into_dart().into_dart(),
+            self.print_ev.into_into_dart().into_dart(),
+            self.filters.into_into_dart().into_dart(),
+            self.heat_glass.into_into_dart().into_dart(),
+            self.spectral.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::chart::PrintCurveJob
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::chart::PrintCurveJob>
+    for crate::api::chart::PrintCurveJob
+{
+    fn into_into_dart(self) -> crate::api::chart::PrintCurveJob {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::print::PrintJob {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -1556,6 +1599,20 @@ impl SseEncode for crate::api::chart::PrintCurve {
         <Vec<f64>>::sse_encode(self.shift, serializer);
         <Vec<f64>>::sse_encode(self.log_e, serializer);
         <Vec<Vec<f64>>>::sse_encode(self.density, serializer);
+    }
+}
+
+impl SseEncode for crate::api::chart::PrintCurveJob {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.film, serializer);
+        <String>::sse_encode(self.paper, serializer);
+        <f64>::sse_encode(self.minutes, serializer);
+        <f64>::sse_encode(self.temp_c, serializer);
+        <f64>::sse_encode(self.print_ev, serializer);
+        <String>::sse_encode(self.filters, serializer);
+        <Option<String>>::sse_encode(self.heat_glass, serializer);
+        <bool>::sse_encode(self.spectral, serializer);
     }
 }
 

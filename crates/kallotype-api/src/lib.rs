@@ -25,8 +25,8 @@ pub mod roll;
 pub mod selection;
 
 pub use chart::{
-    FilmCurve, FrameChart, PaperChart, PrintChart, chart, chart_for, film_curve, paper_chart,
-    print_chart,
+    FilmCurve, FrameChart, PaperChart, PrintChart, PrintChartOptions, chart, chart_for, film_curve,
+    paper_chart, print_chart, print_chart_with,
 };
 pub use contact::{ContactOptions, ContactOutcome, contact, ladder};
 pub use error::Error;

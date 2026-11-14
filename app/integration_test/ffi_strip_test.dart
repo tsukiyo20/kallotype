@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:kallo_ui/lab/ffi_model.dart';
+import 'package:kallo_ui/lab/chart.dart';
 import 'package:kallo_ui/lab/model.dart';
 import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/strip.dart';
@@ -158,6 +159,50 @@ void main() {
       'further $renders ms, cached ${cachedWatch.elapsedMilliseconds} ms',
     );
     expect(renders, hasLength(6));
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
+  test('the print curve is drawn under the enlarger', () async {
+    final bool loaded = await loadLinkedModel();
+    expect(loaded, isTrue, reason: 'the dynamic library should load');
+    final Model model = Model.find();
+
+    final PrintCurve? base = await model.printCurve(
+      film: 'vision3_500t',
+      paper: 'portra_endura',
+      minutes: 6,
+      tempC: 20,
+    );
+    expect(base, isNotNull);
+    expect(base!.logE, isNotEmpty);
+    expect(base.density, hasLength(base.logE.length));
+
+    final PrintCurve? over = await model.printCurve(
+      film: 'vision3_500t',
+      paper: 'portra_endura',
+      minutes: 6,
+      tempC: 20,
+      printEv: 1,
+    );
+    expect(over, isNotNull);
+    expect(
+      over!.shift[0],
+      greaterThan(base.shift[0]),
+      reason: 'a stop of timer moves the curve under the paper',
+    );
+
+    final PrintCurve? filtered = await model.printCurve(
+      film: 'vision3_500t',
+      paper: 'portra_endura',
+      minutes: 6,
+      tempC: 20,
+      filters: '30M',
+    );
+    expect(filtered, isNotNull);
+    expect(
+      filtered!.shift,
+      isNot(equals(base.shift)),
+      reason: 'the colour pack is part of the enlarger',
+    );
   }, timeout: const Timeout(Duration(minutes: 5)));
 
   testWidgets('the develop step previews from the bench session', (

@@ -117,12 +117,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<PrintReport> crateApiPrintMakePrint({required PrintJob job});
 
-  Future<PrintCurve> crateApiChartMakePrintCurve({
-    required String film,
-    required String paper,
-    required double minutes,
-    required double tempC,
-  });
+  Future<PrintCurve> crateApiChartMakePrintCurve({required PrintCurveJob job});
 
   Stream<RollProgress> crateApiRollMakeRoll({required RollJob job});
 
@@ -412,20 +407,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "make_print", argNames: ["job"]);
 
   @override
-  Future<PrintCurve> crateApiChartMakePrintCurve({
-    required String film,
-    required String paper,
-    required double minutes,
-    required double tempC,
-  }) {
+  Future<PrintCurve> crateApiChartMakePrintCurve({required PrintCurveJob job}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(film, serializer);
-          sse_encode_String(paper, serializer);
-          sse_encode_f_64(minutes, serializer);
-          sse_encode_f_64(tempC, serializer);
+          sse_encode_box_autoadd_print_curve_job(job, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -438,17 +425,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiChartMakePrintCurveConstMeta,
-        argValues: [film, paper, minutes, tempC],
+        argValues: [job],
         apiImpl: this,
       ),
     );
   }
 
   TaskConstMeta get kCrateApiChartMakePrintCurveConstMeta =>
-      const TaskConstMeta(
-        debugName: "make_print_curve",
-        argNames: ["film", "paper", "minutes", "tempC"],
-      );
+      const TaskConstMeta(debugName: "make_print_curve", argNames: ["job"]);
 
   @override
   Stream<RollProgress> crateApiRollMakeRoll({required RollJob job}) {
@@ -562,6 +546,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PreviewJob dco_decode_box_autoadd_preview_job(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_preview_job(raw);
+  }
+
+  @protected
+  PrintCurveJob dco_decode_box_autoadd_print_curve_job(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_print_curve_job(raw);
   }
 
   @protected
@@ -779,6 +769,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PrintCurveJob dco_decode_print_curve_job(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return PrintCurveJob(
+      film: dco_decode_String(arr[0]),
+      paper: dco_decode_String(arr[1]),
+      minutes: dco_decode_f_64(arr[2]),
+      tempC: dco_decode_f_64(arr[3]),
+      printEv: dco_decode_f_64(arr[4]),
+      filters: dco_decode_String(arr[5]),
+      heatGlass: dco_decode_opt_String(arr[6]),
+      spectral: dco_decode_bool(arr[7]),
+    );
+  }
+
+  @protected
   PrintJob dco_decode_print_job(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -977,6 +985,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PreviewJob sse_decode_box_autoadd_preview_job(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_preview_job(deserializer));
+  }
+
+  @protected
+  PrintCurveJob sse_decode_box_autoadd_print_curve_job(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_print_curve_job(deserializer));
   }
 
   @protected
@@ -1263,6 +1279,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PrintCurveJob sse_decode_print_curve_job(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_film = sse_decode_String(deserializer);
+    final var_paper = sse_decode_String(deserializer);
+    final var_minutes = sse_decode_f_64(deserializer);
+    final var_tempC = sse_decode_f_64(deserializer);
+    final var_printEv = sse_decode_f_64(deserializer);
+    final var_filters = sse_decode_String(deserializer);
+    final var_heatGlass = sse_decode_opt_String(deserializer);
+    final var_spectral = sse_decode_bool(deserializer);
+    return PrintCurveJob(
+      film: var_film,
+      paper: var_paper,
+      minutes: var_minutes,
+      tempC: var_tempC,
+      printEv: var_printEv,
+      filters: var_filters,
+      heatGlass: var_heatGlass,
+      spectral: var_spectral,
+    );
+  }
+
+  @protected
   PrintJob sse_decode_print_job(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     final var_input = sse_decode_String(deserializer);
@@ -1521,6 +1560,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_print_curve_job(
+    PrintCurveJob self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_print_curve_job(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_print_job(
     PrintJob self,
     SseSerializer serializer,
@@ -1733,6 +1781,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_prim_f_64_strict(self.shift, serializer);
     sse_encode_list_prim_f_64_strict(self.logE, serializer);
     sse_encode_list_list_prim_f_64_strict(self.density, serializer);
+  }
+
+  @protected
+  void sse_encode_print_curve_job(
+    PrintCurveJob self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.film, serializer);
+    sse_encode_String(self.paper, serializer);
+    sse_encode_f_64(self.minutes, serializer);
+    sse_encode_f_64(self.tempC, serializer);
+    sse_encode_f_64(self.printEv, serializer);
+    sse_encode_String(self.filters, serializer);
+    sse_encode_opt_String(self.heatGlass, serializer);
+    sse_encode_bool(self.spectral, serializer);
   }
 
   @protected

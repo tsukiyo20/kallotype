@@ -72,6 +72,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PreviewJob dco_decode_box_autoadd_preview_job(dynamic raw);
 
   @protected
+  PrintCurveJob dco_decode_box_autoadd_print_curve_job(dynamic raw);
+
+  @protected
   PrintJob dco_decode_box_autoadd_print_job(dynamic raw);
 
   @protected
@@ -127,6 +130,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PrintCurve dco_decode_print_curve(dynamic raw);
+
+  @protected
+  PrintCurveJob dco_decode_print_curve_job(dynamic raw);
 
   @protected
   PrintJob dco_decode_print_job(dynamic raw);
@@ -197,6 +203,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PreviewJob sse_decode_box_autoadd_preview_job(SseDeserializer deserializer);
 
   @protected
+  PrintCurveJob sse_decode_box_autoadd_print_curve_job(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PrintJob sse_decode_box_autoadd_print_job(SseDeserializer deserializer);
 
   @protected
@@ -254,6 +265,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PrintCurve sse_decode_print_curve(SseDeserializer deserializer);
+
+  @protected
+  PrintCurveJob sse_decode_print_curve_job(SseDeserializer deserializer);
 
   @protected
   PrintJob sse_decode_print_job(SseDeserializer deserializer);
@@ -340,6 +354,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_print_curve_job(
+    PrintCurveJob self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_print_job(
     PrintJob self,
     SseSerializer serializer,
@@ -416,6 +436,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_print_curve(PrintCurve self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_print_curve_job(PrintCurveJob self, SseSerializer serializer);
 
   @protected
   void sse_encode_print_job(PrintJob self, SseSerializer serializer);

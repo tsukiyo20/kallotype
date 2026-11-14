@@ -156,6 +156,10 @@ abstract class Model {
     required String paper,
     required double minutes,
     required double tempC,
+    double printEv = 0,
+    String filters = '',
+    String? heatGlass,
+    bool spectral = false,
   });
 
   /// Ask the model what stock it carries.
@@ -410,6 +414,10 @@ class ProcessModel implements Model {
     required String paper,
     required double minutes,
     required double tempC,
+    double printEv = 0,
+    String filters = '',
+    String? heatGlass,
+    bool spectral = false,
   }) async => null;
 
   @override

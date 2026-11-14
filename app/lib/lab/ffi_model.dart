@@ -281,12 +281,22 @@ class FfiModel implements Model {
     required String paper,
     required double minutes,
     required double tempC,
+    double printEv = 0,
+    String filters = '',
+    String? heatGlass,
+    bool spectral = false,
   }) async {
     final chart_api.PrintCurve curve = await chart_api.makePrintCurve(
-      film: film,
-      paper: paper,
-      minutes: minutes,
-      tempC: tempC,
+      job: chart_api.PrintCurveJob(
+        film: film,
+        paper: paper,
+        minutes: minutes,
+        tempC: tempC,
+        printEv: printEv,
+        filters: filters,
+        heatGlass: heatGlass,
+        spectral: spectral,
+      ),
     );
     return PrintCurve(
       film: curve.film,

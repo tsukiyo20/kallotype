@@ -268,6 +268,41 @@ pub fn print_chart(
     minutes: f64,
     temp_c: f64,
 ) -> Result<PrintChart, Error> {
+    print_chart_with(
+        film_id,
+        paper_id,
+        minutes,
+        temp_c,
+        &PrintChartOptions::default(),
+    )
+}
+
+/// The enlarger settings a print curve is drawn under.
+#[derive(Debug, Clone, Default)]
+pub struct PrintChartOptions {
+    /// Extra print exposure in stops, on top of the solved balance.
+    pub print_ev: f64,
+    /// The enlarger's colour pack, in Kodak CC units.
+    pub filters: String,
+    /// A heat-absorbing glass in the light path, by name.
+    pub heat_glass: Option<String>,
+    /// Print through the spectral path.
+    pub spectral: bool,
+}
+
+/// The print curve under one enlarger setting.
+///
+/// The timer and the light path are part of the balance, so the curve the panel
+/// draws moves when they do. The colour pack and the heat glass are already in
+/// the selection; a non-empty pack or a glass turns on the spectral print in
+/// the model, and the shift the curve is drawn under includes it.
+pub fn print_chart_with(
+    film_id: &str,
+    paper_id: &str,
+    minutes: f64,
+    temp_c: f64,
+    options: &PrintChartOptions,
+) -> Result<PrintChart, Error> {
     if !(minutes.is_finite() && minutes > 0.0) {
         return Err(Error::InvalidNumber {
             flag: "--dev",
@@ -280,10 +315,16 @@ pub fn print_chart(
         paper: paper_id.to_owned(),
         dev_time: Some(minutes),
         temp: Some(temp_c),
+        filters: options.filters.clone(),
+        heat_glass: options.heat_glass.clone(),
+        spectral: options.spectral,
+        // The curve is the paper under the print; the scan is after it, so
+        // only the print stage of the spectral switch belongs here.
+        spectral_print: options.spectral,
         ..StockChoice::default()
     };
     let selection = resolve(&choice)?;
-    let prepared = selection.prepare(0.0, false)?;
+    let prepared = selection.prepare_with_film(0.0, options.print_ev, false, selection.film)?;
     let paper = selection.paper.channel;
     let shift = prepared.print_shift();
     // The negative's exposure: clear film at the right, the densest shadow at
@@ -412,6 +453,45 @@ mod tests {
         }
         let longer = film_curve("vision3_500t", 15.0, 20.0).expect("the film exists");
         assert!(longer.gamma[0] > curve.gamma[0]);
+    }
+
+    #[test]
+    fn the_print_curve_moves_with_the_timer_and_the_pack() {
+        let base =
+            print_chart("vision3_500t", "portra_endura", 9.0, 20.0).expect("the stocks exist");
+        let over = print_chart_with(
+            "vision3_500t",
+            "portra_endura",
+            9.0,
+            20.0,
+            &PrintChartOptions {
+                print_ev: 1.0,
+                ..PrintChartOptions::default()
+            },
+        )
+        .expect("the stocks exist");
+        assert!(
+            over.shift[0] > base.shift[0],
+            "one stop of timer should move the print curve: {:?} against {:?}",
+            over.shift,
+            base.shift
+        );
+
+        let filtered = print_chart_with(
+            "vision3_500t",
+            "portra_endura",
+            9.0,
+            20.0,
+            &PrintChartOptions {
+                filters: "30M".to_owned(),
+                ..PrintChartOptions::default()
+            },
+        )
+        .expect("the stocks exist");
+        assert_ne!(
+            filtered.shift, base.shift,
+            "a colour pack is part of the enlarger the curve is drawn under"
+        );
     }
 
     #[test]

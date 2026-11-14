@@ -4,7 +4,7 @@
 //! base, fog and mask the instrument sees — not the curve evaluated at nine
 //! exposures.
 
-use kallotype_api::{chart_for, film_curve, paper_chart, print_chart};
+use kallotype_api::{chart_for, film_curve, paper_chart, print_chart_with, PrintChartOptions};
 
 /// One frame's chart.
 #[derive(Debug, Clone)]
@@ -26,11 +26,7 @@ pub struct ChartFrame {
 }
 
 /// Measure a stock's strip at a ladder of development times.
-pub fn make_chart(
-    film: String,
-    times: Vec<f64>,
-    temp_c: f64,
-) -> Result<Vec<ChartFrame>, String> {
+pub fn make_chart(film: String, times: Vec<f64>, temp_c: f64) -> Result<Vec<ChartFrame>, String> {
     let frames = chart_for(&film, &times, temp_c).map_err(|error| error.to_string())?;
     Ok(frames
         .into_iter()
@@ -40,11 +36,7 @@ pub fn make_chart(
             gamma: frame.gamma.to_vec(),
             d_min: frame.d_min.to_vec(),
             d_max: frame.d_max.to_vec(),
-            patches: frame
-                .patches
-                .iter()
-                .map(|patch| patch.to_vec())
-                .collect(),
+            patches: frame.patches.iter().map(|patch| patch.to_vec()).collect(),
             log_e: frame.log_e,
         })
         .collect())
@@ -72,11 +64,7 @@ pub struct FilmCurveChart {
 }
 
 /// The film's developed curve, by id.
-pub fn make_film_curve(
-    film: String,
-    minutes: f64,
-    temp_c: f64,
-) -> Result<FilmCurveChart, String> {
+pub fn make_film_curve(film: String, minutes: f64, temp_c: f64) -> Result<FilmCurveChart, String> {
     let curve = film_curve(&film, minutes, temp_c).map_err(|error| error.to_string())?;
     Ok(FilmCurveChart {
         film: curve.film,
@@ -86,11 +74,7 @@ pub fn make_film_curve(
         d_min: curve.d_min.to_vec(),
         d_max: curve.d_max.to_vec(),
         log_e: curve.log_e,
-        density: curve
-            .density
-            .iter()
-            .map(|sample| sample.to_vec())
-            .collect(),
+        density: curve.density.iter().map(|sample| sample.to_vec()).collect(),
     })
 }
 
@@ -155,15 +139,42 @@ pub struct PrintCurve {
     pub density: Vec<Vec<f64>>,
 }
 
+/// What a print curve is asked for.
+#[derive(Debug, Clone)]
+pub struct PrintCurveJob {
+    /// Film stock id.
+    pub film: String,
+    /// Paper stock id.
+    pub paper: String,
+    /// Development time in minutes.
+    pub minutes: f64,
+    /// Developer temperature in degrees Celsius.
+    pub temp_c: f64,
+    /// Extra print exposure in stops.
+    pub print_ev: f64,
+    /// The enlarger's colour pack, in Kodak CC units.
+    pub filters: String,
+    /// A heat-absorbing glass in the light path, by name.
+    pub heat_glass: Option<String>,
+    /// Print through the spectral path.
+    pub spectral: bool,
+}
+
 /// The print curve, for a film, a paper and a development.
-pub fn make_print_curve(
-    film: String,
-    paper: String,
-    minutes: f64,
-    temp_c: f64,
-) -> Result<PrintCurve, String> {
-    let chart = print_chart(&film, &paper, minutes, temp_c)
-        .map_err(|error| error.to_string())?;
+pub fn make_print_curve(job: PrintCurveJob) -> Result<PrintCurve, String> {
+    let chart = print_chart_with(
+        &job.film,
+        &job.paper,
+        job.minutes,
+        job.temp_c,
+        &PrintChartOptions {
+            print_ev: job.print_ev,
+            filters: job.filters,
+            heat_glass: job.heat_glass,
+            spectral: job.spectral,
+        },
+    )
+    .map_err(|error| error.to_string())?;
     Ok(PrintCurve {
         film: chart.film,
         paper: chart.paper,
@@ -171,10 +182,6 @@ pub fn make_print_curve(
         temp_c: chart.temp_c,
         shift: chart.shift.to_vec(),
         log_e: chart.log_e,
-        density: chart
-            .density
-            .iter()
-            .map(|sample| sample.to_vec())
-            .collect(),
+        density: chart.density.iter().map(|sample| sample.to_vec()).collect(),
     })
 }
