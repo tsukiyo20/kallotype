@@ -1365,6 +1365,7 @@ name = "rust_lib_kallotype"
 version = "0.1.0"
 dependencies = [
  "flutter_rust_bridge",
+ "image",
  "kallotype-api",
  "kallotype-io",
 ]

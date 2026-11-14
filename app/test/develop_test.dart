@@ -141,7 +141,7 @@ void main() {
     // 6000 wide, the wall's copy is 1600, and walking up decodes the rest.
     final Print? shown = await Print.read(image);
     expect(shown, isNotNull);
-    expect(shown!.image.width, 1600);
+    expect(shown!.image!.width, 1600);
     expect(shown.pixels, const Size(6000, 4000));
     final ui.Image? everyPixel = await shown.full();
     expect(everyPixel, isNotNull);

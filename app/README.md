@@ -109,6 +109,17 @@ The gallery, rack and frame goldens draw a test card, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
 something on the wall to be about.
 
+The wall is metadata first. An export is scanned by its header, never decoded
+to make a list; the rack and the gallery ask for a 512-pixel thumbnail only
+when a card is built. The thumbnail cache keeps at most 64 MB of decoded paper
+and writes a PNG beside the app, and both rooms are lazy lists, so a thousand
+prints build a screenful of cards rather than a thousand. On macOS the small
+file is made by ImageIO, which never asks the app to hold the 26-megapixel
+source; other platforms fall back to the model's image reader and then to the
+engine. A synthetic thousand-print library stays around 200 MB with the rack
+open in Release, and the first visit to a card writes the thumbnail the next
+visit reads.
+
 The test loads the bundled faces from disk before it draws, so the picture is in
 the product's own type rather than the runner's. That is the reason the fonts are
 bundled — and both are under the SIL Open Font License, so a public repository

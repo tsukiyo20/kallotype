@@ -9,6 +9,7 @@ import 'api/contact.dart';
 import 'api/preview.dart';
 import 'api/print.dart';
 import 'api/roll.dart';
+import 'api/thumbnail.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -72,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1232128482;
+  int get rustContentHash => 1314745626;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -120,6 +121,12 @@ abstract class RustLibApi extends BaseApi {
   Future<PrintCurve> crateApiChartMakePrintCurve({required PrintCurveJob job});
 
   Stream<RollProgress> crateApiRollMakeRoll({required RollJob job});
+
+  Future<void> crateApiThumbnailMakeThumbnail({
+    required String input,
+    required String output,
+    required int width,
+  });
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_PreviewSession;
@@ -468,6 +475,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     debugName: "make_roll",
     argNames: ["job", "progress"],
   );
+
+  @override
+  Future<void> crateApiThumbnailMakeThumbnail({
+    required String input,
+    required String output,
+    required int width,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(input, serializer);
+          sse_encode_String(output, serializer);
+          sse_encode_u_32(width, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiThumbnailMakeThumbnailConstMeta,
+        argValues: [input, output, width],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiThumbnailMakeThumbnailConstMeta =>
+      const TaskConstMeta(
+        debugName: "make_thumbnail",
+        argNames: ["input", "output", "width"],
+      );
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_PreviewSession => wire

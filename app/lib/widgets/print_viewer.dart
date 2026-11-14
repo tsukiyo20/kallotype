@@ -8,6 +8,7 @@ import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/print.dart';
+import '../lab/thumbnails.dart';
 import 'wall.dart';
 
 /// One print, held up inside the drying rack's room.
@@ -38,17 +39,29 @@ class PrintViewer extends StatefulWidget {
 class _PrintViewerState extends State<PrintViewer> {
   /// The file's copy, when the rack's copy is not the whole picture.
   ui.Image? _full;
+  PrintThumbnail? _thumbnail;
   final FocusNode _keys = FocusNode(debugLabel: 'print-viewer');
 
   @override
   void initState() {
     super.initState();
+    _loadThumbnail();
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _keys.requestFocus();
       }
     });
+  }
+
+  Future<void> _loadThumbnail() async {
+    final PrintThumbnail? thumbnail = await PrintThumbnailCache.instance
+        .acquire(widget.print);
+    if (!mounted || _full != null) {
+      thumbnail?.release();
+      return;
+    }
+    setState(() => _thumbnail = thumbnail);
   }
 
   Future<void> _load() async {
@@ -58,13 +71,21 @@ class _PrintViewerState extends State<PrintViewer> {
       return;
     }
     if (full != null) {
-      setState(() => _full = full);
+      final PrintThumbnail? old = _thumbnail;
+      setState(() {
+        _full = full;
+        _thumbnail = null;
+      });
+      if (old != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => old.release());
+      }
     }
   }
 
   @override
   void dispose() {
     _full?.dispose();
+    _thumbnail?.release();
     _keys.dispose();
     super.dispose();
   }
@@ -74,7 +95,7 @@ class _PrintViewerState extends State<PrintViewer> {
     final KalloStrings s = KalloStrings.of(context);
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloRack rack = KalloRack.of(colors.brightness);
-    final ui.Image image = _full ?? widget.print.image;
+    final ui.Image? image = _full ?? _thumbnail?.image ?? widget.print.image;
     final Print print = widget.print;
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -145,7 +166,7 @@ class _PrintViewerState extends State<PrintViewer> {
     );
   }
 
-  Widget _picture(ui.Image image, Print print, KalloColors colors) {
+  Widget _picture(ui.Image? image, Print print, KalloColors colors) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints room) {
         final double heightPerWidth = PrintSheet.heightPerWidth(
@@ -171,11 +192,13 @@ class _PrintViewerState extends State<PrintViewer> {
                 paper: colors.print,
                 outline: colors.hairline,
                 light: 1,
-                child: RawImage(
-                  image: image,
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.high,
-                ),
+                child: image == null
+                    ? ColoredBox(color: colors.fill.withValues(alpha: 0.35))
+                    : RawImage(
+                        image: image,
+                        fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                      ),
               ),
             ),
           ),

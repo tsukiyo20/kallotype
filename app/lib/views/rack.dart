@@ -7,6 +7,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/print.dart';
 import '../lab/print_out.dart';
+import '../widgets/print_image.dart';
 import '../widgets/print_viewer.dart';
 import '../widgets/wall.dart';
 
@@ -245,7 +246,7 @@ class _RackRoom extends StatelessWidget {
                   ),
                 ),
               ),
-              SingleChildScrollView(
+              ListView.builder(
                 key: const Key('rack-scroll'),
                 padding: EdgeInsets.fromLTRB(
                   side,
@@ -253,22 +254,17 @@ class _RackRoom extends StatelessWidget {
                   side,
                   40,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    for (int i = 0; i < lines.length; i++)
-                      _Line(
-                        key: ValueKey<String>('rack-line-$i'),
-                        prints: lines[i],
-                        width: width,
-                        lineWidth: lineWidth,
-                        gap: gap,
-                        rack: rack,
-                        first: i == 0,
-                        startIndex: i * columns,
-                        onPrint: onPrint,
-                      ),
-                  ],
+                itemCount: lines.length,
+                itemBuilder: (BuildContext context, int i) => _Line(
+                  key: ValueKey<String>('rack-line-$i'),
+                  prints: lines[i],
+                  width: width,
+                  lineWidth: lineWidth,
+                  gap: gap,
+                  rack: rack,
+                  first: i == 0,
+                  startIndex: i * columns,
+                  onPrint: onPrint,
                 ),
               ),
               if (jobs.isNotEmpty)
@@ -443,11 +439,7 @@ class _HangingPrintState extends State<_HangingPrint> {
                               alpha: 0.35,
                             ),
                             light: 1,
-                            child: RawImage(
-                              image: print.image,
-                              fit: BoxFit.cover,
-                              filterQuality: FilterQuality.medium,
-                            ),
+                            child: PrintImage(print: print),
                           ),
                         ),
                       ),

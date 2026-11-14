@@ -14,9 +14,11 @@ import '../lab/film_export.dart';
 import '../lab/model.dart';
 import '../lab/print.dart';
 import '../lab/stock.dart';
+import '../lab/thumbnails.dart';
 import '../widgets/export_sheet.dart';
 import '../widgets/film_frame.dart';
 import '../widgets/lens.dart';
+import '../widgets/print_image.dart';
 import '../widgets/wall.dart';
 
 /// The gallery: the last place. One wall, every print, one lamp.
@@ -90,6 +92,7 @@ class _GalleryState extends State<Gallery> {
   /// put away, and clicking still walks up to the whole frame.
   Print? _lensFor;
   ui.Image? _lens;
+  Timer? _lensTimer;
   Offset _lensAt = Offset.zero;
   Offset _lensPoint = Offset.zero;
   double _lensWidth = 0;
@@ -117,7 +120,13 @@ class _GalleryState extends State<Gallery> {
       _lensFor = print;
       _lensPrintNumber = printNumber;
       _dropLens();
-      unawaited(_loadLens(print));
+      // A sweep across a wall must not decode one file per frame. The glass
+      // waits until the pointer rests, then asks for the print under it.
+      _lensTimer?.cancel();
+      _lensTimer = Timer(
+        const Duration(milliseconds: 90),
+        () => unawaited(_loadLens(print)),
+      );
     } else {
       _lensPrintNumber = printNumber;
     }
@@ -132,6 +141,7 @@ class _GalleryState extends State<Gallery> {
     if (_lensFor == null) {
       return;
     }
+    _lensTimer?.cancel();
     setState(() {
       _lensFor = null;
       _dropLens();
@@ -173,6 +183,7 @@ class _GalleryState extends State<Gallery> {
 
   @override
   void dispose() {
+    _lensTimer?.cancel();
     _lens?.dispose();
     super.dispose();
   }
@@ -194,6 +205,7 @@ class _GalleryState extends State<Gallery> {
     final Print? lens = _lensFor;
     if (!widget.loupe ||
         (lens != null && !widget.prints.any((Print p) => identical(p, lens)))) {
+      _lensTimer?.cancel();
       _lensFor = null;
       _dropLens();
     }
@@ -281,53 +293,77 @@ class _GalleryState extends State<Gallery> {
           (room.maxHeight - content) / 2,
         );
 
+        final List<List<Print>> lines = <List<Print>>[
+          for (int i = 0; i < prints.length; i += columns)
+            prints.sublist(i, math.min(i + columns, prints.length)),
+        ];
+
         return Stack(
           key: _field,
           fit: StackFit.expand,
           children: <Widget>[
             Wall(wall: wall, light: light),
             if (prints.isNotEmpty)
-              SingleChildScrollView(
+              ListView.builder(
+                key: const PageStorageKey<String>('gallery-wall'),
                 padding: EdgeInsets.fromLTRB(margin, top, margin, floor),
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: gap,
-                  runSpacing: gap,
-                  children: <Widget>[
-                    for (int i = 0; i < prints.length; i++)
-                      _Hung(
-                        print: prints[i],
-                        printNumber: prints[i].printNumber,
-                        wall: wall,
-                        width: widthOf(prints[i]),
-                        light: light,
-                        printed: printed,
-                        cursor: widget.loupe && _lensFor != null
-                            ? SystemMouseCursors.none
-                            : SystemMouseCursors.click,
-                        onHover: widget.loupe
-                            ? (Offset local, Offset global) => _lookAt(
-                                prints[i],
-                                prints[i].printNumber,
-                                local,
-                                widthOf(prints[i]),
-                                global,
-                              )
-                            : null,
-                        onLeave: widget.loupe ? _leaveLens : null,
-                        onTap: () => _walkUp(prints[i], prints[i].printNumber),
+                itemCount: lines.length,
+                itemBuilder: (BuildContext context, int row) {
+                  final List<Print> line = lines[row];
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: row == lines.length - 1 ? 0 : gap,
+                    ),
+                    child: SizedBox(
+                      height: height,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          for (int i = 0; i < line.length; i++) ...<Widget>[
+                            if (i > 0) const SizedBox(width: gap),
+                            SizedBox(
+                              width: widthOf(line[i]),
+                              child: _Hung(
+                                print: line[i],
+                                printNumber: line[i].printNumber,
+                                wall: wall,
+                                width: widthOf(line[i]),
+                                light: light,
+                                printed: printed,
+                                cursor: widget.loupe && _lensFor != null
+                                    ? SystemMouseCursors.none
+                                    : SystemMouseCursors.click,
+                                onHover: widget.loupe
+                                    ? (Offset local, Offset global) => _lookAt(
+                                        line[i],
+                                        line[i].printNumber,
+                                        local,
+                                        widthOf(line[i]),
+                                        global,
+                                      )
+                                    : null,
+                                onLeave: widget.loupe ? _leaveLens : null,
+                                onTap: () =>
+                                    _walkUp(line[i], line[i].printNumber),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                  ],
-                ),
+                    ),
+                  );
+                },
               ),
-            if (widget.loupe && _lensFor != null)
+            if (widget.loupe &&
+                _lensFor != null &&
+                (_lens ?? _lensFor!.image) != null)
               _Lens(
                 key: const Key('lens'),
                 at: _lensAt,
                 width: _lensWidth,
                 point: _lensPoint,
-                image: _lens ?? _lensFor!.image,
+                image: (_lens ?? _lensFor!.image)!,
                 film: _lensFor!.film,
                 printNumber: _lensPrintNumber,
                 process: _lensFor!.process,
@@ -410,9 +446,10 @@ class _Loupe extends StatefulWidget {
 }
 
 class _LoupeState extends State<_Loupe> {
-  /// The file's own pixels, once they have been decoded. The wall's copy stands
+  /// The file's own pixels, once they have been decoded. The thumbnail stands
   /// in until then, which is what the eye was already looking at.
   ui.Image? _full;
+  PrintThumbnail? _thumbnail;
 
   /// Magnification over the fit: 1 is the whole frame, and the ceiling is the
   /// scale at which one image pixel is one device pixel.
@@ -436,12 +473,23 @@ class _LoupeState extends State<_Loupe> {
   @override
   void initState() {
     super.initState();
+    unawaited(_loadThumbnail());
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _keys.requestFocus();
       }
     });
+  }
+
+  Future<void> _loadThumbnail() async {
+    final PrintThumbnail? thumbnail = await PrintThumbnailCache.instance
+        .acquire(widget.print);
+    if (!mounted || _full != null) {
+      thumbnail?.release();
+      return;
+    }
+    setState(() => _thumbnail = thumbnail);
   }
 
   Future<void> _load() async {
@@ -457,13 +505,14 @@ class _LoupeState extends State<_Loupe> {
   void dispose() {
     _exportedTimer?.cancel();
     _full?.dispose();
+    _thumbnail?.release();
     _keys.dispose();
     super.dispose();
   }
 
-  /// The image and the size it says it is: the file's, or the wall's copy when
-  /// the print had no file behind it.
-  ({ui.Image image, Size pixels}) get _pixels {
+  /// The image and the size it says it is: the file's, the thumbnail's, or the
+  /// wall's copy when the print had no file behind it.
+  ({ui.Image image, Size pixels})? get _pixels {
     final ui.Image? full = _full;
     if (full != null) {
       final Size? declared = widget.print.pixels;
@@ -472,18 +521,40 @@ class _LoupeState extends State<_Loupe> {
         pixels: declared ?? Size(full.width.toDouble(), full.height.toDouble()),
       );
     }
-    final ui.Image wall = widget.print.image;
+    final ui.Image? image = _thumbnail?.image ?? widget.print.image;
+    if (image == null) {
+      return null;
+    }
     return (
-      image: wall,
+      image: image,
       pixels:
           widget.print.pixels ??
-          Size(wall.width.toDouble(), wall.height.toDouble()),
+          Size(image.width.toDouble(), image.height.toDouble()),
     );
   }
 
-  double get _aspect {
-    final Size pixels = _pixels.pixels;
-    return pixels.width / pixels.height;
+  Widget _waiting(BuildContext context) {
+    final KalloColors colors = KalloScope.colorsOf(context);
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
+      },
+      child: Focus(
+        focusNode: _keys,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            Wall(wall: widget.wall, light: widget.light),
+            Center(
+              child: Text(
+                widget.print.folio,
+                style: KalloType.title.copyWith(color: colors.inkMuted),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// One image pixel per device pixel, as a magnification over the fit.
@@ -562,6 +633,10 @@ class _LoupeState extends State<_Loupe> {
     final KalloStrings s = KalloStrings.of(context);
     final double dpr = MediaQuery.devicePixelRatioOf(context);
     final double light = widget.light;
+    final ({ui.Image image, Size pixels})? shown = _pixels;
+    if (shown == null) {
+      return _waiting(context);
+    }
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -578,8 +653,8 @@ class _LoupeState extends State<_Loupe> {
             Wall(wall: widget.wall, light: light),
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints room) {
-                final Size pixels = _pixels.pixels;
-                final double aspect = _aspect;
+                final Size pixels = shown.pixels;
+                final double aspect = pixels.width / pixels.height;
                 final double perWidth = FilmFrameMetrics.heightPerWidthFor(
                   aspect,
                 );
@@ -652,7 +727,7 @@ class _LoupeState extends State<_Loupe> {
                         child: Stack(
                           children: <Widget>[
                             FilmFrame(
-                              image: _pixels.image,
+                              image: shown.image,
                               width: metrics.outer.width,
                               source: source,
                               film: widget.print.film,
@@ -939,12 +1014,10 @@ class _Hung extends StatelessWidget {
             child: GestureDetector(
               onTap: onTap,
               behavior: HitTestBehavior.opaque,
-              child: FilmFrame(
-                image: print.image,
+              child: PrintFilmFrame(
+                print: print,
                 width: width,
-                film: print.film,
                 printNumber: printNumber,
-                process: print.process,
                 light: printed,
                 semanticLabel: filmEdgeName(print.film).isEmpty
                     ? '${print.name} · ${printNumber.toString().padLeft(2, '0')}'

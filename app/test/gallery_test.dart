@@ -59,7 +59,7 @@ void main() {
       shot = print!;
       return folder;
     }))!;
-    card = shot.image;
+    card = shot.image!;
     addTearDown(() => folder.delete(recursive: true));
     addTearDown(card.dispose);
 

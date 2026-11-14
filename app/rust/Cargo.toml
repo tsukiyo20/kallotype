@@ -16,6 +16,7 @@ crate-type = ["cdylib", "staticlib"]
 flutter_rust_bridge = "=2.13.0"
 kallotype-api = { path = "../../crates/kallotype-api" }
 kallotype-io = { path = "../../crates/kallotype-io" }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

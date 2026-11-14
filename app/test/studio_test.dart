@@ -18,6 +18,7 @@ import 'package:kallo/views/steps.dart';
 import 'package:kallo/widgets/film_frame.dart';
 import 'package:kallo/widgets/stage_tabs.dart';
 import 'package:kallo/widgets/stepper.dart';
+import 'package:kallo/widgets/print_image.dart';
 import 'package:kallo/widgets/print_viewer.dart';
 import 'package:kallo/widgets/studio_sidebar.dart';
 import 'package:kallo/widgets/wall.dart';
@@ -441,5 +442,81 @@ void main() {
     expect(find.byType(FilmFrame), findsOneWidget);
     expect(find.text('放大镜'), findsOneWidget);
     expect(find.text('灯'), findsOneWidget);
+  });
+
+  testWidgets('a thousand prints do not build a thousand cards', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final List<Print> prints = <Print>[
+      for (int i = 0; i < 1000; i++)
+        Print(
+          image: card,
+          name: 'uji-$i',
+          pixels: const Size(1200, 800),
+          printNumber: 1,
+          film: 'ULTRA MAX 400',
+          paper: 'PORTRA ENDURA',
+          minutes: 9,
+          tempC: 20,
+        ),
+    ];
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: const TestStrip(photo: '/photographs/uji.jpg'),
+        photograph: card,
+        prints: prints,
+        initialChamber: Chamber.rack,
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final int built = find.byType(PrintImage).evaluate().length;
+    expect(built, greaterThan(0));
+    expect(built, lessThan(100));
+    expect(find.byKey(const ValueKey<String>('rack-line-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('rack-line-40')), findsNothing);
+  });
+
+  testWidgets('a thousand prints do not build a thousand frames', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final List<Print> prints = <Print>[
+      for (int i = 0; i < 1000; i++)
+        Print(
+          image: card,
+          name: 'uji-$i',
+          pixels: const Size(1200, 800),
+          printNumber: 1,
+          film: 'ULTRA MAX 400',
+          paper: 'PORTRA ENDURA',
+          minutes: 9,
+          tempC: 20,
+        ),
+    ];
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: const TestStrip(photo: '/photographs/uji.jpg'),
+        photograph: card,
+        prints: prints,
+        initialChamber: Chamber.gallery,
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final int built = find.byType(PrintFilmFrame).evaluate().length;
+    expect(built, greaterThan(0));
+    expect(built, lessThan(100));
   });
 }

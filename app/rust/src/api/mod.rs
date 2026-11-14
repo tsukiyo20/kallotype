@@ -6,3 +6,4 @@ pub mod contact;
 pub mod preview;
 pub mod print;
 pub mod roll;
+pub mod thumbnail;

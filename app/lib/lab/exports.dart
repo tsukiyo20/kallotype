@@ -113,9 +113,14 @@ abstract final class Exports {
   /// Every exported print, oldest first, so that the last one is the one that
   /// would be hanging.
   ///
+  /// This reads metadata and image headers only. A wall with a thousand prints
+  /// should cost a thousand small reads, not a thousand full decodes: the
+  /// pixels are the thumbnail cache's job and belong to the room that shows
+  /// them.
+  ///
   /// A folder that does not exist is an empty gallery, not an error: nobody has
   /// printed anything yet, which is the ordinary state of a darkroom.
-  static Future<List<Print>> read({Directory? folder, int width = 1600}) async {
+  static Future<List<Print>> read({Directory? folder}) async {
     if (folder == null || !folder.existsSync()) {
       return const <Print>[];
     }
@@ -135,9 +140,8 @@ abstract final class Exports {
     );
     final List<Print> prints = <Print>[];
     for (final File image in images) {
-      final Print? print = await Print.read(
+      final Print? print = await Print.scan(
         image,
-        width: width,
         record: metadata[image.path],
       );
       if (print != null) {

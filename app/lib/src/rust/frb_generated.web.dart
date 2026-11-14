@@ -12,6 +12,7 @@ import 'api/contact.dart';
 import 'api/preview.dart';
 import 'api/print.dart';
 import 'api/roll.dart';
+import 'api/thumbnail.dart';
 
 import 'dart:async';
 import 'dart:convert';
