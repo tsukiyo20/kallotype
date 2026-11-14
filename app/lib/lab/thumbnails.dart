@@ -21,15 +21,18 @@ class PrintThumbnail {
   PrintThumbnail._(this.image, this._release);
 
   final ui.Image image;
-  final VoidCallback _release;
+  final void Function({bool drop}) _release;
   bool _released = false;
 
-  void release() {
+  /// Let the image go. [drop] also removes it from the cache instead of
+  /// leaving it for the next card, which is what a viewer's large preview
+  /// wants when the viewer closes.
+  void release({bool drop = false}) {
     if (_released) {
       return;
     }
     _released = true;
-    _release();
+    _release(drop: drop);
   }
 }
 
@@ -54,12 +57,18 @@ class PrintThumbnailCache {
 
   /// The width of the paper the rooms hang. The rack's cards are around 260
   /// points; the gallery's are larger, and the near view reads the file again.
-  static const int width = 512;
+  static const int thumbnailWidth = 512;
+
+  /// The width of the copy a print viewer opens. It is wide enough for the
+  /// window at a device pixel ratio of two, and small enough that opening ten
+  /// prints does not decode ten 26-megapixel files. Deep zoom asks for 4000.
+  static const int previewWidth = 1600;
 
   /// The decoded images the cache may keep. A 512-pixel print is roughly two
   /// to four megabytes in the engine's wide-gamut form; this is enough for the
-  /// cards in a room and its next screen of prefetch.
-  static const int memoryBudget = 64 * 1024 * 1024;
+  /// cards in a room and one viewer's preview, and lets the preview go when
+  /// the viewer closes.
+  static const int memoryBudget = 32 * 1024 * 1024;
 
   /// The small files may live on disk longer than the images live in memory.
   static const int diskBudget = 256 * 1024 * 1024;
@@ -86,10 +95,13 @@ class PrintThumbnailCache {
   ///
   /// The caller must [PrintThumbnail.release] the result when the widget that
   /// holds it goes away.
-  Future<PrintThumbnail?> acquire(Print print) async {
+  Future<PrintThumbnail?> acquire(
+    Print print, {
+    int maxWidth = thumbnailWidth,
+  }) async {
     final ui.Image? ready = print.image;
     if (ready != null) {
-      return PrintThumbnail._(ready, () {});
+      return PrintThumbnail._(ready, ({bool drop = false}) {});
     }
     final String? path = print.path;
     if (path == null) {
@@ -103,13 +115,15 @@ class PrintThumbnailCache {
       Model.log('no thumbnail source at $path: $error');
       return null;
     }
-    final String key = _key(path, stat);
+    final String key = _key(path, stat, maxWidth);
     final _Entry? cached = _entries[key];
     if (cached != null) {
       return _lease(cached);
     }
     final Future<_Entry?> future = _inflight.putIfAbsent(key, () {
-      final Future<_Entry?> next = _enqueue(() => _produce(key, source));
+      final Future<_Entry?> next = _enqueue(
+        () => _produce(key, source, maxWidth),
+      );
       next.whenComplete(() {
         if (identical(_inflight[key], next)) {
           _inflight.remove(key);
@@ -150,14 +164,28 @@ class PrintThumbnailCache {
     _entries.remove(entry.key);
     _entries[entry.key] = entry;
     _evict();
-    return PrintThumbnail._(entry.image, () => _release(entry));
+    return PrintThumbnail._(
+      entry.image,
+      ({bool drop = false}) => _release(entry, drop: drop),
+    );
   }
 
-  void _release(_Entry entry) {
+  void _release(_Entry entry, {bool drop = false}) {
     if (entry.refs > 0) {
       entry.refs--;
     }
+    if (drop && entry.refs == 0) {
+      _remove(entry);
+      return;
+    }
     _evict();
+  }
+
+  void _remove(_Entry entry) {
+    if (_entries.remove(entry.key) != null) {
+      _bytes -= entry.bytes;
+      entry.image.dispose();
+    }
   }
 
   void _evict() {
@@ -178,7 +206,7 @@ class PrintThumbnailCache {
     }
   }
 
-  Future<_Entry?> _produce(String key, File source) async {
+  Future<_Entry?> _produce(String key, File source, int maxWidth) async {
     final _Entry? existing = _entries[key];
     if (existing != null) {
       return existing;
@@ -198,7 +226,7 @@ class PrintThumbnailCache {
         }
       }
     }
-    image ??= await _generate(source, cached);
+    image ??= await _generate(source, cached, maxWidth);
     if (image == null) {
       return null;
     }
@@ -224,7 +252,7 @@ class PrintThumbnailCache {
     }
   }
 
-  Future<ui.Image?> _generate(File source, File? cached) async {
+  Future<ui.Image?> _generate(File source, File? cached, int maxWidth) async {
     if (cached != null) {
       try {
         await cached.parent.create(recursive: true);
@@ -234,13 +262,13 @@ class PrintThumbnailCache {
           ).invokeMethod<void>('make', <String, Object>{
             'input': source.path,
             'output': cached.path,
-            'width': width,
+            'width': maxWidth,
           });
         } else {
           await thumbnail_api.makeThumbnail(
             input: source.path,
             output: cached.path,
-            width: width,
+            width: maxWidth,
           );
         }
         final ui.Image? image = await _decode(cached);
@@ -259,7 +287,7 @@ class PrintThumbnailCache {
           await thumbnail_api.makeThumbnail(
             input: source.path,
             output: cached.path,
-            width: width,
+            width: maxWidth,
           );
           final ui.Image? image = await _decode(cached);
           if (image != null) {
@@ -271,19 +299,23 @@ class PrintThumbnailCache {
         }
       }
     }
-    return _generateWithEngine(source, cached);
+    return _generateWithEngine(source, cached, maxWidth);
   }
 
   /// The fallback when neither the platform nor the model can make a file.
   ///
   /// This path is deliberately last: the engine can be asked for a target
   /// width, but a PNG still decodes at its own size first.
-  Future<ui.Image?> _generateWithEngine(File source, File? cached) async {
+  Future<ui.Image?> _generateWithEngine(
+    File source,
+    File? cached,
+    int maxWidth,
+  ) async {
     try {
       final Uint8List bytes = await source.readAsBytes();
       final ui.Codec codec = await ui.instantiateImageCodec(
         bytes,
-        targetWidth: width,
+        targetWidth: maxWidth,
         allowUpscaling: false,
       );
       final ui.Image image;
@@ -437,9 +469,9 @@ class PrintThumbnailCache {
     }
   }
 
-  static String _key(String path, FileStat stat) {
+  static String _key(String path, FileStat stat, int maxWidth) {
     final String source =
-        '$path|${stat.modified.millisecondsSinceEpoch}|${stat.size}|$width|'
+        '$path|${stat.modified.millisecondsSinceEpoch}|${stat.size}|$maxWidth|'
         '$_version';
     int hash = 0x811c9dc5;
     for (final int unit in utf8.encode(source)) {

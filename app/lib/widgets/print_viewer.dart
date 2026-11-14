@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -37,16 +38,23 @@ class PrintViewer extends StatefulWidget {
 }
 
 class _PrintViewerState extends State<PrintViewer> {
-  /// The file's copy, when the rack's copy is not the whole picture.
-  ui.Image? _full;
+  /// A copy wide enough for the window, loaded at once and dropped on close.
+  PrintThumbnail? _preview;
+
+  /// A wide copy for deep zoom, loaded only after the print is actually
+  /// magnified. A glance at ten prints must not decode ten files at 4000.
+  ui.Image? _detail;
   PrintThumbnail? _thumbnail;
+  bool _askingDetail = false;
   final FocusNode _keys = FocusNode(debugLabel: 'print-viewer');
+  final TransformationController _transform = TransformationController();
 
   @override
   void initState() {
     super.initState();
     _loadThumbnail();
-    _load();
+    _loadPreview();
+    _transform.addListener(_zoomChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _keys.requestFocus();
@@ -57,34 +65,72 @@ class _PrintViewerState extends State<PrintViewer> {
   Future<void> _loadThumbnail() async {
     final PrintThumbnail? thumbnail = await PrintThumbnailCache.instance
         .acquire(widget.print);
-    if (!mounted || _full != null) {
+    if (!mounted || _preview != null || _detail != null) {
       thumbnail?.release();
       return;
     }
     setState(() => _thumbnail = thumbnail);
   }
 
-  Future<void> _load() async {
-    final ui.Image? full = await widget.print.full();
-    if (!mounted) {
-      full?.dispose();
+  Future<void> _loadPreview() async {
+    final PrintThumbnail? preview = await PrintThumbnailCache.instance.acquire(
+      widget.print,
+      maxWidth: PrintThumbnailCache.previewWidth,
+    );
+    if (!mounted || _detail != null) {
+      preview?.release(drop: true);
       return;
     }
-    if (full != null) {
-      final PrintThumbnail? old = _thumbnail;
-      setState(() {
-        _full = full;
-        _thumbnail = null;
-      });
-      if (old != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => old.release());
-      }
+    if (preview == null) {
+      return;
     }
+    final PrintThumbnail? old = _thumbnail;
+    setState(() {
+      _preview = preview;
+      _thumbnail = null;
+    });
+    if (old != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.release());
+    }
+  }
+
+  void _zoomChanged() {
+    if (_detail == null &&
+        !_askingDetail &&
+        _transform.value.getMaxScaleOnAxis() > 1.8) {
+      unawaited(_loadDetail());
+    }
+  }
+
+  Future<void> _loadDetail() async {
+    _askingDetail = true;
+    final ui.Image? detail = await widget.print.magnified(width: 4000);
+    if (!mounted) {
+      detail?.dispose();
+      return;
+    }
+    if (detail == null) {
+      _askingDetail = false;
+      return;
+    }
+    final PrintThumbnail? oldPreview = _preview;
+    final PrintThumbnail? oldThumbnail = _thumbnail;
+    setState(() {
+      _detail = detail;
+      _preview = null;
+      _thumbnail = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      oldPreview?.release(drop: true);
+      oldThumbnail?.release();
+    });
   }
 
   @override
   void dispose() {
-    _full?.dispose();
+    _transform.dispose();
+    _detail?.dispose();
+    _preview?.release(drop: true);
     _thumbnail?.release();
     _keys.dispose();
     super.dispose();
@@ -95,7 +141,8 @@ class _PrintViewerState extends State<PrintViewer> {
     final KalloStrings s = KalloStrings.of(context);
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloRack rack = KalloRack.of(colors.brightness);
-    final ui.Image? image = _full ?? _thumbnail?.image ?? widget.print.image;
+    final ui.Image? image =
+        _detail ?? _preview?.image ?? _thumbnail?.image ?? widget.print.image;
     final Print print = widget.print;
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -180,6 +227,7 @@ class _PrintViewerState extends State<PrintViewer> {
           ),
         );
         return InteractiveViewer(
+          transformationController: _transform,
           minScale: 1,
           maxScale: 5,
           boundaryMargin: const EdgeInsets.all(120),
