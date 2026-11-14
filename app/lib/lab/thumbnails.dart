@@ -78,7 +78,7 @@ class PrintThumbnailCache {
   /// The small files may live on disk longer than the images live in memory.
   static const int diskBudget = 256 * 1024 * 1024;
 
-  static const int _version = 1;
+  static const int _version = 2;
 
   /// A fast scroll across a thousand cards must not queue a thousand decodes.
   /// The visible cards are re-requested when they are built again; the oldest
@@ -473,16 +473,25 @@ class PrintThumbnailCache {
     }
   }
 
+  /// A 64-bit key made of two independent 32-bit FNV-1a passes.
+  ///
+  /// One 32-bit hash has a birthday collision around 77,000 keys, and the
+  /// cache has no content check: a collision would silently show the wrong
+  /// print. Two passes make the birthday bound negligible at this app's size
+  /// without adding a dependency. The version is part of the source, so a
+  /// key-scheme change retires the old files instead of reusing them.
   static String _key(String path, FileStat stat, int maxWidth) {
     final String source =
         '$path|${stat.modified.millisecondsSinceEpoch}|${stat.size}|$maxWidth|'
         '$_version';
-    int hash = 0x811c9dc5;
+    int first = 0x811c9dc5;
+    int second = 0x9e3779b9;
     for (final int unit in utf8.encode(source)) {
-      hash ^= unit;
-      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+      first = ((first ^ unit) * 0x01000193) & 0xFFFFFFFF;
+      second = ((second ^ unit) * 0x85EBCA6B) & 0xFFFFFFFF;
     }
-    return 'thumb-${hash.toRadixString(16).padLeft(8, '0')}';
+    String hex(int value) => value.toRadixString(16).padLeft(8, '0');
+    return 'thumb-${hex(first)}${hex(second)}';
   }
 }
 

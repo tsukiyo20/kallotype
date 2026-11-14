@@ -61,7 +61,10 @@ void main() {
 
     final List<FileSystemEntity> stored = cacheDirectory.listSync();
     expect(stored, hasLength(1));
-    expect((stored.single as File).path, endsWith('.png'));
+    expect(
+      (stored.single as File).path,
+      matches(RegExp(r'thumb-[0-9a-f]{16}\.png$')),
+    );
 
     // The second read is served from disk: clearing the decoded images must
     // not make the print be decoded from its 300-pixel source again.
