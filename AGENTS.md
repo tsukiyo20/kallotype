@@ -31,9 +31,9 @@ checklist.
   change usually belongs here, not in a widget.
 - `app/lib/design/scope.dart` — the two environments, and the `emissive` value
   the transition interpolates.
-- `app/lib/film/film.dart` — 35 mm geometry and the strip painter.
+- `app/lib/widgets/film_frame.dart` — 35 mm frame geometry and the film painter.
 - `app/test/goldens/<platform>/` — the studio pictures the design is held
-  against; macOS has four, Windows draws its own.
+  against; macOS has eight, Windows draws its own.
 
 ## Verifying
 
@@ -42,7 +42,7 @@ just check                    # Rust: fmt, clippy, tests
 cd app && flutter analyze     # must say "No issues found!"
 cd app && flutter test        # the studio goldens are opt-in
 cd app && flutter test --dart-define=studio-goldens=true test/studio_golden_test.dart
-                              # the four pictures, from this platform's folder
+                              # the eight pictures, from this platform's folder
 cd app && flutter test integration_test/ffi_strip_test.dart -d macos
                               # the linked model, in the app it ships in
 ```
