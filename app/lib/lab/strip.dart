@@ -224,6 +224,11 @@ class TestStrip {
     tempC: tempC,
   );
 
+  /// Change the developer's temperature.
+  ///
+  /// A strip is one development, and the temperature is part of it; a new
+  /// temperature is a new strip. The photograph and the materials stay, and
+  /// so do the prints only when there are none to lose.
   TestStrip withTemperature(double tempC) => TestStrip(
     photo: photo,
     stockId: stockId,
@@ -232,7 +237,5 @@ class TestStrip {
     paperLabel: paperLabel,
     spectral: spectral,
     tempC: tempC,
-    balanceFrom: balanceFrom,
-    prints: prints,
   );
 }

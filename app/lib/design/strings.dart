@@ -83,6 +83,9 @@ class KalloStrings {
   String get removePrint => zh ? '移除这张' : 'Remove this print';
   String get materialsNote =>
       zh ? '换胶片或相纸会另起一条试片。' : 'A different film or paper starts a new strip.';
+  String get temperatureNote => zh
+      ? '温度也属于这条试片。换温度会另起一条，照片和材料留下。'
+      : 'The temperature belongs to the strip too. Changing it starts a new strip; the photograph and materials stay.';
 
   /// The instrument panel's curves.
   String get filmCurve => zh ? '胶片' : 'FILM';

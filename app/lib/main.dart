@@ -392,6 +392,19 @@ class _KalloAppState extends State<KalloApp> {
     );
   }
 
+  /// Change the developer's temperature.
+  ///
+  /// The temperature is part of the strip's development, so changing it starts
+  /// a new strip: the old prints were made at a different temperature, and
+  /// keeping them would be a strip that says two things at once.
+  Future<void> _setTemperature(double tempC) async {
+    final TestStrip? strip = _strip;
+    if (strip == null || strip.tempC == tempC) {
+      return;
+    }
+    await _replaceStrip(strip.withTemperature(tempC));
+  }
+
   /// Forget the prints and keep the photograph and the materials.
   Future<void> _clearStrip() async {
     final TestStrip? strip = _strip;
@@ -637,6 +650,8 @@ class _KalloAppState extends State<KalloApp> {
               onChoosePhoto: () => unawaited(_choosePhoto()),
               onFilm: (Stock film) => unawaited(_chooseFilm(film)),
               onPaper: (Stock? paper) => unawaited(_choosePaper(paper)),
+              onTemperature: (double tempC) =>
+                  unawaited(_setTemperature(tempC)),
               onDevelop: _develop,
               onRemove: _remove,
               onClearStrip: () => unawaited(_clearStrip()),

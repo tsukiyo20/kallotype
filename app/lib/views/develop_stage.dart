@@ -17,6 +17,7 @@ import '../lab/strip.dart';
 import '../lab/strip_develop.dart';
 import '../widgets/button.dart';
 import '../widgets/curves.dart';
+import '../widgets/stepper.dart';
 import '../widgets/time_slider.dart';
 import '../widgets/wall.dart';
 
@@ -30,11 +31,16 @@ class DevelopStage extends StatefulWidget {
   const DevelopStage({
     super.key,
     required this.strip,
+    required this.onTemperature,
     required this.onDevelop,
     required this.onRemove,
   });
 
   final TestStrip strip;
+
+  /// Change the developer's temperature. A strip is one development, so the
+  /// app starts a new strip when it changes.
+  final ValueChanged<double> onTemperature;
 
   /// Develop one print at a time and add it to the strip.
   final Future<void> Function(double minutes) onDevelop;
@@ -48,6 +54,9 @@ class DevelopStage extends StatefulWidget {
 
 class _DevelopStageState extends State<DevelopStage> {
   static const List<double> _ladder = <double>[3, 6, 9, 12, 15];
+  static const double _tempLow = 15;
+  static const double _tempHigh = 30;
+  static const double _tempStep = 0.5;
 
   late double _minutes;
   ui.Image? _preview;
@@ -715,6 +724,25 @@ class _DevelopStageState extends State<DevelopStage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
+                  KalloStepper(
+                    label: '${s.temperature}  ·  °C',
+                    value: widget.strip.tempC.toStringAsFixed(1),
+                    width: 264,
+                    onMinus: _busy || widget.strip.tempC <= _tempLow
+                        ? null
+                        : () => widget.onTemperature(_nextTemp(-_tempStep)),
+                    onPlus: _busy || widget.strip.tempC >= _tempHigh
+                        ? null
+                        : () => widget.onTemperature(_nextTemp(_tempStep)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    s.temperatureNote,
+                    style: KalloType.small.copyWith(color: colors.inkFaint),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(height: 1, color: colors.hairline),
+                  const SizedBox(height: 14),
                   Row(
                     children: <Widget>[
                       Text(
@@ -840,6 +868,9 @@ class _DevelopStageState extends State<DevelopStage> {
       ),
     );
   }
+
+  double _nextTemp(double delta) =>
+      (widget.strip.tempC + delta).clamp(_tempLow, _tempHigh).toDouble();
 
   static String _triple(List<double> values) =>
       values.map((double v) => v.toStringAsFixed(2)).join('  ');

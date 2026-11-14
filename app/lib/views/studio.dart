@@ -43,6 +43,7 @@ class Studio extends StatefulWidget {
     required this.onChoosePhoto,
     required this.onFilm,
     required this.onPaper,
+    required this.onTemperature,
     required this.onDevelop,
     required this.onRemove,
     required this.onClearStrip,
@@ -74,6 +75,7 @@ class Studio extends StatefulWidget {
   final VoidCallback onChoosePhoto;
   final ValueChanged<Stock> onFilm;
   final ValueChanged<Stock?> onPaper;
+  final ValueChanged<double> onTemperature;
   final Future<void> Function(double minutes) onDevelop;
   final Future<void> Function(double minutes) onRemove;
   final VoidCallback onClearStrip;
@@ -315,6 +317,7 @@ class _StudioState extends State<Studio> {
           '${widget.strip.paperId}-${widget.strip.tempC}',
         ),
         strip: widget.strip,
+        onTemperature: widget.onTemperature,
         onDevelop: widget.onDevelop,
         onRemove: widget.onRemove,
       ),

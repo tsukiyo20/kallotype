@@ -63,6 +63,20 @@ void main() {
     expect(fresh.photo, '/photographs/uji.jpg');
   });
 
+  test('a temperature change starts a new strip', () {
+    final TestStrip strip = const TestStrip(
+      photo: '/photographs/uji.jpg',
+      tempC: 20,
+    ).withPrint(_print(9));
+    final TestStrip warmer = strip.withTemperature(24);
+    expect(warmer.tempC, 24);
+    expect(warmer.photo, '/photographs/uji.jpg');
+    expect(warmer.stockId, strip.stockId);
+    expect(warmer.paperId, strip.paperId);
+    expect(warmer.prints, isEmpty, reason: 'the old prints were at 20 °C');
+    expect(warmer.balanceFrom, isNull);
+  });
+
   test('the nearest print is the one a time looks at', () {
     final TestStrip strip = const TestStrip(photo: '/photographs/uji.jpg')
         .withPrint(_print(6))

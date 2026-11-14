@@ -2,6 +2,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kallo_ui/design/scope.dart';
+import 'package:kallo_ui/design/strings.dart';
+import 'package:kallo_ui/design/tokens.dart';
 import 'package:kallo_ui/lab/chart.dart';
 import 'package:kallo_ui/lab/print.dart';
 import 'package:kallo_ui/lab/stock.dart';
@@ -12,6 +15,7 @@ import 'package:kallo_ui/views/develop_stage.dart';
 import 'package:kallo_ui/views/select_stage.dart';
 import 'package:kallo_ui/views/steps.dart';
 import 'package:kallo_ui/widgets/stage_tabs.dart';
+import 'package:kallo_ui/widgets/stepper.dart';
 import 'package:kallo_ui/widgets/studio_sidebar.dart';
 
 Future<ui.Image> _card({int width = 600, int height = 400}) async {
@@ -103,6 +107,49 @@ void main() {
     expect(find.text('试片条'), findsWidgets);
     expect(find.text('9:00'), findsWidgets);
     expect(find.text('同曝光 · 9:00'), findsOneWidget);
+  });
+
+  testWidgets('the temperature dial asks for the next step', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    double? chosen;
+    final TestStrip strip =
+        const TestStrip(photo: '/photographs/uji.jpg', tempC: 20).withPrint(
+          TestPrint(minutes: 9, tempC: 20, image: card, chart: _chart(9)),
+        );
+    await tester.pumpWidget(
+      KalloScope(
+        colors: KalloColors.dark,
+        pinned: Brightness.dark,
+        onPin: (Brightness? _) {},
+        child: Localizations(
+          locale: const Locale('zh'),
+          delegates: const <LocalizationsDelegate<Object>>[
+            KalloStrings.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DevelopStage(
+              strip: strip,
+              onTemperature: (double value) => chosen = value,
+              onDevelop: (_) async {},
+              onRemove: (_) async {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final Finder stepper = find.byType(KalloStepper);
+    expect(stepper, findsOneWidget);
+    await tester.tap(find.descendant(of: stepper, matching: find.text('+')));
+    expect(chosen, 20.5);
   });
 
   testWidgets('the gallery is the other room', (WidgetTester tester) async {
