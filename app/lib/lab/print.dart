@@ -252,8 +252,12 @@ class Print {
     try {
       final Uint8List bytes = await File(path).readAsBytes();
       final ui.Codec codec = await ui.instantiateImageCodec(bytes);
-      final ui.FrameInfo frame = await codec.getNextFrame();
-      return frame.image;
+      try {
+        final ui.FrameInfo frame = await codec.getNextFrame();
+        return frame.image;
+      } finally {
+        codec.dispose();
+      }
     } on Object catch (error) {
       Model.log('no larger print for $path: $error');
       return null;
@@ -272,15 +276,23 @@ class Print {
     if (path == null) {
       return null;
     }
+    final int source = pixels?.width.toInt() ?? 0;
+    // Magnifying a copy into itself is not a sharper copy.
+    if (source > 0 && source <= image.width) {
+      return null;
+    }
     try {
       final Uint8List bytes = await File(path).readAsBytes();
-      final int source = pixels?.width.toInt() ?? 0;
       final ui.Codec codec = await ui.instantiateImageCodec(
         bytes,
         targetWidth: source > width ? width : null,
       );
-      final ui.FrameInfo frame = await codec.getNextFrame();
-      return frame.image;
+      try {
+        final ui.FrameInfo frame = await codec.getNextFrame();
+        return frame.image;
+      } finally {
+        codec.dispose();
+      }
     } on Object catch (error) {
       Model.log('no magnified print for $path: $error');
       return null;
@@ -309,7 +321,12 @@ class Print {
       bytes,
       targetWidth: source > width ? width : null,
     );
-    final ui.FrameInfo frame = await codec.getNextFrame();
+    final ui.FrameInfo frame;
+    try {
+      frame = await codec.getNextFrame();
+    } finally {
+      codec.dispose();
+    }
     final String? film = record?.film ?? _record(image, 'film') as String?;
     final Object? processRecord = _record(image, 'process');
     final FilmProcess? process =

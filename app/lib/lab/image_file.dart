@@ -7,13 +7,24 @@ import 'dart:ui' as ui;
 /// because the bench holds a 26 megapixel photograph to show 1200 points and
 /// the difference is a hundred megabytes thrown away.
 Future<ui.Image> decode(File file, {int width = 1200}) async {
-  final ui.ImmutableBuffer buffer =
-      await ui.ImmutableBuffer.fromUint8List(await file.readAsBytes());
-  final ui.ImageDescriptor descriptor =
-      await ui.ImageDescriptor.encoded(buffer);
-  final ui.Codec codec = await descriptor.instantiateCodec(
-    targetWidth: descriptor.width > width ? width : null,
+  final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(
+    await file.readAsBytes(),
   );
-  final ui.FrameInfo frame = await codec.getNextFrame();
-  return frame.image;
+  ui.ImageDescriptor? descriptor;
+  ui.Codec? codec;
+  try {
+    descriptor = await ui.ImageDescriptor.encoded(buffer);
+    codec = await descriptor.instantiateCodec(
+      targetWidth: descriptor.width > width ? width : null,
+    );
+    final ui.FrameInfo frame = await codec.getNextFrame();
+    return frame.image;
+  } finally {
+    // The frame owns its pixels. The decoder's buffer and codec are scratch:
+    // release them now so a slider drag does not leave a trail of decoders
+    // waiting for the next GC.
+    codec?.dispose();
+    descriptor?.dispose();
+    buffer.dispose();
+  }
 }
