@@ -114,6 +114,25 @@ class KalloColors {
   }
 }
 
+/// The film itself: the rebate, the clear holes and the printing on the edge.
+///
+/// These are not planes of the window. A film frame is an object in the work,
+/// like the paper, so its colours are stated here once and lit by the room's
+/// lamp where a frame is hung.
+abstract final class KalloFilm {
+  /// The exposed rebate: black, because it was never in the gate.
+  static const Color rebate = Color(0xFF0B0A09);
+
+  /// The edge printing: a developed silver-grey, never white.
+  static const Color edge = Color(0xFFA69D90);
+
+  /// A sprocket hole: clear film, and what is behind it.
+  static const Color clear = Color(0xFFE9E2D5);
+
+  /// The gate's own edge, around the picture.
+  static const Color gate = Color(0xFF2E2A26);
+}
+
 /// What is written on a print's paper.
 ///
 /// A sheet is a light surface in both appearances — the paper does not turn

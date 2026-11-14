@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +16,7 @@ import 'package:kallo_ui/lab/strip.dart';
 import 'package:kallo_ui/main.dart';
 import 'package:kallo_ui/views/chambers.dart';
 import 'package:kallo_ui/views/steps.dart';
+import 'package:kallo_ui/widgets/film_frame.dart';
 
 /// The studio's pictures.
 ///
@@ -247,6 +250,21 @@ const Catalogue _catalogue = Catalogue(
   ],
 );
 
+List<Print> _prints(ui.Image card) => <Print>[
+  for (int i = 0; i < 3; i++)
+    Print(
+      image: card,
+      name: 'uji',
+      pixels: const Size(1200, 800),
+      frame: i + 1,
+      film: 'ULTRA MAX 400',
+      paper: 'PORTRA ENDURA',
+      minutes: <double>[6, 9, 12][i],
+      tempC: 20,
+      printed: DateTime(2026, 11, 13, 21, 30),
+    ),
+];
+
 Future<ui.Image> _card({int width = 1200, int height = 800}) async {
   final ui.PictureRecorder recorder = ui.PictureRecorder();
   final Canvas canvas = Canvas(recorder);
@@ -397,28 +415,34 @@ void main() {
       );
     });
 
-    testWidgets('the gallery', (WidgetTester tester) async {
+    testWidgets('the drying rack', (WidgetTester tester) async {
       _window(tester);
-      final List<Print> prints = <Print>[
-        for (final double minutes in <double>[6, 9, 12])
-          Print(
-            image: card,
-            name: 'uji',
-            pixels: const Size(6000, 4000),
-            frame: 1,
-            film: 'ULTRA MAX 400',
-            paper: 'PORTRA ENDURA',
-            minutes: minutes,
-            tempC: 20,
-            printed: DateTime(2026, 11, 13, 21, 30),
-          ),
-      ];
       await tester.pumpWidget(
         KalloApp(
           catalogue: _catalogue,
           strip: const TestStrip(photo: '/photographs/uji.jpg'),
           photograph: card,
-          prints: prints,
+          prints: _prints(card),
+          initialChamber: Chamber.rack,
+          appearance: Brightness.dark,
+          chrome: WindowChrome.mac,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(KalloApp),
+        matchesGoldenFile('goldens/$_platform/rack.png'),
+      );
+    });
+
+    testWidgets('the gallery', (WidgetTester tester) async {
+      _window(tester);
+      await tester.pumpWidget(
+        KalloApp(
+          catalogue: _catalogue,
+          strip: const TestStrip(photo: '/photographs/uji.jpg'),
+          photograph: card,
+          prints: _prints(card),
           initialChamber: Chamber.gallery,
           appearance: Brightness.dark,
           chrome: WindowChrome.mac,
@@ -428,6 +452,93 @@ void main() {
       await expectLater(
         find.byType(KalloApp),
         matchesGoldenFile('goldens/$_platform/gallery.png'),
+      );
+    });
+
+    testWidgets('a portrait frame', (WidgetTester tester) async {
+      _window(tester);
+      final ui.Image portrait = await _card(width: 800, height: 1200);
+      addTearDown(portrait.dispose);
+      await tester.pumpWidget(
+        KalloApp(
+          catalogue: _catalogue,
+          strip: const TestStrip(photo: '/photographs/uji.jpg'),
+          photograph: portrait,
+          prints: <Print>[
+            Print(
+              image: portrait,
+              name: 'portrait',
+              pixels: const Size(800, 1200),
+              frame: 12,
+              film: 'PORTRA 400',
+              paper: 'PORTRA ENDURA',
+              minutes: 9,
+              tempC: 20,
+            ),
+          ],
+          initialChamber: Chamber.gallery,
+          appearance: Brightness.dark,
+          chrome: WindowChrome.mac,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(KalloApp),
+        matchesGoldenFile('goldens/$_platform/portrait.png'),
+      );
+    });
+
+    testWidgets('the lens on a frame', (WidgetTester tester) async {
+      _window(tester);
+      await tester.pumpWidget(
+        KalloApp(
+          catalogue: _catalogue,
+          strip: const TestStrip(photo: '/photographs/uji.jpg'),
+          photograph: card,
+          prints: _prints(card),
+          initialChamber: Chamber.gallery,
+          appearance: Brightness.dark,
+          chrome: WindowChrome.mac,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: Offset.zero);
+      final Finder frame = find.byType(FilmFrame).first;
+      final Offset origin = tester.getTopLeft(frame);
+      final Size size = tester.getSize(frame);
+      await mouse.moveTo(
+        origin + Offset(size.width * 0.50, size.height * 0.40),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(KalloApp),
+        matchesGoldenFile('goldens/$_platform/lens.png'),
+      );
+    });
+
+    testWidgets('a frame under the loupe', (WidgetTester tester) async {
+      _window(tester);
+      await tester.pumpWidget(
+        KalloApp(
+          catalogue: _catalogue,
+          strip: const TestStrip(photo: '/photographs/uji.jpg'),
+          photograph: card,
+          prints: _prints(card),
+          initialChamber: Chamber.gallery,
+          appearance: Brightness.dark,
+          chrome: WindowChrome.mac,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(FilmFrame).first);
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(KalloApp),
+        matchesGoldenFile('goldens/$_platform/loupe.png'),
       );
     });
   });

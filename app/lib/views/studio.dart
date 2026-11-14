@@ -20,17 +20,18 @@ import 'chambers.dart';
 import 'develop_stage.dart';
 import 'drawer.dart';
 import 'gallery.dart';
-import 'line.dart';
+import 'rack.dart';
 import 'print_stage.dart';
 import 'select_stage.dart';
 import 'steps.dart';
 
-/// The window: two rooms, and the steps of the one that makes the work.
+/// The window: two rooms, a rack between them, and the steps of the room that
+/// makes the work.
 ///
-/// The sidebar is a place. The darkroom has four steps, and they sit on the
+/// The sidebar is a place. The darkroom has three steps, and they sit on the
 /// top edge of the work as edge codes rather than in a second navigation: the
-/// bench does not move, it changes what is on it. The gallery has no steps —
-/// a wall is looked at, not operated.
+/// bench does not move, it changes what is on it. The rack and the gallery have
+/// no steps — a line is hung, a wall is looked at, neither is operated.
 class Studio extends StatefulWidget {
   const Studio({
     super.key,
@@ -111,7 +112,7 @@ class _StudioState extends State<Studio> {
       _chamber = chamber;
       _open = false;
     });
-    if (chamber == Chamber.gallery) {
+    if (chamber != Chamber.darkroom) {
       widget.onEnterExports?.call();
     }
   }
@@ -121,9 +122,6 @@ class _StudioState extends State<Studio> {
       return;
     }
     setState(() => _step = step);
-    if (step == DarkroomStep.dry) {
-      widget.onEnterExports?.call();
-    }
   }
 
   void _closeDrawer() => setState(() => _open = false);
@@ -148,11 +146,11 @@ class _StudioState extends State<Studio> {
               _stage(DarkroomStep.develop),
           const SingleActivator(LogicalKeyboardKey.digit3): () =>
               _stage(DarkroomStep.print),
-          const SingleActivator(LogicalKeyboardKey.digit4): () =>
-              _stage(DarkroomStep.dry),
         },
         const SingleActivator(LogicalKeyboardKey.keyD): () =>
             _room(Chamber.darkroom),
+        const SingleActivator(LogicalKeyboardKey.keyR): () =>
+            _room(Chamber.rack),
         const SingleActivator(LogicalKeyboardKey.keyG): () =>
             _room(Chamber.gallery),
         if (_chamber == Chamber.gallery)
@@ -197,7 +195,7 @@ class _StudioState extends State<Studio> {
                                   double light,
                                   Widget? child,
                                 ) => Gallery(
-                                  // A wall reads newest first, like the line:
+                                  // A wall reads newest first, like the rack:
                                   // the print just made is the one worth seeing.
                                   prints: widget.prints.reversed.toList(
                                     growable: false,
@@ -206,6 +204,8 @@ class _StudioState extends State<Studio> {
                                   onLight: _toggleLight,
                                 ),
                           )
+                        : _chamber == Chamber.rack
+                        ? Rack(prints: widget.prints, jobs: widget.jobs)
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: <Widget>[
@@ -334,8 +334,8 @@ class _StudioState extends State<Studio> {
         exports: widget.exports,
         onPrint: widget.onPrint,
         onGoDevelop: () => _stage(DarkroomStep.develop),
+        onGoRack: () => _room(Chamber.rack),
       ),
-      DarkroomStep.dry => Line(prints: widget.prints, jobs: widget.jobs),
     };
   }
 }

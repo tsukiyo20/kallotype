@@ -31,7 +31,7 @@ class KalloStrings {
     'table' => zh ? '台面' : 'Table',
     'workbench' => zh ? '工作台' : 'Workbench',
     'binder' => zh ? '活页夹' : 'Binder',
-    'line' => zh ? '晾片绳' : 'Line',
+    'rack' => zh ? '晾片架' : 'Drying rack',
     _ => zh ? '观景台' : 'Gallery',
   };
 
@@ -39,16 +39,17 @@ class KalloStrings {
 
   // -- the studio -----------------------------------------------------------
 
-  /// The two rooms. The darkroom is where the work is made; the gallery is
-  /// where it is looked at.
+  /// The two rooms, and the rack between them. The darkroom is where the work
+  /// is made; the gallery is where it is looked at; the rack is where the paper
+  /// goes when it comes out.
   String get darkroom => zh ? '暗房' : 'Darkroom';
+  String get rack => zh ? '晾片架' : 'Drying rack';
   String get galleryRoom => zh ? '观景台' : 'Gallery';
 
-  /// The four steps of the darkroom, in the order the work goes.
+  /// The three steps of the darkroom, in the order the work goes.
   String get selectStep => zh ? '选片' : 'Select';
   String get developStep => zh ? '显影' : 'Develop';
   String get printStep => zh ? '印相' : 'Print';
-  String get dryStep => zh ? '晾干' : 'Dry';
 
   String get settings => zh ? '设置' : 'Settings';
   String get thisStrip => zh ? '这一条' : 'THIS STRIP';
@@ -104,7 +105,8 @@ class KalloStrings {
   String get chooseFirstPrint => zh
       ? '先冲一张试片，再印成品。'
       : 'Develop a test print first; the finished print follows.';
-  String get printQueued => zh ? '已印 · 去晾干看看' : 'printed · look at the line';
+  String get printQueued => zh ? '已印 · 去晾片架看看' : 'printed · look at the rack';
+  String get goRack => zh ? '去晾片架' : 'To the drying rack';
   String get darkroomNote =>
       zh ? '一条试片，一种胶片，一张照片。' : 'One strip, one film, one photograph.';
   String get noPaperForFilm =>
@@ -231,16 +233,16 @@ class KalloStrings {
   String get proof => zh ? '打样' : 'Proof';
   String get printedOut => zh ? '印好了' : 'printed';
   String get printing => zh ? '正在印…' : 'Printing…';
-  String get onTheLine => zh ? '已进晾片绳' : 'on the line';
+  String get onTheRack => zh ? '已进晾片架' : 'on the rack';
 
-  // -- the line -------------------------------------------------------------
+  // -- the drying rack ------------------------------------------------------
 
   String printCount(int count) =>
       zh ? '$count 张' : '$count print${count == 1 ? '' : 's'}';
-  String get lineEmpty => zh ? '晾片绳是空的' : 'Nothing on the line';
-  String get lineEmptyNote => zh
-      ? '在印相里按印，成品会挂到这里，等干了再看。'
-      : 'Print in the darkroom and it hangs here until you look at it.';
+  String get rackEmpty => zh ? '晾片架是空的' : 'Nothing on the rack';
+  String get rackEmptyNote => zh
+      ? '在印相里按印，成品会挂到这里，等干了再进观景台。'
+      : 'Print in the darkroom and it hangs here until it is dry.';
 
   // -- the binder -----------------------------------------------------------
 
@@ -308,6 +310,15 @@ class KalloStrings {
   /// The one scale worth naming: one image pixel on one device pixel.
   String get actualPixels => zh ? '1:1' : '1:1';
 
+  /// The finished product: the print as a 35 mm frame.
+  String get exportFrame => zh ? '导出胶片边框' : 'Export film frame';
+  String get exportingFrame => zh ? '正在导出…' : 'Exporting…';
+  String get exportedFrame => zh ? '已导出 · Frames' : 'Exported · Frames';
+  String get exportFailed => zh ? '导出失败' : 'Export failed';
+
+  /// What the edge of the film is called, when the frame needs a name.
+  String get filmFrame => zh ? '胶片边框' : 'FILM FRAME';
+
   // -- the drawer -----------------------------------------------------------
 
   String get drawer => zh ? '抽屉' : 'DRAWER';
@@ -336,8 +347,8 @@ class KalloStrings {
   String get prints => zh ? '印相' : 'Prints';
 
   String get printsNote => zh
-      ? '印相是文件。模型把它写出来，观景台挂出这个文件夹里的每一张——app 自己一张都不带。'
-      : 'A print is a file. The model writes it out, the gallery hangs whatever is in this folder, and the app carries none of them itself.';
+      ? '印相是文件。模型把它写出来，观景台把每一张放进胶片边框；导出的成品在 Frames/ 里。app 自己一张都不带。'
+      : 'A print is a file. The model writes it out, the gallery frames whatever is in this folder, and the framed exports go in Frames/. The app carries none of them itself.';
 
   String get folder => zh ? '文件夹' : 'Folder';
   String get choose => zh ? '选择…' : 'Choose…';
@@ -346,7 +357,7 @@ class KalloStrings {
 
   /// Said where the platform does not let an app pick, which is every phone.
   String get fixedFolder => zh
-      ? '手机上 app 不能挑文件夹。这里是系统给的位置：在「文件」里打开它，放进去什么，墙上就挂什么。'
+      ? '手机上 app 不能挑文件夹。这里是系统给的位置：在「文件」里打开它，放进去什么，观景台就挂什么。'
       : 'A phone does not let an app choose a folder. This one is the system\'s: open it in Files, and whatever you put there is on the wall.';
 
   // -- colour ---------------------------------------------------------------

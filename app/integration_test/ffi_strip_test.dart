@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -100,14 +101,16 @@ void main() {
       minutes: 6,
       exports: exports,
       paperName: 'PORTRA ENDURA',
+      frame: 1,
       width: 800,
     );
     expect(printed.existsSync(), isTrue);
     expect(printed.lengthSync(), greaterThan(0));
-    expect(
-      File(printed.path.replaceFirst('.png', '.json')).existsSync(),
-      isTrue,
-    );
+    final File record = File(printed.path.replaceFirst('.png', '.json'));
+    expect(record.existsSync(), isTrue);
+    final Map<String, dynamic> json =
+        jsonDecode(await record.readAsString()) as Map<String, dynamic>;
+    expect(json['frame'], 1, reason: 'the record keeps the frame number');
   }, timeout: const Timeout(Duration(minutes: 5)));
 
   test('a bench session is one decode, then renders', () async {

@@ -8,14 +8,15 @@ import '../design/tokens.dart';
 import '../lab/print.dart';
 import '../lab/print_out.dart';
 
-/// The line: prints drying, and the ones still wet.
+/// The drying rack: prints hanging on a line, and the ones still wet.
 ///
-/// A string across the room and the work hanging from it, newest first, because
-/// the line is what happened and the gallery is what it looked like. A print is
-/// a render and not a copy, so there is also a corner that says what is being
+/// A string across the room and the work hanging from it, newest first. This is
+/// the paper as it came out of the enlarger: no frame, no wall, no lamp. The
+/// gallery is the same work framed; the rack is where it dries. A print is a
+/// render and not a copy, so there is also a corner that says what is being
 /// made — the one thing on this string that does not exist yet.
-class Line extends StatelessWidget {
-  const Line({super.key, required this.prints, required this.jobs});
+class Rack extends StatelessWidget {
+  const Rack({super.key, required this.prints, required this.jobs});
 
   /// Everything exported, oldest first. The line reads it backwards.
   final List<Print> prints;
@@ -36,12 +37,12 @@ class Line extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Text(
-                s.lineEmpty,
+                s.rackEmpty,
                 style: KalloType.title.copyWith(color: colors.ink),
               ),
               const SizedBox(height: KalloSpace.step1),
               Text(
-                s.lineEmptyNote,
+                s.rackEmptyNote,
                 style: KalloType.small.copyWith(color: colors.inkFaint),
               ),
             ],
@@ -57,8 +58,10 @@ class Line extends StatelessWidget {
           final List<Print> newest = prints.reversed.toList();
           // The line hangs the wall's paper: the same area for every print, so
           // a vertical frame is the same print turned and not a bigger one.
-          final double base =
-              math.min(240, math.max(160, room.maxHeight * 0.36));
+          final double base = math.min(
+            240,
+            math.max(160, room.maxHeight * 0.36),
+          );
           final double area = base * base / 1.5;
           double widthOf(Print print) => math.sqrt(area * print.aspect);
           return Stack(
@@ -87,12 +90,21 @@ class Line extends StatelessWidget {
               Positioned(
                 left: 40,
                 top: KalloSpace.step5,
-                child: Text(
-                  s.printCount(prints.length),
-                  style: KalloType.caption.copyWith(
-                    color: colors.inkFaint,
-                    letterSpacing: 1.4,
-                  ),
+                child: Row(
+                  children: <Widget>[
+                    Text(
+                      s.rack,
+                      style: KalloType.caption.copyWith(
+                        color: colors.inkFaint,
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                    const SizedBox(width: KalloSpace.step3),
+                    Text(
+                      s.printCount(prints.length),
+                      style: KalloType.folio.copyWith(color: colors.inkFaint),
+                    ),
+                  ],
                 ),
               ),
               if (jobs.isNotEmpty)
@@ -194,7 +206,12 @@ class _Pegged extends StatelessWidget {
                 border: Border.all(color: colors.hairline),
               ),
               child: Padding(
-                padding: EdgeInsets.fromLTRB(border, border, border, border * 2.2),
+                padding: EdgeInsets.fromLTRB(
+                  border,
+                  border,
+                  border,
+                  border * 2.2,
+                ),
                 child: SizedBox(
                   width: image,
                   height: image / aspect,
@@ -213,10 +230,7 @@ class _Pegged extends StatelessWidget {
             ),
             if (at != null) ...<Widget>[
               const SizedBox(height: 1),
-              Text(
-                at,
-                style: KalloType.folio.copyWith(color: colors.inkFaint),
-              ),
+              Text(at, style: KalloType.folio.copyWith(color: colors.inkFaint)),
             ],
           ],
         ),

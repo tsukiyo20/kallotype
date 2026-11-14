@@ -18,6 +18,18 @@ abstract final class Exports {
   /// The name of the folder inside the pictures directory.
   static const String folder = 'Kallotype';
 
+  /// The folder of finished film frames, inside the export folder.
+  ///
+  /// A framed export is a second finished thing, not another print: the gallery
+  /// reads the export folder itself, and a frame beside a print would hang
+  /// twice. The subfolder is also where a person goes when they want the
+  /// version with the rebate.
+  static const String frames = 'Frames';
+
+  /// Where a print's film frames are written.
+  static Directory framesFolder(Directory folder) =>
+      Directory('${folder.path}${Platform.pathSeparator}$frames');
+
   /// Whether the app can ask for a folder.
   ///
   /// A chooser is a desktop idea. A phone does not let an app browse the
@@ -55,13 +67,17 @@ abstract final class Exports {
     if (home == null || home.isEmpty) {
       return null;
     }
-    return Directory('$home${Platform.pathSeparator}Pictures'
-        '${Platform.pathSeparator}$folder');
+    return Directory(
+      '$home${Platform.pathSeparator}Pictures'
+      '${Platform.pathSeparator}$folder',
+    );
   }
 
   /// The folder in use: the one the user chose, or the platform's own.
   static Directory? directoryFor(String? chosen) =>
-      chosen != null && chosen.isNotEmpty ? Directory(chosen) : defaultDirectory;
+      chosen != null && chosen.isNotEmpty
+      ? Directory(chosen)
+      : defaultDirectory;
 
   /// `~/Pictures/Kallotype` — a path with the home shortened, because a path
   /// that begins with a person's name begins with noise.
@@ -95,19 +111,24 @@ abstract final class Exports {
     if (folder == null || !folder.existsSync()) {
       return const <Print>[];
     }
-    final List<File> images = <File>[
-      for (final FileSystemEntity entity in folder.listSync())
-        if (entity is File && entity.path.toLowerCase().endsWith('.png'))
-          entity,
-    ]..sort((File a, File b) {
-        final DateTime left = a.statSync().modified;
-        final DateTime right = b.statSync().modified;
-        return left.compareTo(right);
-      });
+    final List<File> images =
+        <File>[
+          for (final FileSystemEntity entity in folder.listSync())
+            if (entity is File && entity.path.toLowerCase().endsWith('.png'))
+              entity,
+        ]..sort((File a, File b) {
+          final DateTime left = a.statSync().modified;
+          final DateTime right = b.statSync().modified;
+          return left.compareTo(right);
+        });
 
     final List<Print> prints = <Print>[];
-    for (final File image in images) {
-      final Print? print = await Print.read(image, width: width);
+    for (int i = 0; i < images.length; i++) {
+      final Print? print = await Print.read(
+        images[i],
+        width: width,
+        number: i + 1,
+      );
       if (print != null) {
         prints.add(print);
       }

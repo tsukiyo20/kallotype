@@ -160,7 +160,15 @@ class Print {
   /// export is a 26-megapixel print and the wall is 660 points wide, and
   /// holding the difference would cost a hundred megabytes to throw away. The
   /// header is read first so that a small export is never upscaled.
-  static Future<Print?> read(File image, {int width = 1600}) async {
+  ///
+  /// [number] is the file's place in its folder. A print written before the
+  /// record carried a frame number still gets a number on the film edge; a
+  /// print with a record keeps what the enlarger wrote.
+  static Future<Print?> read(
+    File image, {
+    int width = 1600,
+    int? number,
+  }) async {
     final Uint8List bytes = await image.readAsBytes();
     final Size? pixels = _pngSize(bytes);
     final int source = pixels?.width.toInt() ?? 0;
@@ -174,7 +182,7 @@ class Print {
       name: _name(image.path),
       path: image.path,
       pixels: pixels,
-      frame: (_record(image, 'frame') as num?)?.toInt(),
+      frame: (_record(image, 'frame') as num?)?.toInt() ?? number,
       printed: image.statSync().modified,
       film: _record(image, 'film') as String?,
       paper: _record(image, 'paper') as String?,
@@ -193,7 +201,9 @@ class Print {
         (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
     final int height =
         (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
-    return width <= 0 || height <= 0 ? null : Size(width.toDouble(), height.toDouble());
+    return width <= 0 || height <= 0
+        ? null
+        : Size(width.toDouble(), height.toDouble());
   }
 
   /// The record beside the image, if there is one. A file that is not JSON is

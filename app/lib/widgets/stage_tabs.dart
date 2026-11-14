@@ -5,7 +5,7 @@ import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../views/steps.dart';
 
-/// The darkroom's four steps, as edge codes rather than a tab bar.
+/// The darkroom's three steps, as edge codes rather than a tab bar.
 ///
 /// The marks are the film's: a number and two letters, tabular, spaced like a
 /// rebate. They sit on the top edge of the work and they do not push a page —
@@ -36,7 +36,6 @@ class StageTabs extends StatelessWidget {
                 DarkroomStep.select => s.selectStep,
                 DarkroomStep.develop => s.developStep,
                 DarkroomStep.print => s.printStep,
-                DarkroomStep.dry => s.dryStep,
               },
               selected: step == current,
               onTap: () => onSelect(step),

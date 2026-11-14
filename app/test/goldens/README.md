@@ -6,8 +6,8 @@ baselines:
 
 ```
 goldens/
-  macos/     the four drawn on this Mac
-  windows/   where a Windows pass draws its four
+  macos/     the eight drawn on this Mac
+  windows/   where a Windows pass draws its eight
 ```
 
 The test chooses its folder from `Platform`:
@@ -26,6 +26,10 @@ fvm flutter test --dart-define=studio-goldens=true \
 fvm flutter test --dart-define=studio-goldens=true --update-goldens \
   test/studio_golden_test.dart
 ```
+
+The eight baselines are `select`, `develop`, `print`, `rack`, `gallery`,
+`portrait`, `lens` and `loupe`. The lens and the loupe are the two views through
+glass; the portrait is the proof that a vertical frame turns the strip.
 
 `--update-goldens` is the only way a baseline changes, and it changes only the
 folder for the platform that ran it. CI runs `flutter test` without the define,

@@ -36,6 +36,7 @@ class PrintStage extends StatefulWidget {
     required this.exports,
     required this.onPrint,
     required this.onGoDevelop,
+    required this.onGoRack,
   });
 
   final TestStrip strip;
@@ -43,6 +44,7 @@ class PrintStage extends StatefulWidget {
   final Directory? exports;
   final Future<void> Function(PrintRequest request) onPrint;
   final VoidCallback onGoDevelop;
+  final VoidCallback onGoRack;
 
   @override
   State<PrintStage> createState() => _PrintStageState();
@@ -609,6 +611,12 @@ class _PrintStageState extends State<PrintStage> {
                   Text(
                     s.printQueued,
                     style: KalloType.small.copyWith(color: colors.inkMuted),
+                  ),
+                  const SizedBox(height: KalloSpace.step2),
+                  KalloButton(
+                    label: s.goRack,
+                    onTap: widget.onGoRack,
+                    height: 30,
                   ),
                 ],
                 if (_error != null) ...<Widget>[

@@ -12,8 +12,10 @@ import 'package:kallo_ui/lab/strip.dart';
 import 'package:kallo_ui/main.dart';
 import 'package:kallo_ui/views/chambers.dart';
 import 'package:kallo_ui/views/develop_stage.dart';
+import 'package:kallo_ui/views/rack.dart';
 import 'package:kallo_ui/views/select_stage.dart';
 import 'package:kallo_ui/views/steps.dart';
+import 'package:kallo_ui/widgets/film_frame.dart';
 import 'package:kallo_ui/widgets/stage_tabs.dart';
 import 'package:kallo_ui/widgets/stepper.dart';
 import 'package:kallo_ui/widgets/studio_sidebar.dart';
@@ -71,6 +73,7 @@ void main() {
     expect(find.byType(StageTabs), findsOneWidget);
     expect(find.byType(SelectStage), findsOneWidget);
     expect(find.text('暗房'), findsOneWidget);
+    expect(find.text('晾片架'), findsOneWidget);
     expect(find.text('观景台'), findsOneWidget);
     expect(find.text('原片'), findsOneWidget);
   });
@@ -152,17 +155,61 @@ void main() {
     expect(chosen, 20.5);
   });
 
-  testWidgets('the gallery is the other room', (WidgetTester tester) async {
+  testWidgets('the rack is beside the darkroom', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1280, 820);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
+    final Print print = Print(
+      image: card,
+      name: 'uji',
+      frame: 1,
+      film: 'ULTRA MAX 400',
+      paper: 'PORTRA ENDURA',
+      minutes: 9,
+      tempC: 20,
+    );
     await tester.pumpWidget(
       KalloApp(
         catalogue: Catalogue.carried,
         strip: const TestStrip(photo: '/photographs/uji.jpg'),
         photograph: card,
-        prints: const <Print>[],
+        prints: <Print>[print],
+        initialChamber: Chamber.rack,
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StudioSidebar), findsOneWidget);
+    expect(find.byType(Rack), findsOneWidget);
+    expect(find.byType(StageTabs), findsNothing);
+    expect(find.text('晾片架'), findsNWidgets(2));
+    expect(find.text('01   ·   9:00'), findsOneWidget);
+  });
+
+  testWidgets('the gallery is the other room, and it shows film', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final Print print = Print(
+      image: card,
+      name: 'uji',
+      frame: 1,
+      film: 'ULTRA MAX 400',
+      paper: 'PORTRA ENDURA',
+      minutes: 9,
+      tempC: 20,
+    );
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: const TestStrip(photo: '/photographs/uji.jpg'),
+        photograph: card,
+        prints: <Print>[print],
         initialChamber: Chamber.gallery,
         locale: const Locale('zh'),
       ),
@@ -171,6 +218,7 @@ void main() {
 
     expect(find.byType(StudioSidebar), findsOneWidget);
     expect(find.byType(StageTabs), findsNothing);
+    expect(find.byType(FilmFrame), findsOneWidget);
     expect(find.text('灯'), findsOneWidget);
   });
 }
