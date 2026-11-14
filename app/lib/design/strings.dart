@@ -52,7 +52,10 @@ class KalloStrings {
   String get printStep => zh ? '印相' : 'Print';
 
   String get settings => zh ? '设置' : 'Settings';
-  String get thisStrip => zh ? '这一条' : 'THIS STRIP';
+  String get showSidebar => zh ? '显示侧边栏' : 'Show sidebar';
+  String get hideSidebar => zh ? '隐藏侧边栏' : 'Hide sidebar';
+  String get showInspector => zh ? '显示面板' : 'Show inspector';
+  String get hideInspector => zh ? '隐藏面板' : 'Hide inspector';
   String get noPhotographChosen => zh ? '还没选片' : 'nothing chosen';
   String get choosePhotoNote => zh
       ? '选一张照片。它会留在暗房里，胶片和相纸随后决定。'
@@ -115,10 +118,6 @@ class KalloStrings {
       : 'Develop a test print first; the finished print follows.';
   String get printQueued => zh ? '已印 · 去晾片架看看' : 'printed · look at the rack';
   String get goRack => zh ? '去晾片架' : 'To the drying rack';
-  String get darkroomNote =>
-      zh ? '一条试片，一种胶片，一张照片。' : 'One strip, one film, one photograph.';
-  String get noPaperForFilm =>
-      zh ? '这支胶片没有相纸可选。' : 'This film has no paper to choose.';
 
   /// What a roll is called on the pages that name it.
   ///

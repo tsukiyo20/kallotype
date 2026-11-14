@@ -44,12 +44,12 @@ class SettingsDrawer extends StatefulWidget {
 
 class _SettingsDrawerState extends State<SettingsDrawer> {
   List<String> _tabs(KalloStrings s) => <String>[
-        s.tabLanguage,
-        s.tabAppearance,
-        s.tabPrints,
-        s.tabColour,
-        s.tabAbout,
-      ];
+    s.tabLanguage,
+    s.tabAppearance,
+    s.tabPrints,
+    s.tabColour,
+    s.tabAbout,
+  ];
 
   int _tab = 0;
 
@@ -58,17 +58,14 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloStrings s = KalloStrings.of(context);
     return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(top: BorderSide(color: colors.hairline)),
-      ),
+      decoration: BoxDecoration(color: colors.surface),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           SizedBox(
-            height: 44,
+            height: 52,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
+              padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step4),
               child: Row(
                 children: <Widget>[
                   Text(
@@ -86,7 +83,9 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       padding: const EdgeInsets.all(KalloSpace.step2),
                       child: Text(
                         s.close,
-                        style: KalloType.caption.copyWith(color: colors.inkMuted),
+                        style: KalloType.caption.copyWith(
+                          color: colors.inkMuted,
+                        ),
                       ),
                     ),
                   ),
@@ -94,13 +93,11 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
               ),
             ),
           ),
-          Container(height: 1, color: colors.hairline),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                SizedBox(width: 190, child: _rail(colors)),
-                Container(width: 1, color: colors.hairline),
+                SizedBox(width: 196, child: _rail(colors)),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(
@@ -123,10 +120,9 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
               ],
             ),
           ),
-          Container(height: 1, color: colors.hairline),
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: KalloSpace.step3,
+              horizontal: KalloSpace.step4,
               vertical: KalloSpace.step2 + 2,
             ),
             child: Text(
@@ -144,32 +140,37 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
 
   Widget _rail(KalloColors colors) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: KalloSpace.step3),
+      padding: const EdgeInsets.fromLTRB(
+        KalloSpace.step3,
+        KalloSpace.step2,
+        KalloSpace.step3,
+        0,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           for (int i = 0; i < _tabs(KalloStrings.of(context)).length; i++)
-            GestureDetector(
-              onTap: () => setState(() => _tab = i),
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KalloSpace.step3 + 4,
-                  vertical: KalloSpace.step2 + 2,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(
-                      color: i == _tab ? colors.accent : const Color(0x00000000),
-                      width: 3,
-                    ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: GestureDetector(
+                onTap: () => setState(() => _tab = i),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: KalloMotion.quick,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KalloSpace.step3 + 4,
+                    vertical: KalloSpace.step2 + 3,
                   ),
-                ),
-                child: Text(
-                  _tabs(KalloStrings.of(context))[i],
-                  style: KalloType.caption.copyWith(
-                    color: i == _tab ? colors.ink : colors.inkFaint,
-                    letterSpacing: 1.6,
+                  decoration: BoxDecoration(
+                    color: i == _tab ? colors.accentSoft : null,
+                    borderRadius: BorderRadius.circular(KalloRadius.control),
+                  ),
+                  child: Text(
+                    _tabs(KalloStrings.of(context))[i],
+                    style: KalloType.caption.copyWith(
+                      color: i == _tab ? colors.accent : colors.inkFaint,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
               ),
@@ -200,7 +201,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       children: <Widget>[
         Text(
           s.colour,
-          style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
+          style: KalloType.title.copyWith(fontSize: 22, color: colors.ink),
         ),
         const SizedBox(height: KalloSpace.step2),
         SizedBox(
@@ -234,7 +235,10 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(title, style: KalloType.title.copyWith(fontSize: 26, color: colors.ink)),
+        Text(
+          title,
+          style: KalloType.title.copyWith(fontSize: 22, color: colors.ink),
+        ),
         const SizedBox(height: KalloSpace.step3),
         SizedBox(
           width: 460,
@@ -251,15 +255,15 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     final KalloScope scope = KalloScope.of(context);
     final String system =
         WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-                Brightness.dark
-            ? s.dark
-            : s.light;
+            Brightness.dark
+        ? s.dark
+        : s.light;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
           s.appearance,
-          style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
+          style: KalloType.title.copyWith(fontSize: 22, color: colors.ink),
         ),
         const SizedBox(height: KalloSpace.step5),
         _Label(s.appearanceLabel, colors),
@@ -282,7 +286,10 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           alignment: Alignment.centerRight,
           child: Text(
             s.systemLine(system),
-            style: KalloType.data.copyWith(fontSize: 10, color: colors.inkFaint),
+            style: KalloType.data.copyWith(
+              fontSize: 10,
+              color: colors.inkFaint,
+            ),
           ),
         ),
       ],
@@ -296,7 +303,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       children: <Widget>[
         Text(
           s.prints,
-          style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
+          style: KalloType.title.copyWith(fontSize: 22, color: colors.ink),
         ),
         const SizedBox(height: KalloSpace.step2),
         SizedBox(
@@ -314,9 +321,8 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           height: 34,
           padding: const EdgeInsets.only(left: KalloSpace.step3, right: 3),
           decoration: BoxDecoration(
-            color: colors.ground,
+            color: colors.fill,
             borderRadius: BorderRadius.circular(KalloRadius.control),
-            border: Border.all(color: colors.hairline),
           ),
           child: Row(
             children: <Widget>[
@@ -326,9 +332,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: KalloType.data.copyWith(
-                    color: export.label.isEmpty
-                        ? colors.inkFaint
-                        : colors.ink,
+                    color: export.label.isEmpty ? colors.inkFaint : colors.ink,
                   ),
                 ),
               ),
@@ -379,10 +383,13 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       children: <Widget>[
         Text(
           s.language,
-          style: KalloType.title.copyWith(fontSize: 26, color: colors.ink),
+          style: KalloType.title.copyWith(fontSize: 22, color: colors.ink),
         ),
         const SizedBox(height: KalloSpace.step2),
-        Text(s.followsDevice, style: KalloType.body.copyWith(color: colors.inkMuted)),
+        Text(
+          s.followsDevice,
+          style: KalloType.body.copyWith(color: colors.inkMuted),
+        ),
         const SizedBox(height: KalloSpace.step4),
         _Label(s.interfaceLanguage, colors),
         const SizedBox(height: KalloSpace.step2),
@@ -402,7 +409,10 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           alignment: Alignment.centerRight,
           child: Text(
             s.deviceLine(device),
-            style: KalloType.data.copyWith(fontSize: 10, color: colors.inkFaint),
+            style: KalloType.data.copyWith(
+              fontSize: 10,
+              color: colors.inkFaint,
+            ),
           ),
         ),
         const SizedBox(height: KalloSpace.step4),

@@ -17,6 +17,7 @@ import '../lab/strip.dart';
 import '../lab/strip_develop.dart';
 import '../widgets/button.dart';
 import '../widgets/curves.dart';
+import '../widgets/inspector.dart';
 import '../widgets/stepper.dart';
 import '../widgets/time_slider.dart';
 import '../widgets/wall.dart';
@@ -34,6 +35,8 @@ class DevelopStage extends StatefulWidget {
     required this.onTemperature,
     required this.onDevelop,
     required this.onRemove,
+    this.showInspector = true,
+    this.topInset = 0,
   });
 
   final TestStrip strip;
@@ -47,6 +50,12 @@ class DevelopStage extends StatefulWidget {
 
   /// Take one print off the strip.
   final Future<void> Function(double minutes) onRemove;
+
+  /// Whether the instrument panel is open.
+  final bool showInspector;
+
+  /// The transparent chrome at the top of the window.
+  final double topInset;
 
   @override
   State<DevelopStage> createState() => _DevelopStageState();
@@ -545,7 +554,11 @@ class _DevelopStageState extends State<DevelopStage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Expanded(child: _bench(colors, s)),
-        SizedBox(width: 304, child: _panel(colors, s)),
+        InspectorPane(
+          key: const Key('develop-inspector'),
+          open: widget.showInspector,
+          child: _panel(colors, s),
+        ),
       ],
     );
   }
@@ -711,19 +724,24 @@ class _DevelopStageState extends State<DevelopStage> {
     final TestPrint? exact = _printAt(_minutes);
     final double? first = widget.strip.balanceFrom;
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(left: BorderSide(color: colors.hairline)),
-      ),
+      decoration: BoxDecoration(color: colors.surface),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              padding: EdgeInsets.fromLTRB(20, widget.topInset + 18, 20, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
+                  Text(
+                    '${stockDisplayName(widget.strip.stockLabel)}   ·   '
+                    '${stockDisplayName(widget.strip.paperLabel)}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: KalloType.small.copyWith(color: colors.inkFaint),
+                  ),
+                  const SizedBox(height: KalloSpace.step4),
                   KalloStepper(
                     label: '${s.temperature}  ·  °C',
                     value: widget.strip.tempC.toStringAsFixed(1),
@@ -749,7 +767,7 @@ class _DevelopStageState extends State<DevelopStage> {
                         s.filmCurve,
                         style: KalloType.caption.copyWith(
                           color: colors.inkFaint,
-                          letterSpacing: 1.4,
+                          letterSpacing: 0.7,
                         ),
                       ),
                       const Spacer(),
@@ -790,13 +808,15 @@ class _DevelopStageState extends State<DevelopStage> {
                         s.paperCurve,
                         style: KalloType.caption.copyWith(
                           color: colors.inkFaint,
-                          letterSpacing: 1.4,
+                          letterSpacing: 0.7,
                         ),
                       ),
                       const SizedBox(width: KalloSpace.step2),
                       Expanded(
                         child: Text(
-                          _paper?.short ?? (widget.strip.paperLabel ?? ''),
+                          stockDisplayName(
+                            _paper?.short ?? widget.strip.paperLabel,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.right,

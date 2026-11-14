@@ -29,10 +29,10 @@ class KalloSegments extends StatelessWidget {
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     return Container(
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: colors.ground,
-        borderRadius: BorderRadius.circular(KalloRadius.control + 1),
+        color: colors.fill,
+        borderRadius: BorderRadius.circular(KalloRadius.control),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -49,28 +49,19 @@ class KalloSegments extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  // A selected segment has to lift off its track in both
-                  // appearances: white on light, a lit grey on dark.
-                  color: i == selected && !quiet
-                      ? Color.lerp(colors.surface, colors.ink, 0.09)
-                      : null,
-                  borderRadius: BorderRadius.circular(KalloRadius.control),
+                  color: i == selected && !quiet ? colors.elevated : null,
+                  borderRadius: BorderRadius.circular(KalloRadius.control - 2),
                   boxShadow: i == selected && !quiet
-                      ? const <BoxShadow>[
-                          BoxShadow(
-                            color: Color(0x14000000),
-                            blurRadius: 3,
-                            offset: Offset(0, 1),
-                          ),
-                        ]
+                      ? KalloShadow.control
                       : null,
                 ),
                 child: Text(
                   options[i],
                   style: KalloType.body.copyWith(
                     fontSize: 12.5,
-                    fontWeight:
-                        i == selected ? FontWeight.w500 : FontWeight.w400,
+                    fontWeight: i == selected
+                        ? FontWeight.w500
+                        : FontWeight.w400,
                     color: i == selected ? colors.ink : colors.inkMuted,
                   ),
                 ),

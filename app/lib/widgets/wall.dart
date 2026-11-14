@@ -26,18 +26,18 @@ class Wall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0, -0.10),
-            radius: 0.85,
-            colors: <Color>[
-              KalloColors.under(wall.top, light),
-              KalloColors.under(wall.base, light),
-            ],
-          ),
-        ),
-        child: child,
-      );
+    decoration: BoxDecoration(
+      gradient: RadialGradient(
+        center: const Alignment(0, -0.10),
+        radius: 0.85,
+        colors: <Color>[
+          KalloColors.under(wall.top, light),
+          KalloColors.under(wall.base, light),
+        ],
+      ),
+    ),
+    child: child,
+  );
 }
 
 /// A print on its paper: the picture, a fine print's margins, and the light.
@@ -146,7 +146,10 @@ List<InlineSpan> wallLabel({
   String? paper,
   String? fallback,
 }) {
-  final Color quiet = KalloColors.under(wall.label, light).withValues(alpha: 0.60);
+  final Color quiet = KalloColors.under(
+    wall.label,
+    light,
+  ).withValues(alpha: 0.74);
   final Color loud = KalloColors.under(wall.label, light);
   final List<InlineSpan> spans = <InlineSpan>[];
   void add(String? text, Color colour) {
@@ -154,9 +157,19 @@ List<InlineSpan> wallLabel({
       return;
     }
     if (spans.isNotEmpty) {
-      spans.add(TextSpan(text: '   ·   ', style: TextStyle(color: quiet)));
+      spans.add(
+        TextSpan(
+          text: '   ·   ',
+          style: TextStyle(color: quiet),
+        ),
+      );
     }
-    spans.add(TextSpan(text: text, style: TextStyle(color: colour)));
+    spans.add(
+      TextSpan(
+        text: text,
+        style: TextStyle(color: colour),
+      ),
+    );
   }
 
   add(film, quiet);

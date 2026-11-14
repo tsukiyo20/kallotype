@@ -42,14 +42,11 @@ class _KalloSwitchState extends State<KalloSwitch> {
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: KalloMotion.instant,
-          height: 28,
+          height: 30,
           padding: const EdgeInsets.symmetric(horizontal: KalloSpace.step3),
           decoration: BoxDecoration(
-            color: control.withValues(alpha: _hover ? 0.10 : 0.04),
-            borderRadius: BorderRadius.circular(KalloRadius.control),
-            border: Border.all(
-              color: control.withValues(alpha: _hover ? 0.28 : 0.16),
-            ),
+            color: control.withValues(alpha: _hover ? 0.12 : 0.06),
+            borderRadius: BorderRadius.circular(KalloRadius.pill),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

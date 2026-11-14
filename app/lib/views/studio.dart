@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 
 import '../design/chrome.dart';
 import '../design/scope.dart';
+import '../design/strings.dart';
 import '../design/tokens.dart';
 import '../lab/exports.dart';
 import '../lab/print.dart';
@@ -15,6 +16,8 @@ import '../lab/print_request.dart';
 import '../lab/stock.dart';
 import '../lab/strip.dart';
 import '../widgets/stage_tabs.dart';
+import '../widgets/switch.dart';
+import '../widgets/studio_top_bar.dart';
 import '../widgets/studio_sidebar.dart';
 import 'chambers.dart';
 import 'develop_stage.dart';
@@ -104,6 +107,12 @@ class _StudioState extends State<Studio> {
   late DarkroomStep _step = widget.initialStep;
   late bool _open = widget.initiallyOpen;
 
+  /// The two sides of the window. Hiding them is about the work and not a
+  /// preference, so neither is written to disk: the next visit opens on the
+  /// room, not on the last arrangement of the furniture.
+  bool _sidebar = true;
+  bool _inspector = true;
+
   /// The gallery's lamp. The room remembers it; the window does not go dark.
   bool _lit = true;
 
@@ -130,12 +139,6 @@ class _StudioState extends State<Studio> {
 
   @override
   Widget build(BuildContext context) {
-    final Stock? film = widget.catalogue.film(widget.strip.stockId);
-    final Stock? paper = widget.strip.paperId == null
-        ? null
-        : widget.catalogue.paper(widget.strip.paperId!);
-    final String filmShort = film?.short ?? widget.strip.stockLabel;
-    final String paperShort = paper?.short ?? widget.strip.paperLabel ?? '';
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.escape): _closeDrawer,
@@ -165,70 +168,47 @@ class _StudioState extends State<Studio> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  SizedBox(
-                    width: 232,
-                    child: StudioSidebar(
-                      topInset: widget.chrome == WindowChrome.mac ? 44 : 12,
-                      chamber: _chamber,
-                      onChamber: _room,
-                      strip: widget.strip,
-                      filmShort: filmShort,
-                      paperShort: paperShort,
-                      galleryCount: widget.prints.length,
-                      testCount: widget.strip.prints.length,
-                      onSettings: () => setState(() => _open = true),
-                    ),
+                  AnimatedSize(
+                    duration: KalloMotion.settle,
+                    curve: KalloMotion.enter,
+                    alignment: Alignment.centerLeft,
+                    clipBehavior: Clip.hardEdge,
+                    child: _sidebar
+                        ? SizedBox(
+                            key: const Key('studio-sidebar'),
+                            width: 232,
+                            child: StudioSidebar(
+                              topInset: widget.chrome == WindowChrome.mac
+                                  ? 44
+                                  : 12,
+                              chamber: _chamber,
+                              onChamber: _room,
+                              galleryCount: widget.prints.length,
+                              onSettings: () => setState(() => _open = true),
+                            ),
+                          )
+                        : const SizedBox(width: 0),
                   ),
                   Expanded(
-                    child: _chamber == Chamber.gallery
-                        ? TweenAnimationBuilder<double>(
-                            tween: Tween<double>(end: _lit ? 1 : 0),
-                            duration: _lit
-                                ? KalloMotion.settle
-                                : KalloMotion.slow,
-                            curve: _lit
-                                ? KalloMotion.enter
-                                : KalloMotion.settleCurve,
-                            builder:
-                                (
-                                  BuildContext context,
-                                  double light,
-                                  Widget? child,
-                                ) => Gallery(
-                                  // A wall reads newest first, like the rack:
-                                  // the print just made is the one worth seeing.
-                                  prints: widget.prints.reversed.toList(
-                                    growable: false,
-                                  ),
-                                  light: light,
-                                  onLight: _toggleLight,
-                                ),
-                          )
-                        : _chamber == Chamber.rack
-                        ? Rack(prints: widget.prints, jobs: widget.jobs)
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onPanStart:
-                                    widget.chrome == WindowChrome.mac &&
-                                        widget.onDragWindow != null
-                                    ? (_) => widget.onDragWindow!()
-                                    : null,
-                                child: StageTabs(
-                                  current: _step,
-                                  onSelect: _stage,
-                                ),
-                              ),
-                              Expanded(child: _darkroom()),
-                            ],
+                    child: ClipRect(
+                      child: Stack(
+                        children: <Widget>[
+                          Positioned.fill(child: _body()),
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            top: 0,
+                            child: _topBar(),
                           ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
               if (widget.chrome == WindowChrome.mac &&
-                  widget.onDragWindow != null)
+                  widget.onDragWindow != null &&
+                  _sidebar)
                 Positioned(
                   left: 0,
                   top: 0,
@@ -249,8 +229,7 @@ class _StudioState extends State<Studio> {
                       curve: KalloMotion.enter,
                       opacity: _open ? 1 : 0,
                       child: ColoredBox(
-                        color: KalloScope.colorsOf(context).ink
-                            .withValues(alpha: 0.16),
+                        color: KalloScope.colorsOf(context).scrim,
                       ),
                     ),
                   ),
@@ -299,6 +278,75 @@ class _StudioState extends State<Studio> {
     );
   }
 
+  Widget _body() {
+    if (_chamber == Chamber.gallery) {
+      return TweenAnimationBuilder<double>(
+        tween: Tween<double>(end: _lit ? 1 : 0),
+        duration: _lit ? KalloMotion.settle : KalloMotion.slow,
+        curve: _lit ? KalloMotion.enter : KalloMotion.settleCurve,
+        builder: (BuildContext context, double light, Widget? child) => Gallery(
+          // A wall reads newest first, like the rack: the print just made is
+          // the one worth seeing.
+          prints: widget.prints.reversed.toList(growable: false),
+          light: light,
+          topInset: _topBarHeight,
+        ),
+      );
+    }
+    if (_chamber == Chamber.rack) {
+      return Rack(
+        prints: widget.prints,
+        jobs: widget.jobs,
+        topInset: _topBarHeight,
+      );
+    }
+    return _darkroom();
+  }
+
+  static const double _topBarHeight = 56;
+
+  /// The inspector exists only where a step has a panel. The print step with
+  /// nothing to print has no panel, and a control that toggles nothing is a
+  /// control that lies.
+  bool get _hasInspector =>
+      _chamber == Chamber.darkroom &&
+      !(_step == DarkroomStep.print && widget.strip.prints.isEmpty);
+
+  Widget _topBar() {
+    final KalloStrings s = KalloStrings.of(context);
+    final Widget center = _chamber == Chamber.darkroom
+        ? StageTabs(current: _step, onSelect: _stage)
+        : _RoomPill(
+            label: _chamber == Chamber.rack ? s.rack : s.galleryRoom,
+            trailing: _chamber == Chamber.rack && widget.prints.isNotEmpty
+                ? '${widget.prints.length}'
+                : null,
+          );
+    final KalloColors colors = KalloScope.colorsOf(context);
+    return StudioTopBar(
+      sidebarOpen: _sidebar,
+      onSidebar: () => setState(() => _sidebar = !_sidebar),
+      mac: widget.chrome == WindowChrome.mac,
+      inspectorOpen: _hasInspector ? _inspector : null,
+      onInspector: _hasInspector
+          ? () => setState(() => _inspector = !_inspector)
+          : null,
+      trailing: _chamber == Chamber.gallery
+          ? KalloSwitch(
+              key: const Key('light'),
+              label: s.roomLight,
+              control: colors.inkMuted,
+              on: _lit,
+              onTap: _toggleLight,
+            )
+          : null,
+      center: center,
+      onDragWindow: widget.onDragWindow,
+      height: _topBarHeight,
+      rightInset: _hasInspector && _inspector ? 304 : 0,
+    );
+  }
+
   Widget _darkroom() {
     return switch (_step) {
       DarkroomStep.select => SelectStage(
@@ -310,6 +358,8 @@ class _StudioState extends State<Studio> {
         onPaper: widget.onPaper,
         onGoDevelop: () => _stage(DarkroomStep.develop),
         onClear: widget.onClearStrip,
+        showInspector: _inspector,
+        topInset: _topBarHeight,
       ),
       DarkroomStep.develop => DevelopStage(
         key: ValueKey<String>(
@@ -320,6 +370,8 @@ class _StudioState extends State<Studio> {
         onTemperature: widget.onTemperature,
         onDevelop: widget.onDevelop,
         onRemove: widget.onRemove,
+        showInspector: _inspector,
+        topInset: _topBarHeight,
       ),
       DarkroomStep.print => PrintStage(
         key: ValueKey<String>(
@@ -328,14 +380,57 @@ class _StudioState extends State<Studio> {
         ),
         strip: widget.strip,
         paperName:
-            widget.catalogue.paper(widget.strip.paperId ?? '')?.short ??
+            widget.catalogue.paper(widget.strip.paperId ?? '')?.displayName ??
             widget.strip.paperLabel ??
             '',
         exports: widget.exports,
         onPrint: widget.onPrint,
         onGoDevelop: () => _stage(DarkroomStep.develop),
         onGoRack: () => _room(Chamber.rack),
+        showInspector: _inspector,
+        topInset: _topBarHeight,
       ),
     };
+  }
+}
+
+/// A room's name in the top bar, when the room has no steps.
+class _RoomPill extends StatelessWidget {
+  const _RoomPill({required this.label, this.trailing});
+
+  final String label;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final KalloColors colors = KalloScope.colorsOf(context);
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: colors.fill,
+        borderRadius: BorderRadius.circular(KalloRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            label,
+            style: KalloType.body.copyWith(
+              color: colors.ink,
+              fontWeight: FontWeight.w500,
+              fontSize: 12.5,
+            ),
+          ),
+          if (trailing != null) ...<Widget>[
+            const SizedBox(width: KalloSpace.step2),
+            Text(
+              trailing!,
+              style: KalloType.folio.copyWith(color: colors.inkFaint),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

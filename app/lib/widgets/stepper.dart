@@ -33,26 +33,31 @@ class KalloStepper extends StatelessWidget {
         children: <Widget>[
           Text(label, style: KalloType.small.copyWith(color: colors.inkMuted)),
           const Spacer(),
-          Container(
-            height: 24,
-            decoration: BoxDecoration(
-              border: Border.all(color: colors.hairline),
-              borderRadius: BorderRadius.circular(KalloRadius.control - 2),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _Step(mark: '−', onTap: onMinus, colour: colors.inkMuted),
-                SizedBox(
-                  width: 42,
-                  child: Text(
-                    value,
-                    textAlign: TextAlign.center,
-                    style: KalloType.data.copyWith(color: colors.ink),
-                  ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(KalloRadius.control),
+            child: ColoredBox(
+              color: colors.fill,
+              child: SizedBox(
+                height: 28,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _Step(mark: '−', onTap: onMinus, colour: colors.inkMuted),
+                    SizedBox(
+                      width: 42,
+                      child: Text(
+                        value,
+                        textAlign: TextAlign.center,
+                        style: KalloType.data.copyWith(
+                          color: colors.ink,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    _Step(mark: '+', onTap: onPlus, colour: colors.inkMuted),
+                  ],
                 ),
-                _Step(mark: '+', onTap: onPlus, colour: colors.inkMuted),
-              ],
+              ),
             ),
           ),
         ],
@@ -85,11 +90,14 @@ class _StepState extends State<_Step> {
       child: GestureDetector(
         onTap: widget.onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 24,
-          height: 24,
+        child: AnimatedContainer(
+          duration: KalloMotion.instant,
+          width: 28,
+          height: 28,
           alignment: Alignment.center,
-          color: _hover && live ? KalloScope.colorsOf(context).ground : null,
+          color: _hover && live
+              ? KalloScope.colorsOf(context).fillStrong
+              : null,
           child: Text(
             widget.mark,
             style: KalloType.body.copyWith(

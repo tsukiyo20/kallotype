@@ -266,6 +266,22 @@ List<Print> _prints(ui.Image card) => <Print>[
     ),
 ];
 
+List<Print> _rackPrints(ui.Image card) => <Print>[
+  for (int i = 0; i < 7; i++)
+    Print(
+      image: card,
+      name: 'uji-${i + 1}',
+      pixels: const Size(1200, 800),
+      printNumber: 1,
+      process: i == 2 ? FilmProcess.monochrome : FilmProcess.negative,
+      film: i == 2 ? 'T-MAX 400' : 'ULTRA MAX 400',
+      paper: i == 2 ? 'POLYMAX II RC' : 'PORTRA ENDURA',
+      minutes: <double>[6, 7.5, 9, 10.5, 12, 13.5, 15][i],
+      tempC: 20,
+      printed: DateTime(2026, 11, 13, 21, 30),
+    ),
+];
+
 Future<ui.Image> _card({int width = 1200, int height = 800}) async {
   final ui.PictureRecorder recorder = ui.PictureRecorder();
   final Canvas canvas = Canvas(recorder);
@@ -334,6 +350,26 @@ void main() {
       await expectLater(
         find.byType(KalloApp),
         matchesGoldenFile('goldens/$_platform/select.png'),
+      );
+    });
+
+    testWidgets('the select step in daylight', (WidgetTester tester) async {
+      _window(tester);
+      await tester.pumpWidget(
+        KalloApp(
+          catalogue: _catalogue,
+          strip: const TestStrip(photo: '/photographs/uji.jpg'),
+          photograph: card,
+          prints: const <Print>[],
+          initialStep: DarkroomStep.select,
+          appearance: Brightness.light,
+          chrome: WindowChrome.mac,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(KalloApp),
+        matchesGoldenFile('goldens/$_platform/select-light.png'),
       );
     });
 
@@ -423,7 +459,7 @@ void main() {
           catalogue: _catalogue,
           strip: const TestStrip(photo: '/photographs/uji.jpg'),
           photograph: card,
-          prints: _prints(card),
+          prints: _rackPrints(card),
           initialChamber: Chamber.rack,
           appearance: Brightness.dark,
           chrome: WindowChrome.mac,
@@ -433,6 +469,48 @@ void main() {
       await expectLater(
         find.byType(KalloApp),
         matchesGoldenFile('goldens/$_platform/rack.png'),
+      );
+    });
+
+    testWidgets('the drying rack in daylight', (WidgetTester tester) async {
+      _window(tester);
+      await tester.pumpWidget(
+        KalloApp(
+          catalogue: _catalogue,
+          strip: const TestStrip(photo: '/photographs/uji.jpg'),
+          photograph: card,
+          prints: _rackPrints(card),
+          initialChamber: Chamber.rack,
+          appearance: Brightness.light,
+          chrome: WindowChrome.mac,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(KalloApp),
+        matchesGoldenFile('goldens/$_platform/rack-light.png'),
+      );
+    });
+
+    testWidgets('a print taken off the rack', (WidgetTester tester) async {
+      _window(tester);
+      await tester.pumpWidget(
+        KalloApp(
+          catalogue: _catalogue,
+          strip: const TestStrip(photo: '/photographs/uji.jpg'),
+          photograph: card,
+          prints: _rackPrints(card),
+          initialChamber: Chamber.rack,
+          appearance: Brightness.dark,
+          chrome: WindowChrome.mac,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey<String>('rack-print-0')));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(KalloApp),
+        matchesGoldenFile('goldens/$_platform/viewer.png'),
       );
     });
 
@@ -453,6 +531,26 @@ void main() {
       await expectLater(
         find.byType(KalloApp),
         matchesGoldenFile('goldens/$_platform/gallery.png'),
+      );
+    });
+
+    testWidgets('the gallery in daylight', (WidgetTester tester) async {
+      _window(tester);
+      await tester.pumpWidget(
+        KalloApp(
+          catalogue: _catalogue,
+          strip: const TestStrip(photo: '/photographs/uji.jpg'),
+          photograph: card,
+          prints: _prints(card),
+          initialChamber: Chamber.gallery,
+          appearance: Brightness.light,
+          chrome: WindowChrome.mac,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(KalloApp),
+        matchesGoldenFile('goldens/$_platform/gallery-light.png'),
       );
     });
 

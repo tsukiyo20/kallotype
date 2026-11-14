@@ -21,6 +21,7 @@ import '../widgets/button.dart';
 import '../widgets/chip.dart';
 import '../widgets/curves.dart';
 import '../widgets/export_sheet.dart';
+import '../widgets/inspector.dart';
 import '../widgets/stepper.dart';
 import '../widgets/wall.dart';
 
@@ -39,6 +40,8 @@ class PrintStage extends StatefulWidget {
     required this.onPrint,
     required this.onGoDevelop,
     required this.onGoRack,
+    this.showInspector = true,
+    this.topInset = 0,
   });
 
   final TestStrip strip;
@@ -47,6 +50,12 @@ class PrintStage extends StatefulWidget {
   final Future<void> Function(PrintRequest request) onPrint;
   final VoidCallback onGoDevelop;
   final VoidCallback onGoRack;
+
+  /// Whether the instrument panel is open.
+  final bool showInspector;
+
+  /// The transparent chrome at the top of the window.
+  final double topInset;
 
   @override
   State<PrintStage> createState() => _PrintStageState();
@@ -371,7 +380,11 @@ class _PrintStageState extends State<PrintStage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Expanded(child: _bench(colors, s)),
-        SizedBox(width: 304, child: _panel(colors, s)),
+        InspectorPane(
+          key: const Key('print-inspector'),
+          open: widget.showInspector,
+          child: _panel(colors, s),
+        ),
       ],
     );
   }
@@ -438,24 +451,29 @@ class _PrintStageState extends State<PrintStage> {
   Widget _panel(KalloColors colors, KalloStrings s) {
     final bool printable = widget.exports != null;
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(left: BorderSide(color: colors.hairline)),
-      ),
+      decoration: BoxDecoration(color: colors.surface),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+              padding: EdgeInsets.fromLTRB(20, widget.topInset + 18, 20, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   Text(
+                    '${stockDisplayName(widget.strip.stockLabel)}   ·   '
+                    '${widget.paperName}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: KalloType.small.copyWith(color: colors.inkFaint),
+                  ),
+                  const SizedBox(height: KalloSpace.step4),
+                  Text(
                     s.time,
                     style: KalloType.caption.copyWith(
                       color: colors.inkFaint,
-                      letterSpacing: 1.4,
+                      letterSpacing: 0.7,
                     ),
                   ),
                   const SizedBox(height: KalloSpace.step2),
@@ -481,7 +499,7 @@ class _PrintStageState extends State<PrintStage> {
                     '${s.printExposure}  ·  EV',
                     style: KalloType.caption.copyWith(
                       color: colors.inkFaint,
-                      letterSpacing: 1.4,
+                      letterSpacing: 0.7,
                     ),
                   ),
                   const SizedBox(height: KalloSpace.step2),
@@ -516,7 +534,7 @@ class _PrintStageState extends State<PrintStage> {
                     '${s.filters}  ·  CC',
                     style: KalloType.caption.copyWith(
                       color: colors.inkFaint,
-                      letterSpacing: 1.4,
+                      letterSpacing: 0.7,
                     ),
                   ),
                   const SizedBox(height: KalloSpace.step2),
@@ -537,7 +555,7 @@ class _PrintStageState extends State<PrintStage> {
                     s.heatGlass,
                     style: KalloType.caption.copyWith(
                       color: colors.inkFaint,
-                      letterSpacing: 1.4,
+                      letterSpacing: 0.7,
                     ),
                   ),
                   const SizedBox(height: KalloSpace.step2),
@@ -580,7 +598,7 @@ class _PrintStageState extends State<PrintStage> {
                         s.printCurve,
                         style: KalloType.caption.copyWith(
                           color: colors.inkFaint,
-                          letterSpacing: 1.4,
+                          letterSpacing: 0.7,
                         ),
                       ),
                       const Spacer(),

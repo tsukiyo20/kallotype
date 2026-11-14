@@ -29,15 +29,29 @@ Future<ui.Image> _card({int width = 300, int height = 200}) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('the edge carries the name a printer says', () {
+  test('the edge carries the maker and the name a printer says', () {
     expect(
       filmEdgeName('KODAK PROFESSIONAL T-MAX 400, D-76 8 min 20 °C'),
-      'T-MAX 400',
+      'KODAK T-MAX 400',
     );
-    expect(filmEdgeName('KODAK ULTRA MAX 400'), 'ULTRA MAX 400');
+    expect(filmEdgeName('KODAK ULTRA MAX 400'), 'KODAK ULTRA MAX 400');
     expect(filmEdgeName('FUJIFILM 200'), 'FUJIFILM 200');
-    expect(filmEdgeName('ILFORD DELTA 400 PROFESSIONAL, ID-11'), 'DELTA 400');
+    expect(
+      filmEdgeName('ILFORD DELTA 400 PROFESSIONAL, ID-11'),
+      'ILFORD DELTA 400',
+    );
     expect(filmEdgeName(null), '');
+    expect(filmEdgeName('GOLD 200'), 'KODAK GOLD 200');
+    expect(filmEdgeName('PROVIA 100F'), 'FUJIFILM PROVIA 100F');
+    expect(
+      stockDisplayName('ENDURA PREMIER METALLIC'),
+      'KODAK ENDURA PREMIER METALLIC',
+    );
+    expect(
+      stockDisplayName('CRYSTAL ARCHIVE PEARL'),
+      'FUJIFILM CRYSTAL ARCHIVE PEARL',
+    );
+    expect(stockDisplayName('KODAK GOLD 200'), 'KODAK GOLD 200');
     expect(
       filmProcessFromName('KODAK PROFESSIONAL T-MAX 400, D-76 8 min 20 °C'),
       FilmProcess.monochrome,

@@ -5,22 +5,22 @@ import '../design/tokens.dart';
 
 /// A button.
 ///
-/// Two of them, and they are the same shape: one sits on a field and one is the
-/// action at the bottom of a column. Nothing else in the product is a button,
-/// which is why this can be a hundred lines and not a system.
+/// Two of them, and they are the same shape: one action on a page, filled with
+/// the safelight; everything else, filled with the window's own grey. No
+/// outline, no ripple: a mac button changes its fill under the pointer.
 class KalloButton extends StatelessWidget {
   const KalloButton({
     super.key,
     required this.label,
     required this.onTap,
     this.filled = false,
-    this.height = 26,
+    this.height = 30,
   });
 
   final String label;
   final VoidCallback? onTap;
 
-  /// Filled is the one action on a screen; bordered is everything else.
+  /// Filled is the one action on a screen; quiet is everything else.
   final bool filled;
 
   final double height;
@@ -29,32 +29,84 @@ class KalloButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     final bool enabled = onTap != null;
+    return _ButtonBody(
+      label: label,
+      onTap: onTap,
+      filled: filled,
+      height: height,
+      enabled: enabled,
+      colors: colors,
+    );
+  }
+}
+
+class _ButtonBody extends StatefulWidget {
+  const _ButtonBody({
+    required this.label,
+    required this.onTap,
+    required this.filled,
+    required this.height,
+    required this.enabled,
+    required this.colors,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool filled;
+  final double height;
+  final bool enabled;
+  final KalloColors colors;
+
+  @override
+  State<_ButtonBody> createState() => _ButtonBodyState();
+}
+
+class _ButtonBodyState extends State<_ButtonBody> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final KalloColors colors = widget.colors;
+    final Color background = !widget.enabled
+        ? (widget.filled ? colors.fill : colors.fill.withValues(alpha: 0.55))
+        : widget.filled
+        ? colors.accent
+        : _hover
+        ? colors.fillStrong
+        : colors.fill;
+    final Color foreground = !widget.enabled
+        ? colors.inkFaint
+        : widget.filled
+        ? colors.onAccent
+        : colors.ink;
     return MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: widget.enabled
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
-        onTap: onTap,
+        onTap: widget.onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: height,
+        child: AnimatedContainer(
+          duration: KalloMotion.instant,
+          height: widget.height,
           padding: EdgeInsets.symmetric(
-            horizontal: filled ? KalloSpace.step5 : KalloSpace.step3,
+            horizontal: widget.filled ? KalloSpace.step5 : KalloSpace.step4,
           ),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: filled ? colors.ink : colors.surface,
-            borderRadius: BorderRadius.circular(
-              filled ? KalloRadius.control : KalloRadius.control - 1,
-            ),
-            border: filled ? null : Border.all(color: colors.hairline),
+            color: background,
+            borderRadius: BorderRadius.circular(KalloRadius.control),
           ),
           child: Text(
-            label,
+            widget.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: KalloType.body.copyWith(
-              fontSize: filled ? 12.5 : 12,
-              fontWeight: filled ? FontWeight.w500 : FontWeight.w400,
-              color: enabled
-                  ? (filled ? colors.content : colors.ink)
-                  : colors.inkFaint,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: foreground,
             ),
           ),
         ),

@@ -206,27 +206,12 @@ class FilmFrame extends StatelessWidget {
 
 /// The name a film's edge carries, and the name a frame's caption uses.
 ///
-/// The record keeps the whole catalogue label — `KODAK PROFESSIONAL T-MAX 400,
-/// D-76 8 min 20 °C` — because that is the stock's name. A rebate has room for
-/// the name a printer says out loud, and so does a caption under a frame.
-String filmEdgeName(String? film) {
-  if (film == null || film.isEmpty) {
-    return '';
-  }
-  String name = film.split(',').first.trim();
-  for (final String prefix in <String>[
-    'KODAK PROFESSIONAL ',
-    'KODAK ',
-    'ILFORD ',
-  ]) {
-    if (name.toUpperCase().startsWith(prefix)) {
-      name = name.substring(prefix.length);
-      break;
-    }
-  }
-  name = name.replaceFirst(RegExp(r'\s+PROFESSIONAL$'), '');
-  return name.isEmpty ? film : name;
-}
+/// The record may carry the short product name (`GOLD 200`) or the whole
+/// catalogue label. Either way the edge says the manufacturer and the product,
+/// because a rebate is where a film says whose it is. A full data-sheet label is
+/// cut at its first comma; the chemistry and the exposure are not printed on
+/// the edge twice.
+String filmEdgeName(String? film) => stockDisplayName(film);
 
 /// Paints [FilmFrame].
 class FilmFramePainter extends CustomPainter {

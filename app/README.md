@@ -48,14 +48,16 @@ There is no `MaterialApp` anywhere, and that is the point.
 ## What is verified
 
 `fvm flutter analyze` is clean, and the suite covers the strip, the two rooms,
-the rack, the catalogue, the contact sheet's data, the model's curves, and the
-film-frame export. The eight studio goldens are the design's instrument: they
-pin select, develop, print, the drying rack, the gallery, a portrait frame and
-the two views through the lens at 1280 by 820, with the bundled faces loaded
-from disk so the picture is in the product's own type rather than the runner's.
+the rack, the catalogue, the contact sheet's data, the model's curves, the
+film-frame export, both side panes being put away, and a print opened off the
+rack. The twelve studio goldens are the design's instrument: they pin select,
+develop, print, the drying rack and the gallery in both appearances, a print
+taken off the rack, a portrait frame and the two views through the lens at 1280
+by 820, with the bundled faces loaded from disk so the picture is in the
+product's own type rather than the runner's.
 
 They are opt-in and per platform. A golden is local to the renderer that drew
-it, so the baselines live in `test/goldens/<platform>/`: the eight committed
+it, so the baselines live in `test/goldens/<platform>/`: the twelve committed
 today are macOS's, and `test/goldens/windows/` is where a Windows pass draws its
 own. The test is skipped unless it is asked for, and it is never a way to turn a
 red test green:
@@ -74,8 +76,12 @@ fvm flutter test --dart-define=studio-goldens=true --update-goldens   test/studi
 | **print**, the enlarger dialled for this negative | **the rack**, the paper before the frame |
 | ![the gallery](test/goldens/macos/gallery.png) | ![a portrait frame](test/goldens/macos/portrait.png) |
 | **gallery**, frames on the wall, newest first | **portrait**, the strip turned |
+| ![select in daylight](test/goldens/macos/select-light.png) | ![the rack in daylight](test/goldens/macos/rack-light.png) |
+| **select, daylight** | **the rack, daylight** |
 | ![the lens](test/goldens/macos/lens.png) | ![the loupe](test/goldens/macos/loupe.png) |
 | **lens**, the picture bowed under glass | **loupe**, the whole frame, up to 1:1 |
+| ![the gallery in daylight](test/goldens/macos/gallery-light.png) | ![a print off the rack](test/goldens/macos/viewer.png) |
+| **gallery, daylight** | **viewer**, the print off the rack, full screen |
 
 The gallery, rack and frame goldens draw a test card, because the app ships no
 pictures: a print is a file the model exports, and the golden has to have
@@ -94,25 +100,27 @@ is the window the product opens.
 ## What you are looking at
 
 One window. The darkroom, the drying rack and the gallery on the left; in the
-darkroom, three steps on the top edge of the work: select, develop, print. The
-steps are edge codes, not a tab bar: they change what is on the bench, not where
-the bench is. The instrument panel on the right belongs to the step, and the one
-action is at its bottom.
+darkroom, three steps in one small capsule over the centre of the bench: select,
+develop, print. There is no bar and no rule under it, because the steps change
+what is on the bench, not where the bench is. The instrument panel on the right
+belongs to the step, and the one action is at its bottom. Both sides of the
+window can be put away: the glass switch at the left edge hides the source list,
+the one at the right hides the inspector, and the work takes the width back.
 
 | | |
 |---|---|
-| **The select step is the photograph, before the developer** | One photograph enters the darkroom, and the step shows it — the whole original, not a thumbnail — with the film and the paper in the column beside it. The materials are not constants in the app: `kalo stocks --json` hands over every film the model carries, grouped by chemistry, and every paper under a rule of its own, so the shelf cannot show a film or a paper the model does not have. The first picture is the original; the developing has not happened yet. |
-| **The develop step is one print at a time** | The print on the easel is the time in hand; the ruler under it moves the time; the strip below it is what has been printed. Dragging the ruler only changes the preview. Pressing *develop* renders one print at 1200 px and adds it to the strip. The first print fixes the enlarger's exposure, and every later print keeps it — the strip compares developments, not timers. The temperature is a dial in the panel; it belongs to the strip, so changing it starts a new strip and keeps the photograph and materials. The panel draws the film's developed curve, the paper's, the strip's times together, and the densitometer's gamma and D-max. |
+| **The select step is the photograph, before the developer** | One photograph enters the darkroom, and the step shows it — the whole original, not a thumbnail — with the film and the paper in the column beside it. The materials are not constants in the app: `kalo stocks --json` hands over every film the model carries, grouped by chemistry and then by manufacturer, and every paper under a rule of its own, so the shelf cannot show a film or a paper the model does not have. A maker is a heading, not a prefix repeated on every box: `KODAK` over `GOLD 200`, `FUJIFILM` over `PROVIA 100F`. The first picture is the original; the developing has not happened yet. |
+| **The develop step is one print at a time** | The print on the easel is the time in hand; the ruler under it moves the time; the strip below it is what has been printed. Dragging the ruler only changes the preview. Pressing *develop* renders one print at 1200 px and adds it to the strip. The first print fixes the enlarger's exposure, and every later print keeps it — the strip compares developments, not timers. The temperature is a dial in the panel; it belongs to the strip, so changing it starts a new strip and keeps the photograph and materials. The panel names both materials with their manufacturers, then draws the film's developed curve, the paper's, the strip's times together, and the densitometer's gamma and D-max. |
 | **The print step is the enlarger dialled** | The chosen development is printed again at the photograph's size, balanced on its own negative, with the timer, the CC pack and the heat glass. It is not a copy of the strip's print: the strip is one exposure; the finished print is the one dialled for this photograph. The panel draws the paper's curve under those settings — the timer, the pack and the glass move it — so the picture and the instrument are the same enlarger. Pressing *print* opens a sheet for the size (original, 6000 or 4000 pixels) and the file format (PNG or JPEG). |
-| **The drying rack is what came out** | A place beside the darkroom, not a fourth step: a string across the room with the paper hanging from it, newest first, and a corner that says what is still being made. The gallery is the same files looked at properly, as film. |
+| **The drying rack is what came out** | A place beside the darkroom, not a fourth step: lines of wire across the room, each print held by a clip, newest first, wrapping into as many columns as the window holds and scrolling down to the next line. The paper has a shadow because it is in the air; clicking one takes it off the rack and fills the window with it, where it can be pinched or scrolled. A corner says what is still being made. The gallery is the same files looked at properly, as film. |
 | **The path is a choice** | Exposure, print and scan go through the spectrum — 71 wavelengths, reconstructed from the input and integrated against each layer's sensitivity — or through one number per channel. It is a setting because the model keeps it opt-in: the structure is physical end to end, and the data under it is mixed — the curves and layer sensitivities of twenty-one films are measured, the papers are, the illuminant is CIE D50, and fifteen films still borrow their dye shapes because their sheets print a neutral instead of three dyes. The select panel and the catalogue say per film which is which. The two paths are different photographs, not different labels, and the strip remembers which made it: a print of that strip is made the same way. |
 | **The model is the app's own library** | `kallo_ui` links `kallotype-api` through `flutter_rust_bridge`; a strip print is one call, and a finished print is the same pipeline at the photograph's size. A roll and its contact proof are one call for the CLI, from one read of the photograph. The `kalo` binary is still underneath as the fallback when the library cannot load — tests run that way — and both answer the same `Model`, because the binding was written to the shape the subprocess already had. |
 | **Two rooms, a rack, three steps** | The darkroom and the gallery are rooms; the drying rack is the place between them. In the darkroom: select, develop, print — the photograph, the strip and the finished print. The rack has no steps and neither does the gallery: a line is hung, a wall is looked at. The old six places are gone; the shelf's job is the select step, the bench's is develop and print, the rack's is the paper. |
 | **The test strip is the proof, made one print at a time** | A proof is the film laid on paper and exposed once. The strip is that idea with the person's hand in it: one print per development, all on the first print's exposure, laid side by side. A longer development makes a denser negative, so on one exposure it prints lighter; the strip says that before the finished print is dialled. The prints are rendered, not drawn: each is a real 1200 px print, and the densitometer reads its chart. |
 | **A frame can be looked through, then walked up to** | Hovering a frame brings a loupe to the pointer: three times the wall, from the print's own file decoded wide enough to be sharp, with the 35 mm rebate still in the glass. The picture under the lens bows at its edge — glass is not a window — while the rebate and the sprocket holes stay flat. Clicking opens the frame at the file's own size: the film keeps its size and shape — this is a loupe on film, not a picture viewer — and the picture is magnified *inside* the aperture, clipped by the gate, up to 1:1, one image pixel per device pixel, which is as far as the file goes. The label under it says the file's pixels and the scale; escape puts it back on the wall, and the lamp comes with you. The same view opens an export sheet: the size is the print's own by default or 4096 pixels, and the format is JPEG, PNG or TIFF. |
-| **The gallery is a wall of film with one lamp** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the film and the wall label multiply by one number, and the switch is that number. Turn it off and the wall goes black, the labels go with it, the picture stays at a tenth — and the window around them does not move: the lamp is the gallery's, not the app's. In a light appearance the wall is a wall in daylight; the lamp still goes out. Each frame is a 35 mm piece of film: black rebate, clear sprocket holes, the stock and the print number on one edge, the process and `135` on the other. The ink follows the chemistry: warm ivory for a silver film, pale amber for a colour negative, white for a reversal. A single print is `01`; a batch of selected frames will count `02`, `03`. A vertical picture turns the strip, so the holes run down its sides. Frames are given the same area, so a portrait is the same piece of film turned, not a wider one. |
+| **The gallery is a wall of film with one lamp** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the film and the wall label multiply by one number; the lamp switch is at the top right of the chrome, and it is that number. Turn it off and the wall goes black, the labels go with it, the picture stays at a tenth — and the window around them does not move: the lamp is the gallery's, not the app's. In a light appearance the wall is a wall in daylight; the lamp still goes out. Each frame is a 35 mm piece of film: black rebate, clear sprocket holes, the stock and the print number on one edge, the process and `135` on the other. The stock says its manufacturer (`KODAK ULTRA MAX 400`, `ILFORD DELTA 400`) and the caption under the frame does too. The ink follows the chemistry: warm ivory for a silver film, pale amber for a colour negative, white for a reversal. A single print is `01`; a batch of selected frames will count `02`, `03`. A vertical picture turns the strip, so the holes run down its sides. Frames are given the same area, so a portrait is the same piece of film turned, not a wider one. |
 | **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery frames whatever is in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting, and on a phone it is the one place the system lets an app write. The plain print and the framed export both open the same kind of sheet: size first, then format. The frame defaults to the print's own size and JPEG; the print defaults to the photograph's size and PNG. The framed export goes to `Frames/` inside that folder; the plain print stays where the model wrote it. The metadata — stock, paper, development, print number — lives in the app's own support folder, so the picture folder holds pictures and no sidecar JSON. |
-| **The chrome is light, the print is paper** | The window is a tool, so its planes are one neutral ramp in both appearances. The only warm and saturated surfaces in the product are the paper a print sits on, the film frame around it, and the gallery wall behind it. |
+| **The chrome is a neutral, the print is paper** | The window is a tool, so its planes are one Apple-shaped neutral ramp in both appearances: grouped background, sidebar, content, inspector, a recessed fill for every control, and the safelight only where something is chosen or acted on. Corners are 8, 14 and 20; hairlines are quiet. The only warm and saturated surfaces in the product are the paper a print sits on, the film frame around it, and the gallery wall behind it. |
 | **Time is a ruler** | The develop step's ruler is continuous and the model accepts any positive time; 3/6/9/12/15 are the marks, not a limit. The strip's prints are the times actually tried, and the panel draws their curves together. The point is the difference between them. |
 | **Nothing is a default** | No ripple, no elevation, no Roboto, no colour roles, no 4 dp grid. |
 
@@ -127,20 +135,20 @@ These are the ones worth enforcing in review.
    It gives nothing else. `uses-material-design: false` in `pubspec.yaml` is
    where that is written down.
 
-2. **No shadows for depth.** A plane is raised by being lighter than what is
-   behind it, and by a hairline. `KalloShadow.sheet` is the one shadow in the
-   code, and it says the drawer is above the window; it does not say anything is
-   deep.
+2. **No shadows for layout.** A plane is raised by being lighter than what is
+   behind it, and by a fill. A shadow belongs to an object in the room: the
+   sheet over the window, the print hanging in the rack, the viewer's paper. It
+   does not say a card is deep.
 
-3. **One accent.** The safelight, turned down: a selection and the tone curve.
-   Everything else is a neutral on one luminance ramp, because the contrast in
-   this product is density — which is brightness — and not hue. The gallery's
-   wall, the paper and the film are the exception that proves it: they are not
-   state, they are objects.
+3. **One accent.** The safelight: a selection, the tone curve, and the one
+   primary action on a page. Everything else is a neutral on one luminance
+   ramp, because the contrast in this product is density — which is brightness
+   — and not hue. The gallery's wall, the paper and the film are the exception
+   that proves it: they are not state, they are objects.
 
-4. **The ramps are closed sets.** Seven spacing steps, four radii, eight type
-   roles. When you need a new one, the layout is usually wrong. The gaps in
-   `KalloSpace` are the whole reason it reads as deliberate.
+4. **The ramps are closed sets.** Seven spacing steps, three radii and one
+   capsule, eight type roles. When you need a new one, the layout is usually
+   wrong. The gaps in `KalloSpace` are the whole reason it reads as deliberate.
 
 5. **A hairline is one device pixel, not one logical pixel.** *Not met yet*: the
    hairlines are `BorderSide`s of width 1, which is two device pixels on a
@@ -164,15 +172,21 @@ These are the ones worth enforcing in review.
 
 - **Colours** — two complete sets, `light` and `dark`, resolved once from the
   system unless the user pinned one. Four planes (`ground`, `sidebar`, `content`,
-  `surface`), one `hairline`, three inks, one accent in two weights, and `print`:
-  the paper. Plus one operation — `under(colour, light)` — because a wall under
-  a lamp is the same wall lit less, and a print is a reflectance, not an image
-  with an opacity.
+  `surface`) and a three-step control ramp (`fill`, `fillStrong`, `elevated`), one
+  `hairline`, three inks, the `accent` and its `accentSoft` wash, `onAccent`, the
+  modal `scrim`, and `print`: the paper. Plus one operation — `under(colour,
+  light)` — because a wall under a lamp is the same wall lit less, and a print is
+  a reflectance, not an image with an opacity.
 - **The wall** — `KalloWall`: the ground, the paper, the label and the control
   colours of the one room in the product that is lit by a lamp, in both
   appearances, plus the largest a print gets on it and how much light an eye
   keeps in the dark. A wall is lit by the room it stands in, so it follows the
   window's appearance; the lamp is the gallery's and takes the wall with it.
+- **The rack** — `KalloRack`: the working room's ground, its wire, its clip and
+  its graphite. It is not a wall and not a plane of the window; it is the one
+  place paper hangs in the air.
+- **The viewer** — `KalloViewer`: fixed black and fixed ink, because a print
+  taken off the rack is not in either appearance's room.
 - **Ink on paper** — `KalloInk`: what a contact proof writes on its sheet, at
   the light set's values in both appearances, because the paper does not turn
   dark when the window does. The accent is the safelight's, for the mark around
@@ -182,7 +196,10 @@ These are the ones worth enforcing in review.
   hairline. A film frame is an object in the work, like the paper, and it is lit
   by the same lamp.
 - **Space** — 2, 4, 8, 12, 16, 24, 32.
-- **Radius** — 3 for film, 6 for a control, 10 for a card, 14 for a sheet.
+- **Radius** — 8 for a control, 14 for a card, 20 for a sheet, and a capsule
+  for a tab track or a toolbar control.
+- **Shadow** — one for a sheet over the window, one for paper hanging in air,
+  and one pixel of lift under a chosen segment. No layout shadow.
 - **Motion** — 90 / 160 / 240 / 460 ms, three curves, one stagger. A lamp comes
   up faster than a room goes dark: the one direction is the filament, the other
   is the eye.

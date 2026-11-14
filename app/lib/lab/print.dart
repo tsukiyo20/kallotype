@@ -195,6 +195,12 @@ class Print {
   final double? minutes;
   final double? tempC;
 
+  /// The film as a box prints it, with its manufacturer.
+  String get filmDisplay => stockDisplayName(film);
+
+  /// The paper as a box prints it, with its manufacturer.
+  String get paperDisplay => stockDisplayName(paper);
+
   /// The picture's shape, width over height.
   ///
   /// A print is a sheet of paper cut to the picture, so this is the paper's

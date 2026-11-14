@@ -6,9 +6,9 @@ import 'package:flutter/widgets.dart';
 /// an app is made of. Two complete sets, one for each appearance, and the
 /// system decides which unless the user pins one.
 ///
-/// The accent is the safelight, turned down: it appears on a selection and on
-/// the tone curve, and nowhere else. Everything else is a neutral, because the
-/// colour in this product belongs to the photographs.
+/// The accent is the safelight: a selection, the tone curve, and the one action
+/// on a page. Everything else is a neutral, because the colour in this product
+/// belongs to the photographs.
 @immutable
 class KalloColors {
   const KalloColors({
@@ -17,13 +17,18 @@ class KalloColors {
     required this.sidebar,
     required this.content,
     required this.surface,
+    required this.fill,
+    required this.fillStrong,
+    required this.elevated,
     required this.hairline,
     required this.ink,
     required this.inkMuted,
     required this.inkFaint,
     required this.accent,
-    required this.accentDim,
+    required this.accentSoft,
+    required this.onAccent,
     required this.print,
+    required this.scrim,
   });
 
   final Brightness brightness;
@@ -40,6 +45,15 @@ class KalloColors {
   /// The inspector, a card, a panel that sits on the content.
   final Color surface;
 
+  /// The recessed fill of a control: a track, a field, an unfilled chip.
+  final Color fill;
+
+  /// The same fill under the pointer. One step, not a second palette.
+  final Color fillStrong;
+
+  /// A control that has lifted off its fill: a chosen segment, a raised key.
+  final Color elevated;
+
   /// The one border in the app, and it is a device pixel.
   final Color hairline;
 
@@ -52,44 +66,62 @@ class KalloColors {
   /// Text that must be felt.
   final Color inkFaint;
 
-  /// The safelight, turned down. Selection, and the curve. Nothing else.
+  /// The safelight turned up: the one tint in the chrome. Selection, the tone
+  /// curve, and the one primary action.
   final Color accent;
 
-  /// The accent at rest.
-  final Color accentDim;
+  /// The accent at rest: the wash behind a selected row, never a border.
+  final Color accentSoft;
+
+  /// Text drawn on [accent].
+  final Color onAccent;
 
   /// The paper a print sits on. Always warm, in both appearances: it is the one
   /// surface in the product that is a material rather than a plane.
   final Color print;
 
+  /// A modal's dimming. Black in both appearances, because a sheet dims the
+  /// room, not the ink.
+  final Color scrim;
+
   static const KalloColors light = KalloColors(
     brightness: Brightness.light,
-    ground: Color(0xFFF6F5F2),
-    sidebar: Color(0xFFF0EEE9),
+    ground: Color(0xFFF2F2F7),
+    sidebar: Color(0xFFF7F7FA),
     content: Color(0xFFFFFFFF),
-    surface: Color(0xFFFFFFFF),
-    hairline: Color(0xFFE2DFD8),
-    ink: Color(0xFF1D1B18),
-    inkMuted: Color(0xFF6E6A63),
-    inkFaint: Color(0xFFA6A199),
-    accent: Color(0xFF9A4318),
-    accentDim: Color(0xFFE3C6B4),
+    surface: Color(0xFFF7F7FA),
+    fill: Color(0xFFECECF0),
+    fillStrong: Color(0xFFE1E1E6),
+    elevated: Color(0xFFFFFFFF),
+    hairline: Color(0xFFD6D6DB),
+    ink: Color(0xFF1D1D1F),
+    inkMuted: Color(0xFF6E6E73),
+    inkFaint: Color(0xFF8E8E93),
+    accent: Color(0xFFC2410C),
+    accentSoft: Color(0xFFFBE9DE),
+    onAccent: Color(0xFFFFFFFF),
     print: Color(0xFFFFFCF7),
+    scrim: Color(0x52000000),
   );
 
   static const KalloColors dark = KalloColors(
     brightness: Brightness.dark,
-    ground: Color(0xFF1A1917),
-    sidebar: Color(0xFF252320),
-    content: Color(0xFF1C1B19),
-    surface: Color(0xFF232120),
-    hairline: Color(0xFF35322D),
-    ink: Color(0xFFF1EEE8),
-    inkMuted: Color(0xFFA29C93),
-    inkFaint: Color(0xFF6E6962),
-    accent: Color(0xFFC4652F),
-    accentDim: Color(0xFF5A2E18),
-    print: Color(0xFFF3EFE7),
+    ground: Color(0xFF000000),
+    sidebar: Color(0xFF0B0B0D),
+    content: Color(0xFF000000),
+    surface: Color(0xFF1C1C1E),
+    fill: Color(0xFF2C2C2E),
+    fillStrong: Color(0xFF3A3A3C),
+    elevated: Color(0xFF3A3A3C),
+    hairline: Color(0xFF38383A),
+    ink: Color(0xFFF5F5F7),
+    inkMuted: Color(0xFFAEAEB2),
+    inkFaint: Color(0xFF8E8E93),
+    accent: Color(0xFFFF9F0A),
+    accentSoft: Color(0xFF3A2A12),
+    onAccent: Color(0xFF1C1206),
+    print: Color(0xFFF7F2E9),
+    scrim: Color(0x99000000),
   );
 
   static KalloColors of(Brightness brightness) =>
@@ -124,7 +156,7 @@ abstract final class KalloFilm {
   static const Color rebate = Color(0xFF0B0A09);
 
   /// The film's outer edge, for the one hairline around the rebate.
-  static const Color edge = Color(0xFFA69D90);
+  static const Color edge = Color(0xFFB0B0B4);
 
   /// The edge printing of a silver film: warm ivory, the positive view of the
   /// dark letters on a negative.
@@ -138,10 +170,10 @@ abstract final class KalloFilm {
   static const Color edgeReversal = Color(0xFFF7F3EA);
 
   /// A sprocket hole: clear film, and what is behind it.
-  static const Color clear = Color(0xFFE9E2D5);
+  static const Color clear = Color(0xFFE9E9E7);
 
   /// The gate's own edge, around the picture.
-  static const Color gate = Color(0xFF2E2A26);
+  static const Color gate = Color(0xFF2C2C2E);
 }
 
 /// What is written on a print's paper.
@@ -155,16 +187,16 @@ abstract final class KalloFilm {
 /// wall's is: this is not a plane of the window but a material in the work.
 abstract final class KalloInk {
   /// A frame's number: the one thing written on the sheet by hand.
-  static const Color ink = Color(0xFF1D1B18);
+  static const Color ink = Color(0xFF1D1D1F);
 
   /// A time, a development, a note.
-  static const Color muted = Color(0xFF6E6A63);
+  static const Color muted = Color(0xFF6E6E73);
 
   /// The paper's name in the margin, and anything that is a caption.
-  static const Color faint = Color(0xFFA6A199);
+  static const Color faint = Color(0xFF8E8E93);
 
   /// The mark on the frame that was chosen.
-  static const Color accent = Color(0xFF9A4318);
+  static const Color accent = Color(0xFFC2410C);
 }
 
 /// A wall: its ground, the paper on it, and the graphite beside it.
@@ -207,20 +239,20 @@ class KalloWall {
   final Color? outline;
 
   static const KalloWall light = KalloWall(
-    top: Color(0xFFF4F0E8),
-    base: Color(0xFFE3DDD0),
+    top: Color(0xFFF7F7FA),
+    base: Color(0xFFE6E6EB),
     paper: Color(0xFFFFFDF8),
-    label: Color(0xFF6E6A63),
-    control: Color(0xFF3F3A33),
-    outline: Color(0xFFD8D2C5),
+    label: Color(0xFF5F5F64),
+    control: Color(0xFF1D1D1F),
+    outline: Color(0xFFDADAE0),
   );
 
   static const KalloWall dark = KalloWall(
-    top: Color(0xFF262119),
-    base: Color(0xFF090807),
-    paper: Color(0xFFFFFBF2),
-    label: Color(0xFF9A9387),
-    control: Color(0xFFF4EFE6),
+    top: Color(0xFF222224),
+    base: Color(0xFF000000),
+    paper: Color(0xFFFBF8F1),
+    label: Color(0xFFB0B0B5),
+    control: Color(0xFFF5F5F7),
   );
 
   static KalloWall of(Brightness brightness) =>
@@ -244,6 +276,68 @@ class KalloWall {
   static const double darkAdaptation = 0.10;
 }
 
+/// The drying rack: a room that is not the gallery's wall.
+///
+/// A rack is a working surface with wires across it, not a neutral plane. Its
+/// ground is still one of the window's neutrals; the wire and the clip are the
+/// only things that are metal, and they are stated here once.
+class KalloRack {
+  const KalloRack({
+    required this.top,
+    required this.base,
+    required this.wire,
+    required this.clip,
+    required this.label,
+  });
+
+  /// The end of the room the window is on.
+  final Color top;
+
+  /// The end the floor is on.
+  final Color base;
+
+  /// The line a print hangs from.
+  final Color wire;
+
+  /// The clip holding it there.
+  final Color clip;
+
+  /// The graphite under a print.
+  final Color label;
+
+  static const KalloRack light = KalloRack(
+    top: Color(0xFFF4F4F7),
+    base: Color(0xFFE3E3E8),
+    wire: Color(0xFFADADB5),
+    clip: Color(0xFF7A7A80),
+    label: Color(0xFF5F5F64),
+  );
+
+  static const KalloRack dark = KalloRack(
+    top: Color(0xFF151517),
+    base: Color(0xFF040405),
+    wire: Color(0xFF5A5A5F),
+    clip: Color(0xFFB8B8BE),
+    label: Color(0xFFB0B0B5),
+  );
+
+  static KalloRack of(Brightness brightness) =>
+      brightness == Brightness.dark ? dark : light;
+}
+
+/// A picture taken off the wall and looked at on its own.
+///
+/// The viewer is black in both appearances: it is not a room and not a sheet,
+/// it is the absence of everything except the print. Its ink is fixed because
+/// the background is.
+abstract final class KalloViewer {
+  static const Color background = Color(0xFF09090B);
+  static const Color ink = Color(0xFFF5F5F7);
+  static const Color muted = Color(0xFFAEAEB2);
+  static const Color fill = Color(0x1FFFFFFF);
+  static const Color hairline = Color(0x26FFFFFF);
+}
+
 /// The spacing ramp. Six steps, and the gaps are the point.
 abstract final class KalloSpace {
   static const double step0 = 2;
@@ -257,27 +351,40 @@ abstract final class KalloSpace {
 
 /// Corners. Controls are tight, cards are rounder, sheets rounder still.
 abstract final class KalloRadius {
-  /// A frame on the sheet. Almost sharp: a rectangle of emulsion.
-  static const double film = 3;
-
-  /// A button, a field, a segmented control.
-  static const double control = 6;
+  /// A button, a field, a chip, a segmented control.
+  static const double control = 8;
 
   /// A card, a panel, the inspector.
-  static const double card = 10;
+  static const double card = 14;
 
   /// A sheet that slides over everything.
-  static const double sheet = 14;
+  static const double sheet = 20;
+
+  /// A capsule: a tab track, a toolbar control.
+  static const double pill = 999;
 }
 
 /// Depth.
 ///
-/// One shadow, for the one thing that floats above the window: the drawer.
-/// Nothing else is raised — the planes of the app do that with colour, and a
-/// shadow that is not a thing sitting on another thing is decoration.
+/// A plane still rises by being lighter, not by a blur. The shadows here are
+/// objects: a sheet over the window, a print hanging in air, and the one pixel
+/// under a segment that has lifted off its track.
 abstract final class KalloShadow {
+  /// A sheet over the window, or a full-screen viewer.
   static const List<BoxShadow> sheet = <BoxShadow>[
-    BoxShadow(color: Color(0x24000000), blurRadius: 32, offset: Offset(0, 10)),
+    BoxShadow(color: Color(0x24000000), blurRadius: 40, offset: Offset(0, 14)),
+    BoxShadow(color: Color(0x0F000000), blurRadius: 8, offset: Offset(0, 2)),
+  ];
+
+  /// Paper on the rack: a material in a room, not a card in a layout.
+  static const List<BoxShadow> paper = <BoxShadow>[
+    BoxShadow(color: Color(0x26000000), blurRadius: 18, offset: Offset(0, 8)),
+    BoxShadow(color: Color(0x10000000), blurRadius: 3, offset: Offset(0, 1)),
+  ];
+
+  /// A segment or key lifted off its fill.
+  static const List<BoxShadow> control = <BoxShadow>[
+    BoxShadow(color: Color(0x14000000), blurRadius: 4, offset: Offset(0, 1)),
   ];
 }
 
@@ -368,7 +475,7 @@ abstract final class KalloType {
     fontFamilyFallback: fallback,
     fontSize: 10.5,
     height: 1.2,
-    letterSpacing: 0.7,
+    letterSpacing: 0.5,
     fontWeight: FontWeight.w600,
   );
 

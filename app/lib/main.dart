@@ -497,11 +497,11 @@ class _KalloAppState extends State<KalloApp> {
     setState(() => _jobs = <PrintJob>[job, ..._jobs]);
     try {
       final String filmName =
-          _catalogue?.film(strip.stockId)?.short ?? strip.stockLabel;
+          _catalogue?.film(strip.stockId)?.displayName ?? strip.stockLabel;
       final String paperName =
-          _catalogue?.paper(strip.paperId ?? '')?.short ??
+          _catalogue?.paper(strip.paperId ?? '')?.displayName ??
           strip.paperLabel ??
-          Stocks.paperShort;
+          Stocks.crystal.displayName;
       final File output = await printTest(
         model: Model.find(),
         strip: strip,
@@ -655,7 +655,7 @@ class _KalloAppState extends State<KalloApp> {
         );
       },
       home: _strip == null
-          ? const ColoredBox(color: Color(0xFFF6F5F2))
+          ? ColoredBox(color: KalloColors.light.ground)
           : Studio(
               strip: _strip!,
               photograph: _photograph,

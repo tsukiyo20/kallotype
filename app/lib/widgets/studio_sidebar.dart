@@ -3,26 +3,20 @@ import 'package:flutter/widgets.dart';
 import '../design/scope.dart';
 import '../design/strings.dart';
 import '../design/tokens.dart';
-import '../lab/clock.dart';
-import '../lab/strip.dart';
 import '../views/chambers.dart';
 
-/// The two rooms, the rack between them, and the one strip in the darkroom.
+/// The three places, and the one setting.
 ///
-/// The sidebar is a place, not a menu: the darkroom, the drying rack and the
-/// gallery are the only things it can make current, and the work underneath is
-/// the strip that is on the bench. It says what the strip is made of, not how
-/// to operate it — the steps belong to the room.
+/// The sidebar is a source list, not a dashboard. It says where a person can
+/// go and nothing about the strip they are working on: the work belongs to the
+/// room, and a title and a material line do not become global facts because
+/// they fit in a column.
 class StudioSidebar extends StatelessWidget {
   const StudioSidebar({
     super.key,
     required this.chamber,
     required this.onChamber,
-    required this.strip,
-    required this.filmShort,
-    required this.paperShort,
     required this.galleryCount,
-    required this.testCount,
     required this.onSettings,
     this.topInset = 12,
   });
@@ -30,15 +24,8 @@ class StudioSidebar extends StatelessWidget {
   final Chamber chamber;
   final ValueChanged<Chamber> onChamber;
 
-  final TestStrip strip;
-  final String filmShort;
-  final String paperShort;
-
   /// The prints hanging in the gallery: the room's count.
   final int galleryCount;
-
-  /// The prints on the strip: the work's count.
-  final int testCount;
 
   final VoidCallback onSettings;
 
@@ -49,8 +36,6 @@ class StudioSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloStrings s = KalloStrings.of(context);
-    final String? name = strip.name;
-    final double? first = strip.balanceFrom;
     return ColoredBox(
       color: colors.sidebar,
       child: Column(
@@ -58,81 +43,35 @@ class StudioSidebar extends StatelessWidget {
         children: <Widget>[
           SizedBox(height: topInset),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 2, 16, 16),
+            padding: const EdgeInsets.fromLTRB(20, 2, 16, 18),
             child: Text(
               'KALLOTYPE',
               style: KalloType.caption.copyWith(
                 color: colors.inkFaint,
-                letterSpacing: 2.2,
-                fontWeight: FontWeight.w500,
+                letterSpacing: 2.0,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
           _Room(
             label: s.darkroom,
-            mark: const _DarkroomMark(),
+            mark: _DarkroomMark(),
             selected: chamber == Chamber.darkroom,
             onTap: () => onChamber(Chamber.darkroom),
           ),
           _Room(
             label: s.rack,
-            mark: const _RackMark(),
+            mark: _RackMark(),
             selected: chamber == Chamber.rack,
             onTap: () => onChamber(Chamber.rack),
           ),
           _Room(
             label: s.galleryRoom,
-            mark: const _GalleryMark(),
+            mark: _GalleryMark(),
             selected: chamber == Chamber.gallery,
             trailing: galleryCount > 0 ? '$galleryCount' : null,
             onTap: () => onChamber(Chamber.gallery),
           ),
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(height: 1, color: colors.hairline),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              s.thisStrip,
-              style: KalloType.caption.copyWith(
-                color: colors.inkFaint,
-                letterSpacing: 1.4,
-              ),
-            ),
-          ),
-          const SizedBox(height: 7),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              name ?? s.noPhotographChosen,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KalloType.title.copyWith(
-                color: name == null ? colors.inkFaint : colors.ink,
-              ),
-            ),
-          ),
-          const SizedBox(height: 3),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              strip.photo == null
-                  ? s.darkroomNote
-                  : '$filmShort   ·   $paperShort',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: KalloType.small.copyWith(color: colors.inkMuted),
-            ),
-          ),
-          if (strip.photo != null) ...<Widget>[
-            const SizedBox(height: 14),
-            _Fact(label: s.testStrip, value: s.stripCount(testCount)),
-            if (first != null)
-              _Fact(label: s.sameExposure, value: darkroomClock(first)),
-          ],
           const Spacer(),
           _SettingsItem(onTap: onSettings),
           const SizedBox(height: 8),
@@ -167,7 +106,16 @@ class _RoomState extends State<_Room> {
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
-    final bool lit = widget.selected || _hover;
+    final Color ink = widget.selected
+        ? colors.ink
+        : _hover
+        ? colors.ink
+        : colors.inkMuted;
+    final Color mark = widget.selected
+        ? colors.accent
+        : _hover
+        ? colors.ink
+        : colors.inkMuted;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
       child: MouseRegion(
@@ -177,26 +125,31 @@ class _RoomState extends State<_Room> {
         child: GestureDetector(
           onTap: widget.onTap,
           behavior: HitTestBehavior.opaque,
-          child: Container(
-            height: 32,
+          child: AnimatedContainer(
+            duration: KalloMotion.quick,
+            curve: KalloMotion.enter,
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 9),
             decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color: widget.selected ? colors.accent : colors.sidebar,
-                  width: 2,
-                ),
-              ),
+              color: widget.selected
+                  ? colors.fillStrong
+                  : _hover
+                  ? colors.fill
+                  : null,
+              borderRadius: BorderRadius.circular(KalloRadius.control),
             ),
-            padding: const EdgeInsets.only(left: 8, right: 8),
             child: Row(
               children: <Widget>[
-                widget.mark,
+                ColorFiltered(
+                  colorFilter: ColorFilter.mode(mark, BlendMode.srcIn),
+                  child: widget.mark,
+                ),
                 const SizedBox(width: KalloSpace.step3),
                 Expanded(
                   child: Text(
                     widget.label,
                     style: KalloType.body.copyWith(
-                      color: lit ? colors.ink : colors.inkMuted,
+                      color: ink,
                       fontWeight: widget.selected
                           ? FontWeight.w500
                           : FontWeight.w400,
@@ -212,43 +165,6 @@ class _RoomState extends State<_Room> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Fact extends StatelessWidget {
-  const _Fact({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final KalloColors colors = KalloScope.colorsOf(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 3, 20, 3),
-      child: Row(
-        children: <Widget>[
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KalloType.small.copyWith(color: colors.inkFaint),
-            ),
-          ),
-          const SizedBox(width: KalloSpace.step2),
-          Flexible(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: KalloType.data.copyWith(color: colors.inkMuted),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -279,9 +195,14 @@ class _SettingsItemState extends State<_SettingsItem> {
         child: GestureDetector(
           onTap: widget.onTap,
           behavior: HitTestBehavior.opaque,
-          child: Container(
-            height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: AnimatedContainer(
+            duration: KalloMotion.quick,
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 9),
+            decoration: BoxDecoration(
+              color: _hover ? colors.fill : null,
+              borderRadius: BorderRadius.circular(KalloRadius.control),
+            ),
             child: Row(
               children: <Widget>[
                 SizedBox(
@@ -296,7 +217,7 @@ class _SettingsItemState extends State<_SettingsItem> {
                 const SizedBox(width: KalloSpace.step3),
                 Text(
                   s.settings,
-                  style: KalloType.small.copyWith(
+                  style: KalloType.body.copyWith(
                     color: _hover ? colors.ink : colors.inkMuted,
                   ),
                 ),
@@ -311,8 +232,6 @@ class _SettingsItemState extends State<_SettingsItem> {
 
 /// The darkroom's mark: a safelight, its shade and the light under it.
 class _DarkroomMark extends StatelessWidget {
-  const _DarkroomMark();
-
   @override
   Widget build(BuildContext context) => CustomPaint(
     size: const Size(16, 16),
@@ -351,8 +270,6 @@ class _DarkroomPainter extends CustomPainter {
 
 /// The rack's mark: a line, two pegs, two sheets.
 class _RackMark extends StatelessWidget {
-  const _RackMark();
-
   @override
   Widget build(BuildContext context) => CustomPaint(
     size: const Size(16, 16),
@@ -391,8 +308,6 @@ class _RackPainter extends CustomPainter {
 
 /// The gallery's mark: a print on a wire.
 class _GalleryMark extends StatelessWidget {
-  const _GalleryMark();
-
   @override
   Widget build(BuildContext context) => CustomPaint(
     size: const Size(16, 16),

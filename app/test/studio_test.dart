@@ -18,6 +18,7 @@ import 'package:kallo_ui/views/steps.dart';
 import 'package:kallo_ui/widgets/film_frame.dart';
 import 'package:kallo_ui/widgets/stage_tabs.dart';
 import 'package:kallo_ui/widgets/stepper.dart';
+import 'package:kallo_ui/widgets/print_viewer.dart';
 import 'package:kallo_ui/widgets/studio_sidebar.dart';
 
 Future<ui.Image> _card({int width = 600, int height = 400}) async {
@@ -153,6 +154,122 @@ void main() {
     expect(stepper, findsOneWidget);
     await tester.tap(find.descendant(of: stepper, matching: find.text('+')));
     expect(chosen, 20.5);
+  });
+
+  testWidgets('the window holds at its smallest size', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(960, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: const TestStrip(photo: '/photographs/uji.jpg'),
+        photograph: card,
+        prints: const <Print>[],
+        initialStep: DarkroomStep.select,
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('stage-tabs')), findsOneWidget);
+  });
+
+  testWidgets('the sides of the window can be put away', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: const TestStrip(photo: '/photographs/uji.jpg'),
+        photograph: card,
+        prints: const <Print>[],
+        initialStep: DarkroomStep.select,
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('studio-sidebar')), findsOneWidget);
+    expect(find.byKey(const Key('select-inspector')), findsOneWidget);
+    expect(find.text('彩色负片'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sidebar-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('studio-sidebar')), findsNothing);
+    expect(find.byType(StudioSidebar), findsNothing);
+    expect(find.byType(SelectStage), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sidebar-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('studio-sidebar')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('inspector-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('彩色负片'), findsNothing);
+    expect(find.byType(SelectStage), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('inspector-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('彩色负片'), findsOneWidget);
+  });
+
+  testWidgets('the rack wraps its prints and opens one full screen', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final List<Print> prints = <Print>[
+      for (int i = 0; i < 6; i++)
+        Print(
+          image: card,
+          name: 'uji-$i',
+          printNumber: 1,
+          film: 'ULTRA MAX 400',
+          paper: 'PORTRA ENDURA',
+          minutes: 6 + i.toDouble(),
+          tempC: 20,
+        ),
+    ];
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: const TestStrip(photo: '/photographs/uji.jpg'),
+        photograph: card,
+        prints: prints,
+        initialChamber: Chamber.rack,
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final Scrollable scroll = tester.widget<Scrollable>(
+      find.descendant(
+        of: find.byKey(const Key('rack-scroll')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(scroll.axisDirection, AxisDirection.down);
+    expect(find.byKey(const ValueKey<String>('rack-line-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('rack-line-1')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('rack-print-0')));
+    await tester.pumpAndSettle();
+    expect(find.byType(PrintViewer), findsOneWidget);
+    expect(find.byKey(const Key('print-viewer-close')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('print-viewer-close')));
+    await tester.pumpAndSettle();
+    expect(find.byType(PrintViewer), findsNothing);
   });
 
   testWidgets('the rack is beside the darkroom', (WidgetTester tester) async {

@@ -17,7 +17,6 @@ import '../lab/stock.dart';
 import '../widgets/export_sheet.dart';
 import '../widgets/film_frame.dart';
 import '../widgets/lens.dart';
-import '../widgets/switch.dart';
 import '../widgets/wall.dart';
 
 /// The gallery: the last place. One wall, every print, one lamp.
@@ -49,7 +48,7 @@ class Gallery extends StatefulWidget {
     super.key,
     required this.prints,
     required this.light,
-    required this.onLight,
+    this.topInset = 0,
   });
 
   /// Everything exported, oldest first.
@@ -59,8 +58,8 @@ class Gallery extends StatefulWidget {
   /// takes the wall and the work with it — not the window around them.
   final double light;
 
-  /// The switch belongs to the room, not to the wall.
-  final VoidCallback onLight;
+  /// The transparent chrome over the wall: the grid starts below it.
+  final double topInset;
 
   @override
   State<Gallery> createState() => _GalleryState();
@@ -167,7 +166,6 @@ class _GalleryState extends State<Gallery> {
 
   @override
   Widget build(BuildContext context) {
-    final KalloStrings s = KalloStrings.of(context);
     // The wall is the appearance's: a gallery is white in daylight and dark
     // after hours, and the lamp goes out in both.
     final KalloWall wall = KalloWall.of(
@@ -188,7 +186,6 @@ class _GalleryState extends State<Gallery> {
         wall: wall,
         light: light,
         printed: printed,
-        onLight: widget.onLight,
         onClose: () => setState(() => _near = null),
       );
     }
@@ -197,9 +194,8 @@ class _GalleryState extends State<Gallery> {
       builder: (BuildContext context, BoxConstraints room) {
         const double gap = 28;
         const double margin = 40;
-        // The switch floats over the wall, so the wall fades under it rather
-        // than putting a panel in front of the work.
-        const double floor = 120;
+        // The wall fades into the floor, and the grid stops above it.
+        const double floor = 96;
         final double available = math.max(200, room.maxWidth - margin * 2);
         // Three frames across a 1280 window, four across a wide one, and never
         // fewer columns than there are frames to put in them.
@@ -243,9 +239,12 @@ class _GalleryState extends State<Gallery> {
         final double tallest = prints.isEmpty
             ? 0.0
             : prints.map(heightOf).reduce(math.max);
-        final double height = math.max(film * 0.74, tallest) + 30;
+        final double height = math.max(film * 0.74, tallest) + 48;
         final double content = rows * height + math.max(0, rows - 1) * gap;
-        final double top = math.max(margin, (room.maxHeight - content) / 2);
+        final double top = math.max(
+          margin + widget.topInset,
+          (room.maxHeight - content) / 2,
+        );
 
         return Stack(
           key: _field,
@@ -323,20 +322,6 @@ class _GalleryState extends State<Gallery> {
                 ),
               ),
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: KalloSpace.step6,
-              child: Center(
-                child: KalloSwitch(
-                  key: const Key('light'),
-                  label: s.roomLight,
-                  control: wall.controlAt(light),
-                  on: light > 0.5,
-                  onTap: widget.onLight,
-                ),
-              ),
-            ),
           ],
         );
       },
@@ -367,7 +352,6 @@ class _Loupe extends StatefulWidget {
     required this.wall,
     required this.light,
     required this.printed,
-    required this.onLight,
     required this.onClose,
   });
 
@@ -382,10 +366,6 @@ class _Loupe extends StatefulWidget {
 
   /// The light on the film, which holds a little after the wall has gone out.
   final double printed;
-
-  /// The lamp is the room's, and this is still the room: a person who walked up
-  /// to a print in the dark has to be able to turn the light on.
-  final VoidCallback onLight;
 
   final VoidCallback onClose;
 
@@ -705,14 +685,14 @@ class _LoupeState extends State<_Loupe> {
                                       wall: widget.wall,
                                       film: filmEdgeName(widget.print.film),
                                       clock: widget.print.clock,
-                                      paper: widget.print.paper,
+                                      paper: widget.print.paperDisplay,
                                       fallback: widget.print.name,
                                     ),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: KalloType.caption.copyWith(
-                                    letterSpacing: 0.5,
+                                  style: KalloType.small.copyWith(
+                                    letterSpacing: 0.2,
                                     fontWeight: FontWeight.w400,
                                   ),
                                 ),
@@ -739,13 +719,6 @@ class _LoupeState extends State<_Loupe> {
                             ),
                           ),
                           const SizedBox(width: KalloSpace.step4),
-                          KalloSwitch(
-                            label: s.roomLight,
-                            control: widget.wall.controlAt(light),
-                            on: widget.light > 0.5,
-                            onTap: widget.onLight,
-                          ),
-                          const SizedBox(width: KalloSpace.step3),
                           _Pill(
                             key: const Key('export'),
                             label: exportLabel,
@@ -954,15 +927,15 @@ class _Hung extends StatelessWidget {
                 wall: wall,
                 film: filmEdgeName(print.film),
                 clock: print.clock,
-                paper: print.paper,
+                paper: print.paperDisplay,
                 fallback: print.name,
               ),
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: KalloType.caption.copyWith(
-              letterSpacing: 0.5,
+            style: KalloType.small.copyWith(
+              letterSpacing: 0.2,
               fontWeight: FontWeight.w400,
             ),
           ),

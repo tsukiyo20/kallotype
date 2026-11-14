@@ -2,6 +2,112 @@ import 'dart:convert';
 
 import 'model.dart';
 
+/// The manufacturer a stock's label names, or the name it is known by.
+///
+/// The model carries the manufacturer in the label, not in a field of its own.
+/// A film's short name is the product (`GOLD 200`); a print's record may carry
+/// either shape. These three functions are the one place the app adds the
+/// manufacturer back, so a box, a caption and a rebate all say the same thing.
+String stockMaker(String? name) {
+  final String upper = (name ?? '').toUpperCase();
+  if (upper.isEmpty) {
+    return '';
+  }
+  if (upper.startsWith('KODAK') ||
+      <String>[
+        'T-MAX',
+        'TRI-X',
+        'PORTRA',
+        'ULTRA MAX',
+        'GOLD',
+        'VISION3',
+        'EKTAR',
+        'EKTACHROME',
+        'ENDURA',
+        'POLYMAX',
+      ].any(upper.contains)) {
+    return 'KODAK';
+  }
+  if (upper.startsWith('FUJI') ||
+      <String>[
+        'PROVIA',
+        'VELVIA',
+        'SUPERIA',
+        'CRYSTAL ARCHIVE',
+        'PRO 400H',
+        'C200',
+        'ACROS',
+      ].any(upper.contains)) {
+    return 'FUJIFILM';
+  }
+  if (upper.startsWith('ILFORD') ||
+      <String>['DELTA', 'HP5', 'FP4', 'XP2', 'PAN F'].any(upper.contains)) {
+    return 'ILFORD';
+  }
+  return upper.split(RegExp(r'\s+')).first;
+}
+
+/// A stock's product name without the manufacturer, process or data sheet.
+///
+/// A full label is the manufacturer's sentence: `KODAK PROFESSIONAL T-MAX 400,
+/// D-76 8 min 20 °C`. A box, a chip and a rebate want the noun. The short name
+/// is already that noun, so callers with a [Stock] should use [Stock.displayName]
+/// rather than this function.
+String stockProductName(String? name, {String? maker}) {
+  String value = (name ?? '').split(',').first.trim();
+  if (value.isEmpty) {
+    return '';
+  }
+  value = value.replaceAll(
+    RegExp(r'\bPROFESSIONAL\b', caseSensitive: false),
+    '',
+  );
+  value = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+  final String brand = maker ?? stockMaker(value);
+  for (final String prefix in <String>[
+    'KODAK',
+    'FUJIFILM',
+    'FUJICOLOR',
+    'FUJICHROME',
+    'ILFORD',
+  ]) {
+    if (value.toUpperCase().startsWith(prefix)) {
+      value = value.substring(prefix.length).trim();
+      break;
+    }
+  }
+  value = value
+      .replaceAll(RegExp(r'\s+Color Negative Film$', caseSensitive: false), '')
+      .replaceAll(RegExp(r'\s+Film$', caseSensitive: false), '')
+      .replaceAll(RegExp(r'\s+Paper$', caseSensitive: false), '')
+      .trim();
+  if (value.toUpperCase().startsWith(brand.toUpperCase())) {
+    value = value.substring(brand.length).trim();
+  }
+  return value;
+}
+
+/// A stock's manufacturer and product, as a box would print it.
+///
+/// `GOLD 200` becomes `KODAK GOLD 200`; a full label becomes `KODAK T-MAX 400`.
+/// A name that already carries the manufacturer is left alone, so calling this
+/// twice does not print it twice.
+String stockDisplayName(String? name) {
+  final String value = (name ?? '').split(',').first.trim();
+  if (value.isEmpty) {
+    return '';
+  }
+  final String maker = stockMaker(value);
+  final String product = stockProductName(value, maker: maker);
+  if (product.isEmpty) {
+    return maker;
+  }
+  if (product.toUpperCase().startsWith(maker.toUpperCase())) {
+    return product;
+  }
+  return '$maker $product';
+}
+
 /// Which chemistry a film is, and therefore which stages a print runs.
 ///
 /// A negative is developed, printed onto paper and scanned; a reversal is
@@ -46,10 +152,10 @@ class Measured {
   ];
 
   static Measured fromJson(Map<String, dynamic> json) => Measured(
-        field: json['field'] as String? ?? '',
-        claim: json['claim'] as String? ?? '',
-        detail: json['detail'] as String? ?? '',
-      );
+    field: json['field'] as String? ?? '',
+    claim: json['claim'] as String? ?? '',
+    detail: json['detail'] as String? ?? '',
+  );
 }
 
 /// Where a stock's numbers came from: a data sheet, a printed page, a date, and
@@ -70,11 +176,11 @@ class Provenance {
   bool get isEmpty => publication.isEmpty && retrieved.isEmpty;
 
   static Provenance fromJson(Map<String, dynamic> json) => Provenance(
-        publication: json['publication'] as String? ?? '',
-        page: json['page'] as String? ?? '',
-        retrieved: json['retrieved'] as String? ?? '',
-        checksum: json['checksum'] as String? ?? '',
-      );
+    publication: json['publication'] as String? ?? '',
+    page: json['page'] as String? ?? '',
+    retrieved: json['retrieved'] as String? ?? '',
+    checksum: json['checksum'] as String? ?? '',
+  );
 }
 
 /// A stock: an id the model knows, the name on the box, and the record behind
@@ -106,6 +212,22 @@ class Stock {
   /// The manufacturer's full name, as the data sheet prints it.
   final String label;
 
+  /// The manufacturer, added back where the interface shows a film or paper.
+  String get maker => stockMaker(label.isNotEmpty ? label : short);
+
+  /// The product alone, for a shelf that has already named the maker.
+  String get productName =>
+      stockProductName(short.isNotEmpty ? short : label, maker: maker);
+
+  /// The stock as a box prints it: manufacturer and product, no data sheet.
+  String get displayName {
+    final String base = short.isNotEmpty ? short : label;
+    if (base.isEmpty || base.toUpperCase().startsWith(maker.toUpperCase())) {
+      return base;
+    }
+    return '$maker $base';
+  }
+
   /// Which chemistry the film is. Null for a paper, which has no process of its
   /// own: it records what is on the negative.
   final FilmProcess? process;
@@ -127,8 +249,9 @@ class Stock {
 
   static Stock fromJson(Map<String, dynamic> json) {
     final Object? reference = json['reference'];
-    final Map<String, dynamic>? measuredAt =
-        reference is Map<String, dynamic> ? reference : null;
+    final Map<String, dynamic>? measuredAt = reference is Map<String, dynamic>
+        ? reference
+        : null;
     final Object? measured = json['measured'];
     return Stock(
       id: json['id'] as String? ?? '',
@@ -146,8 +269,7 @@ class Stock {
         _ => null,
       },
       note: json['note'] as String? ?? '',
-      referenceMinutes:
-          (measuredAt?['minutes'] as num?)?.toDouble() ?? 0,
+      referenceMinutes: (measuredAt?['minutes'] as num?)?.toDouble() ?? 0,
       referenceTempC: (measuredAt?['temp_c'] as num?)?.toDouble() ?? 0,
       provenance: Provenance.fromJson(
         json['provenance'] is Map<String, dynamic>
@@ -184,9 +306,9 @@ class Catalogue {
 
   /// Every film, grouped by chemistry in the order the shelf shows them.
   List<Stock> of(FilmProcess process) => <Stock>[
-        for (final Stock stock in films)
-          if (stock.process == process) stock,
-      ];
+    for (final Stock stock in films)
+      if (stock.process == process) stock,
+  ];
 
   Stock? film(String id) {
     for (final Stock stock in films) {
@@ -260,10 +382,10 @@ class Catalogue {
 
   static Catalogue fromJson(Map<String, dynamic> json) {
     List<Stock> stocks(String key) => <Stock>[
-          if (json[key] is List)
-            for (final Object? row in json[key] as List)
-              if (row is Map<String, dynamic>) Stock.fromJson(row),
-        ];
+      if (json[key] is List)
+        for (final Object? row in json[key] as List)
+          if (row is Map<String, dynamic>) Stock.fromJson(row),
+    ];
     return Catalogue(films: stocks('films'), papers: stocks('papers'));
   }
 }

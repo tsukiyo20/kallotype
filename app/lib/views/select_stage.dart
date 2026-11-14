@@ -9,6 +9,7 @@ import '../lab/stock.dart';
 import '../lab/strip.dart';
 import '../widgets/button.dart';
 import '../widgets/chip.dart';
+import '../widgets/inspector.dart';
 
 /// The first step: the photograph, before the developer.
 ///
@@ -27,6 +28,8 @@ class SelectStage extends StatelessWidget {
     required this.onPaper,
     required this.onGoDevelop,
     required this.onClear,
+    this.showInspector = true,
+    this.topInset = 0,
   });
 
   final TestStrip strip;
@@ -38,6 +41,14 @@ class SelectStage extends StatelessWidget {
   final ValueChanged<Stock?> onPaper;
   final VoidCallback onGoDevelop;
   final VoidCallback onClear;
+
+  /// Whether the instrument panel is open. The work takes the width back when
+  /// it is not.
+  final bool showInspector;
+
+  /// The transparent chrome at the top of the window. The page runs under it;
+  /// its text starts below it.
+  final double topInset;
 
   Stock? get _film => catalogue.film(strip.stockId);
   Stock? get _paper =>
@@ -52,9 +63,9 @@ class SelectStage extends StatelessWidget {
       children: <Widget>[
         Expanded(
           child: ColoredBox(
-            color: colors.ground,
+            color: colors.content,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(32, 22, 32, 28),
+              padding: EdgeInsets.fromLTRB(32, topInset + 18, 32, 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
@@ -64,7 +75,7 @@ class SelectStage extends StatelessWidget {
                         s.theOriginal,
                         style: KalloType.caption.copyWith(
                           color: colors.inkFaint,
-                          letterSpacing: 1.4,
+                          letterSpacing: 0.7,
                         ),
                       ),
                       const SizedBox(width: KalloSpace.step3),
@@ -100,7 +111,11 @@ class SelectStage extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(width: 304, child: _materials(colors, s)),
+        InspectorPane(
+          key: const Key('select-inspector'),
+          open: showInspector,
+          child: _materials(colors, s),
+        ),
       ],
     );
   }
@@ -155,21 +170,29 @@ class SelectStage extends StatelessWidget {
     );
   }
 
+  /// The makers in a chemistry, in the order the shelf already has them.
+  List<String> _makers(FilmProcess process) {
+    final List<String> makers = <String>[];
+    for (final Stock stock in catalogue.of(process)) {
+      if (!makers.contains(stock.maker)) {
+        makers.add(stock.maker);
+      }
+    }
+    return makers;
+  }
+
   Widget _materials(KalloColors colors, KalloStrings s) {
     final Stock? film = _film;
     final Stock? paper = _paper;
     final List<Stock> papers = catalogue.papersFor(film?.process);
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(left: BorderSide(color: colors.hairline)),
-      ),
+      decoration: BoxDecoration(color: colors.surface),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+              padding: EdgeInsets.fromLTRB(20, topInset + 18, 20, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -177,7 +200,7 @@ class SelectStage extends StatelessWidget {
                     s.film,
                     style: KalloType.caption.copyWith(
                       color: colors.inkFaint,
-                      letterSpacing: 1.4,
+                      letterSpacing: 0.7,
                     ),
                   ),
                   for (final FilmProcess process in FilmProcess.values)
@@ -187,20 +210,34 @@ class SelectStage extends StatelessWidget {
                         s.processName(process),
                         style: KalloType.small.copyWith(color: colors.inkMuted),
                       ),
-                      const SizedBox(height: KalloSpace.step1 + 2),
-                      Wrap(
-                        spacing: KalloSpace.step1 + 2,
-                        runSpacing: KalloSpace.step1 + 2,
-                        children: <Widget>[
-                          for (final Stock stock in catalogue.of(process))
-                            KalloChip(
-                              label: stock.short,
-                              selected: stock.id == film?.id,
-                              compact: true,
-                              onTap: () => onFilm(stock),
-                            ),
-                        ],
-                      ),
+                      for (final String maker in _makers(process)) ...<Widget>[
+                        const SizedBox(height: KalloSpace.step2),
+                        Text(
+                          maker,
+                          style: KalloType.caption.copyWith(
+                            color: colors.inkFaint,
+                            fontSize: 9.5,
+                            letterSpacing: 1.1,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: KalloSpace.step1),
+                        Wrap(
+                          spacing: KalloSpace.step1 + 2,
+                          runSpacing: KalloSpace.step1 + 2,
+                          children: <Widget>[
+                            for (final Stock stock in catalogue.of(process))
+                              if (stock.maker == maker)
+                                KalloChip(
+                                  label: stock.productName,
+                                  semanticLabel: stock.displayName,
+                                  selected: stock.id == film?.id,
+                                  compact: true,
+                                  onTap: () => onFilm(stock),
+                                ),
+                          ],
+                        ),
+                      ],
                     ],
                   if (film != null) ...<Widget>[
                     const SizedBox(height: KalloSpace.step2),
@@ -232,7 +269,7 @@ class SelectStage extends StatelessWidget {
                   s.paper,
                   style: KalloType.caption.copyWith(
                     color: colors.inkFaint,
-                    letterSpacing: 1.4,
+                    letterSpacing: 0.7,
                   ),
                 ),
                 if (papers.isEmpty)
@@ -265,7 +302,7 @@ class SelectStage extends StatelessWidget {
                             if ((p.emulsion ?? PaperEmulsion.colour) ==
                                 emulsion)
                               KalloChip(
-                                label: p.short,
+                                label: p.displayName,
                                 selected: p.id == paper?.id,
                                 compact: true,
                                 onTap: () => onPaper(p),
@@ -289,7 +326,7 @@ class SelectStage extends StatelessWidget {
                       s.exposure,
                       style: KalloType.caption.copyWith(
                         color: colors.inkFaint,
-                        letterSpacing: 1.4,
+                        letterSpacing: 0.7,
                       ),
                     ),
                     const Spacer(),
@@ -345,9 +382,8 @@ class _Quiet extends StatelessWidget {
         child: Text(
           label,
           style: KalloType.small.copyWith(
-            color: colors.inkMuted,
-            decoration: TextDecoration.underline,
-            decorationColor: colors.hairline,
+            color: colors.accent,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ),

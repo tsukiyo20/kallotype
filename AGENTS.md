@@ -33,7 +33,7 @@ checklist.
   the transition interpolates.
 - `app/lib/widgets/film_frame.dart` — 35 mm frame geometry and the film painter.
 - `app/test/goldens/<platform>/` — the studio pictures the design is held
-  against; macOS has eight, Windows draws its own.
+  against; macOS has twelve, Windows draws its own.
 
 ## Verifying
 
@@ -42,7 +42,7 @@ just check                    # Rust: fmt, clippy, tests
 cd app && flutter analyze     # must say "No issues found!"
 cd app && flutter test        # the studio goldens are opt-in
 cd app && flutter test --dart-define=studio-goldens=true test/studio_golden_test.dart
-                              # the eight pictures, from this platform's folder
+                              # the twelve pictures, from this platform's folder
 cd app && flutter test integration_test/ffi_strip_test.dart -d macos
                               # the linked model, in the app it ships in
 ```

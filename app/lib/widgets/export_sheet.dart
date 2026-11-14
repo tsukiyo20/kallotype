@@ -30,7 +30,7 @@ Future<ExportOptions?> showExportSheet(
     context: context,
     barrierDismissible: true,
     barrierLabel: s.cancel,
-    barrierColor: colors.ink.withValues(alpha: 0.18),
+    barrierColor: colors.scrim,
     transitionDuration: KalloMotion.settle,
     pageBuilder:
         (
@@ -115,15 +115,15 @@ class _ExportSheetState extends State<_ExportSheet> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: colors.surface,
-                    borderRadius: BorderRadius.circular(KalloRadius.card),
-                    border: Border.all(color: colors.hairline),
+                    borderRadius: BorderRadius.circular(KalloRadius.sheet),
+                    boxShadow: KalloShadow.sheet,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
+                      KalloSpace.step5 + 2,
                       KalloSpace.step5,
-                      KalloSpace.step4,
+                      KalloSpace.step5 + 2,
                       KalloSpace.step5,
-                      KalloSpace.step4,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -155,9 +155,7 @@ class _ExportSheetState extends State<_ExportSheet> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: KalloSpace.step4),
-                        Container(height: 1, color: colors.hairline),
-                        const SizedBox(height: KalloSpace.step4),
+                        const SizedBox(height: KalloSpace.step5),
                         Text(
                           s.size,
                           style: KalloType.caption.copyWith(
