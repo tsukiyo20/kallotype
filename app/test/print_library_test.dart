@@ -5,7 +5,7 @@ import 'package:image/image.dart' as img;
 import 'package:kallo/lab/catalog.dart';
 import 'package:kallo/lab/exports.dart';
 import 'package:kallo/lab/print.dart';
-import 'package:kallo/lab/print_library.dart';
+import 'package:kallo/lab/folder_print_library.dart';
 import 'package:kallo/lab/print_marker.dart';
 import 'package:kallo/lab/print_meta.dart';
 import 'package:kallo/lab/print_store.dart';
@@ -15,7 +15,7 @@ void main() {
   late Directory root;
   late Directory folder;
   late Catalog catalog;
-  late PrintLibrary library;
+  late FolderPrintLibrary library;
   final DateTime printed = DateTime.utc(2026, 11, 14, 9, 5);
 
   PrintMeta meta({String? id, String title = 'print 01'}) => PrintMeta(
@@ -44,7 +44,7 @@ void main() {
     root = await Directory.systemTemp.createTemp('kallo-library-');
     folder = Directory('${root.path}/Kallo')..createSync();
     catalog = Catalog.openInMemory();
-    library = PrintLibrary.open(folder: folder, catalog: catalog);
+    library = FolderPrintLibrary.open(folder: folder, catalog: catalog);
   });
 
   tearDown(() async {
@@ -147,7 +147,7 @@ void main() {
     await library.read();
 
     final Directory destination = Directory('${root.path}/Moved');
-    final PrintLibrary moved = await library.moveTo(destination);
+    final FolderPrintLibrary moved = await library.moveTo(destination);
 
     expect(moved.folder.path, destination.path);
     expect(File('${destination.path}/print.png').existsSync(), isTrue);

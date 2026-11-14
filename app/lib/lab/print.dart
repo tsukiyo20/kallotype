@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 
 import 'clock.dart';
 import 'model.dart';
+import 'print_ref.dart';
 import 'stock.dart';
 
 /// The chemistry a film's name implies, for a print written before the record
@@ -145,7 +146,9 @@ class Print {
   const Print({
     this.image,
     required this.name,
+    this.id,
     this.path,
+    this.ref,
     this.pixels,
     this.printNumber = 1,
     this.process,
@@ -163,9 +166,16 @@ class Print {
   /// loaded callers may still hand over an image directly.
   final ui.Image? image;
 
-  /// The file this print came from. Null for a print a test built, which is the
-  /// one case where a print has pixels and no file behind it.
+  /// The catalog's identity for this print, when it came from a library.
+  final String? id;
+
+  /// The file this print came from. Null for a print a test built, and for a
+  /// print the system library owns.
   final String? path;
+
+  /// Where the pixels come from when they are not a file. On a phone this is
+  /// a Photos asset or a MediaStore item.
+  final PrintRef? ref;
 
   /// The file's own pixel size, which is what the loupe magnifies and what the
   /// readout says. Null when there is no file.
@@ -258,19 +268,17 @@ class Print {
   /// Null when there is no file behind this print, or when the file cannot be
   /// decoded any more — the wall's copy is always there to fall back to.
   Future<ui.Image?> full() async {
-    final String? path = this.path;
-    if (path == null) {
-      return null;
-    }
     try {
-      final Uint8List bytes = await File(path).readAsBytes();
-      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
-      try {
-        final ui.FrameInfo frame = await codec.getNextFrame();
-        return frame.image;
-      } finally {
-        codec.dispose();
+      final PrintRef? ref = this.ref;
+      if (ref != null) {
+        final Uint8List? bytes = await ref.image();
+        return bytes == null ? null : await _decodeBytes(bytes);
       }
+      final String? path = this.path;
+      if (path == null) {
+        return null;
+      }
+      return await _decodeBytes(await File(path).readAsBytes());
     } on Object catch (error) {
       Model.log('no larger print for $path: $error');
       return null;
@@ -284,26 +292,41 @@ class Print {
   /// needs to be honest at a device pixel ratio of two, and it is thrown away
   /// when the pointer leaves the print.
   Future<ui.Image?> magnified({int width = 4000}) async {
-    final String? path = this.path;
-    if (path == null) {
-      return null;
-    }
     final int source = pixels?.width.toInt() ?? 0;
     try {
+      final PrintRef? ref = this.ref;
+      if (ref != null) {
+        final Uint8List? bytes = await ref.image(maxWidth: width);
+        return bytes == null ? null : await _decodeBytes(bytes);
+      }
+      final String? path = this.path;
+      if (path == null) {
+        return null;
+      }
       final Uint8List bytes = await File(path).readAsBytes();
-      final ui.Codec codec = await ui.instantiateImageCodec(
+      return await _decodeBytes(
         bytes,
         targetWidth: source > width ? width : null,
       );
-      try {
-        final ui.FrameInfo frame = await codec.getNextFrame();
-        return frame.image;
-      } finally {
-        codec.dispose();
-      }
     } on Object catch (error) {
       Model.log('no magnified print for $path: $error');
       return null;
+    }
+  }
+
+  static Future<ui.Image?> _decodeBytes(
+    Uint8List bytes, {
+    int? targetWidth,
+  }) async {
+    final ui.Codec codec = await ui.instantiateImageCodec(
+      bytes,
+      targetWidth: targetWidth,
+    );
+    try {
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      return frame.image;
+    } finally {
+      codec.dispose();
     }
   }
 
@@ -390,7 +413,9 @@ class Print {
   Print _withImage(ui.Image image) => Print(
     image: image,
     name: name,
+    id: id,
     path: path,
+    ref: ref,
     pixels: pixels ?? Size(image.width.toDouble(), image.height.toDouble()),
     printNumber: printNumber,
     process: process,

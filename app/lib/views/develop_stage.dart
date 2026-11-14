@@ -550,6 +550,23 @@ class _DevelopStageState extends State<DevelopStage> {
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloStrings s = KalloStrings.of(context);
+    if (MediaQuery.sizeOf(context).width < 700) {
+      return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double panel = (constraints.maxHeight * 0.46).clamp(
+            240.0,
+            420.0,
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(child: _bench(colors, s)),
+              SizedBox(height: panel, child: _panel(colors, s)),
+            ],
+          );
+        },
+      );
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -735,7 +752,15 @@ class _DevelopStageState extends State<DevelopStage> {
         children: <Widget>[
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(20, widget.topInset + 18, 20, 12),
+              // Stacked under the bench on a phone, the panel no longer sits
+              // under the floating capsule; its text starts at its own edge.
+              padding: EdgeInsets.fromLTRB(
+                20,
+                (MediaQuery.sizeOf(context).width < 700 ? 0 : widget.topInset) +
+                    18,
+                20,
+                12,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import '../src/rust/api/thumbnail.dart' as thumbnail_api;
 import 'model.dart';
 import 'print.dart';
+import 'print_ref.dart';
 import 'settings.dart';
 
 /// A thumbnail that a widget is holding.
@@ -108,6 +109,10 @@ class PrintThumbnailCache {
     if (ready != null) {
       return PrintThumbnail._(ready, ({bool drop = false}) {});
     }
+    final ref = print.ref;
+    if (ref != null) {
+      return _acquireRemote(ref.locator, ref, maxWidth);
+    }
     final String? path = print.path;
     if (path == null) {
       return null;
@@ -151,6 +156,70 @@ class PrintThumbnailCache {
       return null;
     }
     return _lease(current);
+  }
+
+  /// A thumbnail from a system library. There is no file to cache beside the
+  /// app: the platform's thumbnail request is already the cache, and the
+  /// decoded image is bounded by the same lease as a folder print.
+  Future<PrintThumbnail?> _acquireRemote(
+    String locator,
+    PrintRef ref,
+    int maxWidth,
+  ) async {
+    final String key = 'system:$locator:$maxWidth';
+    final _Entry? cached = _entries[key];
+    if (cached != null) {
+      return _lease(cached);
+    }
+    final Future<_Entry?> future = _inflight.putIfAbsent(key, () {
+      final Future<_Entry?> next = _enqueue(() async {
+        final Uint8List? bytes = await ref.thumbnail(maxWidth: maxWidth);
+        if (bytes == null) {
+          return null;
+        }
+        final ui.Image? image = await _decodeBytes(bytes);
+        if (image == null) {
+          return null;
+        }
+        final _Entry entry = _Entry(key, image);
+        _entries[key] = entry;
+        _bytes += entry.bytes;
+        return entry;
+      });
+      next.whenComplete(() {
+        if (identical(_inflight[key], next)) {
+          _inflight.remove(key);
+        }
+      });
+      return next;
+    });
+    final _Entry? entry;
+    try {
+      entry = await future;
+    } on Object catch (error) {
+      Model.log('no thumbnail for $locator: $error');
+      return null;
+    }
+    if (entry == null) {
+      return null;
+    }
+    final _Entry? current = _entries[key];
+    return current == null ? null : _lease(current);
+  }
+
+  Future<ui.Image?> _decodeBytes(Uint8List bytes) async {
+    try {
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      try {
+        final ui.FrameInfo frame = await codec.getNextFrame();
+        return frame.image;
+      } finally {
+        codec.dispose();
+      }
+    } on Object catch (error) {
+      Model.log('a system thumbnail could not be decoded: $error');
+      return null;
+    }
   }
 
   /// Drop every decoded image. The disk cache is untouched; this is for tests

@@ -352,8 +352,8 @@ class KalloStrings {
   String get prints => zh ? '印相' : 'Prints';
 
   String get printsNote => zh
-      ? '每一张印相都保存在这个文件夹；观景台会给它们加上胶片边框，导出的成品在 Frames/。'
-      : 'Every print is a file in this folder; the gallery frames it, and exports go in Frames/.';
+      ? '每张印相都是一张图片；文件带着记录，目录保留索引。'
+      : 'Every print is a picture; the file carries its record, and the catalog keeps the index.';
 
   String get folder => zh ? '文件夹' : 'Folder';
   String get choose => zh ? '选择…' : 'Choose…';
@@ -393,6 +393,12 @@ class KalloStrings {
   String get fixedFolder => zh
       ? '手机不能选择文件夹。这里是系统给的位置：在「文件」里打开它，放进去的图片会出现在观景台。'
       : 'Phones cannot choose a folder. This is the system location: open it in Files, and the pictures you put there appear on the wall.';
+
+  /// Said when the app can import and save but the platform has not granted
+  /// access to the whole folder, so pictures from Files stay invisible.
+  String get fixedFolderLimited => zh
+      ? '手机不能选择文件夹。照片访问目前只允许了部分图片；要在观景台看到「文件」里放进来的图片，请允许访问全部照片。'
+      : 'Phones cannot choose a folder. Photo access covers selected pictures only; to see pictures you put in this folder in Files, allow access to all photos.';
 
   // -- colour ---------------------------------------------------------------
 

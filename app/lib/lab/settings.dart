@@ -30,9 +30,22 @@ class Settings {
 
   static const String _name = 'settings.json';
 
+  static Directory? _override;
+
+  /// Point the settings at the folder the platform actually gave the app.
+  ///
+  /// A phone has no `XDG_CONFIG_HOME` and its `HOME` is a container whose shape
+  /// is the platform's business. The native library bridge knows the support
+  /// folder, so it tells the app once, and the catalog and settings use it.
+  static void useDirectory(Directory? directory) => _override = directory;
+
   /// The app's own folder: settings, and the roll being carried. Null where
   /// there is no such place to name.
   static Directory? get directory {
+    final Directory? directory = _override;
+    if (directory != null) {
+      return directory;
+    }
     final String separator = Platform.pathSeparator;
     final Map<String, String> environment = Platform.environment;
     final String? home = environment['HOME'];

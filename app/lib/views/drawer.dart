@@ -58,10 +58,14 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
 
   int _tab = _aboutTab;
 
+  double _fieldWidth(BuildContext context) =>
+      (MediaQuery.sizeOf(context).width - 56).clamp(240.0, 460.0);
+
   @override
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloStrings s = KalloStrings.of(context);
+    final bool compact = MediaQuery.sizeOf(context).width < 700;
     return Container(
       decoration: BoxDecoration(color: colors.surface),
       child: Column(
@@ -90,31 +94,21 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
             ),
           ),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                SizedBox(width: 196, child: _rail(colors)),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
-                      KalloSpace.step4 - 4,
-                      KalloSpace.step4 - 6,
-                      KalloSpace.step4,
-                      KalloSpace.step4,
-                    ),
-                    // A drawer opened on a 27-inch display should still read
-                    // as a page, not as two columns a metre apart.
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 720),
-                        child: _page(s, colors),
-                      ),
-                    ),
+            child: compact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      _railCompact(colors),
+                      Expanded(child: _pageScroll(s, colors)),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      SizedBox(width: 196, child: _rail(colors)),
+                      Expanded(child: _pageScroll(s, colors)),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
           if (_tab != _aboutTab)
             Padding(
@@ -127,6 +121,67 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                 style: KalloType.data.copyWith(
                   fontSize: 10,
                   color: colors.inkFaint,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pageScroll(KalloStrings s, KalloColors colors) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        KalloSpace.step4 - 4,
+        KalloSpace.step4 - 6,
+        KalloSpace.step4,
+        KalloSpace.step4,
+      ),
+      // A drawer opened on a 27-inch display should still read as a page, not
+      // as two columns a metre apart.
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: _page(s, colors),
+        ),
+      ),
+    );
+  }
+
+  Widget _railCompact(KalloColors colors) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(
+        KalloSpace.step3,
+        KalloSpace.step2,
+        KalloSpace.step3,
+        0,
+      ),
+      child: Row(
+        children: <Widget>[
+          for (int i = 0; i < _tabs(KalloStrings.of(context)).length; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: KalloSpace.step2),
+              child: GestureDetector(
+                onTap: () => setState(() => _tab = i),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KalloSpace.step3,
+                    vertical: KalloSpace.step2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: i == _tab ? colors.accentSoft : null,
+                    borderRadius: BorderRadius.circular(KalloRadius.control),
+                  ),
+                  child: Text(
+                    _tabs(KalloStrings.of(context))[i],
+                    style: KalloType.caption.copyWith(
+                      color: i == _tab ? colors.accent : colors.inkFaint,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -268,7 +323,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         ),
         const SizedBox(height: KalloSpace.step2),
         SizedBox(
-          width: 460,
+          width: _fieldWidth(context),
           child: Text(
             s.colourNote,
             style: KalloType.body.copyWith(color: colors.inkMuted),
@@ -284,7 +339,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         ),
         const SizedBox(height: KalloSpace.step3),
         SizedBox(
-          width: 460,
+          width: _fieldWidth(context),
           child: Text(
             s.spectralNote,
             style: KalloType.small.copyWith(color: colors.inkMuted),
@@ -350,7 +405,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         ),
         const SizedBox(height: KalloSpace.step2),
         SizedBox(
-          width: 460,
+          width: _fieldWidth(context),
           child: Text(
             s.printsNote,
             style: KalloType.body.copyWith(color: colors.inkMuted),
@@ -415,7 +470,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
           Align(
             alignment: Alignment.centerRight,
             child: SizedBox(
-              width: 460,
+              width: _fieldWidth(context),
               child: Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
@@ -433,9 +488,9 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         if (!export.canChoose) ...<Widget>[
           const SizedBox(height: KalloSpace.step4),
           SizedBox(
-            width: 460,
+            width: _fieldWidth(context),
             child: Text(
-              s.fixedFolder,
+              export.canListAll ? s.fixedFolder : s.fixedFolderLimited,
               style: KalloType.small.copyWith(color: colors.inkFaint),
             ),
           ),
@@ -526,7 +581,7 @@ class _RepositoryLinkState extends State<_RepositoryLink> {
           behavior: HitTestBehavior.opaque,
           child: AnimatedContainer(
             duration: KalloMotion.instant,
-            width: 460,
+            width: (MediaQuery.sizeOf(context).width - 56).clamp(240.0, 460.0),
             height: 62,
             padding: const EdgeInsets.symmetric(
               horizontal: KalloSpace.step4,

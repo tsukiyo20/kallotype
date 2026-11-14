@@ -45,6 +45,9 @@ and the two render differently — which is exactly the failure this pin exists 
 prevent.
 
 All five platforms are checked in: `macos`, `windows`, `linux`, `ios`, `android`.
+A window narrower than 700 points takes the phone shell: one column, a bottom
+bar for the three places and settings, and no side panes. The rooms are the
+same; only the furniture moves.
 They share one identity, `com.kallo.app`, and three floors — macOS 13,
 iOS 15, and Android API 29, which is where Impeller takes the Vulkan path
 instead of falling back to its OpenGL ES backend.
@@ -145,6 +148,15 @@ the source untouched. The export folder is statted once per file on read, and
 the thumbnail key is 64-bit, because a 32-bit key can silently name the wrong
 print at this library's future size.
 
+A phone has no folder to choose. iOS keeps the library in the `Kallo` album in
+Photos; Android keeps it in `Pictures/Kallo` in MediaStore. The catalog and the
+marker are the same; only the locator changes — a `PHAsset` local identifier or
+a MediaStore content URI. A phone library therefore reads its list from the
+platform, asks PhotoKit or MediaStore for a thumbnail instead of decoding a
+file, and imports through the system photo picker. Album membership is the
+boundary: an asset whose marker was stripped is still a print, and the catalog
+keeps its record.
+
 The test loads the bundled faces from disk before it draws, so the picture is in
 the product's own type rather than the runner's. That is the reason the fonts are
 bundled — and both are under the SIL Open Font License, so a public repository
@@ -190,7 +202,7 @@ are the settings themselves, with the one sentence each needs.
 | **The test strip is the proof, made one print at a time** | A proof is the film laid on paper and exposed once. The strip is that idea with the person's hand in it: one print per development, all on the first print's exposure, laid side by side. Each print is scaled to the strip's height and takes the width its own shape asks for, so a portrait and a landscape print sit on the same strip without being cropped or overflowing. A longer development makes a denser negative, so on one exposure it prints lighter; the strip says that before the finished print is dialled. The prints are rendered, not drawn: each is a real 1200 px print, and the densitometer reads its chart. |
 | **A frame can be looked through, then walked up to** | The loupe is a switch beside the lamp, put away by default. With it out, hovering a frame brings a loupe to the pointer: three times the wall, from the print's own file decoded wide enough to be sharp, with the 35 mm rebate still in the glass. The picture under the lens bows slightly at its edge — glass is not a window — while the rebate and the sprocket holes stay flat. The switch belongs to the wall, so it goes when a print fills the window; the lamp stays. Clicking opens the frame at the file's own size: the film keeps its size and shape — this is a loupe on film, not a picture viewer — and the picture is magnified *inside* the aperture, clipped by the gate, up to 1:1, one image pixel per device pixel, which is as far as the file goes. That close view is flat: it moves the picture under the gate and never bends the file. The label under it says the file's pixels and the scale; escape puts it back on the wall, and the lamp comes with you. The same view opens an export sheet: the size is the print's own by default or 4096 pixels, and the format is JPEG, PNG or TIFF. |
 | **The gallery is a wall of film with one lamp** | A print is not a picture; it is a sheet of paper reflecting whatever light falls on it. So the wall, the film and the wall label multiply by one number; the lamp switch is at the top right of the chrome, with the loupe beside it, and the lamp is that number. Turn it off and the wall goes black, the labels go with it, the picture stays at a tenth — and the window around them does not move: the lamp is the gallery's, not the app's. In a light appearance the wall is a wall in daylight; the lamp still goes out. Each frame is a 35 mm piece of film: black rebate, clear sprocket holes, the stock and the print number on one edge, the process and `135` on the other. The stock says its manufacturer (`KODAK ULTRA MAX 400`, `ILFORD DELTA 400`) and the caption under the frame does too. The ink follows the chemistry: warm ivory for a silver film, pale amber for a colour negative, white for a reversal. A single print is `01`; a batch of selected frames will count `02`, `03`. A vertical picture turns the strip, so the holes run down its sides. Frames are given the same area, so a portrait is the same piece of film turned, not a wider one. |
-| **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery frames the marked prints in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting, and on a phone it is the one place the system lets an app write. The plain print and the framed export both open the same kind of sheet: size first, then format. The frame defaults to the print's own size and JPEG; the print defaults to the photograph's size and PNG. The framed export goes to `Frames/` inside that folder; the plain print stays where the model wrote it. The record — stock, paper, development, print number, title, dates — is an XMP packet inside the print, not a sidecar; the SQLite catalog indexes it for the rooms. Import copies a picture into the folder and marks the copy; the source is never modified. |
+| **A print is a file, not an asset** | The app ships no pictures. `just print <photograph>` renders one through the model into the export folder, and the gallery frames the marked prints in there — nothing, most of the time, which is why an empty wall is a state and not a bug. The folder is a setting on desktop; a phone keeps its prints in the `Kallo` album in Photos or in `Pictures/Kallo` in MediaStore. The plain print and the framed export both open the same kind of sheet: size first, then format. The frame defaults to the print's own size and JPEG; the print defaults to the photograph's size and PNG. The framed export goes to `Frames/` inside that folder; the plain print stays where the model wrote it. The record — stock, paper, development, print number, title, dates — is an XMP packet inside the print, not a sidecar; the SQLite catalog indexes it for the rooms. Import copies a picture into the library and marks the copy; the source is never modified. |
 | **The chrome is a neutral, the print is paper** | The window is a tool, so its planes are one Apple-shaped neutral ramp in both appearances: grouped background, sidebar, content, inspector, a recessed fill for every control, and the safelight only where something is chosen or acted on. Corners are 8, 14 and 20; hairlines are quiet. The only warm and saturated surfaces in the product are the paper a print sits on, the film frame around it, and the gallery wall behind it. |
 | **Time is a ruler** | The develop step's ruler is continuous and the model accepts any positive time; 3/6/9/12/15 are the marks, not a limit. The strip's prints are the times actually tried, and the panel draws their curves together. The point is the difference between them. |
 | **Nothing is a default** | No ripple, no elevation, no Roboto, no colour roles, no 4 dp grid. |
@@ -329,12 +341,10 @@ translates.
   the paper.
 - **A paper for a film with no print stage.** A reversal has no paper to choose:
   there is no print. The shelf says so where the papers would be.
-- **A folder chooser on a phone.** iOS gives an app one folder and shows it in
-  Files; Android has a per-app directory the system owns. A picker there is a
-  desktop idiom, and neither platform is wired yet: iOS reads its Documents
-  folder, Android has no folder at all until its own API is called. The drawer
-  says which of the two it is instead of showing a button that would do
-  nothing.
+- **A folder chooser on a phone.** iOS gives the app one album in Photos;
+  Android gives it `Pictures/Kallo` in MediaStore. A folder picker there is a
+  desktop idiom, so the drawer names the system location instead of offering a
+  button that would do nothing.
 - **Colour management.** The model writes sRGB and the system manages the
   display. Wide gamut is the screen's business; nothing here is tagged or
   converted.

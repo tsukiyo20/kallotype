@@ -18,6 +18,7 @@ class StudioTopBar extends StatelessWidget {
     required this.sidebarOpen,
     required this.onSidebar,
     required this.mac,
+    this.showSidebar = true,
     this.inspectorOpen,
     this.onInspector,
     this.trailing,
@@ -29,6 +30,10 @@ class StudioTopBar extends StatelessWidget {
 
   final bool sidebarOpen;
   final VoidCallback onSidebar;
+
+  /// Whether this window has a sidebar at all. A phone keeps its places in a
+  /// bottom bar, so the pane switch would have nothing to put away.
+  final bool showSidebar;
 
   /// Whether the window has traffic lights over its top-left corner.
   final bool mac;
@@ -81,7 +86,7 @@ class StudioTopBar extends StatelessWidget {
                   ),
                 ),
               ),
-            if (!sidebarOpen)
+            if (showSidebar && !sidebarOpen)
               AnimatedPositioned(
                 duration: KalloMotion.settle,
                 curve: KalloMotion.enter,

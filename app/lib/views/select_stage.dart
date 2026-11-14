@@ -58,59 +58,74 @@ class SelectStage extends StatelessWidget {
   Widget build(BuildContext context) {
     final KalloColors colors = KalloScope.colorsOf(context);
     final KalloStrings s = KalloStrings.of(context);
+    final Widget work = ColoredBox(
+      color: colors.content,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(32, topInset + 18, 32, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Text(
+                  s.theOriginal,
+                  style: KalloType.caption.copyWith(
+                    color: colors.inkFaint,
+                    letterSpacing: 0.7,
+                  ),
+                ),
+                const SizedBox(width: KalloSpace.step3),
+                Expanded(
+                  child: Text(
+                    strip.name ?? s.noPhotographChosen,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KalloType.small.copyWith(color: colors.inkMuted),
+                  ),
+                ),
+                _Quiet(
+                  label: photograph == null ? s.choosePhoto : s.changePhoto,
+                  onTap: onChoosePhoto,
+                ),
+              ],
+            ),
+            const SizedBox(height: KalloSpace.step4),
+            Expanded(child: _photograph(colors, s)),
+            const SizedBox(height: KalloSpace.step3),
+            Text(
+              photograph == null ? s.choosePhotoNote : '${strip.photo}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: KalloType.small.copyWith(color: colors.inkFaint),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (MediaQuery.sizeOf(context).width < 700) {
+      return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double panel = (constraints.maxHeight * 0.46).clamp(
+            240.0,
+            420.0,
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(child: work),
+              SizedBox(
+                height: panel,
+                child: _materials(colors, s, stacked: true),
+              ),
+            ],
+          );
+        },
+      );
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Expanded(
-          child: ColoredBox(
-            color: colors.content,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(32, topInset + 18, 32, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Text(
-                        s.theOriginal,
-                        style: KalloType.caption.copyWith(
-                          color: colors.inkFaint,
-                          letterSpacing: 0.7,
-                        ),
-                      ),
-                      const SizedBox(width: KalloSpace.step3),
-                      Expanded(
-                        child: Text(
-                          strip.name ?? s.noPhotographChosen,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: KalloType.small.copyWith(
-                            color: colors.inkMuted,
-                          ),
-                        ),
-                      ),
-                      _Quiet(
-                        label: photograph == null
-                            ? s.choosePhoto
-                            : s.changePhoto,
-                        onTap: onChoosePhoto,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: KalloSpace.step4),
-                  Expanded(child: _photograph(colors, s)),
-                  const SizedBox(height: KalloSpace.step3),
-                  Text(
-                    photograph == null ? s.choosePhotoNote : '${strip.photo}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KalloType.small.copyWith(color: colors.inkFaint),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+        Expanded(child: work),
         InspectorPane(
           key: const Key('select-inspector'),
           open: showInspector,
@@ -181,10 +196,187 @@ class SelectStage extends StatelessWidget {
     return makers;
   }
 
-  Widget _materials(KalloColors colors, KalloStrings s) {
+  Widget _materials(
+    KalloColors colors,
+    KalloStrings s, {
+    bool stacked = false,
+  }) {
     final Stock? film = _film;
     final Stock? paper = _paper;
     final List<Stock> papers = catalogue.papersFor(film?.process);
+    final Widget filmShelf = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          s.film,
+          style: KalloType.caption.copyWith(
+            color: colors.inkFaint,
+            letterSpacing: 0.7,
+          ),
+        ),
+        for (final FilmProcess process in FilmProcess.values)
+          if (catalogue.of(process).isNotEmpty) ...<Widget>[
+            const SizedBox(height: KalloSpace.step3),
+            Text(
+              s.processName(process),
+              style: KalloType.small.copyWith(color: colors.inkMuted),
+            ),
+            for (final String maker in _makers(process)) ...<Widget>[
+              const SizedBox(height: KalloSpace.step2),
+              Text(
+                maker,
+                style: KalloType.caption.copyWith(
+                  color: colors.inkFaint,
+                  fontSize: 9.5,
+                  letterSpacing: 1.1,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: KalloSpace.step1),
+              Wrap(
+                spacing: KalloSpace.step1 + 2,
+                runSpacing: KalloSpace.step1 + 2,
+                children: <Widget>[
+                  for (final Stock stock in catalogue.of(process))
+                    if (stock.maker == maker)
+                      KalloChip(
+                        label: stock.productName,
+                        semanticLabel: stock.displayName,
+                        selected: stock.id == film?.id,
+                        compact: true,
+                        onTap: () => onFilm(stock),
+                      ),
+                ],
+              ),
+            ],
+          ],
+        if (film != null) ...<Widget>[
+          const SizedBox(height: KalloSpace.step2),
+          Text(
+            film.label,
+            style: KalloType.small.copyWith(color: colors.inkFaint),
+          ),
+        ],
+        if (strip.hasPrints) ...<Widget>[
+          const SizedBox(height: KalloSpace.step4),
+          Text(
+            s.materialsNote,
+            style: KalloType.small.copyWith(color: colors.inkFaint),
+          ),
+        ],
+      ],
+    );
+    final Widget paperShelf = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          s.paper,
+          style: KalloType.caption.copyWith(
+            color: colors.inkFaint,
+            letterSpacing: 0.7,
+          ),
+        ),
+        if (papers.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: KalloSpace.step2),
+            child: Text(
+              s.noPaper,
+              style: KalloType.small.copyWith(color: colors.inkFaint),
+            ),
+          )
+        else
+          for (final PaperEmulsion emulsion in PaperEmulsion.values)
+            if (papers.any(
+              (Stock p) => (p.emulsion ?? PaperEmulsion.colour) == emulsion,
+            )) ...<Widget>[
+              const SizedBox(height: KalloSpace.step2),
+              Text(
+                emulsion == PaperEmulsion.silver
+                    ? s.silverPaper
+                    : s.colourPaper,
+                style: KalloType.small.copyWith(color: colors.inkMuted),
+              ),
+              const SizedBox(height: KalloSpace.step1),
+              Wrap(
+                spacing: KalloSpace.step1 + 2,
+                runSpacing: KalloSpace.step1 + 2,
+                children: <Widget>[
+                  for (final Stock p in papers)
+                    if ((p.emulsion ?? PaperEmulsion.colour) == emulsion)
+                      KalloChip(
+                        label: p.displayName,
+                        selected: p.id == paper?.id,
+                        compact: true,
+                        onTap: () => onPaper(p),
+                      ),
+                ],
+              ),
+            ],
+        if (paper != null) ...<Widget>[
+          const SizedBox(height: KalloSpace.step1),
+          Text(
+            paper.label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: KalloType.small.copyWith(color: colors.inkFaint),
+          ),
+        ],
+        const SizedBox(height: KalloSpace.step3),
+        Row(
+          children: <Widget>[
+            Text(
+              s.exposure,
+              style: KalloType.caption.copyWith(
+                color: colors.inkFaint,
+                letterSpacing: 0.7,
+              ),
+            ),
+            const Spacer(),
+            Flexible(
+              child: Text(
+                '${s.metered}   0.0 EV',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: KalloType.data.copyWith(color: colors.inkMuted),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: KalloSpace.step3),
+        KalloButton(
+          label: s.goDevelop,
+          onTap: photograph == null ? null : onGoDevelop,
+          filled: true,
+          height: 34,
+        ),
+        if (strip.hasPrints) ...<Widget>[
+          const SizedBox(height: KalloSpace.step2),
+          Align(
+            alignment: Alignment.center,
+            child: _Quiet(label: s.newStrip, onTap: onClear),
+          ),
+        ],
+      ],
+    );
+    if (stacked) {
+      return DecoratedBox(
+        decoration: BoxDecoration(color: colors.surface),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              filmShelf,
+              const SizedBox(height: KalloSpace.step5),
+              Container(height: 1, color: colors.hairline),
+              const SizedBox(height: KalloSpace.step4),
+              paperShelf,
+            ],
+          ),
+        ),
+      );
+    }
     return DecoratedBox(
       decoration: BoxDecoration(color: colors.surface),
       child: Column(
@@ -193,68 +385,7 @@ class SelectStage extends StatelessWidget {
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(20, topInset + 18, 20, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    s.film,
-                    style: KalloType.caption.copyWith(
-                      color: colors.inkFaint,
-                      letterSpacing: 0.7,
-                    ),
-                  ),
-                  for (final FilmProcess process in FilmProcess.values)
-                    if (catalogue.of(process).isNotEmpty) ...<Widget>[
-                      const SizedBox(height: KalloSpace.step3),
-                      Text(
-                        s.processName(process),
-                        style: KalloType.small.copyWith(color: colors.inkMuted),
-                      ),
-                      for (final String maker in _makers(process)) ...<Widget>[
-                        const SizedBox(height: KalloSpace.step2),
-                        Text(
-                          maker,
-                          style: KalloType.caption.copyWith(
-                            color: colors.inkFaint,
-                            fontSize: 9.5,
-                            letterSpacing: 1.1,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: KalloSpace.step1),
-                        Wrap(
-                          spacing: KalloSpace.step1 + 2,
-                          runSpacing: KalloSpace.step1 + 2,
-                          children: <Widget>[
-                            for (final Stock stock in catalogue.of(process))
-                              if (stock.maker == maker)
-                                KalloChip(
-                                  label: stock.productName,
-                                  semanticLabel: stock.displayName,
-                                  selected: stock.id == film?.id,
-                                  compact: true,
-                                  onTap: () => onFilm(stock),
-                                ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  if (film != null) ...<Widget>[
-                    const SizedBox(height: KalloSpace.step2),
-                    Text(
-                      film.label,
-                      style: KalloType.small.copyWith(color: colors.inkFaint),
-                    ),
-                  ],
-                  if (strip.hasPrints) ...<Widget>[
-                    const SizedBox(height: KalloSpace.step4),
-                    Text(
-                      s.materialsNote,
-                      style: KalloType.small.copyWith(color: colors.inkFaint),
-                    ),
-                  ],
-                ],
-              ),
+              child: filmShelf,
             ),
           ),
           Container(
@@ -262,101 +393,7 @@ class SelectStage extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: colors.hairline)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Text(
-                  s.paper,
-                  style: KalloType.caption.copyWith(
-                    color: colors.inkFaint,
-                    letterSpacing: 0.7,
-                  ),
-                ),
-                if (papers.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: KalloSpace.step2),
-                    child: Text(
-                      s.noPaper,
-                      style: KalloType.small.copyWith(color: colors.inkFaint),
-                    ),
-                  )
-                else
-                  for (final PaperEmulsion emulsion in PaperEmulsion.values)
-                    if (papers.any(
-                      (Stock p) =>
-                          (p.emulsion ?? PaperEmulsion.colour) == emulsion,
-                    )) ...<Widget>[
-                      const SizedBox(height: KalloSpace.step2),
-                      Text(
-                        emulsion == PaperEmulsion.silver
-                            ? s.silverPaper
-                            : s.colourPaper,
-                        style: KalloType.small.copyWith(color: colors.inkMuted),
-                      ),
-                      const SizedBox(height: KalloSpace.step1),
-                      Wrap(
-                        spacing: KalloSpace.step1 + 2,
-                        runSpacing: KalloSpace.step1 + 2,
-                        children: <Widget>[
-                          for (final Stock p in papers)
-                            if ((p.emulsion ?? PaperEmulsion.colour) ==
-                                emulsion)
-                              KalloChip(
-                                label: p.displayName,
-                                selected: p.id == paper?.id,
-                                compact: true,
-                                onTap: () => onPaper(p),
-                              ),
-                        ],
-                      ),
-                    ],
-                if (paper != null) ...<Widget>[
-                  const SizedBox(height: KalloSpace.step1),
-                  Text(
-                    paper.label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: KalloType.small.copyWith(color: colors.inkFaint),
-                  ),
-                ],
-                const SizedBox(height: KalloSpace.step3),
-                Row(
-                  children: <Widget>[
-                    Text(
-                      s.exposure,
-                      style: KalloType.caption.copyWith(
-                        color: colors.inkFaint,
-                        letterSpacing: 0.7,
-                      ),
-                    ),
-                    const Spacer(),
-                    Flexible(
-                      child: Text(
-                        '${s.metered}   0.0 EV',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                        style: KalloType.data.copyWith(color: colors.inkMuted),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: KalloSpace.step3),
-                KalloButton(
-                  label: s.goDevelop,
-                  onTap: photograph == null ? null : onGoDevelop,
-                  filled: true,
-                  height: 34,
-                ),
-                if (strip.hasPrints) ...<Widget>[
-                  const SizedBox(height: KalloSpace.step2),
-                  Align(
-                    alignment: Alignment.center,
-                    child: _Quiet(label: s.newStrip, onTap: onClear),
-                  ),
-                ],
-              ],
-            ),
+            child: paperShelf,
           ),
         ],
       ),

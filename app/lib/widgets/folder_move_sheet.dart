@@ -20,13 +20,12 @@ Future<FolderMoveChoice?> showFolderMoveSheet(
   required int count,
   required String destination,
 }) {
-  final KalloStrings s = KalloStrings.of(context);
-  final KalloColors colors = KalloScope.colorsOf(context);
   return showGeneralDialog<FolderMoveChoice>(
     context: context,
     barrierDismissible: true,
-    barrierLabel: s.cancel,
-    barrierColor: colors.scrim,
+    barrierLabel: 'Cancel',
+    barrierColor:
+        KalloScope.maybeOf(context)?.colors.scrim ?? const Color(0x99000000),
     transitionDuration: KalloMotion.settle,
     pageBuilder: (
       BuildContext dialogContext,

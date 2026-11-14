@@ -11,6 +11,7 @@ import 'package:kallo/lab/stock.dart';
 import 'package:kallo/lab/strip.dart';
 import 'package:kallo/main.dart';
 import 'package:kallo/views/chambers.dart';
+import 'package:kallo/views/drawer.dart';
 import 'package:kallo/views/develop_stage.dart';
 import 'package:kallo/views/rack.dart';
 import 'package:kallo/views/select_stage.dart';
@@ -80,6 +81,40 @@ void main() {
     expect(find.text('晾片架'), findsOneWidget);
     expect(find.text('观景台'), findsOneWidget);
     expect(find.text('原片'), findsOneWidget);
+  });
+
+  testWidgets('a phone gets one column and a bottom bar', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      KalloApp(
+        catalogue: Catalogue.carried,
+        strip: const TestStrip(photo: '/photographs/uji.jpg'),
+        photograph: card,
+        prints: const <Print>[],
+        initialStep: DarkroomStep.select,
+        locale: const Locale('zh'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(StudioSidebar), findsNothing);
+    expect(find.byType(StageTabs), findsOneWidget);
+    expect(find.byType(SelectStage), findsOneWidget);
+    expect(find.text('暗房'), findsOneWidget);
+    expect(find.text('晾片架'), findsOneWidget);
+    expect(find.text('观景台'), findsOneWidget);
+    expect(find.text('设置'), findsOneWidget);
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(SettingsDrawer), findsOneWidget);
   });
 
   testWidgets('the develop step shows the strip and its curves', (

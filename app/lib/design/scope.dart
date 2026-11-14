@@ -30,9 +30,11 @@ class KalloScope extends InheritedWidget {
 
   Brightness get brightness => colors.brightness;
 
+  static KalloScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<KalloScope>();
+
   static KalloScope of(BuildContext context) {
-    final KalloScope? scope =
-        context.dependOnInheritedWidgetOfExactType<KalloScope>();
+    final KalloScope? scope = maybeOf(context);
     assert(scope != null, 'No KalloScope above this widget.');
     return scope!;
   }

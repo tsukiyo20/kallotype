@@ -63,7 +63,8 @@ ImportProgress showImportProgressSheet(
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: false,
-      barrierColor: KalloScope.colorsOf(context).scrim,
+      barrierColor:
+          KalloScope.maybeOf(context)?.colors.scrim ?? const Color(0x99000000),
       transitionDuration: KalloMotion.settle,
       pageBuilder:
           (

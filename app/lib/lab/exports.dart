@@ -171,6 +171,7 @@ class ExportSetting {
     this.onChoose,
     this.onReset,
     this.onImport,
+    this.canListAll = true,
     this.missingPrints = 0,
     this.repairablePrints = 0,
     this.onRepair,
@@ -190,6 +191,10 @@ class ExportSetting {
 
   /// Import pictures into the library, when there is a library to import into.
   final VoidCallback? onImport;
+
+  /// Whether the platform lets the app see pictures other apps put in the
+  /// library. False on a phone with partial photo access.
+  final bool canListAll;
 
   /// Prints whose file is gone. The catalog keeps them; the wall does not.
   final int missingPrints;

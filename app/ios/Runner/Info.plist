@@ -26,6 +26,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Kallo keeps its prints in one album, reads their markers to rebuild the
+	     catalog, and saves a marked copy when a print is made or imported. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kallo keeps its prints in an album in your photo library.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Kallo saves finished prints and imports to its album in your photo library.</string>
 	<!-- The app's folder is where prints go, and on a phone the system is the
 	     file browser: without these two, Documents exists and nobody can reach
 	     it. This is the whole of the "export folder" on iOS. -->

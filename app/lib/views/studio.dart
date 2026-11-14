@@ -104,6 +104,10 @@ class Studio extends StatefulWidget {
 }
 
 class _StudioState extends State<Studio> {
+  /// A phone has one column, not two panes. The threshold is below the
+  /// desktop window's minimum, so this is the phone layout and nothing else.
+  bool get _compact => MediaQuery.sizeOf(context).width < 700;
+
   late Chamber _chamber = widget.initialChamber;
   late DarkroomStep _step = widget.initialStep;
   late bool _open = widget.initiallyOpen;
@@ -177,142 +181,203 @@ class _StudioState extends State<Studio> {
         autofocus: true,
         child: ColoredBox(
           color: KalloScope.colorsOf(context).ground,
-          child: Stack(
-            children: <Widget>[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  AnimatedSize(
-                    duration: KalloMotion.settle,
-                    curve: KalloMotion.enter,
-                    alignment: Alignment.centerLeft,
-                    clipBehavior: Clip.hardEdge,
-                    child: _sidebar
-                        ? SizedBox(
-                            key: const Key('studio-sidebar'),
-                            width: 232,
-                            child: StudioSidebar(
-                              chamber: _chamber,
-                              onChamber: _room,
-                              galleryCount: widget.prints.length,
-                              onSettings: () => setState(() => _open = true),
-                              onSidebar: () =>
-                                  setState(() => _sidebar = !_sidebar),
-                            ),
-                          )
-                        : const SizedBox(width: 0),
-                  ),
-                  Expanded(
-                    child: ClipRect(
-                      child: Stack(
-                        children: <Widget>[
-                          Positioned.fill(child: _body()),
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            top: 0,
-                            child: _topBar(),
-                          ),
-                        ],
+          child: _shell(compact: _compact),
+        ),
+      ),
+    );
+  }
+
+  Widget _shell({required bool compact}) {
+    final Widget content = Stack(
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            AnimatedSize(
+              duration: KalloMotion.settle,
+              curve: KalloMotion.enter,
+              alignment: Alignment.centerLeft,
+              clipBehavior: Clip.hardEdge,
+              child: _sidebar && !_compact
+                  ? SizedBox(
+                      key: const Key('studio-sidebar'),
+                      width: 232,
+                      child: StudioSidebar(
+                        chamber: _chamber,
+                        onChamber: _room,
+                        galleryCount: widget.prints.length,
+                        onSettings: () => setState(() => _open = true),
+                        onSidebar: () => setState(() => _sidebar = !_sidebar),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              if (widget.chrome == WindowChrome.mac &&
-                  widget.onDragWindow != null &&
-                  _sidebar)
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  // Leave the sidebar's own switch hittable. The rest of the
-                  // strip above the traffic lights still drags the window.
-                  width: 232 - 16 - 34 - 12,
-                  height: 44,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onPanStart: (_) => widget.onDragWindow!(),
-                  ),
-                ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: !_open,
-                  child: GestureDetector(
-                    onTap: _closeDrawer,
-                    child: AnimatedOpacity(
-                      duration: KalloMotion.settle,
-                      curve: KalloMotion.enter,
-                      opacity: _open ? 1 : 0,
-                      child: ColoredBox(
-                        color: KalloScope.colorsOf(context).scrim,
-                      ),
-                    ),
-                  ),
+                    )
+                  : const SizedBox(width: 0),
+            ),
+            Expanded(
+              child: ClipRect(
+                child: Stack(
+                  children: <Widget>[
+                    Positioned.fill(child: _body()),
+                    Positioned(left: 0, right: 0, top: 0, child: _topBar()),
+                  ],
                 ),
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: AnimatedSwitcher(
-                  duration: KalloMotion.settle,
-                  switchInCurve: KalloMotion.enter,
-                  switchOutCurve: KalloMotion.enter,
-                  layoutBuilder: (Widget? current, List<Widget> previous) =>
-                      Stack(
-                        alignment: Alignment.bottomCenter,
-                        clipBehavior: Clip.none,
-                        children: <Widget>[...previous, ?current],
-                      ),
-                  transitionBuilder:
-                      (Widget child, Animation<double> animation) =>
-                          SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 1),
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                  child: _open
-                      ? LayoutBuilder(
-                          key: const ValueKey<String>('settings-drawer'),
-                          builder:
-                              (
-                                BuildContext context,
-                                BoxConstraints constraints,
-                              ) {
-                                return SizedBox(
-                                  height: math.min(
-                                    600,
-                                    constraints.maxHeight * 0.9,
-                                  ),
-                                  child: KalloShadowBox(
-                                    kind: KalloShadowKind.sheet,
-                                    child: ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(KalloRadius.sheet),
-                                      ),
-                                      child: SettingsDrawer(
-                                        export: widget.export,
-                                        locale: widget.locale,
-                                        onLocale: widget.onLocale,
-                                        spectral: widget.spectral,
-                                        onSpectral: widget.onSpectral,
-                                        onClose: _closeDrawer,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                        )
-                      : const SizedBox.shrink(
-                          key: ValueKey<String>('settings-closed'),
-                        ),
-                ),
+            ),
+          ],
+        ),
+        if (widget.chrome == WindowChrome.mac &&
+            widget.onDragWindow != null &&
+            _sidebar)
+          Positioned(
+            left: 0,
+            top: 0,
+            // Leave the sidebar's own switch hittable. The rest of the
+            // strip above the traffic lights still drags the window.
+            width: 232 - 16 - 34 - 12,
+            height: 44,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanStart: (_) => widget.onDragWindow!(),
+            ),
+          ),
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: !_open,
+            child: GestureDetector(
+              onTap: _closeDrawer,
+              child: AnimatedOpacity(
+                duration: KalloMotion.settle,
+                curve: KalloMotion.enter,
+                opacity: _open ? 1 : 0,
+                child: ColoredBox(color: KalloScope.colorsOf(context).scrim),
               ),
-            ],
+            ),
           ),
         ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: AnimatedSwitcher(
+            duration: KalloMotion.settle,
+            switchInCurve: KalloMotion.enter,
+            switchOutCurve: KalloMotion.enter,
+            layoutBuilder: (Widget? current, List<Widget> previous) => Stack(
+              alignment: Alignment.bottomCenter,
+              clipBehavior: Clip.none,
+              children: <Widget>[...previous, ?current],
+            ),
+            transitionBuilder: (Widget child, Animation<double> animation) =>
+                SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+            child: _open
+                ? LayoutBuilder(
+                    key: const ValueKey<String>('settings-drawer'),
+                    builder:
+                        (BuildContext context, BoxConstraints constraints) {
+                          return SizedBox(
+                            height: math.min(600, constraints.maxHeight * 0.9),
+                            child: KalloShadowBox(
+                              kind: KalloShadowKind.sheet,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(KalloRadius.sheet),
+                                ),
+                                child: SettingsDrawer(
+                                  export: widget.export,
+                                  locale: widget.locale,
+                                  onLocale: widget.onLocale,
+                                  spectral: widget.spectral,
+                                  onSpectral: widget.onSpectral,
+                                  onClose: _closeDrawer,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                  )
+                : const SizedBox.shrink(
+                    key: ValueKey<String>('settings-closed'),
+                  ),
+          ),
+        ),
+      ],
+    );
+    if (!compact) {
+      return content;
+    }
+    return SafeArea(
+      top: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+              child: content,
+            ),
+          ),
+          _mobileBar(),
+        ],
+      ),
+    );
+  }
+
+  Widget _mobileBar() {
+    final KalloColors colors = KalloScope.colorsOf(context);
+    final KalloStrings s = KalloStrings.of(context);
+    Widget item(String label, bool selected, VoidCallback onTap) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: selected ? colors.accent : const Color(0x00000000),
+                  width: 1.5,
+                ),
+              ),
+            ),
+            child: Text(
+              label,
+              style: KalloType.caption.copyWith(
+                color: selected ? colors.ink : colors.inkMuted,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.sidebar,
+        border: Border(top: BorderSide(color: colors.hairline)),
+      ),
+      child: Row(
+        children: <Widget>[
+          item(
+            s.darkroom,
+            _chamber == Chamber.darkroom,
+            () => _room(Chamber.darkroom),
+          ),
+          item(s.rack, _chamber == Chamber.rack, () => _room(Chamber.rack)),
+          item(
+            s.galleryRoom,
+            _chamber == Chamber.gallery,
+            () => _room(Chamber.gallery),
+          ),
+          item(s.settings, _open, () => setState(() => _open = true)),
+        ],
       ),
     );
   }
@@ -354,6 +419,7 @@ class _StudioState extends State<Studio> {
   /// nothing to print has no panel, and a control that toggles nothing is a
   /// control that lies.
   bool get _hasInspector =>
+      !_compact &&
       _chamber == Chamber.darkroom &&
       !(_step == DarkroomStep.print && widget.strip.prints.isEmpty);
 
@@ -370,6 +436,7 @@ class _StudioState extends State<Studio> {
     final KalloColors colors = KalloScope.colorsOf(context);
     return StudioTopBar(
       sidebarOpen: _sidebar,
+      showSidebar: !_compact,
       onSidebar: () => setState(() => _sidebar = !_sidebar),
       mac: widget.chrome == WindowChrome.mac,
       inspectorOpen: _hasInspector ? _inspector : null,
@@ -418,7 +485,7 @@ class _StudioState extends State<Studio> {
         onPaper: widget.onPaper,
         onGoDevelop: () => _stage(DarkroomStep.develop),
         onClear: widget.onClearStrip,
-        showInspector: _inspector,
+        showInspector: _inspector && !_compact,
         topInset: _topBarHeight,
       ),
       DarkroomStep.develop => DevelopStage(
@@ -430,7 +497,7 @@ class _StudioState extends State<Studio> {
         onTemperature: widget.onTemperature,
         onDevelop: widget.onDevelop,
         onRemove: widget.onRemove,
-        showInspector: _inspector,
+        showInspector: _inspector && !_compact,
         topInset: _topBarHeight,
       ),
       DarkroomStep.print => PrintStage(
@@ -447,7 +514,7 @@ class _StudioState extends State<Studio> {
         onPrint: widget.onPrint,
         onGoDevelop: () => _stage(DarkroomStep.develop),
         onGoRack: () => _room(Chamber.rack),
-        showInspector: _inspector,
+        showInspector: _inspector && !_compact,
         topInset: _topBarHeight,
       ),
     };
